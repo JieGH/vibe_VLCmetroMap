@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# GTFS feeds. Refetch with `npm run fetch:gtfs` rather than committing them:
+# each export is ~7 MB, they are superseded every few weeks, and the data the
+# app actually imports (gtfs_expanded.json, segment_times.json) is generated
+# from them and committed.
+*_Metro_Valencia/
+.gtfs_download*
+
+# Generated from the feed by `npm run build:timetable`. Large, and nothing
+# imports it — keep it out until something does.
+src/data/line3_timetable.json
+
+# Agent tooling installed from skills-lock.json
+.claude/
+.agents/
+.scratch/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

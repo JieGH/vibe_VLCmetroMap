@@ -1,0 +1,168 @@
+import React from 'react';
+import { Menu, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import metroData from '../data/metro_lines.json';
+import gtfsData from '../data/gtfs_expanded.json';
+
+const Sidebar = ({ isOpen, onToggleSidebar, activeLineFilter, onSelectLine, onHoverLine }) => {
+  // Combine line features from bundled metro JSON and GTFS-generated data.
+  const allFeatures = [
+    ...metroData.features,
+    ...(gtfsData && gtfsData.features ? gtfsData.features : []),
+  ];
+  const lineFeatures = allFeatures.filter(f => f.geometry && f.geometry.type === 'LineString');
+  const seen = new Set();
+  const lines = [];
+  for (const f of lineFeatures) {
+    const id = f.properties && f.properties.line;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    lines.push({ properties: { line: id, color: f.properties && f.properties.color ? f.properties.color : '#888', name: f.properties && f.properties.name ? f.properties.name : `Line ${id}` } });
+  }
+
+  return (
+    <>
+      {/* Sidebar Container */}
+      <div 
+        className={`sidebar glass-panel ${!isOpen ? 'collapsed' : ''}`} 
+        style={{ padding: '20px' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, #FFD100 0%, #E2001A 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 800, color: '#fff', fontSize: '1.1rem'
+            }}>
+              V
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.3px' }}>Metro Valencia</h1>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Real-Time Tracker</div>
+            </div>
+          </div>
+
+          <button 
+            onClick={onToggleSidebar}
+            style={{ 
+              padding: '6px', 
+              borderRadius: '8px', 
+              background: 'var(--bg-hover)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+            title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            <ChevronLeft size={20} />
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+                Lines & Services
+              </h2>
+              {activeLineFilter && (
+                <button 
+                  onClick={() => onSelectLine(null)}
+                  style={{ fontSize: '0.75rem', color: '#FFD100', textDecoration: 'underline' }}
+                >
+                  Show All
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {lines.map((line) => {
+                const lineId = line.properties.line;
+                const isSelected = Array.isArray(activeLineFilter) && activeLineFilter.includes(lineId);
+
+                return (
+                  <div
+                    key={lineId}
+                    onClick={() => onSelectLine(lineId)}
+                    onMouseEnter={() => onHoverLine && onHoverLine(lineId)}
+                    onMouseLeave={() => onHoverLine && onHoverLine(null)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: isSelected ? 'var(--bg-hover-active)' : 'var(--bg-hover)',
+                      border: isSelected ? `1.5px solid ${line.properties.color}` : '1.5px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    className="line-card-hover"
+                  >
+                    <div style={{
+                      width: '32px', height: '32px',
+                      borderRadius: '50%',
+                      background: line.properties.color,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontWeight: 'bold', fontSize: '0.95rem',
+                      boxShadow: `0 0 10px ${line.properties.color}44`
+                    }}>
+                      L{lineId}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{line.properties.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4CAF50' }}></span>
+                        Good Service
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <div style={{
+                        width: '20px', height: '20px', borderRadius: '50%',
+                        background: line.properties.color, color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Info & Footer */}
+          <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <div>⚡ Live Simulated GPS Data</div>
+              <div>📍 FGV Metrovalència System</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Toggle Button when Sidebar is Collapsed */}
+      {!isOpen && (
+        <button
+          onClick={onToggleSidebar}
+          className="glass-panel"
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            zIndex: 20,
+            padding: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: 'var(--shadow-panel)'
+          }}
+          title="Open Sidebar"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+    </>
+  );
+};
+
+export default Sidebar;

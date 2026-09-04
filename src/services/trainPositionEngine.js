@@ -1,0 +1,617 @@
+// Train Position Engine
+//
+// Answers one question: given the live arrival predictions we hold, where is
+// each train right now?
+//
+// A prediction is "vehicle 5301 reaches Àngel Guimerà in 415 seconds". Turning
+// that into a coordinate means walking back along the line from Àngel Guimerà,
+// spending each segment's real timetabled interval, until those 415 seconds are
+// used up. The obvious shortcut — multiply the countdown by one commercial
+// speed — is wrong in both directions, because real segments run anywhere from
+// 3.9 m/s in the dense centre to 16.9 m/s on the northern stretch. At the
+// network median of 7.5 m/s the old constant of 10.5 placed every train about
+// 40% too far back: roughly two stations of error in the city centre.
+import metroData from '../data/metro_lines.json';
+import gtfsData from '../data/gtfs_expanded.json';
+import segmentTimes from '../data/segment_times.json';
+import arrivalStore from './arrivalStore';
+
+// Haversine distance in meters
+export const haversineDistance = (c1, c2) => {
+  const R = 6371000;
+  const dLat = (c2[1] - c1[1]) * (Math.PI / 180);
+  const dLon = (c2[0] - c1[0]) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(c1[1] * (Math.PI / 180)) * Math.cos(c2[1] * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+// Project a geographical coordinate onto a polyline to find its cumulative distance along the track
+export const projectPointOntoPolyline = (point, coords, cumDists) => {
+  let minPerpDist = Infinity;
+  let bestDistAlong = 0;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const segLen = cumDists[i + 1] - cumDists[i];
+    if (segLen === 0) continue;
+
+    const dx = p2[0] - p1[0];
+    const dy = p2[1] - p1[1];
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : ((point[0] - p1[0]) * dx + (point[1] - p1[1]) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const proj = [p1[0] + t * dx, p1[1] + t * dy];
+    const d = haversineDistance(point, proj);
+    if (d < minPerpDist) {
+      minPerpDist = d;
+      bestDistAlong = cumDists[i] + t * segLen;
+    }
+  }
+
+  return { distAlongTrack: bestDistAlong, perpDistance: minPerpDist };
+};
+
+const DWELL_SECONDS = segmentTimes.dwellSeconds ?? 25;
+
+// A prediction this far past its arrival time is stale enough to drop, and one
+// this far out has accumulated too much walk error to place with confidence.
+const MAX_SECONDS_PAST = 40;
+const MAX_SECONDS_AHEAD = 1080;
+
+// Several lines serve branches their polyline in metro_lines.json does not
+// cover — line 9 lists Rafelbunyol among its stations but its geometry stops
+// 9.8 km short at Alboraia. Projecting those onto the nearest point of the
+// wrong track would silently corrupt the station order the walk depends on, so
+// they are held out of the chain instead. Real platforms sit a little to the
+// side of the alignment, hence the tolerance rather than an exact test.
+const MAX_STATION_OFFSET_METRES = 250;
+
+const normalise = (value) => (value || '').toLowerCase().trim();
+
+class TrainPositionEngine {
+  constructor() {
+    this.lineTracks = new Map();
+    this.lineStations = new Map();
+    // Stations a line serves but its geometry cannot reach; trains bound for
+    // these hold at the nearest terminus rather than being drawn off-track.
+    this.offTrackStations = [];
+    // Per-vehicle render position, so a fresh fetch eases the marker to its new
+    // anchor instead of teleporting it.
+    this.renderState = new Map();
+    this.init();
+  }
+
+  init() {
+    const allStationPoints = (gtfsData.features || []).filter(
+      f => f.geometry && f.geometry.type === 'Point'
+    );
+
+    for (let l = 1; l <= 10; l++) {
+      const lineId = String(l);
+      const feature = (metroData.features || []).find(
+        f => f.properties && f.properties.line === lineId && f.geometry && f.geometry.type === 'LineString'
+      );
+      if (!feature) continue;
+
+      const coords = feature.geometry.coordinates;
+      if (!coords || coords.length < 2) continue;
+
+      // 1. Calculate cumulative track distances
+      const cumDists = [0];
+      for (let i = 1; i < coords.length; i++) {
+        cumDists.push(cumDists[i - 1] + haversineDistance(coords[i - 1], coords[i]));
+      }
+      const totalLength = cumDists[cumDists.length - 1] || 1;
+
+      const timing = segmentTimes.lines[lineId] || {};
+      this.lineTracks.set(lineId, {
+        coords,
+        cumDists,
+        totalLength,
+        segments: timing.segments || {},
+        // Only used where the timetable has no entry for a segment.
+        fallbackSpeed: (timing.fallback || segmentTimes.networkFallback).metresPerSecond,
+        minSegmentSeconds: (timing.fallback || segmentTimes.networkFallback).minSeconds ?? DWELL_SECONDS + 15,
+        color: feature.properties.color || '#888888',
+        name: feature.properties.name || `Line ${lineId}`,
+      });
+
+      // 2. Project stations serving this line
+      const stationsForLine = allStationPoints.filter(
+        st => Array.isArray(st.properties.lines) && st.properties.lines.includes(lineId)
+      );
+
+      const projectedStations = stationsForLine.map((st) => {
+        const proj = projectPointOntoPolyline(st.geometry.coordinates, coords, cumDists);
+        return {
+          id: st.properties.id,
+          stopId: st.properties.stop_id || null,
+          apiId: st.properties.apiId || null,
+          name: st.properties.name,
+          coords: st.geometry.coordinates,
+          trackDist: proj.distAlongTrack,
+          offTrackMetres: proj.perpDistance,
+        };
+      });
+
+      for (const station of projectedStations) {
+        if (station.offTrackMetres > MAX_STATION_OFFSET_METRES) {
+          this.offTrackStations.push({
+            line: lineId,
+            name: station.name,
+            metres: Math.round(station.offTrackMetres),
+          });
+        }
+      }
+
+      this.lineStations.set(lineId, projectedStations
+        .filter(st => st.offTrackMetres <= MAX_STATION_OFFSET_METRES)
+        .sort((a, b) => a.trackDist - b.trackDist));
+    }
+  }
+
+  getLineTrack(lineId) {
+    return this.lineTracks.get(String(lineId));
+  }
+
+  getLineStations(lineId) {
+    return this.lineStations.get(String(lineId)) || [];
+  }
+
+  /**
+   * Seconds between arriving at one station and arriving at the next, taken
+   * from the timetable where it exists. Includes the dwell at the origin.
+   */
+  getSegmentSeconds(lineId, from, to) {
+    const track = this.getLineTrack(lineId);
+    if (!track) return DWELL_SECONDS + 60;
+
+    if (from.stopId && to.stopId) {
+      const forward = track.segments[`${from.stopId}>${to.stopId}`];
+      if (forward) return forward;
+      // Timetables are directional but running times are near-symmetric, and
+      // some segments are only ever served one way in the feed.
+      const reverse = track.segments[`${to.stopId}>${from.stopId}`];
+      if (reverse) return reverse;
+    }
+
+    const metres = Math.abs(to.trackDist - from.trackDist);
+    return Math.max(track.minSegmentSeconds, Math.round(metres / track.fallbackSpeed));
+  }
+
+  /**
+   * [lng, lat] and bearing at a distance along the track.
+   */
+  getCoordsAndBearingAtDistance(lineId, distanceMeters, isForward = true) {
+    const track = this.getLineTrack(lineId);
+    if (!track) return { coordinates: [0, 0], bearing: 0 };
+
+    const dist = Math.max(0, Math.min(track.totalLength, distanceMeters));
+    const { coords, cumDists } = track;
+
+    // Binary search for segment
+    let low = 0;
+    let high = cumDists.length - 1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (cumDists[mid] <= dist) {
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    const idx = Math.max(0, Math.min(coords.length - 2, high));
+    const segStartDist = cumDists[idx];
+    const segEndDist = cumDists[idx + 1];
+    const segLen = segEndDist - segStartDist;
+    const t = segLen > 0 ? (dist - segStartDist) / segLen : 0;
+
+    const p1 = coords[idx];
+    const p2 = coords[idx + 1];
+    const lng = p1[0] + t * (p2[0] - p1[0]);
+    const lat = p1[1] + t * (p2[1] - p1[1]);
+
+    // Bearing
+    const dx = isForward ? (p2[0] - p1[0]) : (p1[0] - p2[0]);
+    const dy = isForward ? (p2[1] - p1[1]) : (p1[1] - p2[1]);
+    const rad = Math.atan2(dx, dy);
+    const bearing = (rad * 180 / Math.PI + 360) % 360;
+
+    return { coordinates: [lng, lat], bearing };
+  }
+
+  findStation(lineId, stationName) {
+    const stations = this.getLineStations(lineId);
+    const target = normalise(stationName);
+    if (!target) return null;
+
+    const exact = stations.find(s => normalise(s.name) === target);
+    if (exact) return exact;
+
+    return stations.find(
+      s => normalise(s.name).includes(target) || target.includes(normalise(s.name))
+    ) || null;
+  }
+
+  /**
+   * Which way along the track is this train travelling?
+   *
+   * The headsign is a real station name, so locating it on the line gives the
+   * answer directly; the terminus checks are only there for the handful of
+   * headsigns that name a station on a branch this polyline does not cover.
+   */
+  resolveDirection(lineId, destination, target) {
+    const stations = this.getLineStations(lineId);
+    if (stations.length < 2 || !target) return true;
+
+    const destination_ = this.findStation(lineId, destination);
+    if (destination_ && destination_.trackDist !== target.trackDist) {
+      return destination_.trackDist > target.trackDist;
+    }
+
+    const normDest = normalise(destination);
+    const firstStop = stations[0];
+    const lastStop = stations[stations.length - 1];
+    if (normDest && normalise(firstStop.name).startsWith(normDest.slice(0, 4))) return false;
+    if (normDest && normalise(lastStop.name).startsWith(normDest.slice(0, 4))) return true;
+
+    return true;
+  }
+
+  /**
+   * Walk the station chain to place a train that is `secondsToTarget` away from
+   * `target`, spending each segment's timetabled interval on the way.
+   *
+   * A negative countdown means the train has already called at the target and
+   * is walked forwards instead.
+   */
+  walkFromStation(lineId, target, secondsToTarget, isForward) {
+    const track = this.getLineTrack(lineId);
+    const stations = this.getLineStations(lineId);
+    if (!track || !target) return null;
+
+    const targetIndex = stations.findIndex(s => s.id === target.id);
+    if (targetIndex < 0) return null;
+
+    // Walking backwards from the target means stepping against the direction of
+    // travel; walking forwards from it means stepping with the direction.
+    const stepBack = isForward ? -1 : 1;
+
+    if (secondsToTarget <= 0) {
+      let remaining = -secondsToTarget;
+      if (remaining <= DWELL_SECONDS) {
+        return { trackDist: target.trackDist, status: 'At Platform', nextStation: target };
+      }
+      remaining -= DWELL_SECONDS;
+
+      let fromIndex = targetIndex;
+      while (true) {
+        const toIndex = fromIndex - stepBack;
+        if (toIndex < 0 || toIndex >= stations.length) {
+          return { trackDist: stations[fromIndex].trackDist, status: 'At Terminus', nextStation: stations[fromIndex] };
+        }
+        const from = stations[fromIndex];
+        const to = stations[toIndex];
+        const running = Math.max(1, this.getSegmentSeconds(lineId, from, to) - DWELL_SECONDS);
+
+        if (remaining <= running) {
+          const progress = remaining / running;
+          return {
+            trackDist: from.trackDist + (to.trackDist - from.trackDist) * progress,
+            status: 'En Route',
+            nextStation: to,
+          };
+        }
+        remaining -= running;
+        if (remaining <= DWELL_SECONDS) {
+          return { trackDist: to.trackDist, status: 'At Platform', nextStation: to };
+        }
+        remaining -= DWELL_SECONDS;
+        fromIndex = toIndex;
+      }
+    }
+
+    let remaining = secondsToTarget;
+    let arrivalIndex = targetIndex;
+
+    while (true) {
+      const departureIndex = arrivalIndex + stepBack;
+      if (departureIndex < 0 || departureIndex >= stations.length) {
+        // The prediction reaches further back than this line's geometry goes,
+        // which happens on branches the polyline does not cover. Hold at the
+        // terminus rather than inventing track.
+        return {
+          trackDist: stations[arrivalIndex].trackDist,
+          status: 'At Terminus',
+          nextStation: stations[targetIndex],
+        };
+      }
+
+      const departure = stations[departureIndex];
+      const arrival = stations[arrivalIndex];
+      const running = Math.max(1, this.getSegmentSeconds(lineId, departure, arrival) - DWELL_SECONDS);
+
+      if (remaining <= running) {
+        const progress = 1 - remaining / running;
+        return {
+          trackDist: departure.trackDist + (arrival.trackDist - departure.trackDist) * progress,
+          status: remaining <= 60 ? 'Approaching' : 'En Route',
+          nextStation: arrival,
+        };
+      }
+
+      remaining -= running;
+      if (remaining <= DWELL_SECONDS) {
+        return { trackDist: departure.trackDist, status: 'At Platform', nextStation: arrival };
+      }
+      remaining -= DWELL_SECONDS;
+      arrivalIndex = departureIndex;
+    }
+  }
+
+  /**
+   * Position a train from one arrival prediction.
+   */
+  estimatePositionFromArrival(lineId, destination, targetStationName, secondsToTarget) {
+    const stations = this.getLineStations(lineId);
+    if (!this.getLineTrack(lineId) || stations.length === 0) return null;
+
+    const target = this.findStation(lineId, targetStationName);
+    if (!target) return null;
+
+    const isForward = this.resolveDirection(lineId, destination, target);
+    const walked = this.walkFromStation(lineId, target, secondsToTarget, isForward);
+    if (!walked) return null;
+
+    const { coordinates, bearing } = this.getCoordsAndBearingAtDistance(lineId, walked.trackDist, isForward);
+    return {
+      coordinates,
+      bearing,
+      distanceAlongTrack: walked.trackDist,
+      isForward,
+      status: walked.status,
+      targetStation: target.name,
+      nextStation: walked.nextStation ? walked.nextStation.name : target.name,
+      secondsToTarget: Math.round(secondsToTarget),
+    };
+  }
+
+  /**
+   * Gather every sighting of every vehicle across all cached stations.
+   *
+   * The same train is routinely predicted at several stations at once. Each
+   * sighting is a separate constraint on where it is, and the nearest one in
+   * time is the most reliable, because walk error grows with the countdown.
+   */
+  collectVehicleSightings(now) {
+    const byVehicle = new Map();
+
+    for (const [, entry] of arrivalStore.memory.entries()) {
+      if (!entry || !Array.isArray(entry.arrivals)) continue;
+
+      for (const arrival of entry.arrivals) {
+        if (!arrival.isLive || !arrival.targetTimestamp) continue;
+
+        const secondsRemaining = (arrival.targetTimestamp - now) / 1000;
+        if (secondsRemaining < -MAX_SECONDS_PAST || secondsRemaining > MAX_SECONDS_AHEAD) continue;
+
+        const lineId = String(arrival.line);
+        const station = this.findStation(lineId, entry.stationName);
+        if (!station) continue;
+
+        // Without a vehicle id from the API, a sighting cannot be tied to any
+        // other, so it stands alone as its own train.
+        const key = arrival.vehicleId
+          ? `${lineId}-${arrival.vehicleId}`
+          : `${lineId}-${arrival.destination}-${Math.round(arrival.targetTimestamp / 60000)}`;
+
+        if (!byVehicle.has(key)) {
+          byVehicle.set(key, {
+            key,
+            lineId,
+            vehicleId: arrival.vehicleId || null,
+            destination: arrival.destination,
+            sightings: [],
+          });
+        }
+        byVehicle.get(key).sightings.push({ station, secondsRemaining });
+      }
+    }
+
+    return byVehicle;
+  }
+
+  /**
+   * Extract real-time trains from arrival memory.
+   */
+  getLiveVehiclesFromMemory(now = Date.now()) {
+    const vehicles = [];
+
+    for (const train of this.collectVehicleSightings(now).values()) {
+      const sightings = train.sightings.sort(
+        (a, b) => Math.abs(a.secondsRemaining) - Math.abs(b.secondsRemaining)
+      );
+      const anchor = sightings[0];
+
+      // Two sightings settle the direction outright: the station the train
+      // reaches later is the one it is heading towards. That beats matching the
+      // headsign against station names.
+      let isForward;
+      const other = sightings.find(s => s.station.trackDist !== anchor.station.trackDist);
+      if (other) {
+        const laterStation = other.secondsRemaining > anchor.secondsRemaining ? other : anchor;
+        const earlierStation = laterStation === other ? anchor : other;
+        isForward = laterStation.station.trackDist > earlierStation.station.trackDist;
+      } else {
+        isForward = this.resolveDirection(train.lineId, train.destination, anchor.station);
+      }
+
+      const walked = this.walkFromStation(
+        train.lineId, anchor.station, anchor.secondsRemaining, isForward
+      );
+      if (!walked) continue;
+
+      const { coordinates, bearing } = this.getCoordsAndBearingAtDistance(
+        train.lineId, walked.trackDist, isForward
+      );
+
+      vehicles.push({
+        id: `live-${train.key}`,
+        line: train.lineId,
+        vehicleId: train.vehicleId,
+        direction: train.destination,
+        coordinates,
+        bearing,
+        distanceAlongTrack: walked.trackDist,
+        isForward,
+        isLive: true,
+        status: walked.status,
+        sightingCount: sightings.length,
+        targetStation: walked.nextStation ? walked.nextStation.name : anchor.station.name,
+        secondsToTarget: Math.max(0, Math.round(anchor.secondsRemaining)),
+      });
+    }
+
+    return vehicles;
+  }
+
+  /**
+   * Headway simulation for lines with no live data. These are not real trains
+   * and callers must present them as such.
+   */
+  getHeadwayVehiclesForLine(lineId, now = Date.now()) {
+    const track = this.getLineTrack(lineId);
+    const stations = this.getLineStations(lineId);
+    if (!track || stations.length < 2) return [];
+
+    const firstStop = stations[0];
+    const lastStop = stations[stations.length - 1];
+    const totalLength = track.totalLength;
+    const speed = track.fallbackSpeed;
+
+    // One round-trip cycle duration in milliseconds
+    const oneWaySecs = totalLength / speed;
+    const cycleTimeMs = Math.max(600000, oneWaySecs * 1000 * 2.2);
+
+    // Number of trains per direction based on line length
+    const numTrainsPerDir = totalLength > 40000 ? 3 : (totalLength > 15000 ? 2 : 1);
+    const vehicles = [];
+
+    for (let dir = 0; dir < 2; dir++) {
+      const isForward = dir === 0;
+      const destination = isForward ? lastStop.name : firstStop.name;
+
+      for (let tIdx = 0; tIdx < numTrainsPerDir; tIdx++) {
+        const offsetMs = (cycleTimeMs / numTrainsPerDir) * tIdx + (dir * (cycleTimeMs / (numTrainsPerDir * 2)));
+        const cycleProgress = (((now + offsetMs) % cycleTimeMs) / cycleTimeMs);
+
+        // Ping-pong smoothly along the line
+        const posProgress = cycleProgress > 0.5 ? (1 - cycleProgress) * 2 : cycleProgress * 2;
+        const currentDist = posProgress * totalLength;
+
+        // Determine nearest upcoming station
+        let nearestTarget = isForward ? lastStop : firstStop;
+        for (const st of stations) {
+          if (isForward && st.trackDist >= currentDist) {
+            nearestTarget = st;
+            break;
+          } else if (!isForward && st.trackDist <= currentDist) {
+            nearestTarget = st;
+            break;
+          }
+        }
+
+        const remainingDist = Math.abs(nearestTarget.trackDist - currentDist);
+        const secondsToTarget = Math.round(remainingDist / speed);
+
+        const { coordinates, bearing } = this.getCoordsAndBearingAtDistance(lineId, currentDist, isForward);
+
+        vehicles.push({
+          id: `sim-L${lineId}-${isForward ? 'fwd' : 'rev'}-${tIdx}`,
+          line: lineId,
+          direction: destination,
+          coordinates,
+          bearing,
+          distanceAlongTrack: currentDist,
+          isForward,
+          isLive: false,
+          isSimulated: true,
+          targetStation: nearestTarget.name,
+          secondsToTarget,
+        });
+      }
+    }
+
+    return vehicles;
+  }
+
+  /**
+   * Ease a marker towards its computed position so a fresh fetch does not make
+   * it jump. Live trains only: simulated ones are already continuous.
+   */
+  smoothVehicle(vehicle, now) {
+    if (!vehicle.isLive) return vehicle;
+
+    const previous = this.renderState.get(vehicle.id);
+    this.renderState.set(vehicle.id, {
+      trackDist: vehicle.distanceAlongTrack,
+      at: now,
+    });
+
+    if (!previous) return vehicle;
+
+    const jump = Math.abs(vehicle.distanceAlongTrack - previous.trackDist);
+    // Below this the marker is simply moving; far above it the anchor changed
+    // so much that easing would drag the train visibly along the track.
+    if (jump < 5 || jump > 2000) return vehicle;
+
+    const elapsed = Math.max(0, now - previous.at);
+    const blend = Math.min(1, elapsed / 900);
+    const eased = previous.trackDist + (vehicle.distanceAlongTrack - previous.trackDist) * blend;
+    const { coordinates, bearing } = this.getCoordsAndBearingAtDistance(
+      vehicle.line, eased, vehicle.isForward !== false
+    );
+
+    this.renderState.set(vehicle.id, { trackDist: eased, at: now });
+    return { ...vehicle, coordinates, bearing, distanceAlongTrack: eased };
+  }
+
+  /**
+   * Main entry point: live trains where we have predictions, headway trains
+   * elsewhere.
+   */
+  getAllVehicles(now = Date.now()) {
+    const liveVehicles = this.getLiveVehiclesFromMemory(now);
+    const allVehicles = [...liveVehicles];
+
+    for (let l = 1; l <= 10; l++) {
+      const lineId = String(l);
+      const liveOnLine = liveVehicles.filter(v => v.line === lineId);
+
+      if (liveOnLine.length === 0) {
+        allVehicles.push(...this.getHeadwayVehiclesForLine(lineId, now));
+      } else if (liveOnLine.length === 1) {
+        // Add opposite direction headway train
+        const simulated = this.getHeadwayVehiclesForLine(lineId, now);
+        const oppSim = simulated.find(s => s.direction !== liveOnLine[0].direction);
+        if (oppSim) allVehicles.push(oppSim);
+      }
+    }
+
+    // Drop render state for trains that are no longer on the map.
+    const alive = new Set(allVehicles.map(v => v.id));
+    for (const id of this.renderState.keys()) {
+      if (!alive.has(id)) this.renderState.delete(id);
+    }
+
+    return allVehicles.map(v => this.smoothVehicle(v, now));
+  }
+}
+
+export const trainPositionEngine = new TrainPositionEngine();
+export default trainPositionEngine;

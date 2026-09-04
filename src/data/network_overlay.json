@@ -1,0 +1,12 @@
+{
+  "note": "Corrections applied on top of the GTFS feed by scripts/generate_gtfs_geojson.cjs. Empty is the healthy state: it means the feed describes the network as it actually runs. Add entries here only for something the feed gets wrong, and always with a source and a date, so the next person can tell a real correction from a stale workaround.",
+  "history": [
+    {
+      "removed": "2026-09-04",
+      "was": "Aragó, Amistat and Ayora added by hand, plus lines 5 and 7 tagged onto Marítim",
+      "why": "The 2026-07-28 feed had no line 5 or 7 service east of Alameda and its service calendar had already expired on 2026-08-30. The live arrivals API was returning line 5 trains bound for Marítim, so the feed was stale rather than the network being out of service. The 2026-09-02 feed carries all three stations as real stops (Aragó 120, Amistat 121, Ayora 122) and the eastern routes, so the overlay is no longer needed."
+    }
+  ],
+  "addStations": [],
+  "addLinesToStations": {}
+}
