@@ -8,7 +8,11 @@ npm run dev      # http://localhost:5173
 npm test
 ```
 
-`CONTEXT.md` is the glossary. Read it before naming anything.
+`CONTEXT.md` is the glossary — read it before naming anything. The decisions behind the design are in `docs/adr/`:
+
+- [ADR-0001](docs/adr/0001-walk-the-timetable-to-place-trains.md) — why positions come from a timetable walk, not a speed constant
+- [ADR-0002](docs/adr/0002-one-polyline-per-line-no-branches.md) — why branches are unsupported, and what that costs
+- [ADR-0003](docs/adr/0003-gtfs-feeds-are-refetchable-input.md) — why feeds are fetched, not committed
 
 ## How a train gets on the map
 

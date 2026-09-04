@@ -41,7 +41,7 @@ The consumption limit of upstream real-time API requests, managed by client-side
 _Avoid_: Request ceiling, throttle counter
 
 **Timetable Walk**:
-The method of calculating a Vehicle's coordinate and heading: step back along the Station Chain from the Station it is due at, spending each Segment Interval in turn, until its time remaining ($T$) is used up. Replaced Kinematic Track Projection, which multiplied $T$ by a single Commercial Speed and so placed every Vehicle about 40% too far back.
+The method of calculating a Vehicle's coordinate and heading: step back along the Station Chain from the Station it is due at, spending each Segment Interval in turn, until its time remaining ($T$) is used up. Replaced Kinematic Track Projection, which multiplied $T$ by a single Commercial Speed and so placed every Vehicle about 40% too far back. See ADR-0001.
 _Avoid_: Kinematic track projection, coordinate mapping, vector estimation
 
 **Station Chain**:
@@ -65,7 +65,7 @@ One prediction of one Vehicle at one Station. The same Vehicle is routinely sigh
 _Avoid_: Observation, ping, report
 
 **Off-Track Station**:
-A Station a Line serves that its Track Geometry cannot reach, because the geometry omits a branch — Line 9 lists Rafelbunyol but its geometry stops 9.8 km short. Held out of the Station Chain, since projecting it onto the nearest point of the wrong track corrupts every position computed through it.
+A Station a Line serves that its Track Geometry cannot reach, because the geometry omits a branch — Lines 5 and 7 both run north to Machado, 2 km off their polylines. Held out of the Station Chain, since projecting it onto the nearest point of the wrong track corrupts every position computed through it. See ADR-0002.
 _Avoid_: Missing station, unmatched stop
 
 **Simulated Train**:
@@ -87,7 +87,7 @@ _Avoid_: Refresh all, sync all, update all stations
 ### Data Sources
 
 **GTFS Feed**:
-Official General Transit Feed Specification dataset providing scheduled trips, calendar dates, stop times, and station positions.
+Official General Transit Feed Specification dataset providing scheduled trips, calendar dates, stop times, and station positions. Refetched rather than committed (`npm run fetch:gtfs`), because a feed carries a service calendar that expires — a lapsed one lists no trips for today. See ADR-0003.
 _Avoid_: Timetable dump, static schedule
 
 **OSM Rail Geometry**:
