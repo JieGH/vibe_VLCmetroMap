@@ -14,11 +14,15 @@ export default defineConfig({
     // to just above the current bundle rather than silenced: that keeps it
     // working as a ratchet, tripping if the bundle grows again.
     //
-    // Everything reducible has been reduced — line geometry is simplified
-    // (scripts/simplify_line_geometry.cjs), line 4's OSM geometry is fetched
-    // from public/ instead of imported, and react-map-gl was an unused
-    // dependency. Remaining option if this ever matters: lazy-load MapView so
-    // the sidebar paints before the map engine arrives.
+    // The only real reduction available was the line geometry, simplified by
+    // scripts/simplify_line_geometry.cjs: 1,373 kB → 1,265 kB, essentially all
+    // of it metro_lines.json. Line 4's geometry moving to public/ and the
+    // react-map-gl removal were correctness and hygiene fixes — neither was in
+    // the bundle to begin with, so neither saved a byte.
+    //
+    // Remaining option if this ever matters: lazy-load MapView so the sidebar
+    // paints before the map engine arrives. It defers bytes rather than
+    // removing them, which is why it was not done here.
     chunkSizeWarningLimit: 1300,
   },
   server: {

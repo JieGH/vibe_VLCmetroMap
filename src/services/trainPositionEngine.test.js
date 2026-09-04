@@ -131,21 +131,11 @@ describe('track geometry fidelity', () => {
     }
   });
 
-  it('keeps every station close to where it projected before', () => {
-    // A station's trackDist is the anchor the walk interpolates from, so a
-    // shift here moves every train near it by the same amount.
-    for (let l = 1; l <= 10; l++) {
-      const lineId = String(l);
-      for (const station of trainPositionEngine.getLineStations(lineId)) {
-        const { coordinates } = trainPositionEngine
-          .getCoordsAndBearingAtDistance(lineId, station.trackDist, true);
-        expect(
-          haversineDistance(station.coords, coordinates),
-          `${lineId} ${station.name}`
-        ).toBeLessThan(250);
-      }
-    }
-  });
+  // There is deliberately no "stations are still near their track" test here.
+  // The engine filters its chains to offTrackMetres <= 250 when it builds them,
+  // so any such assertion re-measures an already-filtered set and cannot fail —
+  // over-simplification would show up as a station silently *leaving* a chain,
+  // which is what the chain-size test above actually catches.
 });
 
 describe('walking the station chain', () => {

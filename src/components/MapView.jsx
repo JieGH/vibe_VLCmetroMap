@@ -11,12 +11,23 @@ import lineRenderConfig from '../data/line_render_config.js';
 // directory Vite copies into a build verbatim — served from src/ it resolved in
 // dev and 404'd in production, where the catch below swallowed the failure and
 // line 4 silently fell back to the coarser metro_lines.json geometry.
+// Failing to load it is not fatal — line 4 falls back to the metro_lines.json
+// alignment — but it must not be silent, because that silence is exactly how
+// the production 404 went unnoticed.
 let line4Osm = null;
 try {
   // eslint-disable-next-line no-undef
-  line4Osm = await fetch('/line4_osm.geojson').then(r => r.ok ? r.json() : null).catch(() => null);
-} catch {
-  line4Osm = null;
+  const response = await fetch('/line4_osm.geojson');
+  if (response.ok) {
+    line4Osm = await response.json();
+  } else {
+    console.warn(
+      `Line 4 OSM geometry unavailable (HTTP ${response.status}); ` +
+      'falling back to the coarser metro_lines.json alignment.'
+    );
+  }
+} catch (error) {
+  console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
 import arrivalStore from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';

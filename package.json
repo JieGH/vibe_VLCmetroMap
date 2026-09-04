@@ -15,7 +15,8 @@
     "build:stations": "node scripts/generate_gtfs_geojson.cjs",
     "fetch:line4": "node --no-warnings scripts/fetch_line4_overpass.cjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs"
   },
   "dependencies": {
     "lucide-react": "^1.29.0",

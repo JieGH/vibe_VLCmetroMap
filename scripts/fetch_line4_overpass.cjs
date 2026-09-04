@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// Fetch Line 4 geometry from Overpass and write GeoJSON to src/data/line4_osm.geojson
-// Usage: npm run fetch:line4 (install deps: node-fetch and osmtogeojson)
+// Fetch Line 4 geometry from Overpass and write GeoJSON to public/line4_osm.geojson
+// Usage: npm run fetch:line4
+// Needs node-fetch and osmtogeojson, neither of which is a dependency yet, so
+// this cannot run as-is — see README on why the raw dump stays committed.
 
 const fs = require('fs');
 const fetch = require('node-fetch');
