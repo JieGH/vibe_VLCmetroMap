@@ -42,6 +42,8 @@ npm test               # confirm the network still looks sane
 
 - **`src/data/gtfs_expanded.json`** — every station with the lines it serves, plus line geometry.
 - **`src/data/segment_times.json`** — median seconds between consecutive station arrivals, per line. ~440 segments, 12 KB. This is what the walk spends.
+- **`src/data/metro_lines.json`** — the Track Geometry the engine projects onto. Simplified to 3 m tolerance by `npm run build:geometry` (5,747 → 988 points, 414 KB → 29 KB) because the engine imports it synchronously and so it ships in the JS chunk. Re-run that after replacing the geometry, and check `npm test` — the track-geometry-fidelity tests fail if simplification drops a station out of a chain.
+- **`public/line4_osm.geojson`** — line 4's finer OSM alignment, `fetch`ed at runtime rather than imported so its 209 KB stays out of the bundle. It must live in `public/`; served from `src/` it resolves in dev and 404s in production.
 - **`src/data/network_overlay.json`** — corrections applied on top of the feed. **Empty is the healthy state.** It exists because the feed bundled in July 2026 had already expired and predated lines 5 and 7 returning east of Alameda, while the live API was reporting trains bound for Marítim. A fresh feed made the overlay redundant; its `history` records why it existed.
 
 **Refetch the feed when positions look wrong.** A GTFS feed carries a service calendar that expires, and a lapsed feed yields a timetable with no trips for today. The scripts always take the newest dated directory.

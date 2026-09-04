@@ -17,7 +17,7 @@ relation["route"~"subway|light_rail|tram"]["ref"="4"]["network"~"Metro|metro|Met
     const osmJson = await res.json();
     console.log('Converting OSM JSON to GeoJSON...');
     const geo = osmtogeojson(osmJson);
-    const outPath = './src/data/line4_osm.geojson';
+    const outPath = './public/line4_osm.geojson';
     fs.writeFileSync(outPath, JSON.stringify(geo, null, 2));
     console.log('Wrote', outPath);
   } catch (err) {

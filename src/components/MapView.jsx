@@ -6,15 +6,16 @@ import gtfsData from '../data/gtfs_expanded.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import lineRenderConfig from '../data/line_render_config.js';
 
-// Load local OSM-derived Line 4 GeoJSON at runtime to avoid bundler JSON import issues
+// Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
+// stays out of the JS chunk. It lives in public/ because that is the only
+// directory Vite copies into a build verbatim — served from src/ it resolved in
+// dev and 404'd in production, where the catch below swallowed the failure and
+// line 4 silently fell back to the coarser metro_lines.json geometry.
 let line4Osm = null;
 try {
-  // top-level await is supported by Vite; fetch the geojson file directly
-  // so the browser parses it as JSON rather than the bundler attempting to
-  // treat the .geojson file as an ES module.
   // eslint-disable-next-line no-undef
-  line4Osm = await fetch('/src/data/line4_osm.geojson').then(r => r.ok ? r.json() : null).catch(() => null);
-} catch (e) {
+  line4Osm = await fetch('/line4_osm.geojson').then(r => r.ok ? r.json() : null).catch(() => null);
+} catch {
   line4Osm = null;
 }
 import arrivalStore from '../services/arrivalStore';

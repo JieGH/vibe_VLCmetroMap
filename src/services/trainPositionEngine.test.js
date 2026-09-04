@@ -101,6 +101,53 @@ describe('network coverage', () => {
   });
 });
 
+describe('track geometry fidelity', () => {
+  // Locked deliberately. The polylines are simplified to keep them out of the
+  // JS chunk, and the failure mode of over-simplifying is silent: a station
+  // drifts past the 250 m off-track threshold, drops out of its chain, and
+  // every position computed through that stretch shifts. Chain sizes catch
+  // that; a diff here means the network shape changed, not just the geometry.
+  const EXPECTED_CHAIN_SIZES = {
+    1: 40, 2: 34, 3: 27, 4: 31, 5: 18, 6: 21, 7: 16, 8: 4, 9: 23, 10: 8,
+  };
+
+  // Metres. Simplification must not change how long a line is.
+  const EXPECTED_TRACK_LENGTHS = {
+    1: 72164, 2: 40097, 3: 24673, 4: 14996, 5: 13320,
+    6: 8854, 7: 15738, 8: 1282, 9: 23418, 10: 5017,
+  };
+
+  it('keeps every line chain intact', () => {
+    const actual = {};
+    for (let l = 1; l <= 10; l++) actual[l] = trainPositionEngine.getLineStations(String(l)).length;
+    expect(actual).toEqual(EXPECTED_CHAIN_SIZES);
+  });
+
+  it('preserves each line’s length to within 0.5%', () => {
+    for (const [line, expected] of Object.entries(EXPECTED_TRACK_LENGTHS)) {
+      const actual = trainPositionEngine.getLineTrack(line).totalLength;
+      const drift = Math.abs(actual - expected) / expected;
+      expect(drift, `line ${line}: ${Math.round(actual)}m vs ${expected}m`).toBeLessThan(0.005);
+    }
+  });
+
+  it('keeps every station close to where it projected before', () => {
+    // A station's trackDist is the anchor the walk interpolates from, so a
+    // shift here moves every train near it by the same amount.
+    for (let l = 1; l <= 10; l++) {
+      const lineId = String(l);
+      for (const station of trainPositionEngine.getLineStations(lineId)) {
+        const { coordinates } = trainPositionEngine
+          .getCoordsAndBearingAtDistance(lineId, station.trackDist, true);
+        expect(
+          haversineDistance(station.coords, coordinates),
+          `${lineId} ${station.name}`
+        ).toBeLessThan(250);
+      }
+    }
+  });
+});
+
 describe('walking the station chain', () => {
   it('puts a train at the platform when its countdown is spent', () => {
     const position = trainPositionEngine
