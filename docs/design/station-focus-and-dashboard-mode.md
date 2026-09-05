@@ -48,6 +48,8 @@ Direction comes from the engine, not from string-matching the headsign: `trainPo
 
 A Station served by several Lines puts all of them in the same two groups, ordered by countdown. The alternative — one group per Line per direction — was rejected: at Àngel Guimerà that is ten columns, which is a table, not a glance.
 
+**The caveat this model carries**, found while building it: "forward" is per-Line, so at an interchange the two groups are *not* two compass directions. At Àngel Guimerà, L5 towards Marítim (east) lands in the same group as L3 towards Rafelbunyol (north), because both run towards increasing track distance on their own Line. It is exactly right at a Station on one or two Lines, which is most of the network, and rough at the handful of big interchanges. Two things keep it honest: the group label names every terminus in it, and each group carries the mean bearing of the track it leaves on — averaged as unit vectors, since bearings wrap — so the marker's arms point where the track actually goes rather than assuming up and down. If the hub case turns out to read badly, the fix is to group by bearing rather than by track direction, and that is a change to this one function.
+
 ### Countdown Heat
 
 Each arrival's countdown is coloured on a red→amber→green ramp: imminent is hot.

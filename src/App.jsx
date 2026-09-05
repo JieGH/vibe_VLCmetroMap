@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
-import StationDetailCard from './components/StationDetailCard';
-import { Sun, Moon, X } from 'lucide-react';
+import StationPanel from './components/StationPanel';
+import DashboardBoard from './components/DashboardBoard';
+import { Sun, Moon, X, LayoutDashboard } from 'lucide-react';
 import './index.css';
+
+// Dashboard mode is bookmarkable so an unattended tablet can boot straight into
+// it, and reachable from a button so it is discoverable from the map.
+const readMode = () =>
+  new URLSearchParams(window.location.search).get('mode') === 'dashboard' ? 'dashboard' : 'map';
 
 function App() {
   const [theme, setTheme] = useState('dark');
+  const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedStation, setSelectedStation] = useState(null);
   const [flyTarget, setFlyTarget] = useState(null);
@@ -48,6 +55,30 @@ function App() {
     return colors[lineId] || '#888';
   };
 
+  const selectMode = (next) => {
+    const url = new URL(window.location.href);
+    if (next === 'dashboard') url.searchParams.set('mode', 'dashboard');
+    else url.searchParams.delete('mode');
+    window.history.replaceState({}, '', url);
+    setMode(next);
+  };
+
+  // Back and forward have to land on the mode the URL names, or a bookmarked
+  // dashboard stops being a reliable place to return to.
+  useEffect(() => {
+    const onPopState = () => setMode(readMode());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  if (mode === 'dashboard') {
+    return (
+      <div className="app-container">
+        <DashboardBoard theme={theme} onExit={() => selectMode('map')} />
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       {/* Full-screen interactive map */}
@@ -80,6 +111,21 @@ function App() {
           activeLineFilter={activeLineFilter}
         />
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
+        <button
+          onClick={() => selectMode('dashboard')}
+          style={{
+            padding: '8px',
+            borderRadius: '8px',
+            background: 'var(--bg-hover)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+          title="Dashboard mode — a departure board for an ambient display"
+        >
+          <LayoutDashboard size={18} />
+        </button>
         <button
           onClick={toggleTheme}
           style={{
@@ -116,10 +162,11 @@ function App() {
         </button>
       )}
 
-      {/* Station Detail Card */}
+      {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
-        <StationDetailCard
+        <StationPanel
           station={selectedStation}
+          theme={theme}
           onClose={() => setSelectedStation(null)}
           onCenter={() => handleCenterStation(selectedStation)}
         />

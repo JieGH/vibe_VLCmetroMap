@@ -31,6 +31,8 @@ try {
 }
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
+import { getStationFocus } from '../services/stationFocus';
+import { countdownHeat } from '../utils/countdownHeat';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -265,6 +267,54 @@ const describePositionDoubt = (v) => {
   return ` • ${basis}, last confirmed ${confirmed}`;
 };
 
+// The expanded Station node's markup. Built as a string because it lives inside
+// a MapLibre Marker, outside React's tree, and is redrawn every second.
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+));
+
+const focusCountdown = (seconds) => (
+  seconds <= 0 ? 'Due' : seconds < 60 ? '<1' : String(Math.round(seconds / 60))
+);
+
+const renderFocusNode = (focus, theme) => {
+  const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
+  const text = theme === 'light' ? '#121212' : '#ffffff';
+  const muted = theme === 'light' ? '#5f6368' : '#a0a0b0';
+  const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
+
+  const arms = focus.directions.map((direction) => {
+    const next = direction.arrivals[0];
+    // The arrow points the way the track actually leaves this Station, which is
+    // why each Direction Group carries a bearing. 0° is north; the glyph points
+    // up at rest, so the bearing rotates it directly.
+    const rotation = direction.bearing === null ? 0 : Math.round(direction.bearing);
+    const badge = next
+      ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;background:${lineColorMap[next.line] || '#8a8a8a'};color:#000;font:900 11px/1 system-ui">${escapeHtml(next.line)}</span>`
+      : '';
+    const due = next
+      ? `<span style="font:800 17px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${focusCountdown(next.seconds)}</span>`
+      : `<span style="font:600 11px/1 system-ui;color:${muted}">none</span>`;
+
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px">
+        <span aria-hidden="true" style="display:inline-block;font:700 13px/1 system-ui;color:${muted};transform:rotate(${rotation}deg)">&#9650;</span>
+        <span style="flex:1;min-width:0;font:600 12px/1.25 system-ui;color:${text};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(direction.label)}</span>
+        ${badge}
+        ${due}
+      </div>`;
+  }).join(`<div style="height:1px;background:${border}"></div>`);
+
+  return `
+    <div style="min-width:212px;max-width:280px;border-radius:12px;background:${panel};border:1px solid ${border};box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden">
+      <div style="padding:8px 10px 6px;border-bottom:1px solid ${border}">
+        <div style="font:800 13px/1.2 system-ui;color:${text};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(focus.name)}</div>
+        <div style="font:600 9px/1.2 system-ui;letter-spacing:.1em;text-transform:uppercase;color:${focus.isFresh ? '#4CAF50' : '#00B4D8'};margin-top:3px">${focus.isFresh ? 'Live API' : 'From memory'}</div>
+      </div>
+      ${arms || `<div style="padding:9px 10px;font:600 11px/1 system-ui;color:${muted}">No live trains</div>`}
+    </div>`;
+};
+
 /** Picks the first line's color for a station marker border */
 const stationBorderColor = (st) => {
   const lines = st.properties.lines || [];
@@ -272,6 +322,11 @@ const stationBorderColor = (st) => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
+// The zoom a focused Station eases to. Close enough that the expanded node has
+// room beside its neighbours, not so close that the rest of the Line leaves the
+// screen and the map stops being a map.
+const STATION_FOCUS_ZOOM = 14.6;
+
 const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine }) => {
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -287,6 +342,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const hoverRef        = useRef(null);
   const selectStRef     = useRef(onSelectStation);
   const trainCountRef   = useRef(null);
+  const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
   const vehInnerElemsRef= useRef([]); // refs to vehicle inner elements for direct scale updates
@@ -686,6 +742,49 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!map) return;
     if (map.isStyleLoaded()) initStationMarkers(map);
   }, [hoverLine]);
+
+  // ── Station Focus ──────────────────────────────────────────────────────────
+  // Clicking a Station does two things here: the camera eases in to centre it,
+  // and its marker grows into a node showing both directions with the next
+  // train on each. The node redraws every second so its countdowns tick.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    if (focusMarkerRef.current) {
+      focusMarkerRef.current.remove();
+      focusMarkerRef.current = null;
+    }
+    if (!selectedStation) return undefined;
+
+    const coordinates = selectedStation.geometry.coordinates;
+    map.easeTo({
+      center: coordinates,
+      zoom: Math.max(map.getZoom(), STATION_FOCUS_ZOOM),
+      duration: 900,
+      essential: true,
+    });
+
+    const element = document.createElement('div');
+    element.className = 'station-focus-node';
+    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -14] })
+      .setLngLat(coordinates)
+      .addTo(map);
+    focusMarkerRef.current = marker;
+
+    const render = () => {
+      const focus = getStationFocus(selectedStation.properties, Date.now());
+      element.innerHTML = renderFocusNode(focus, themeRef.current);
+    };
+    render();
+    const id = setInterval(render, 1000);
+
+    return () => {
+      clearInterval(id);
+      marker.remove();
+      if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
+    };
+  }, [selectedStation]);
 
   return (
     <div
