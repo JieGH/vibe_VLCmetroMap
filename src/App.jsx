@@ -6,7 +6,38 @@ import StationDetailCard from './components/StationDetailCard';
 import { Sun, Moon, X } from 'lucide-react';
 import './index.css';
 
+// PROTOTYPE — throwaway, see src/prototype/README.md. Four options on this one
+// route via ?variant=. The whole block is gated on import.meta.env.PROD, so a
+// stray merge cannot ship any of it.
+import PrototypeSwitcher from './prototype/PrototypeSwitcher';
+import VariantBoard from './prototype/VariantBoard';
+import VariantSheet from './prototype/VariantSheet';
+import VariantSplit from './prototype/VariantSplit';
+
+const PROTOTYPE_ENABLED = !import.meta.env.PROD;
+const PROTOTYPE_VARIANTS = ['current', 'A', 'B', 'C'];
+const PROTOTYPE_NAMES = {
+  current: 'today’s UI',
+  A: 'departure board',
+  B: 'map + bottom sheet',
+  C: 'split dashboard',
+};
+
 function App() {
+  const [variant, setVariant] = useState(() => {
+    if (!PROTOTYPE_ENABLED) return 'current';
+    const requested = new URLSearchParams(window.location.search).get('variant');
+    return PROTOTYPE_VARIANTS.includes(requested) ? requested : 'current';
+  });
+
+  const selectVariant = (next) => {
+    const url = new URL(window.location.href);
+    if (next === 'current') url.searchParams.delete('variant');
+    else url.searchParams.set('variant', next);
+    window.history.replaceState({}, '', url);
+    setVariant(next);
+  };
+
   const [theme, setTheme] = useState('dark');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedStation, setSelectedStation] = useState(null);
@@ -47,6 +78,26 @@ function App() {
     const colors = { '1': '#FFD100', '3': '#E2001A', '5': '#00994D' };
     return colors[lineId] || '#888';
   };
+
+  const prototypeBar = PROTOTYPE_ENABLED ? (
+    <PrototypeSwitcher
+      variants={PROTOTYPE_VARIANTS}
+      names={PROTOTYPE_NAMES}
+      current={variant}
+      onChange={selectVariant}
+    />
+  ) : null;
+
+  if (PROTOTYPE_ENABLED && variant !== 'current') {
+    return (
+      <div className="app-container">
+        {variant === 'A' && <VariantBoard />}
+        {variant === 'B' && <VariantSheet />}
+        {variant === 'C' && <VariantSplit />}
+        {prototypeBar}
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -124,6 +175,8 @@ function App() {
           onCenter={() => handleCenterStation(selectedStation)}
         />
       )}
+
+      {prototypeBar}
     </div>
   );
 }
