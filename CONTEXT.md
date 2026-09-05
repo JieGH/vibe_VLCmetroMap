@@ -57,12 +57,24 @@ The stationary duration a Vehicle remains paused at a Station platform before pr
 _Avoid_: Stop pause, platform wait
 
 **Commercial Speed**:
-A Line's median observed speed, used only where no Segment Interval covers a pair of Stations. A fallback, never the primary model.
+A Line's median observed speed. Never used to place a Vehicle except where no Segment Interval covers a pair of Stations — that is ADR-0001, and it stands. It is, separately, the conversion from seconds of doubt to metres in Position Uncertainty, which is a measure of a position rather than a position, so a Line's speed is exactly the right scale for it.
 _Avoid_: Max speed, cruise velocity
 
 **Sighting**:
 One prediction of one Vehicle at one Station. The same Vehicle is routinely sighted at several Stations at once; each is an independent constraint on where it is, and the nearest in time anchors the Timetable Walk because walk error grows with $T$.
 _Avoid_: Observation, ping, report
+
+**Position Uncertainty**:
+Metres of doubt around a walked position. Two terms, both seconds of doubt converted at the Line's Commercial Speed: √(segments walked) × 30 s, because the GTFS Feed states every time to a whole minute so each Segment Interval carries ±30 s; plus a quarter-second per second unheard beyond one Network Sync interval, for the Vehicle drifting from what the API predicted. The first term is measured from the feed; the second is calibrated, not measured, and awaits the live watch in issue #4. Not a function of age alone — a Target Arrival Timestamp is absolute, so a prediction sitting in memory keeps counting down correctly.
+_Avoid_: Error, margin, tolerance, accuracy
+
+**Position Confidence**:
+The scale a live Vehicle's marker is drawn at. A walked position runs from 1 down to 0.45 as Position Uncertainty goes from 200 m to 1 km; Dead Reckoning sits below all of it at 0.35. Two floors rather than one, because they are two different claims: however long the walk, it still rests on a prediction the API made. Floored rather than taken to zero — a Vehicle whose position is a guess must read as uncertain, not absent. Simulated Trains are excluded: hollow and dashed is a different claim, not a fainter one. The CSS opacity a marker is finally drawn with keeps its own name at the render boundary; "faint" and "fades" describe what the reader sees, but the quantity is this.
+_Avoid_: Opacity, alpha, staleness
+
+**Dead Reckoning**:
+Walking a Vehicle on past a spent countdown, once its Target Arrival Timestamp has passed and the Timetable Walk has no prediction left to spend. The sharpest loss of Position Confidence there is, and unrelated to age: a prediction fetched a second ago can already be in it. Sitting out a Station Dwell at the Station it was reported for is *not* this — that Vehicle is where the API said it would be.
+_Avoid_: Extrapolation, coasting, projection
 
 **Off-Track Station**:
 A Station a Line serves that its Track Geometry cannot reach, because the geometry omits a branch — Lines 5 and 7 both run north to Machado, 2 km off their polylines. Held out of the Station Chain, since projecting it onto the nearest point of the wrong track corrupts every position computed through it. See ADR-0002.

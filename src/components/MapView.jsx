@@ -29,12 +29,8 @@ try {
 } catch (error) {
   console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
-import arrivalStore from '../services/arrivalStore';
+import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
-
-// Long enough to stay well inside the upstream rate budget, short enough that
-// no prediction reaches the 18-minute age-out before being replaced.
-const NETWORK_SYNC_INTERVAL_MS = 120000;
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -249,6 +245,26 @@ const buildStyle = (tiles, tileSourceId) => ({
 const DARK_STYLE  = buildStyle(DARK_TILES,  'basemap-dark');
 const LIGHT_STYLE = buildStyle(LIGHT_TILES, 'basemap-light');
 
+// The CSS opacity a vehicle marker is drawn at. For a live train that is its
+// Position Confidence; a Simulated Train keeps its own flat value, because
+// hollow and dashed is a different claim about a train, not a fainter one.
+const vehicleOpacity = (v) =>
+  (v.isLive ? (v.positionConfidence ?? 1) : 0.55).toFixed(2);
+
+// Says in the reader's words — not the model's — why a marker is drawn faint,
+// covering both causes: how far the walk had to reach, and how long since the
+// API last confirmed the train.
+const describePositionDoubt = (v) => {
+  if (!v.isLive || v.positionConfidence >= 1) return '';
+  const confirmed = v.secondsUnheard < 60
+    ? 'just now'
+    : `${Math.round(v.secondsUnheard / 60)} min ago`;
+  const basis = v.isDeadReckoned
+    ? 'position estimated past its last prediction'
+    : `position estimated ±${v.positionUncertaintyMetres} m`;
+  return ` • ${basis}, last confirmed ${confirmed}`;
+};
+
 /** Picks the first line's color for a station marker border */
 const stationBorderColor = (st) => {
   const lines = st.properties.lines || [];
@@ -261,7 +277,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
   const animFrameRef    = useRef(null);
-  const markerMapRef    = useRef(new globalThis.Map()); // native JS Map for vehicle markers
+  // native JS Map of vehicle id → { marker, inner }. The inner element is kept
+  // alongside its marker because the animation loop restyles it every frame,
+  // and rediscovering it by walking the marker's DOM would tie the loop to a
+  // wrapper structure built far away in createVehicleMarker.
+  const markerMapRef    = useRef(new globalThis.Map());
   const themeRef        = useRef(theme);
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
@@ -284,7 +304,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   };
 
   const clearVehicleMarkers = () => {
-    markerMapRef.current.forEach(m => m.remove());
+    markerMapRef.current.forEach(({ marker }) => marker.remove());
     markerMapRef.current.clear();
     vehInnerElemsRef.current = [];
   };
@@ -334,7 +354,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       ? 'at platform'
       : `${Math.round(v.secondsToTarget / 60)} min to`;
     const pin = v.sightingCount > 1 ? ` • ${v.sightingCount} sightings` : '';
-    return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}`;
+    return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}${describePositionDoubt(v)}`;
   };
 
   const updateTrainCount = () => {
@@ -452,7 +472,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         box-shadow:0 0 0 0 ${color};
         display:flex; align-items:center; justify-content:center;
         color:${v.isLive ? '#fff' : color}; font-size:10px; font-weight:800;
-        opacity:${v.isLive ? 1 : 0.55};
+        opacity:${vehicleOpacity(v)};
         ${v.isLive ? 'animation: vehiclePulse 2s ease-in-out infinite;' : ''}
         box-sizing:border-box; position:relative;
         transform: scale(${Math.min(1.1, currentScale).toFixed(3)});
@@ -470,7 +490,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         .setLngLat(v.coordinates)
         .addTo(map);
 
-      markerMapRef.current.set(v.id, marker);
+      markerMapRef.current.set(v.id, { marker, inner });
     };
 
     visible.forEach(createVehicleMarker);
@@ -485,7 +505,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       }
       const visibleIds = new Set(currentVisible.map(v => v.id));
 
-      markerMapRef.current.forEach((marker, id) => {
+      markerMapRef.current.forEach(({ marker }, id) => {
         if (!visibleIds.has(id)) {
           marker.remove();
           markerMapRef.current.delete(id);
@@ -493,10 +513,14 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       });
 
       currentVisible.forEach((v) => {
-        const marker = markerMapRef.current.get(v.id);
-        if (marker) {
-          marker.setLngLat(v.coordinates);
-          marker.getElement().title = describeVehicle(v);
+        const existing = markerMapRef.current.get(v.id);
+        if (existing) {
+          existing.marker.setLngLat(v.coordinates);
+          existing.marker.getElement().title = describeVehicle(v);
+          // Confidence moves while the train does — the countdown runs down,
+          // syncs land or fail to — so the marker has to follow it rather than
+          // keep the opacity it was created with.
+          existing.inner.style.opacity = vehicleOpacity(v);
         } else {
           // The API can return a different set of vehicle IDs after a poll.
           // Add new live trains without waiting for a map/style refresh.

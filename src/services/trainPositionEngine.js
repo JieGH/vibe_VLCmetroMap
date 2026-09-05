@@ -14,7 +14,7 @@
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import segmentTimes from '../data/segment_times.json';
-import arrivalStore from './arrivalStore';
+import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from './arrivalStore';
 
 // Haversine distance in meters
 export const haversineDistance = (c1, c2) => {
@@ -70,6 +70,72 @@ const MAX_SECONDS_AHEAD = 1080;
 // they are held out of the chain instead. Real platforms sit a little to the
 // side of the alignment, hence the tolerance rather than an exact test.
 const MAX_STATION_OFFSET_METRES = 250;
+
+// ─── How much to trust a placed train ────────────────────────────────────────
+//
+// A live marker should look as confident as its position actually is. Two
+// things blur that position, and neither is the prediction's age on its own:
+// because `targetTimestamp` is an absolute epoch, a prediction sitting in
+// memory keeps counting down correctly, and the walk gets *more* accurate as
+// the train approaches, because fewer Segment Intervals are left to spend.
+//
+// 1. Quantisation. The feed states every time to a whole minute, so each
+//    Segment Interval the walk spends carries ±30s. Those errors accumulate as
+//    a random walk, so n segments cost roughly √n × 30s. This half is measured:
+//    it comes straight out of the feed.
+// 2. Drift, for the train running late against what the API predicted. Nothing
+//    in this repo measures that yet — issue #4 is the live watch that would —
+//    so the rate below is calibrated, not derived: it is set so that two missed
+//    Network Syncs cost about what a full-length countdown costs on a median
+//    line, the two states issue #7's table puts at the same opacity. Revisit it
+//    with real numbers rather than treating it as measured.
+//    Seconds inside one Network Sync interval are the healthy cadence and cost
+//    nothing.
+//
+// Both terms are seconds of doubt, converted to metres at the Line's Commercial
+// Speed. That puts one segment on line 6 (the slowest at 4.1 m/s) at 123 m, and
+// a nine-segment full-countdown walk on line 1 (11.01 m/s) at 991 m — the two
+// ends of the range this network spans.
+const QUANTISATION_SECONDS = 30;
+const DRIFT_SECONDS_PER_SECOND_UNHEARD = 0.25;
+
+// Below this a position is as good as this model gets — one segment on a median
+// line is about 200 m — so it costs no confidence. A walked position bottoms
+// out at 1 km of doubt.
+const FULL_CONFIDENCE_METRES = 200;
+const LOST_CONFIDENCE_METRES = 1000;
+
+// Two floors, because they are two different claims. A walked position, however
+// long the walk, still rests on a prediction the API actually made; Dead
+// Reckoning does not. Keeping them apart means a dead-reckoned train reads as
+// the faintest thing on the map on every line — without it, a full-countdown
+// train on line 1 (991 m of doubt) is already indistinguishable from one that
+// has run out of prediction entirely.
+export const MIN_WALKED_CONFIDENCE = 0.45;
+
+// A train whose position is a guess must still be visible: it should read as
+// uncertain, not absent.
+export const MIN_POSITION_CONFIDENCE = 0.35;
+
+/**
+ * Metres of doubt around a walked position.
+ */
+export const estimatePositionUncertainty = (segmentsWalked, secondsUnheard, metresPerSecond) => {
+  const quantisation = Math.sqrt(Math.max(0, segmentsWalked)) * QUANTISATION_SECONDS;
+  const beyondOneSync = Math.max(0, secondsUnheard - NETWORK_SYNC_INTERVAL_MS / 1000);
+  const drift = beyondOneSync * DRIFT_SECONDS_PER_SECOND_UNHEARD;
+  return (quantisation + drift) * metresPerSecond;
+};
+
+/**
+ * The 0.45–1 scale a walked position is drawn at. Dead Reckoning does not come
+ * through here: it has no walk to size, and sits at MIN_POSITION_CONFIDENCE.
+ */
+export const confidenceFromUncertainty = (uncertaintyMetres) => {
+  const span = LOST_CONFIDENCE_METRES - FULL_CONFIDENCE_METRES;
+  const lost = (uncertaintyMetres - FULL_CONFIDENCE_METRES) / span;
+  return Math.max(MIN_WALKED_CONFIDENCE, Math.min(1, 1 - lost));
+};
 
 const normalise = (value) => (value || '').toLowerCase().trim();
 
@@ -269,6 +335,17 @@ class TrainPositionEngine {
    *
    * A negative countdown means the train has already called at the target and
    * is walked forwards instead.
+   *
+   * Reports `segmentsWalked` alongside the position, counting a part-crossed
+   * segment as the fraction of it spent. That is what the ±30s each Segment
+   * Interval carries accumulates over, so it is what sizes the uncertainty the
+   * marker is drawn with.
+   *
+   * Also reports whether it ended up Dead Reckoning: walking on past a spent
+   * countdown with no prediction left. Sitting out a Station Dwell at the
+   * target is not that — the train is where it was reported to be — so the
+   * distinction is the walk's to make, not something a caller can read off the
+   * sign of the countdown.
    */
   walkFromStation(lineId, target, secondsToTarget, isForward) {
     const track = this.getLineTrack(lineId);
@@ -281,11 +358,14 @@ class TrainPositionEngine {
     // Walking backwards from the target means stepping against the direction of
     // travel; walking forwards from it means stepping with the direction.
     const stepBack = isForward ? -1 : 1;
+    let segmentsWalked = 0;
 
     if (secondsToTarget <= 0) {
       let remaining = -secondsToTarget;
+      // Still inside the dwell it was predicted to arrive for: the train is at
+      // the platform the API named, which is the best-known position there is.
       if (remaining <= DWELL_SECONDS) {
-        return { trackDist: target.trackDist, status: 'At Platform', nextStation: target };
+        return { trackDist: target.trackDist, status: 'At Platform', nextStation: target, segmentsWalked, isDeadReckoned: false };
       }
       remaining -= DWELL_SECONDS;
 
@@ -293,7 +373,7 @@ class TrainPositionEngine {
       while (true) {
         const toIndex = fromIndex - stepBack;
         if (toIndex < 0 || toIndex >= stations.length) {
-          return { trackDist: stations[fromIndex].trackDist, status: 'At Terminus', nextStation: stations[fromIndex] };
+          return { trackDist: stations[fromIndex].trackDist, status: 'At Terminus', nextStation: stations[fromIndex], segmentsWalked, isDeadReckoned: true };
         }
         const from = stations[fromIndex];
         const to = stations[toIndex];
@@ -305,11 +385,14 @@ class TrainPositionEngine {
             trackDist: from.trackDist + (to.trackDist - from.trackDist) * progress,
             status: 'En Route',
             nextStation: to,
+            segmentsWalked: segmentsWalked + progress,
+            isDeadReckoned: true,
           };
         }
         remaining -= running;
+        segmentsWalked += 1;
         if (remaining <= DWELL_SECONDS) {
-          return { trackDist: to.trackDist, status: 'At Platform', nextStation: to };
+          return { trackDist: to.trackDist, status: 'At Platform', nextStation: to, segmentsWalked, isDeadReckoned: true };
         }
         remaining -= DWELL_SECONDS;
         fromIndex = toIndex;
@@ -329,6 +412,8 @@ class TrainPositionEngine {
           trackDist: stations[arrivalIndex].trackDist,
           status: 'At Terminus',
           nextStation: stations[targetIndex],
+          segmentsWalked,
+          isDeadReckoned: false,
         };
       }
 
@@ -342,12 +427,15 @@ class TrainPositionEngine {
           trackDist: departure.trackDist + (arrival.trackDist - departure.trackDist) * progress,
           status: remaining <= 60 ? 'Approaching' : 'En Route',
           nextStation: arrival,
+          segmentsWalked: segmentsWalked + (1 - progress),
+          isDeadReckoned: false,
         };
       }
 
       remaining -= running;
+      segmentsWalked += 1;
       if (remaining <= DWELL_SECONDS) {
-        return { trackDist: departure.trackDist, status: 'At Platform', nextStation: arrival };
+        return { trackDist: departure.trackDist, status: 'At Platform', nextStation: arrival, segmentsWalked, isDeadReckoned: false };
       }
       remaining -= DWELL_SECONDS;
       arrivalIndex = departureIndex;
@@ -394,6 +482,11 @@ class TrainPositionEngine {
     for (const [, entry] of arrivalStore.memory.entries()) {
       if (!entry || !Array.isArray(entry.arrivals)) continue;
 
+      // When we last heard from the API about this station. Not how old the
+      // countdown is — that stays honest on its own — but how long the train
+      // has had to drift from the prediction unobserved.
+      const fetchedAt = Number.isFinite(entry.fetchedAt) ? entry.fetchedAt : now;
+
       for (const arrival of entry.arrivals) {
         if (!arrival.isLive || !arrival.targetTimestamp) continue;
 
@@ -419,7 +512,7 @@ class TrainPositionEngine {
             sightings: [],
           });
         }
-        byVehicle.get(key).sightings.push({ station, secondsRemaining });
+        byVehicle.get(key).sightings.push({ station, secondsRemaining, fetchedAt });
       }
     }
 
@@ -460,6 +553,16 @@ class TrainPositionEngine {
         train.lineId, walked.trackDist, isForward
       );
 
+      const secondsUnheard = Math.max(0, (now - anchor.fetchedAt) / 1000);
+      const uncertaintyMetres = estimatePositionUncertainty(
+        walked.segmentsWalked, secondsUnheard, this.getLineTrack(train.lineId).fallbackSpeed
+      );
+      // Dead Reckoning is the sharpest loss of confidence there is, and it is
+      // not about age at all — a prediction fetched a second ago can already be
+      // in it — so it goes straight to the floor rather than through the walk's
+      // own scale.
+      const { isDeadReckoned } = walked;
+
       vehicles.push({
         id: `live-${train.key}`,
         line: train.lineId,
@@ -472,6 +575,12 @@ class TrainPositionEngine {
         isLive: true,
         status: walked.status,
         sightingCount: sightings.length,
+        positionUncertaintyMetres: Math.round(uncertaintyMetres),
+        positionConfidence: isDeadReckoned
+          ? MIN_POSITION_CONFIDENCE
+          : confidenceFromUncertainty(uncertaintyMetres),
+        isDeadReckoned,
+        secondsUnheard: Math.round(secondsUnheard),
         targetStation: walked.nextStation ? walked.nextStation.name : anchor.station.name,
         secondsToTarget: Math.max(0, Math.round(anchor.secondsRemaining)),
       });

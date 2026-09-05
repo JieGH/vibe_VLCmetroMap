@@ -48,6 +48,13 @@ export const MAJOR_STATIONS = [
   { id: 1, name: 'Rafelbunyol' },
 ];
 
+// How often a Network Sync sweeps the Major Stations. Long enough to stay well
+// inside the upstream rate budget, short enough that no prediction reaches the
+// 18-minute age-out before being replaced. It lives here rather than with the
+// timer that fires it because it is also the cadence a position's confidence is
+// judged against: one interval unheard is healthy, more is not.
+export const NETWORK_SYNC_INTERVAL_MS = 120000;
+
 const CACHE_TTL_MS = 60000; // 60 seconds strict memory pause per station
 const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual refreshes
 const MIN_DISPATCH_INTERVAL_MS = 1000; // 1 second minimum delay between outbound API requests
