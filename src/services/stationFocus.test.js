@@ -152,3 +152,50 @@ describe('bringing a station into focus', () => {
     expect(focus.arrivals).toEqual([]);
   });
 });
+
+describe('laterArrivals', () => {
+  it('leaves out the train each direction already headlines', () => {
+    const now = Date.now();
+    remember(ANGEL_GUIMERA, [
+      { line: '3', destination: 'Rafelbunyol', seconds: 120 },
+      { line: '3', destination: 'Rafelbunyol', seconds: 600 },
+      { line: '5', destination: 'Marítim', seconds: 240 },
+    ], now);
+
+    const focus = getStationFocus(ANGEL_GUIMERA, now);
+
+    expect(focus.arrivals).toHaveLength(3);
+    // Two directions, so two headlines; only what neither headlined is left.
+    const headlined = focus.directions.map((d) => d.arrivals[0]);
+    expect(headlined).toHaveLength(focus.directions.length);
+    expect(focus.laterArrivals).toHaveLength(3 - focus.directions.length);
+    for (const arrival of headlined) {
+      expect(focus.laterArrivals).not.toContain(arrival);
+    }
+  });
+
+  it('says nothing more when the headlines have said it all', () => {
+    // The case that made the panel read as a stutter: two trains due, two
+    // direction rows, and a table repeating both of them verbatim.
+    const now = Date.now();
+    remember(RAFELBUNYOL, [{ line: '3', destination: 'Aeroport', seconds: 300 }], now);
+
+    const focus = getStationFocus(RAFELBUNYOL, now);
+
+    expect(focus.arrivals).toHaveLength(1);
+    expect(focus.laterArrivals).toEqual([]);
+  });
+
+  it('keeps every arrival when no direction could be resolved', () => {
+    // An Off-Track Station has no trustworthy direction, so nothing is
+    // headlined and the table stays the whole story.
+    const now = Date.now();
+    const offTrack = { apiId: 68, name: 'Fira València', lines: ['4'] };
+    remember(offTrack, [{ line: '4', destination: 'Mas del Rosari', seconds: 180 }], now);
+
+    const focus = getStationFocus(offTrack, now);
+
+    expect(focus.directions).toEqual([]);
+    expect(focus.laterArrivals).toHaveLength(1);
+  });
+});

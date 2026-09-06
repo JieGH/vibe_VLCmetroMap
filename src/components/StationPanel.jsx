@@ -148,7 +148,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                 key={d.key}
                 title={d.label}
                 style={{
-                  background: 'var(--bg-panel-solid)', padding: '7px 10px',
+                  background: 'var(--bg-panel-solid)', padding: '9px 10px',
                   display: 'flex', alignItems: 'center', gap: 7,
                 }}
               >
@@ -174,13 +174,16 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                   {d.label}
                 </div>
                 {next && (
+                  /* Deliberately larger than the table below: the soonest train
+                     each way is the answer to the question the panel was opened
+                     to ask, and everything under it is context. */
                   <div style={{
-                    fontSize: '.92rem', fontWeight: 800, flexShrink: 0,
+                    fontSize: '1.2rem', fontWeight: 800, flexShrink: 0, lineHeight: 1,
                     fontVariantNumeric: 'tabular-nums',
                     color: countdownHeat(next.seconds, theme),
                   }}>
                     {countdownLabel(next.seconds)}
-                    {next.seconds > 0 && <span style={{ fontSize: '.62rem', fontWeight: 600, marginLeft: 2 }}>min</span>}
+                    {next.seconds > 0 && <span style={{ fontSize: '.6rem', fontWeight: 600, marginLeft: 2 }}>min</span>}
                   </div>
                 )}
               </div>
@@ -190,7 +193,12 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
       )}
 
       {/* The table. Capped to roughly three rows so the panel stays compact —
-          scrolling this area (not the whole panel) reveals the rest. */}
+          scrolling this area (not the whole panel) reveals the rest.
+
+          It lists `laterArrivals`, not every arrival: the soonest train each way
+          is already the headline above, and repeating it here made a Station
+          with two trains due render the same two trains twice, once as rows and
+          once as a table. What is left is what the headlines have not said. */}
       <div style={{ maxHeight: 176, overflowY: 'auto', padding: '4px 8px 8px' }}>
         {focus.fetchError && (
           <div role="status" style={{
@@ -205,9 +213,15 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
           <p style={{ padding: 20, textAlign: 'center', fontSize: '.8rem', color: 'var(--text-secondary)' }}>
             No live trains arriving soon.
           </p>
+        ) : focus.laterArrivals.length === 0 ? (
+          /* Everything due is already in the headlines. Saying so beats an
+             empty table with a header row over nothing. */
+          <p style={{ padding: '12px 20px', textAlign: 'center', fontSize: '.74rem', color: 'var(--text-secondary)' }}>
+            Nothing further due yet.
+          </p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem' }}>
-            <caption className="visually-hidden">Upcoming arrivals at {focus.name}</caption>
+            <caption className="visually-hidden">Later arrivals at {focus.name}</caption>
             <thead>
               <tr style={{
                 fontSize: '.62rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
@@ -221,7 +235,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
               </tr>
             </thead>
             <tbody>
-              {focus.arrivals.map((a, i) => (
+              {focus.laterArrivals.map((a, i) => (
                 <tr key={i} style={{ borderTop: '1px solid var(--border-color)' }}>
                   {/* Line identity is a labelled badge, never colour alone */}
                   <td style={{ padding: '7px 8px', width: 1 }}>

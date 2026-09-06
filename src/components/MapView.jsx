@@ -45,10 +45,11 @@ try {
 } catch (error) {
   console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
-import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
+import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { getDistance, nearestPointOnPath } from '../utils/geoUtils';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -145,12 +146,108 @@ const gtfsStations = (gtfsData && gtfsData.features)
   ? gtfsData.features.filter(f => f.geometry.type === 'Point')
   : [];
 const gtfsStationNames = new Set(gtfsStations.map(f => f.properties.name));
-const stationFeatures = [
+const rawStations = [
   ...gtfsStations,
   ...metroData.features.filter(
     f => f.geometry.type === 'Point' && !gtfsStationNames.has(f.properties.name)
   ),
 ];
+
+// How far a Station is allowed to be from its Line before snapping it there
+// would be a lie rather than a correction. Beyond this it is an Off-Track
+// Station — the geometry omits the branch it actually sits on (ADR-0002), and
+// dragging it onto the wrong track would put it visibly nowhere near where it
+// is. Fira València and Ll. Llarga - Terramelar, 642 m and 546 m out, are the
+// two that stay where the data puts them.
+const SNAP_LIMIT_M = 200;
+
+// Two features this close together, resolving to the same station in the live
+// API, are one Station spelled two ways rather than two Stations.
+const DUPLICATE_LIMIT_M = 150;
+
+const stationApiId = (properties) => {
+  if (!properties || !properties.name) return null;
+  const direct = STATION_ID_MAP[properties.name];
+  if (direct !== undefined) return Number(direct);
+  const lower = STATION_ID_MAP[properties.name.toLowerCase().trim()];
+  return lower === undefined ? null : Number(lower);
+};
+
+// "Pl. Espanya" and "Plaça Espanya" are 99 m apart in the data and both resolve
+// to station 51 in the live API: one interchange drawn as two dots, each
+// showing half its Lines. Merged into whichever came from GTFS — the single
+// source above — carrying the union of both features' Lines.
+const mergeDuplicateStations = (stations) => {
+  const kept = [];
+  const byApiId = new Map();
+
+  for (const station of stations) {
+    const apiId = stationApiId(station.properties);
+    const twin = apiId === null ? null : byApiId.get(apiId);
+
+    if (twin && getDistance(twin.geometry.coordinates, station.geometry.coordinates) < DUPLICATE_LIMIT_M) {
+      const lines = new Set([
+        ...(twin.properties.lines || []),
+        ...(station.properties.lines || []),
+      ]);
+      twin.properties = { ...twin.properties, lines: [...lines] };
+      continue;
+    }
+
+    // Cloned rather than mutated in place: trainPositionEngine imports the same
+    // gtfs_expanded.json objects, and moving a Station under it would shift
+    // every position walked through that Station.
+    const clone = {
+      ...station,
+      properties: { ...station.properties },
+      geometry: { ...station.geometry, coordinates: station.geometry.coordinates.slice() },
+    };
+    kept.push(clone);
+    if (apiId !== null && !byApiId.has(apiId)) byApiId.set(apiId, clone);
+  }
+
+  return kept;
+};
+
+// Station coordinates come from the GTFS Feed and the track alignment from OSM,
+// two surveys that disagree by tens of metres — Xàtiva sits 45 m off the line
+// it serves, which at station zoom is a station floating beside its own track.
+// Snapping the marker onto the alignment the map actually draws is a rendering
+// correction only: the Timetable Walk keeps projecting from the feed's own
+// coordinates, so nothing about where trains are placed changes.
+const snapStationToItsLines = (station) => {
+  const lines = station.properties.lines || [];
+  let best = null;
+
+  for (const lineId of lines) {
+    const geometry = lineCoordsById.get(String(lineId));
+    if (!geometry) continue;
+    const candidate = nearestPointOnPath(geometry, station.geometry.coordinates);
+    if (candidate && (!best || candidate.distance < best.distance)) best = candidate;
+  }
+
+  if (!best || best.distance > SNAP_LIMIT_M) return station;
+
+  station.geometry.coordinates = best.coordinates;
+  return station;
+};
+
+const lineCoordsById = new Map(
+  lineFeatures
+    .filter(f => f.geometry && f.geometry.type === 'LineString')
+    .map(f => [String(f.properties.line), f.geometry.coordinates])
+);
+
+const stationFeatures = mergeDuplicateStations(rawStations).map(snapStationToItsLines);
+
+// Snapped positions are what the map draws, so a Station handed in from
+// somewhere that has not snapped it — userLocation's Nearest Station, say —
+// still has to be drawn and framed at the same place as its own dot.
+const snappedByName = new Map(stationFeatures.map(f => [f.properties.name, f]));
+const snappedCoordinates = (station) => {
+  const snapped = station && snappedByName.get(station.properties.name);
+  return snapped ? snapped.geometry.coordinates : station.geometry.coordinates;
+};
 const lineGeoJSON    = { type: 'FeatureCollection', features: lineFeatures };
 
 // Build a color lookup from line id → color from actual GeoJSON data,
@@ -802,7 +899,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !flyTarget) return;
-    const [lng, lat] = flyTarget.geometry.coordinates;
+    const [lng, lat] = snappedCoordinates(flyTarget);
     map.flyTo({
       center: [lng, lat],
       zoom: 14.5,
@@ -850,7 +947,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     }
     if (!selectedStation) return undefined;
 
-    const coordinates = selectedStation.geometry.coordinates;
+    const coordinates = snappedCoordinates(selectedStation);
 
     const element = document.createElement('div');
     element.className = 'station-focus-node';
@@ -964,7 +1061,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     }
 
     const bounds = new LngLatBounds(userLocation.coordinates, userLocation.coordinates);
-    bounds.extend(userLocation.nearestStation.geometry.coordinates);
+    bounds.extend(snappedCoordinates(userLocation.nearestStation));
     map.fitBounds(bounds, {
       padding,
       maxZoom: USER_FRAME_MAX_ZOOM,
