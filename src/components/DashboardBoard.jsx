@@ -68,6 +68,7 @@ const DashboardBoard = ({ theme, onExit }) => {
       position: 'absolute', inset: 0, background: bg, color: fg,
       display: 'flex', flexDirection: 'column',
       padding: 'clamp(16px, 3vw, 48px)',
+      paddingTop: 'calc(clamp(16px, 3vw, 48px) + env(safe-area-inset-top, 0px))',
       fontFamily: 'Inter, system-ui, sans-serif',
     }}>
       <header style={{

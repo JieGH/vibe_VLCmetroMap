@@ -84,7 +84,7 @@ body {
 .line3-train-count {
   position: absolute;
   right: 20px;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 2;
   padding: 8px 12px;
   color: var(--text-primary);
@@ -105,9 +105,9 @@ body {
 
 .sidebar {
   position: absolute;
-  top: 20px;
+  top: calc(20px + env(safe-area-inset-top, 0px));
   left: 20px;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   width: 320px;
   z-index: 10;
   display: flex;
@@ -123,7 +123,7 @@ body {
 
 .search-bar-container {
   position: absolute;
-  top: 20px;
+  top: calc(20px + env(safe-area-inset-top, 0px));
   left: 360px; /* offset from sidebar */
   z-index: 10;
   width: 420px;
@@ -171,6 +171,20 @@ button:active {
   }
 }
 
+.station-panel {
+  /* cubic-bezier(0.16, 1, 0.3, 1) ("ease-out-expo") front-loads the motion —
+     most of the distance covers in the first third, then eases off gently —
+     which reads as a rise rather than a slide, in either dock: bottom sheet
+     in portrait, right rail in landscape. */
+  animation: slideUp 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-panel {
+    animation: none;
+  }
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -214,7 +228,7 @@ button:active {
 
 .active-filter-banner {
   position: absolute;
-  top: 76px;
+  top: calc(76px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 15;
@@ -253,7 +267,7 @@ button:active {
     top: auto;
     left: 12px;
     right: 12px;
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     width: auto;
     height: 45vh;
     border-radius: 16px;
@@ -265,7 +279,7 @@ button:active {
   }
 
   .search-bar-container {
-    top: 12px;
+    top: calc(12px + env(safe-area-inset-top, 0px));
     left: 12px;
     right: 12px;
     width: auto;
