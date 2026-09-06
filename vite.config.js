@@ -26,6 +26,11 @@ export default defineConfig({
     chunkSizeWarningLimit: 1300,
   },
   server: {
+    // Browser fetch() can never set User-Agent (a forbidden header in the
+    // Fetch spec), and the API requires one containing contact=, so a browser
+    // context has to go through this Node-side proxy, which can set it. The
+    // native iOS app has no dev server to proxy through, so it takes a
+    // different path — see arrivalStore.js.
     proxy: {
       '/api/metro': {
         target: 'https://metroapi.alexbadi.es',

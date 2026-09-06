@@ -1,0 +1,10 @@
+{
+  "appId": "com.jielei.metrovalencia",
+  "appName": "Metro Valencia",
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}
