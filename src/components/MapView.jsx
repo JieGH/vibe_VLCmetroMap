@@ -686,6 +686,12 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     updateZoomScale();
 
     map.on('style.load', () => {
+      // In dev, StrictMode double-mounts this effect, so a stale map from the
+      // first mount can still be sitting on a pending style.load when the
+      // second mount replaces mapRef.current. The marker refs are shared
+      // across instances, so letting a stale callback through would clear the
+      // live map's markers and re-attach them to the removed one.
+      if (mapRef.current !== map) return;
       initStationMarkers(map);
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
@@ -719,6 +725,14 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    // The map is constructed with the style matching the initial `theme`, so
+    // this effect's mount-time run has nothing to do — and calling setStyle
+    // before that initial style has loaded triggers a second style.load cycle
+    // (and a "Style is not done loading" console warning) that only widens
+    // the StrictMode double-mount race above. A theme flip that lands in that
+    // narrow pre-load window is silently missed, which is an acceptable trade
+    // for removing the race.
+    if (!map.isStyleLoaded()) return;
     map.setStyle(theme === 'dark' ? DARK_STYLE : LIGHT_STYLE);
   }, [theme]);
 
