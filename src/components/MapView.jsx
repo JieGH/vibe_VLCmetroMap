@@ -29,12 +29,10 @@ try {
 } catch (error) {
   console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
-import arrivalStore from '../services/arrivalStore';
+import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
-
-// Long enough to stay well inside the upstream rate budget, short enough that
-// no prediction reaches the 18-minute age-out before being replaced.
-const NETWORK_SYNC_INTERVAL_MS = 120000;
+import { getStationFocus } from '../services/stationFocus';
+import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -249,6 +247,76 @@ const buildStyle = (tiles, tileSourceId) => ({
 const DARK_STYLE  = buildStyle(DARK_TILES,  'basemap-dark');
 const LIGHT_STYLE = buildStyle(LIGHT_TILES, 'basemap-light');
 
+// The CSS opacity a vehicle marker is drawn at. For a live train that is its
+// Position Confidence; a Simulated Train keeps its own flat value, because
+// hollow and dashed is a different claim about a train, not a fainter one.
+const vehicleOpacity = (v) =>
+  (v.isLive ? (v.positionConfidence ?? 1) : 0.55).toFixed(2);
+
+// Says in the reader's words — not the model's — why a marker is drawn faint,
+// covering both causes: how far the walk had to reach, and how long since the
+// API last confirmed the train.
+const describePositionDoubt = (v) => {
+  if (!v.isLive || v.positionConfidence >= 1) return '';
+  const confirmed = v.secondsUnheard < 60
+    ? 'just now'
+    : `${Math.round(v.secondsUnheard / 60)} min ago`;
+  const basis = v.isDeadReckoned
+    ? 'position estimated past its last prediction'
+    : `position estimated ±${v.positionUncertaintyMetres} m`;
+  return ` • ${basis}, last confirmed ${confirmed}`;
+};
+
+// The expanded Station node's markup. Built as a string because it lives inside
+// a MapLibre Marker, outside React's tree, and is redrawn every second.
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+));
+
+const renderFocusNode = (focus, theme) => {
+  const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
+  const text = theme === 'light' ? '#121212' : '#ffffff';
+  const muted = theme === 'light' ? '#5f6368' : '#a0a0b0';
+  const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
+
+  // No destination text here — only badge, arrow and countdown. The full
+  // "Aeroport · Torrent Avinguda" style label lives in the docked Station
+  // panel, which has the width for it; found by testing against real station
+  // names that even two names joined don't fit this bubble's width, and
+  // showing it twice (truncated here, in full in the panel) was the
+  // duplication that made both surfaces read as cluttered.
+  const arms = focus.directions.map((direction) => {
+    const next = direction.arrivals[0];
+    // The arrow points the way the track actually leaves this Station, which is
+    // why each Direction Group carries a bearing. 0° is north; the glyph points
+    // up at rest, so the bearing rotates it directly.
+    const rotation = direction.bearing === null ? 0 : Math.round(direction.bearing);
+    const badge = next
+      ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:${lineColorMap[next.line] || '#8a8a8a'};color:#000;font:900 12px/1 system-ui">${escapeHtml(next.line)}</span>`
+      : '';
+    const due = next
+      ? `<span style="font:800 18px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${countdownLabel(next.seconds)}</span>`
+      : `<span style="font:600 11px/1 system-ui;color:${muted}">none</span>`;
+
+    return `
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 12px">
+        <span aria-hidden="true" style="display:inline-block;font:700 14px/1 system-ui;color:${muted};transform:rotate(${rotation}deg)">&#9650;</span>
+        ${badge}
+        <span style="flex:1"></span>
+        ${due}
+      </div>`;
+  }).join(`<div style="height:1px;background:${border}"></div>`);
+
+  return `
+    <div style="min-width:150px;max-width:200px;border-radius:12px;background:${panel};border:1px solid ${border};box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden">
+      <div style="padding:8px 10px 6px;border-bottom:1px solid ${border}">
+        <div style="font:800 13px/1.2 system-ui;color:${text};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(focus.name)}</div>
+        <div style="font:600 9px/1.2 system-ui;letter-spacing:.1em;text-transform:uppercase;color:${focus.isFresh ? '#4CAF50' : '#00B4D8'};margin-top:3px">${focus.isFresh ? 'Live API' : 'From memory'}</div>
+      </div>
+      ${arms || `<div style="padding:9px 10px;font:600 11px/1 system-ui;color:${muted}">No live trains</div>`}
+    </div>`;
+};
+
 /** Picks the first line's color for a station marker border */
 const stationBorderColor = (st) => {
   const lines = st.properties.lines || [];
@@ -256,17 +324,27 @@ const stationBorderColor = (st) => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
+// The zoom a focused Station eases to. Close enough that the expanded node has
+// room beside its neighbours, not so close that the rest of the Line leaves the
+// screen and the map stops being a map.
+const STATION_FOCUS_ZOOM = 14.6;
+
 const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine }) => {
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
   const animFrameRef    = useRef(null);
-  const markerMapRef    = useRef(new globalThis.Map()); // native JS Map for vehicle markers
+  // native JS Map of vehicle id → { marker, inner }. The inner element is kept
+  // alongside its marker because the animation loop restyles it every frame,
+  // and rediscovering it by walking the marker's DOM would tie the loop to a
+  // wrapper structure built far away in createVehicleMarker.
+  const markerMapRef    = useRef(new globalThis.Map());
   const themeRef        = useRef(theme);
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
   const selectStRef     = useRef(onSelectStation);
   const trainCountRef   = useRef(null);
+  const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
   const vehInnerElemsRef= useRef([]); // refs to vehicle inner elements for direct scale updates
@@ -284,7 +362,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   };
 
   const clearVehicleMarkers = () => {
-    markerMapRef.current.forEach(m => m.remove());
+    markerMapRef.current.forEach(({ marker }) => marker.remove());
     markerMapRef.current.clear();
     vehInnerElemsRef.current = [];
   };
@@ -334,7 +412,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       ? 'at platform'
       : `${Math.round(v.secondsToTarget / 60)} min to`;
     const pin = v.sightingCount > 1 ? ` • ${v.sightingCount} sightings` : '';
-    return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}`;
+    return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}${describePositionDoubt(v)}`;
   };
 
   const updateTrainCount = () => {
@@ -452,7 +530,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         box-shadow:0 0 0 0 ${color};
         display:flex; align-items:center; justify-content:center;
         color:${v.isLive ? '#fff' : color}; font-size:10px; font-weight:800;
-        opacity:${v.isLive ? 1 : 0.55};
+        opacity:${vehicleOpacity(v)};
         ${v.isLive ? 'animation: vehiclePulse 2s ease-in-out infinite;' : ''}
         box-sizing:border-box; position:relative;
         transform: scale(${Math.min(1.1, currentScale).toFixed(3)});
@@ -470,7 +548,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         .setLngLat(v.coordinates)
         .addTo(map);
 
-      markerMapRef.current.set(v.id, marker);
+      markerMapRef.current.set(v.id, { marker, inner });
     };
 
     visible.forEach(createVehicleMarker);
@@ -485,7 +563,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       }
       const visibleIds = new Set(currentVisible.map(v => v.id));
 
-      markerMapRef.current.forEach((marker, id) => {
+      markerMapRef.current.forEach(({ marker }, id) => {
         if (!visibleIds.has(id)) {
           marker.remove();
           markerMapRef.current.delete(id);
@@ -493,10 +571,14 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       });
 
       currentVisible.forEach((v) => {
-        const marker = markerMapRef.current.get(v.id);
-        if (marker) {
-          marker.setLngLat(v.coordinates);
-          marker.getElement().title = describeVehicle(v);
+        const existing = markerMapRef.current.get(v.id);
+        if (existing) {
+          existing.marker.setLngLat(v.coordinates);
+          existing.marker.getElement().title = describeVehicle(v);
+          // Confidence moves while the train does — the countdown runs down,
+          // syncs land or fail to — so the marker has to follow it rather than
+          // keep the opacity it was created with.
+          existing.inner.style.opacity = vehicleOpacity(v);
         } else {
           // The API can return a different set of vehicle IDs after a poll.
           // Add new live trains without waiting for a map/style refresh.
@@ -576,7 +658,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       container: containerRef.current,
       style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE,
       center: [-0.3763, 39.4699],
-      zoom: 11.5,
+      // 12.3 is where updateZoomScale's formula below caps marker scale at its
+      // 1.2x maximum, so the default view opens with stations already at their
+      // largest, easiest-to-tap size rather than the network's full extent.
+      zoom: 12.3,
     });
 
     const trainCount = document.createElement('div');
@@ -597,6 +682,12 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     updateZoomScale();
 
     map.on('style.load', () => {
+      // In dev, StrictMode double-mounts this effect, so a stale map from the
+      // first mount can still be sitting on a pending style.load when the
+      // second mount replaces mapRef.current. The marker refs are shared
+      // across instances, so letting a stale callback through would clear the
+      // live map's markers and re-attach them to the removed one.
+      if (mapRef.current !== map) return;
       initStationMarkers(map);
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
@@ -630,6 +721,14 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    // The map is constructed with the style matching the initial `theme`, so
+    // this effect's mount-time run has nothing to do — and calling setStyle
+    // before that initial style has loaded triggers a second style.load cycle
+    // (and a "Style is not done loading" console warning) that only widens
+    // the StrictMode double-mount race above. A theme flip that lands in that
+    // narrow pre-load window is silently missed, which is an acceptable trade
+    // for removing the race.
+    if (!map.isStyleLoaded()) return;
     map.setStyle(theme === 'dark' ? DARK_STYLE : LIGHT_STYLE);
   }, [theme]);
 
@@ -662,6 +761,56 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!map) return;
     if (map.isStyleLoaded()) initStationMarkers(map);
   }, [hoverLine]);
+
+  // ── Station Focus ──────────────────────────────────────────────────────────
+  // Clicking a Station does two things here: the camera eases in to centre it,
+  // and its marker grows into a node showing both directions with the next
+  // train on each. The node redraws every second so its countdowns tick.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    if (focusMarkerRef.current) {
+      focusMarkerRef.current.remove();
+      focusMarkerRef.current = null;
+    }
+    // The floating "N live trains" readout and the Station panel say the same
+    // kind of thing at once — worse, the panel visually sits on top of it,
+    // so the count peeked out from under the panel's corner. The panel is the
+    // more specific answer while a Station is in focus.
+    if (trainCountRef.current) {
+      trainCountRef.current.style.visibility = selectedStation ? 'hidden' : '';
+    }
+    if (!selectedStation) return undefined;
+
+    const coordinates = selectedStation.geometry.coordinates;
+    map.easeTo({
+      center: coordinates,
+      zoom: Math.max(map.getZoom(), STATION_FOCUS_ZOOM),
+      duration: 900,
+      essential: true,
+    });
+
+    const element = document.createElement('div');
+    element.className = 'station-focus-node';
+    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -14] })
+      .setLngLat(coordinates)
+      .addTo(map);
+    focusMarkerRef.current = marker;
+
+    const render = () => {
+      const focus = getStationFocus(selectedStation.properties, Date.now());
+      element.innerHTML = renderFocusNode(focus, themeRef.current);
+    };
+    render();
+    const id = setInterval(render, 1000);
+
+    return () => {
+      clearInterval(id);
+      marker.remove();
+      if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
+    };
+  }, [selectedStation]);
 
   return (
     <div

@@ -282,3 +282,25 @@ button:active {
     width: auto !important;
   }
 }
+
+/* Available to a screen reader, absent from the layout. Used for the arrivals
+   table caption, which sighted readers get from the panel heading instead. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The expanded Station node on the map. Sits above vehicle markers, because
+   while a Station is in focus it is the thing being read. */
+.station-focus-node {
+  z-index: 1200;
+  pointer-events: none;
+}
