@@ -609,6 +609,20 @@
     "zona": "A"
   },
   {
+    "id": 22,
+    "latitud": 39.4664268494,
+    "longitud": -0.3429694474,
+    "nombre": "Ayora",
+    "zona": "A"
+  },
+  {
+    "id": 23,
+    "latitud": 39.4703330994,
+    "longitud": -0.3503944576,
+    "nombre": "Amistat",
+    "zona": "A"
+  },
+  {
     "id": 109,
     "latitud": 39.4639778137,
     "longitud": -0.3794222176,
