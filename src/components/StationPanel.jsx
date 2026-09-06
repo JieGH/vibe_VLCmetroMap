@@ -7,6 +7,7 @@
 // is the only place a thumb reaches at all.
 import React, { useEffect, useState } from 'react';
 import { X, Radio, Database, Navigation } from 'lucide-react';
+import arrivalStore from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat } from '../utils/countdownHeat';
 import lineColors from '../data/line_colors_from_image.json';
@@ -46,6 +47,22 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // getStationFocus only ever reads arrivalStore's cache — it has to, since it
+  // also runs inside MapView's floating node every second and must not fire a
+  // network request from there. Something has to be the one place that
+  // actually asks the API for the Station just clicked, or any Station
+  // outside the Strategic Hubs and Major Stations stays "confirmed never
+  // fetched" forever, however live its real trains are. That's this effect.
+  useEffect(() => {
+    if (!station) return undefined;
+    arrivalStore.getStationArrivals(station.properties);
+    const id = setInterval(
+      () => arrivalStore.getStationArrivals(station.properties),
+      60000
+    );
+    return () => clearInterval(id);
+  }, [station]);
 
   if (!station) return null;
 
