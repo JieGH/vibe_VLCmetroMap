@@ -283,6 +283,12 @@ const renderFocusNode = (focus, theme) => {
   const muted = theme === 'light' ? '#5f6368' : '#a0a0b0';
   const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
 
+  // No destination text here — only badge, arrow and countdown. The full
+  // "Aeroport · Torrent Avinguda" style label lives in the docked Station
+  // panel, which has the width for it; found by testing against real station
+  // names that even two names joined don't fit this bubble's width, and
+  // showing it twice (truncated here, in full in the panel) was the
+  // duplication that made both surfaces read as cluttered.
   const arms = focus.directions.map((direction) => {
     const next = direction.arrivals[0];
     // The arrow points the way the track actually leaves this Station, which is
@@ -290,23 +296,23 @@ const renderFocusNode = (focus, theme) => {
     // up at rest, so the bearing rotates it directly.
     const rotation = direction.bearing === null ? 0 : Math.round(direction.bearing);
     const badge = next
-      ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;background:${lineColorMap[next.line] || '#8a8a8a'};color:#000;font:900 11px/1 system-ui">${escapeHtml(next.line)}</span>`
+      ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:${lineColorMap[next.line] || '#8a8a8a'};color:#000;font:900 12px/1 system-ui">${escapeHtml(next.line)}</span>`
       : '';
     const due = next
-      ? `<span style="font:800 17px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${focusCountdown(next.seconds)}</span>`
+      ? `<span style="font:800 18px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${focusCountdown(next.seconds)}</span>`
       : `<span style="font:600 11px/1 system-ui;color:${muted}">none</span>`;
 
     return `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px">
-        <span aria-hidden="true" style="display:inline-block;font:700 13px/1 system-ui;color:${muted};transform:rotate(${rotation}deg)">&#9650;</span>
-        <span style="flex:1;min-width:0;font:600 12px/1.25 system-ui;color:${text};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(direction.label)}</span>
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 12px">
+        <span aria-hidden="true" style="display:inline-block;font:700 14px/1 system-ui;color:${muted};transform:rotate(${rotation}deg)">&#9650;</span>
         ${badge}
+        <span style="flex:1"></span>
         ${due}
       </div>`;
   }).join(`<div style="height:1px;background:${border}"></div>`);
 
   return `
-    <div style="min-width:212px;max-width:280px;border-radius:12px;background:${panel};border:1px solid ${border};box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden">
+    <div style="min-width:150px;max-width:200px;border-radius:12px;background:${panel};border:1px solid ${border};box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden">
       <div style="padding:8px 10px 6px;border-bottom:1px solid ${border}">
         <div style="font:800 13px/1.2 system-ui;color:${text};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(focus.name)}</div>
         <div style="font:600 9px/1.2 system-ui;letter-spacing:.1em;text-transform:uppercase;color:${focus.isFresh ? '#4CAF50' : '#00B4D8'};margin-top:3px">${focus.isFresh ? 'Live API' : 'From memory'}</div>
@@ -754,6 +760,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (focusMarkerRef.current) {
       focusMarkerRef.current.remove();
       focusMarkerRef.current = null;
+    }
+    // The floating "N live trains" readout and the Station panel say the same
+    // kind of thing at once — worse, the panel visually sits on top of it,
+    // so the count peeked out from under the panel's corner. The panel is the
+    // more specific answer while a Station is in focus.
+    if (trainCountRef.current) {
+      trainCountRef.current.style.visibility = selectedStation ? 'hidden' : '';
     }
     if (!selectedStation) return undefined;
 

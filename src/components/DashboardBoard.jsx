@@ -72,7 +72,14 @@ const DashboardBoard = ({ theme, onExit }) => {
       padding: 'clamp(16px, 3vw, 48px)',
       fontFamily: 'Inter, system-ui, sans-serif',
     }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24 }}>
+      <header style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24,
+        // Bold display type at this size needs the extra room below: at 1.02
+        // line-height a descender (the "g" in "Guimerà") visually bled into
+        // the first departure row, which centres in the space below and so
+        // sits closer to the header the fewer rows there are.
+        paddingBottom: 'clamp(8px, 1.4vh, 20px)',
+      }}>
         <div style={{ minWidth: 0 }}>
           <div style={{
             fontSize: 'clamp(11px, 1.4vw, 20px)', letterSpacing: '.28em',
@@ -81,7 +88,7 @@ const DashboardBoard = ({ theme, onExit }) => {
             Departures
           </div>
           <h1 style={{
-            fontSize: 'clamp(32px, 7vw, 104px)', fontWeight: 800, lineHeight: 1.02,
+            fontSize: 'clamp(32px, 7vw, 104px)', fontWeight: 800, lineHeight: 1.2,
             letterSpacing: '-.02em', margin: '.06em 0 0',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
@@ -113,8 +120,16 @@ const DashboardBoard = ({ theme, onExit }) => {
       </header>
 
       <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
         gap: 'clamp(6px, 1.2vh, 18px)', minHeight: 0,
+        // Row type is sized by vw, so it stays glanceable regardless of
+        // height, but does not shrink to fit a short, wide window on its own
+        // — found by testing at 1512x809, where six rows ran past the
+        // footer. Top-aligned with a hard clip: a partial last row reads as
+        // "more below", the ordinary way a departure board runs out of room.
+        // Centering (the alternative) clipped the FIRST row instead, which
+        // reads as broken rather than as a board that goes on further.
+        overflow: 'hidden',
       }}>
         {rows.length === 0 && (
           <p style={{ fontSize: 'clamp(18px, 2.6vw, 38px)', color: dim, textAlign: 'center' }}>

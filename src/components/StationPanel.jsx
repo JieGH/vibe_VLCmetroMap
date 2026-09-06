@@ -67,7 +67,11 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         flexDirection: 'column',
         overflow: 'hidden',
         ...(landscape
-          ? { top: 16, right: 16, bottom: 16, width: 'min(380px, 34vw)' }
+          // top clears the search bar's own row (its container sits at
+          // top:20, height ~52px) — starting level with it let the panel's
+          // z-index paint over the theme and dashboard-mode buttons, making
+          // them unclickable while a station was focused.
+          ? { top: 84, right: 16, maxHeight: 'calc(100vh - 100px)', width: 'min(380px, 34vw)' }
           : { left: 0, right: 0, bottom: 0, maxHeight: '58vh', borderRadius: '18px 18px 0 0' }),
       }}
     >
@@ -135,10 +139,22 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                 }}>
                   Towards
                 </div>
-                <div style={{
-                  fontSize: '.8rem', fontWeight: 600, lineHeight: 1.25,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
+                <div
+                  title={d.label}
+                  style={{
+                    fontSize: '.78rem', fontWeight: 600, lineHeight: 1.25,
+                    // Real destination names ("Seminari - CEU", "Torrent
+                    // Avinguda") overflow this column even at two names
+                    // joined — found by testing against live data rather
+                    // than the short placeholder names used to design this.
+                    // Wrapping to two lines beats an ellipsis that cuts a
+                    // station name mid-word.
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
                   {d.label}
                 </div>
                 {next && (
