@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Map as MapLibreMap, Marker, setWorkerUrl } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -345,7 +345,58 @@ const stationBorderColor = (st) => {
 // screen and the map stops being a map.
 const STATION_FOCUS_ZOOM = 14.6;
 
-const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine }) => {
+// How close framing the viewer against their Nearest Station is allowed to get.
+// Without a cap, standing 40 m from a platform fills the screen with one
+// junction and the map stops being a map.
+const USER_FRAME_MAX_ZOOM = 15.5;
+
+// A User Location is a single fix, taken once, and it starts going stale
+// immediately — you can walk 500 m in the time it takes to read a departure
+// board. Rather than let a stale dot keep claiming to be current, it fades as
+// it ages, on a floor, for the same reason Position Confidence has one: a
+// position that has become a guess must read as uncertain, not absent.
+const USER_FIX_FADE_MS = 300000;
+const USER_FIX_OPACITY_FLOOR = 0.4;
+
+const userFixOpacity = (ageMs) => {
+  const spent = Math.min(1, Math.max(0, ageMs / USER_FIX_FADE_MS));
+  return (1 - spent * (1 - USER_FIX_OPACITY_FLOOR)).toFixed(3);
+};
+
+// Metres per pixel at a given latitude and zoom. The accuracy circle is a real
+// distance, so it has to be redrawn at every zoom rather than pinned to a pixel
+// size — a fixed circle would claim a different accuracy at every scale.
+const metresPerPixel = (latitude, zoom) =>
+  (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
+
+// What the Station panel and the search bar actually cover right now, so the
+// camera centres on the map still visible rather than behind them. Measured
+// rather than assumed from the CSS: both the bottom sheet's maxHeight:58vh and
+// the right rail's width:min(380px,34vw) are content-sized caps, not fixed
+// sizes, and the panel renders shorter than its cap now that its arrivals
+// table stops at three rows.
+const panelAwarePadding = (map) => {
+  const isLandscape = window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
+  const containerRect = map.getContainer().getBoundingClientRect();
+  const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
+  const panelRect = document.querySelector('.station-panel')?.getBoundingClientRect();
+
+  return isLandscape
+    ? {
+        top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 84) + 12,
+        right: (panelRect ? containerRect.right - panelRect.left : Math.min(380, window.innerWidth * 0.34)) + 16,
+        bottom: 40,
+        left: 40,
+      }
+    : {
+        top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 90) + 12,
+        right: 24,
+        bottom: (panelRect ? containerRect.bottom - panelRect.top : window.innerHeight * 0.58) + 16,
+        left: 24,
+      };
+};
+
+const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
@@ -815,30 +866,9 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     render();
     const id = setInterval(render, 1000);
 
-    // Also reserves the Station panel's own footprint, measured rather than
-    // assumed from its CSS (a bottom sheet with maxHeight:58vh in portrait, a
-    // right rail with width:min(380px,34vw) in landscape): both are content-
-    // sized caps, not fixed sizes, and the panel actually renders shorter than
-    // 58vh now that its arrivals table caps at three rows. The panel shares
-    // this render (same selectedStation update), so it's already in the DOM
-    // once this effect runs.
-    const isLandscape = window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
-    const containerRect = map.getContainer().getBoundingClientRect();
-    const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
-    const panelRect = document.querySelector('.station-panel')?.getBoundingClientRect();
-    const basePadding = isLandscape
-      ? {
-          top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 84) + 12,
-          right: (panelRect ? containerRect.right - panelRect.left : Math.min(380, window.innerWidth * 0.34)) + 16,
-          bottom: 40,
-          left: 40,
-        }
-      : {
-          top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 90) + 12,
-          right: 24,
-          bottom: (panelRect ? containerRect.bottom - panelRect.top : window.innerHeight * 0.58) + 16,
-          left: 24,
-        };
+    // The panel shares this render (same selectedStation update), so it is
+    // already in the DOM once this effect runs and can be measured.
+    const basePadding = panelAwarePadding(map);
 
     map.easeTo({
       center: coordinates,
@@ -854,6 +884,94 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
     };
   }, [selectedStation]);
+
+  // ── The viewer's own dot ───────────────────────────────────────────────────
+  // A MapLibre Marker rather than a style layer, matching every other marker
+  // here, which also means it survives the setStyle a theme flip performs.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || userLocation.status !== 'located') return undefined;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'user-location-marker';
+    const accuracyRing = document.createElement('div');
+    accuracyRing.className = 'user-location-accuracy';
+    const dot = document.createElement('div');
+    dot.className = 'user-location-dot';
+    wrapper.appendChild(accuracyRing);
+    wrapper.appendChild(dot);
+
+    const marker = new Marker({ element: wrapper, anchor: 'center' })
+      .setLngLat(userLocation.coordinates)
+      .addTo(map);
+
+    const sizeAccuracyRing = () => {
+      if (!Number.isFinite(userLocation.accuracy)) {
+        accuracyRing.style.display = 'none';
+        return;
+      }
+      const scale = metresPerPixel(userLocation.coordinates[1], map.getZoom());
+      const diameter = (2 * userLocation.accuracy) / scale;
+      // Below the dot's own size the ring says nothing the dot does not already
+      // say, and drawing it would only make a precise fix look fuzzy.
+      accuracyRing.style.display = diameter < 26 ? 'none' : '';
+      accuracyRing.style.width = `${diameter}px`;
+      accuracyRing.style.height = `${diameter}px`;
+    };
+
+    const fade = () => {
+      wrapper.style.opacity = userFixOpacity(Date.now() - userLocation.fetchedAt);
+    };
+
+    sizeAccuracyRing();
+    fade();
+    map.on('zoom', sizeAccuracyRing);
+    // Five seconds is one hundredth of the fade's span, so the decay reads as
+    // gradual without a second animation loop running against the vehicles'.
+    const fadeTimer = setInterval(fade, 5000);
+
+    return () => {
+      map.off('zoom', sizeAccuracyRing);
+      clearInterval(fadeTimer);
+      marker.remove();
+    };
+  }, [userLocation]);
+
+  // ── Framing the viewer against their Nearest Station ───────────────────────
+  // Declared after the station-focus effect on purpose. A locate that names a
+  // Station sets both `selectedStation` and `userLocation` in one commit, so
+  // both effects run; React runs them in declaration order, and this one has to
+  // be the camera call that lands. Seeing both points is the whole answer —
+  // centring on the viewer alone says where you are but not how far the train
+  // is.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || userLocation.status !== 'located') return;
+
+    const padding = panelAwarePadding(map);
+
+    if (!userLocation.nearestStation) {
+      // No Station worth naming — too rough a fix, or genuinely nothing near.
+      // Being located is still useful, so the camera still goes there.
+      map.easeTo({
+        center: userLocation.coordinates,
+        zoom: Math.max(map.getZoom(), 14.5),
+        padding,
+        duration: 900,
+        essential: true,
+      });
+      return;
+    }
+
+    const bounds = new LngLatBounds(userLocation.coordinates, userLocation.coordinates);
+    bounds.extend(userLocation.nearestStation.geometry.coordinates);
+    map.fitBounds(bounds, {
+      padding,
+      maxZoom: USER_FRAME_MAX_ZOOM,
+      duration: 900,
+      essential: true,
+    });
+  }, [userLocation]);
 
   return (
     <div

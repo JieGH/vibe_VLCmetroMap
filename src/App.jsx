@@ -4,8 +4,14 @@ import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
+import LocateButton from './components/LocateButton';
+import { locate } from './services/userLocation';
 import { Sun, Moon, X, LayoutDashboard } from 'lucide-react';
 import './index.css';
+
+// How long a locate's answer stays on screen. Long enough to read a refusal,
+// short enough that it is gone before it becomes furniture.
+const LOCATE_NOTICE_MS = 6000;
 
 // Dashboard mode is bookmarkable so an unattended tablet can boot straight into
 // it, and reachable from a button so it is discoverable from the map.
@@ -20,6 +26,9 @@ function App() {
   const [flyTarget, setFlyTarget] = useState(null);
   const [activeLineFilter, setActiveLineFilter] = useState([]);
   const [hoverLine, setHoverLine] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locateState, setLocateState] = useState('idle');
+  const [locateNotice, setLocateNotice] = useState(null);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -38,6 +47,41 @@ function App() {
     // even if the same station is clicked again
     setFlyTarget({ ...station, _ts: Date.now() });
   };
+
+  // The locate button. One press takes a fix, frames it against the Nearest
+  // Station and opens that Station's departures — deliberately compounding the
+  // three, against the rule three lines above that a Station click never moves
+  // the map. That rule is about incidental clicks; this is a single explicit
+  // ask, and answering "where am I" without moving the map would answer
+  // nothing. It is the only exception.
+  const handleLocate = async () => {
+    // A press while a fix is in flight is ignored rather than queued.
+    if (locateState === 'locating') return;
+
+    setLocateState('locating');
+    // Always re-acquire rather than re-centring on the fix already held: a dot
+    // that is twenty minutes old under a button that looks like it just worked
+    // is exactly the lie the fade exists to prevent. `maximumAge` inside
+    // locate() makes a repeat press within half a minute cheap anyway.
+    const result = await locate();
+
+    // A timeout goes back to idle rather than sticking on 'unavailable': it is
+    // the one failure worth pressing again, and a crossed-out icon says the
+    // opposite. Denied and unavailable are states of the device, not of the
+    // attempt, so those persist until something changes.
+    setLocateState(
+      result.status === 'located' || result.status === 'timeout' ? 'idle' : 'unavailable'
+    );
+    setUserLocation(result.status === 'located' ? result : null);
+    setLocateNotice({ text: result.message, _ts: Date.now() });
+    if (result.nearestStation) setSelectedStation(result.nearestStation);
+  };
+
+  useEffect(() => {
+    if (!locateNotice) return undefined;
+    const id = setTimeout(() => setLocateNotice(null), LOCATE_NOTICE_MS);
+    return () => clearTimeout(id);
+  }, [locateNotice]);
 
   const handleSelectLine = (lineId) => {
     // null clears selection
@@ -89,6 +133,7 @@ function App() {
         onSelectStation={handleSelectStation}
         activeLineFilter={activeLineFilter}
         hoverLine={hoverLine}
+        userLocation={userLocation}
       />
 
       {/* Collapsible Sidebar */}
@@ -161,6 +206,23 @@ function App() {
           <X size={13} style={{ opacity: 0.85 }} />
         </button>
       )}
+
+      {/* What the locate button found, or why it found nothing */}
+      {locateNotice && (
+        <button
+          className="locate-notice glass-panel"
+          onClick={() => setLocateNotice(null)}
+          title="Dismiss"
+        >
+          {locateNotice.text}
+        </button>
+      )}
+
+      <LocateButton
+        state={locateState}
+        lifted={Boolean(selectedStation)}
+        onLocate={handleLocate}
+      />
 
       {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
