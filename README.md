@@ -14,6 +14,55 @@ npm test
 - [ADR-0002](docs/adr/0002-one-polyline-per-line-no-branches.md) — why branches are unsupported, and what that costs
 - [ADR-0003](docs/adr/0003-gtfs-feeds-are-refetchable-input.md) — why feeds are fetched, not committed
 
+## Running the app
+
+The same React app ships two ways: as a website, and as a native iOS app via [Capacitor](https://capacitorjs.com). Both build from the same `src/`; nothing in the app code branches on which one you're using except `arrivalStore.js`'s fetch, explained below.
+
+### Web
+
+```bash
+npm run dev        # http://localhost:5173, hot-reloading
+npm run dev:phone  # same, but bound to 0.0.0.0 — open the printed
+                   # Network URL on a phone on the same Wi-Fi
+npm run build      # production bundle → dist/
+npm run preview    # serves dist/ as it would be deployed
+```
+
+`npm run dev` and `dev:phone` proxy `/api/metro/*` to the live arrivals API through Vite's dev server. This isn't optional plumbing — the API requires a `User-Agent` header containing `contact=`, which browser `fetch()` can never set (a forbidden header, by spec, in every browser). The proxy runs in Node, which has no such restriction, and injects it. There is currently no production web deployment; a static host would need an equivalent server-side relay for arrivals to work outside of `dev`.
+
+### iOS (native app)
+
+The native shell is a thin Capacitor wrapper: the same web build, running full-screen in a WKWebView, packaged as a real `.app`. No server, no Wi-Fi dependency for the UI — only the live arrivals need a network connection, same as the website.
+
+**Prerequisites**
+
+- A Mac with the full **Xcode** app installed (not just the Command Line Tools — `xcodebuild -version` should report a real version, not a CLT-only error)
+- An Apple ID signed into Xcode (Xcode → Settings → Accounts). A free personal account is enough to run on your own device; it just needs re-installing from Xcode roughly every 7 days. A paid developer account removes that limit.
+- An iPhone, connected by USB the first time
+
+**Build and run**
+
+```bash
+npm install        # installs @capacitor/core, @capacitor/ios, @capacitor/cli
+npm run ios:sync   # npm run build, then copies dist/ into ios/App/App/public
+npm run ios:open   # opens ios/App/App.xcodeproj in Xcode
+```
+
+Then, in Xcode:
+
+1. Select the **App** target → **Signing & Capabilities** → set **Team** to your Apple ID.
+2. In the toolbar's device dropdown, choose your iPhone under **iOS Device** (not a simulator).
+3. Press **Run** (▶ / Cmd-R).
+
+First launch, iOS blocks the app as an "Untrusted Developer": on the phone, go to **Settings → General → VPN & Device Management** and trust the developer profile, then open the app from the home screen.
+
+**After any code change**, re-run `npm run ios:sync` before hitting Run again in Xcode — it rebuilds the web bundle and re-copies it into the native project. Xcode doesn't watch `src/` itself.
+
+Two things exist purely to make this build path work, and are easy to break by "cleaning up" without knowing why:
+
+- **`capacitor.config.json`'s `plugins.CapacitorHttp.enabled`.** WKWebView's `fetch` is still browser `fetch` — it can't set `User-Agent` either. Enabling `CapacitorHttp` patches `fetch` to route through native networking instead, which isn't subject to that restriction. `arrivalStore.js` checks `Capacitor.isNativePlatform()` and only sends the header on that path; the web build keeps using the dev-server proxy above.
+- **`public/vendor/maplibre/`.** MapLibre resolves its own web-worker URL from `import.meta.url`, which Vite's bundler never emits as an actual file — the map's lines and tiles render in `npm run dev` (Vite serves the real file from `node_modules` directly) but silently fail in any production build, native app included. These two files are an unmodified copy of MapLibre's worker and its shared chunk, kept as static assets so the path always resolves. If `maplibre-gl` is upgraded, re-copy both files from `node_modules/maplibre-gl/dist/`.
+
 ## How a train gets on the map
 
 1. **Boot.** `arrivalStore.seedStrategicHubs()` fetches three interchange stations.

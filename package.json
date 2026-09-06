@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:phone": "vite --host",
     "build": "vite build",
     "test": "vitest run",
     "fetch:gtfs": "node scripts/fetch_gtfs.cjs",
@@ -16,15 +17,20 @@
     "fetch:line4": "node --no-warnings scripts/fetch_line4_overpass.cjs",
     "lint": "oxlint",
     "preview": "vite preview",
-    "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs"
+    "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs",
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:open": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
     "lucide-react": "^1.29.0",
     "maplibre-gl": "^6.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",

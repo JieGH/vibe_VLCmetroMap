@@ -1,5 +1,6 @@
 // Arrival Memory Store: Client-side cache, wall-clock countdown memory & Hub Seeder
 // Manages the API rate budget, 60s memory pause, and minimal 3-hub initial network seeding.
+import { Capacitor } from '@capacitor/core';
 import metroData from '../data/metro_lines.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import paradasApi from '../data/paradas_api.json';
@@ -340,10 +341,23 @@ class ArrivalStore {
       const timeoutId = setTimeout(() => controller.abort(), 4500);
 
       try {
-        const url = `/api/metro/prevision/${stationId}/parse`;
+        // The API requires a User-Agent containing contact=, which browser
+        // fetch can never set (a forbidden header, unconditionally, in every
+        // browser). A browser context has no way around that but a Node-side
+        // relay, so it goes through the dev-server proxy below. The native
+        // app has no such server to relay through, but CapacitorHttp (enabled
+        // in capacitor.config.json) patches fetch to run over native
+        // networking instead of the WebView's, which is not subject to the
+        // forbidden-header list, so it can set User-Agent directly.
+        const isNative = Capacitor.isNativePlatform();
+        const url = isNative
+          ? `https://metroapi.alexbadi.es/prevision/${stationId}/parse`
+          : `/api/metro/prevision/${stationId}/parse`;
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: { 'Accept': 'application/json' },
+          headers: isNative
+            ? { 'Accept': 'application/json', 'User-Agent': 'vib-metro-valencia/1.0 (Native iOS; contact=dev@example.com)' }
+            : { 'Accept': 'application/json' },
         });
 
         if (!response.ok) {

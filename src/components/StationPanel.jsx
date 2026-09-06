@@ -11,16 +11,17 @@ import arrivalStore from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
+import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
 // on a desktop should get the portrait treatment too.
 const useIsLandscape = () => {
   const [landscape, setLandscape] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth >= 820
+    () => typeof window !== 'undefined' && window.innerWidth >= LANDSCAPE_BREAKPOINT_PX
   );
   useEffect(() => {
-    const onResize = () => setLandscape(window.innerWidth >= 820);
+    const onResize = () => setLandscape(window.innerWidth >= LANDSCAPE_BREAKPOINT_PX);
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
@@ -81,7 +82,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
           // z-index paint over the theme and dashboard-mode buttons, making
           // them unclickable while a station was focused.
           ? { top: 84, right: 16, maxHeight: 'calc(100vh - 100px)', width: 'min(380px, 34vw)' }
-          : { left: 0, right: 0, bottom: 0, maxHeight: '58vh', borderRadius: '18px 18px 0 0' }),
+          : { left: 0, right: 0, bottom: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)', maxHeight: '58vh', borderRadius: '18px 18px 0 0' }),
       }}
     >
       {/* Header: which station, and how trustworthy this is */}
@@ -89,33 +90,33 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         gap: 12, padding: '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
       }}>
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8, overflow: 'hidden' }}>
           <h2 style={{
-            fontSize: 'clamp(1.05rem, 2.4vw, 1.4rem)', fontWeight: 800, lineHeight: 1.15,
+            fontSize: '1.05rem', fontWeight: 800, lineHeight: 1.15,
             letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            minWidth: 0, flexShrink: 1,
           }}>
             {focus.name}
           </h2>
 
           {/* Live API vs memory. Two different claims, so they never share a
               treatment: one was fetched now, the other is a countdown running
-              on from an older fetch. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '2px 8px', borderRadius: 999, fontSize: '.68rem', fontWeight: 700,
-              letterSpacing: '.04em',
-              color: focus.isFresh ? '#4CAF50' : '#00B4D8',
-              background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
-            }}>
-              {focus.isFresh
-                ? <><Radio size={10} className="pulse" /> LIVE API</>
-                : <><Database size={10} /> FROM MEMORY</>}
-            </span>
-            <span style={{ fontSize: '.68rem', color: 'var(--text-secondary)' }}>
-              confirmed {unheardLabel}
-            </span>
-          </div>
+              on from an older fetch. Sharing the name's line rather than a row
+              of its own is what makes the compacted header fit in one line. */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
+            padding: '2px 7px', borderRadius: 999, fontSize: '.62rem', fontWeight: 700,
+            letterSpacing: '.03em', whiteSpace: 'nowrap',
+            color: focus.isFresh ? '#4CAF50' : '#00B4D8',
+            background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
+          }}>
+            {focus.isFresh
+              ? <><Radio size={9} className="pulse" /> LIVE</>
+              : <><Database size={9} /> MEMORY</>}
+          </span>
+          <span style={{ fontSize: '.64rem', color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            confirmed {unheardLabel}
+          </span>
         </div>
 
         <button
@@ -131,49 +132,55 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         </button>
       </header>
 
-      {/* Directions summary — the same split the expanded marker draws */}
+      {/* Directions summary — the same split the expanded marker draws. One
+          row per direction rather than side-by-side cards: a two-column grid
+          halved the width available to the destination text, and real names
+          ("Alboraia Peris Aragó · Marítim · Rafelbunyol") wrapped and got cut
+          in that half-width even at two lines. Full width, single line,
+          ellipsis beyond it — still the full name on hover/long-press via
+          title, but the common case reads at a glance instead of wrapping. */}
       {focus.directions.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: focus.directions.length > 1 ? '1fr 1fr' : '1fr',
-          gap: 1, background: 'var(--border-color)', flexShrink: 0,
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border-color)', flexShrink: 0 }}>
           {focus.directions.map((d) => {
             const next = d.arrivals[0];
             return (
-              <div key={d.key} style={{ background: 'var(--bg-panel-solid)', padding: '10px 14px' }}>
+              <div
+                key={d.key}
+                title={d.label}
+                style={{
+                  background: 'var(--bg-panel-solid)', padding: '7px 10px',
+                  display: 'flex', alignItems: 'center', gap: 7,
+                }}
+              >
+                {/* The line badge names which train the countdown belongs to
+                    — a direction can merge more than one Line (two Lines
+                    leaving an interchange the same way), so "next" is only
+                    ever one specific train, not the direction as a whole. */}
+                {next && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 17, height: 17, padding: '0 4px', borderRadius: 5,
+                    background: lineColor(next.line), color: '#000',
+                    fontSize: '.6rem', fontWeight: 900, flexShrink: 0,
+                  }}>
+                    {next.line}
+                  </span>
+                )}
+                <span style={{ fontSize: '.7rem', color: 'var(--text-secondary)', flexShrink: 0 }}>→</span>
                 <div style={{
-                  fontSize: '.62rem', letterSpacing: '.14em', textTransform: 'uppercase',
-                  color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4,
+                  flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 600,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
-                  Towards
-                </div>
-                <div
-                  title={d.label}
-                  style={{
-                    fontSize: '.78rem', fontWeight: 600, lineHeight: 1.25,
-                    // Real destination names ("Seminari - CEU", "Torrent
-                    // Avinguda") overflow this column even at two names
-                    // joined — found by testing against live data rather
-                    // than the short placeholder names used to design this.
-                    // Wrapping to two lines beats an ellipsis that cuts a
-                    // station name mid-word.
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
                   {d.label}
                 </div>
                 {next && (
                   <div style={{
-                    fontSize: '1.35rem', fontWeight: 800, marginTop: 4,
+                    fontSize: '.92rem', fontWeight: 800, flexShrink: 0,
                     fontVariantNumeric: 'tabular-nums',
                     color: countdownHeat(next.seconds, theme),
                   }}>
                     {countdownLabel(next.seconds)}
-                    {next.seconds > 0 && <span style={{ fontSize: '.7rem', fontWeight: 600, marginLeft: 3 }}>min</span>}
+                    {next.seconds > 0 && <span style={{ fontSize: '.62rem', fontWeight: 600, marginLeft: 2 }}>min</span>}
                   </div>
                 )}
               </div>
@@ -182,8 +189,9 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         </div>
       )}
 
-      {/* The table */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '4px 8px 8px' }}>
+      {/* The table. Capped to roughly three rows so the panel stays compact —
+          scrolling this area (not the whole panel) reveals the rest. */}
+      <div style={{ maxHeight: 176, overflowY: 'auto', padding: '4px 8px 8px' }}>
         {focus.fetchError && (
           <div role="status" style={{
             margin: '8px', padding: '8px 10px', borderRadius: 8,
@@ -201,38 +209,43 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem' }}>
             <caption className="visually-hidden">Upcoming arrivals at {focus.name}</caption>
             <thead>
-              <tr style={{ fontSize: '.62rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '8px 8px 6px', fontWeight: 700 }}>Line</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '8px 8px 6px', fontWeight: 700 }}>Towards</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '8px 8px 6px', fontWeight: 700 }}>Due</th>
+              <tr style={{
+                fontSize: '.62rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                // Stays visible while scrolling past the third row, so the
+                // columns are never unlabelled once there's more to scroll to.
+                position: 'sticky', top: 0, background: 'var(--bg-panel-solid)',
+              }}>
+                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>Line</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>Towards</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '6px 8px 5px', fontWeight: 700 }}>Due</th>
               </tr>
             </thead>
             <tbody>
               {focus.arrivals.map((a, i) => (
                 <tr key={i} style={{ borderTop: '1px solid var(--border-color)' }}>
                   {/* Line identity is a labelled badge, never colour alone */}
-                  <td style={{ padding: '9px 8px', width: 1 }}>
+                  <td style={{ padding: '7px 8px', width: 1 }}>
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      minWidth: 26, height: 26, padding: '0 6px', borderRadius: 7,
+                      minWidth: 24, height: 24, padding: '0 6px', borderRadius: 7,
                       background: lineColor(a.line), color: '#000',
-                      fontSize: '.75rem', fontWeight: 900,
+                      fontSize: '.72rem', fontWeight: 900,
                     }}>
                       {a.line}
                     </span>
                   </td>
-                  <td style={{ padding: '9px 8px', maxWidth: 0 }}>
+                  <td style={{ padding: '7px 8px', maxWidth: 0 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
                       {a.destination}
                     </div>
                     {a.vehicleId && (
-                      <div style={{ fontSize: '.64rem', color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)' }}>
                         Train #{a.vehicleId}
                       </div>
                     )}
                   </td>
                   <td style={{
-                    padding: '9px 8px', textAlign: 'right', whiteSpace: 'nowrap',
+                    padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap',
                     fontWeight: 800, fontVariantNumeric: 'tabular-nums',
                     color: countdownHeat(a.seconds, theme),
                   }}>

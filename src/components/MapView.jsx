@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { Map as MapLibreMap, Marker } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import lineRenderConfig from '../data/line_render_config.js';
+import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -14,6 +15,21 @@ import lineRenderConfig from '../data/line_render_config.js';
 // Failing to load it is not fatal — line 4 falls back to the metro_lines.json
 // alignment — but it must not be silent, because that silence is exactly how
 // the production 404 went unnoticed.
+// MapLibre derives its worker's URL from import.meta.url, which resolves to a
+// file Vite's bundler never writes (maplibre-gl is bundled into the app chunk,
+// not kept as its own file) — a build-only 404 that a dev server's raw module
+// resolution never hits, which is why this only ever broke in production and
+// the native app. Bundling the worker as a Vite asset (?worker&url) was tried
+// first and loads without error but never actually starts: MapLibre requests
+// it as { type: 'module' }, and Vite's default worker output format is IIFE —
+// a mismatch that fails silent, with no console error and no worker activity,
+// rather than throwing. Pointing at an unbundled, unmodified copy in public/ —
+// the one directory Vite copies verbatim, already used for line4's OSM geojson
+// for the same reason — sidesteps both failure modes entirely. Re-copy
+// public/vendor/maplibre/*.mjs from node_modules/maplibre-gl/dist/ if the
+// maplibre-gl version ever changes.
+setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
+
 let line4Osm = null;
 try {
   // eslint-disable-next-line no-undef
@@ -784,12 +800,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!selectedStation) return undefined;
 
     const coordinates = selectedStation.geometry.coordinates;
-    map.easeTo({
-      center: coordinates,
-      zoom: Math.max(map.getZoom(), STATION_FOCUS_ZOOM),
-      duration: 900,
-      essential: true,
-    });
 
     const element = document.createElement('div');
     element.className = 'station-focus-node';
@@ -804,6 +814,39 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     };
     render();
     const id = setInterval(render, 1000);
+
+    // Also reserves the Station panel's own footprint, measured rather than
+    // assumed from its CSS (a bottom sheet with maxHeight:58vh in portrait, a
+    // right rail with width:min(380px,34vw) in landscape): both are content-
+    // sized caps, not fixed sizes, and the panel actually renders shorter than
+    // 58vh now that its arrivals table caps at three rows. The panel shares
+    // this render (same selectedStation update), so it's already in the DOM
+    // once this effect runs.
+    const isLandscape = window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
+    const containerRect = map.getContainer().getBoundingClientRect();
+    const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
+    const panelRect = document.querySelector('.station-panel')?.getBoundingClientRect();
+    const basePadding = isLandscape
+      ? {
+          top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 84) + 12,
+          right: (panelRect ? containerRect.right - panelRect.left : Math.min(380, window.innerWidth * 0.34)) + 16,
+          bottom: 40,
+          left: 40,
+        }
+      : {
+          top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 90) + 12,
+          right: 24,
+          bottom: (panelRect ? containerRect.bottom - panelRect.top : window.innerHeight * 0.58) + 16,
+          left: 24,
+        };
+
+    map.easeTo({
+      center: coordinates,
+      zoom: Math.max(map.getZoom(), STATION_FOCUS_ZOOM),
+      padding: basePadding,
+      duration: 900,
+      essential: true,
+    });
 
     return () => {
       clearInterval(id);
