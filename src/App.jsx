@@ -15,7 +15,7 @@ const readMode = () =>
 function App() {
   const [theme, setTheme] = useState('dark');
   const [mode, setMode] = useState(readMode);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
   const [flyTarget, setFlyTarget] = useState(null);
   const [activeLineFilter, setActiveLineFilter] = useState([]);

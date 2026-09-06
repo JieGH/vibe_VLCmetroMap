@@ -662,7 +662,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       container: containerRef.current,
       style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE,
       center: [-0.3763, 39.4699],
-      zoom: 11.5,
+      // 12.3 is where updateZoomScale's formula below caps marker scale at its
+      // 1.2x maximum, so the default view opens with stations already at their
+      // largest, easiest-to-tap size rather than the network's full extent.
+      zoom: 12.3,
     });
 
     const trainCount = document.createElement('div');
