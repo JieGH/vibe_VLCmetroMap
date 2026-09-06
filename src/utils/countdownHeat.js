@@ -42,4 +42,15 @@ export const countdownHeat = (seconds, theme) => {
   return band[ramp];
 };
 
+/**
+ * The number this ramp is drawn next to: "Due", "<1", or whole minutes.
+ * Every countdown display in the app reads off this, so the wording can't
+ * drift between the map's expanded marker, the Station panel, and the board.
+ */
+export const countdownLabel = (seconds) => {
+  if (seconds <= 0) return 'Due';
+  if (seconds < 60) return '<1';
+  return String(Math.round(seconds / 60));
+};
+
 export default countdownHeat;

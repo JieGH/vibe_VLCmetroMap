@@ -9,10 +9,8 @@ import React, { useEffect, useState } from 'react';
 import { X, Radio, Database, Navigation } from 'lucide-react';
 import arrivalStore from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
-import { countdownHeat } from '../utils/countdownHeat';
-import lineColors from '../data/line_colors_from_image.json';
-
-const lineColor = (id) => lineColors[String(id)] || '#8a8a8a';
+import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { lineColor } from '../utils/lineColor';
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
@@ -31,12 +29,6 @@ const useIsLandscape = () => {
     };
   }, []);
   return landscape;
-};
-
-const countdownLabel = (seconds) => {
-  if (seconds <= 0) return 'Due';
-  if (seconds < 60) return '<1';
-  return String(Math.round(seconds / 60));
 };
 
 const StationPanel = ({ station, theme, onClose, onCenter }) => {

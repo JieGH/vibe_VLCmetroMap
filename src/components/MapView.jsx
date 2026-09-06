@@ -32,7 +32,7 @@ try {
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { getStationFocus } from '../services/stationFocus';
-import { countdownHeat } from '../utils/countdownHeat';
+import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -273,10 +273,6 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
 ));
 
-const focusCountdown = (seconds) => (
-  seconds <= 0 ? 'Due' : seconds < 60 ? '<1' : String(Math.round(seconds / 60))
-);
-
 const renderFocusNode = (focus, theme) => {
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
@@ -299,7 +295,7 @@ const renderFocusNode = (focus, theme) => {
       ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:${lineColorMap[next.line] || '#8a8a8a'};color:#000;font:900 12px/1 system-ui">${escapeHtml(next.line)}</span>`
       : '';
     const due = next
-      ? `<span style="font:800 18px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${focusCountdown(next.seconds)}</span>`
+      ? `<span style="font:800 18px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${countdownLabel(next.seconds)}</span>`
       : `<span style="font:600 11px/1 system-ui;color:${muted}">none</span>`;
 
     return `

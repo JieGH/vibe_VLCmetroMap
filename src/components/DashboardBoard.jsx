@@ -12,8 +12,8 @@
 import React, { useEffect, useState } from 'react';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
-import { countdownHeat } from '../utils/countdownHeat';
-import lineColors from '../data/line_colors_from_image.json';
+import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { lineColor } from '../utils/lineColor';
 
 const ROTATE_MS = 12000;
 
@@ -24,8 +24,6 @@ const BOARD_STATIONS = [
   { apiId: 115, name: 'Marítim', lines: ['5', '6', '7', '8'] },
   { apiId: 34, name: 'Torrent Avinguda', lines: ['1', '2'] },
 ];
-
-const lineColor = (id) => lineColors[String(id)] || '#8a8a8a';
 
 const DashboardBoard = ({ theme, onExit }) => {
   const [now, setNow] = useState(Date.now());
@@ -154,7 +152,13 @@ const DashboardBoard = ({ theme, onExit }) => {
             </span>
 
             <span style={{
-              fontSize: 'clamp(20px, 3.6vw, 58px)', fontWeight: 700, lineHeight: 1.1,
+              // 42-75px is the band the research converges on for 2m viewing
+              // distance; 3.6vw only reached the middle of it (~58px) above
+              // ~1600px wide, undershooting the floor on real tablet-class
+              // widths (1024-1366px landscape). 5.71vw puts 1024px exactly at
+              // the band's middle and saturates at the 75px cap by ~1366px,
+              // rather than missing the band on the devices it's meant for.
+              fontSize: 'clamp(42px, 5.71vw, 75px)', fontWeight: 700, lineHeight: 1.1,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
             }}>
               {a.destination}
@@ -175,7 +179,7 @@ const DashboardBoard = ({ theme, onExit }) => {
               minWidth: 'clamp(96px, 13vw, 210px)',
               color: countdownHeat(a.seconds, theme),
             }}>
-              {a.seconds <= 0 ? 'Due' : a.seconds < 60 ? '<1' : Math.round(a.seconds / 60)}
+              {countdownLabel(a.seconds)}
               {a.seconds > 0 && <span style={{ fontSize: '.42em', fontWeight: 600, marginLeft: 4 }}>min</span>}
             </span>
           </div>
