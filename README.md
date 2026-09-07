@@ -193,3 +193,23 @@ npm test               # confirm the network still looks sane
 - **Station ids.** The GTFS `stop_id` space and the live API's id space disagree for most stations; `/api/metro/prevision/<id>` uses the API's. Never hand-write one — derive it from `paradas_api.json`. A wrong id fails silently, and `npm test` guards the ones we hardcode.
 - **The eastern stations have no arrival endpoint.** Ayora, Amistat and Aragó carry trains and appear in search, but the API exposes no station id for them, so they have no arrivals card of their own.
 - **Markers sometimes never appear in `npm run dev`.** A `StrictMode` double-mount races MapLibre's `style.load` over shared marker refs, so the map can load with no stations and no trains at all. It looks exactly like broken data and it is not — it does not happen in a production build. Reload, or see [#8](https://github.com/JieGH/vib_metroValencia/issues/8). Check `vite preview` before believing a rendering bug is real.
+
+## Data, privacy, and trademarks
+
+**This is an independent project, not an official one.** "Metrovalencia" is the trading name of [Ferrocarrils de la Generalitat Valenciana (FGV)](https://www.fgv.es), the public operator of the network, and its brand, colours and station names remain FGV's. This app is not built, run, reviewed, or endorsed by FGV — it is a third party reading their public feed and drawing what it says.
+
+**What data the app touches, and where it goes:**
+
+- **The GTFS schedule** ([`google_transit_feed`](https://www.metrovalencia.es/google_transit_feed/google_transit.zip)) is fetched by a build script (`npm run fetch:gtfs`), never at runtime by a visitor's device. It becomes the small, committed JSON files described above.
+- **Live arrival predictions** are fetched from [metroapi.alexbadi.es](https://metroapi.alexbadi.es), a third-party API that itself reads FGV's live feed — this project did not build it and cannot vouch for its uptime or accuracy, only for what it does with what comes back.
+- **Track geometry** comes from [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via the Overpass API.
+- **The offline basemap** is a [Protomaps](https://protomaps.com) extract, itself built from OpenStreetMap.
+
+**What never leaves your device:**
+
+- **Your location.** The locate feature reads a GPS fix from the OS and compares it, on-device, against the station list already in memory. It is never sent to this project, to FGV, to the arrivals API, or to any other service — there is no server that could receive it.
+- **Everything you do in the app.** There is no analytics, no tracking pixel, no crash reporter, no account, and nothing about you is collected. The only thing the app writes down is a short-lived cache of recent arrival predictions, kept in the browser's `sessionStorage` so a repeat visit doesn't need to refetch — cleared automatically when the tab closes, and never sent anywhere itself.
+
+**License.** The code in this repository is [Apache 2.0](LICENSE). That covers this project's code — not FGV's data, not OpenStreetMap's, and not Metrovalencia's brand, each of which carries its own terms.
+
+**Thanks** to FGV for publishing the GTFS feed this runs on, to the maintainer of metroapi.alexbadi.es for the live arrivals API, to OpenStreetMap's contributors for the geometry, and to Protomaps for making an offline-first basemap possible without a tile-server bill.
