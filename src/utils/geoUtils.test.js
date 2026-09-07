@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDistance, nearestPointOnPath } from './geoUtils';
+import { getDistance, nearestFeature, nearestPointOnPath } from './geoUtils';
 
 // A straight north-south segment through Valencia, and a point beside it.
 const PATH = [[-0.3800, 39.4600], [-0.3800, 39.4800]];
@@ -33,5 +33,28 @@ describe('nearestPointOnPath', () => {
 
   it('returns nothing to snap to for an empty path', () => {
     expect(nearestPointOnPath([], [-0.38, 39.47])).toBeNull();
+  });
+});
+
+describe('nearestFeature', () => {
+  const at = (name, coordinates) => ({ properties: { name }, geometry: { type: 'Point', coordinates } });
+  const FEATURES = [
+    at('west', [-0.3810, 39.4700]),
+    at('east', [-0.3790, 39.4700]),
+  ];
+
+  it('picks whichever is closer, not whichever came first', () => {
+    // Nearer the east one, which is second in the list.
+    expect(nearestFeature(FEATURES, [-0.3792, 39.4700]).feature.properties.name).toBe('east');
+    expect(nearestFeature(FEATURES, [-0.3808, 39.4700]).feature.properties.name).toBe('west');
+  });
+
+  it('reports the distance so the caller can apply its own threshold', () => {
+    const nearest = nearestFeature(FEATURES, [-0.3810, 39.4700]);
+    expect(nearest.distance).toBeLessThan(1);
+  });
+
+  it('has nothing to offer for an empty list', () => {
+    expect(nearestFeature([], [-0.38, 39.47])).toBeNull();
   });
 });

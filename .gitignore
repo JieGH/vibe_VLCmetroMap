@@ -38,3 +38,7 @@ src/data/line3_timetable.json
 *.njsproj
 *.sln
 *.sw?
+
+# Offline basemap — refetchable input, not committed data (npm run fetch:basemap)
+public/basemap/
+.cache/

@@ -129,3 +129,22 @@ export const nearestPointOnPath = (coords, point) => {
 
   return best;
 };
+
+// The feature nearest a coordinate, with how far away it was.
+//
+// Policy-free on purpose: it names the nearest whatever the distance, and the
+// caller decides whether that is close enough to mean anything. Nearest-wins is
+// what makes a forgiving tap target safe — where two stations' targets overlap,
+// the one you were actually closest to is the one you get, rather than whichever
+// happened to be drawn on top.
+export const nearestFeature = (features, coordinates) => {
+  if (!features || features.length === 0 || !coordinates) return null;
+
+  let best = null;
+  for (const feature of features) {
+    const distance = getDistance(coordinates, feature.geometry.coordinates);
+    if (!best || distance < best.distance) best = { feature, distance };
+  }
+
+  return best;
+};

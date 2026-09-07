@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Map as MapLibreMap, Marker, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
+import { noLabels, labels } from 'protomaps-themes-base';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -30,6 +32,25 @@ import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 // maplibre-gl version ever changes.
 setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
 
+// The offline basemap: one PMTiles archive of the Valencia region, read
+// straight off disk in the native app and by HTTP range request on the web, so
+// a visitor pulls the handful of tiles they look at rather than all 34 MB.
+//
+// Vector rather than raster because the complaint that started this was zoom:
+// every raster provider that needs no API key stops having real tiles around
+// zoom 16, and CARTO's keyless tiles come back stamped "API KEY REQUIRED".
+// Vector tiles have no such ceiling — the archive stops at zoom 15 and MapLibre
+// renders it sharp at 20, because it is drawing geometry rather than stretching
+// pixels.
+// Absolute rather than root-relative: MapLibre rejects a relative sprite URL
+// outright ("must be absolute"), and having the archive, glyphs and sprite all
+// resolve the same way keeps the native app — served from capacitor://localhost
+// rather than http — working off the same three lines.
+const BASEMAP_DIR = `${window.location.origin}/basemap`;
+const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
+
+addProtocol('pmtiles', new Protocol().tile);
+
 let line4Osm = null;
 try {
   // eslint-disable-next-line no-undef
@@ -45,11 +66,35 @@ try {
 } catch (error) {
   console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
+// Absent until `npm run fetch:basemap` has been run — it is refetchable input,
+// not committed data (ADR-0003's rule, and 34 MB of binary has no business in
+// git history).
+//
+// Probed with a one-byte range read rather than a HEAD, because that is exactly
+// the request the archive's own reader makes: a server that answers this will
+// serve the archive, and one that cannot is no use however it answers a HEAD.
+// Vite's dev server, in fact, returns 503 to a HEAD from the browser while
+// serving ranges perfectly well.
+let OFFLINE_BASEMAP_AVAILABLE = false;
+try {
+  // eslint-disable-next-line no-undef
+  const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
+  OFFLINE_BASEMAP_AVAILABLE = probe.ok;
+  if (!probe.ok) {
+    console.warn(
+      `Offline basemap unavailable (HTTP ${probe.status}); falling back to online raster tiles, ` +
+      'which stop resolving past zoom 16. Run `npm run fetch:basemap`.'
+    );
+  }
+} catch (error) {
+  console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
+}
+
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
-import { getDistance, nearestPointOnPath } from '../utils/geoUtils';
+import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -282,83 +327,134 @@ const DARK_TILES = cartoApiKey ? getCartoTiles('dark_all') : KEYLESS_DARK_TILES;
 const LIGHT_TILES = cartoApiKey ? getCartoTiles('light_all') : KEYLESS_LIGHT_TILES;
 const TILE_ATTRIBUTION = cartoApiKey ? '© OpenStreetMap © CARTO' : '© OpenStreetMap © Esri';
 
-const buildStyle = (tiles, tileSourceId) => ({
+// The Line layers, as a template both basemaps below clone. They sit above the
+// basemap's own geometry and below its labels, so a street name stays readable
+// where a Line crosses it while the Lines themselves are never buried under a
+// road. Cloned rather than shared for the reason given at styleFor.
+const metroLayers = [
+  {
+    id: 'metro-casing',
+    type: 'line',
+    source: 'metro-lines',
+    paint: {
+      'line-color': '#000000',
+      'line-width': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 1.2,
+        8, 1.8,
+        10, 2.6,
+        11.5, 3.4,
+        13, 4.6,
+        15, 6.2,
+        17, 8.5,
+        19, 11.0
+      ],
+      'line-opacity': 0.35,
+      'line-offset': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 0,
+        8, ['*', ['get', 'offset'], 0.15],
+        10, ['*', ['get', 'offset'], 0.35],
+        11.5, ['*', ['get', 'offset'], 0.6],
+        13, ['*', ['get', 'offset'], 0.85],
+        15, ['*', ['get', 'offset'], 1.1],
+        17, ['*', ['get', 'offset'], 1.4],
+        19, ['*', ['get', 'offset'], 1.8]
+      ]
+    },
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+  },
+  {
+    id: 'metro-fill',
+    type: 'line',
+    source: 'metro-lines',
+    paint: {
+      'line-color': ['get', 'color'],
+      'line-width': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 0.75,
+        8, 1.2,
+        10, 1.8,
+        11.5, 2.4,
+        13, 3.4,
+        15, 4.8,
+        17, 6.8,
+        19, 9.0
+      ],
+      'line-offset': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 0,
+        8, ['*', ['get', 'offset'], 0.15],
+        10, ['*', ['get', 'offset'], 0.35],
+        11.5, ['*', ['get', 'offset'], 0.6],
+        13, ['*', ['get', 'offset'], 0.85],
+        15, ['*', ['get', 'offset'], 1.1],
+        17, ['*', ['get', 'offset'], 1.4],
+        19, ['*', ['get', 'offset'], 1.8]
+      ]
+    },
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+  },
+];
+
+// Raster fallback, used only when the offline archive is missing. Esri's Gray
+// Canvas stops having real tiles at zoom 16 and serves a "map data not yet
+// available" placeholder above it, which is exactly why the offline vector
+// basemap exists — but a clone that has not run `npm run fetch:basemap` should
+// still get a map rather than a void.
+const buildRasterStyle = (tiles, tileSourceId) => ({
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
-    [tileSourceId]: { type: 'raster', tiles, tileSize: 256, attribution: TILE_ATTRIBUTION },
+    [tileSourceId]: { type: 'raster', tiles, tileSize: 256, attribution: TILE_ATTRIBUTION, maxzoom: 16 },
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
   },
   layers: [
     { id: `${tileSourceId}-tiles`, type: 'raster', source: tileSourceId },
-    {
-      id: 'metro-casing',
-      type: 'line',
-      source: 'metro-lines',
-      paint: {
-        'line-color': '#000000',
-        'line-width': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 1.2,
-          8, 1.8,
-          10, 2.6,
-          11.5, 3.4,
-          13, 4.6,
-          15, 6.2,
-          17, 8.5,
-          19, 11.0
-        ],
-        'line-opacity': 0.35,
-        'line-offset': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 0,
-          8, ['*', ['get', 'offset'], 0.15],
-          10, ['*', ['get', 'offset'], 0.35],
-          11.5, ['*', ['get', 'offset'], 0.6],
-          13, ['*', ['get', 'offset'], 0.85],
-          15, ['*', ['get', 'offset'], 1.1],
-          17, ['*', ['get', 'offset'], 1.4],
-          19, ['*', ['get', 'offset'], 1.8]
-        ]
-      },
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-    },
-    {
-      id: 'metro-fill',
-      type: 'line',
-      source: 'metro-lines',
-      paint: {
-        'line-color': ['get', 'color'],
-        'line-width': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 0.75,
-          8, 1.2,
-          10, 1.8,
-          11.5, 2.4,
-          13, 3.4,
-          15, 4.8,
-          17, 6.8,
-          19, 9.0
-        ],
-        'line-offset': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 0,
-          8, ['*', ['get', 'offset'], 0.15],
-          10, ['*', ['get', 'offset'], 0.35],
-          11.5, ['*', ['get', 'offset'], 0.6],
-          13, ['*', ['get', 'offset'], 0.85],
-          15, ['*', ['get', 'offset'], 1.1],
-          17, ['*', ['get', 'offset'], 1.4],
-          19, ['*', ['get', 'offset'], 1.8]
-        ]
-      },
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-    },
+    ...structuredClone(metroLayers),
   ],
 });
 
-const DARK_STYLE  = buildStyle(DARK_TILES,  'basemap-dark');
-const LIGHT_STYLE = buildStyle(LIGHT_TILES, 'basemap-light');
+// Protomaps' basemap flavours. 'white' gives the clean near-white ground the
+// app already had; 'dark' rather than 'black' for the other, because 'black'
+// paints earth #141414 under roads #333333 and the structure of the city simply
+// does not survive that little contrast — it reads as an empty screen with
+// Lines floating on it. Each flavour names its own sprite file.
+const THEME_FLAVOURS = { dark: 'dark', light: 'white' };
+
+const buildVectorStyle = (flavour) => ({
+  version: 8,
+  glyphs: `${BASEMAP_DIR}/fonts/{fontstack}/{range}.pbf`,
+  sprite: `${BASEMAP_DIR}/sprites/${flavour}`,
+  sources: {
+    protomaps: {
+      type: 'vector',
+      url: `pmtiles://${BASEMAP_ARCHIVE}`,
+      attribution: '© OpenStreetMap · Protomaps',
+    },
+    'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
+  },
+  // Basemap geometry, then the Lines, then the basemap's labels on top.
+  layers: [
+    ...noLabels('protomaps', flavour),
+    ...structuredClone(metroLayers),
+    ...labels('protomaps', flavour, 'en'),
+  ],
+});
+
+// Built fresh on every call rather than held as two module-level constants.
+// MapLibre takes ownership of the style object it is handed and mutates it, and
+// StrictMode mounts this component twice in dev: the first map consumed the
+// shared object and the second one — the live one — got the leftovers, so the
+// basemap and the Lines both silently failed to draw while the console stayed
+// clean. Toggling the theme appeared to fix it only because that handed over
+// the other, still-untouched object.
+const styleFor = (theme) => (OFFLINE_BASEMAP_AVAILABLE
+  ? buildVectorStyle(theme === 'dark' ? THEME_FLAVOURS.dark : THEME_FLAVOURS.light)
+  : buildRasterStyle(
+    theme === 'dark' ? DARK_TILES : LIGHT_TILES,
+    theme === 'dark' ? 'basemap-dark' : 'basemap-light'
+  ));
 
 // The CSS opacity a vehicle marker is drawn at. For a live train that is its
 // Position Confidence; a Simulated Train keeps its own flat value, because
@@ -442,6 +538,21 @@ const stationBorderColor = (st) => {
 // screen and the map stops being a map.
 const STATION_FOCUS_ZOOM = 14.6;
 
+// The radius, in screen pixels, within which a tap counts as meaning a Station.
+// A Station dot is drawn 10 px across, which is a quarter of the 44 px Apple
+// asks for as a minimum touch target and the reason the map had to be zoomed
+// right in before a station could be hit at all. 22 px gives that 44 px target
+// without drawing anything bigger.
+//
+// Enlarging each marker's own hit box would have been the obvious fix and the
+// wrong one: neighbouring Stations are 99 m apart at the closest and 387 m at
+// the first quartile, so at normal zoom those boxes overlap, and an overlap
+// between DOM elements is settled by which one happens to be on top rather than
+// which one you meant. Resolving the tap to the *nearest* Station within the
+// radius settles it by distance instead, which is the thing the finger was
+// actually aiming at.
+const TAP_RADIUS_PX = 22;
+
 // How close framing the viewer against their Nearest Station is allowed to get.
 // Without a cap, standing 40 m from a platform fills the screen with one
 // junction and the map stops being a map.
@@ -511,6 +622,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
+  // The Stations actually drawn right now, which is not every Station: a Line
+  // filter or a hovered Line narrows them. A tap must only ever resolve to
+  // something the viewer can currently see.
+  const drawnStationsRef = useRef([]);
   const vehInnerElemsRef= useRef([]); // refs to vehicle inner elements for direct scale updates
 
   useEffect(() => { themeRef.current = theme; }, [theme]);
@@ -616,11 +731,14 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       return true;
     });
 
+    drawnStationsRef.current = [];
+
     filteredStations.forEach((st) => {
       const sid = st.properties.stop_id || st.properties.id || st.properties.name;
       if (!sid) return;
       if (seenStops.has(sid)) return;
       seenStops.add(sid);
+      drawnStationsRef.current.push(st);
 
       const wrapper = document.createElement('div');
       wrapper.className = 'ml-station-marker-wrapper';
@@ -820,7 +938,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
     const map = new MapLibreMap({
       container: containerRef.current,
-      style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE,
+      style: styleFor(theme),
       center: [-0.3763, 39.4699],
       // 12.3 is where updateZoomScale's formula below caps marker scale at its
       // 1.2x maximum, so the default view opens with stations already at their
@@ -844,6 +962,26 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     };
     map.on('zoom', updateZoomScale);
     updateZoomScale();
+
+    // A forgiving tap. This fires only for clicks that reach the map canvas —
+    // a click that lands squarely on a Station marker is handled by the marker's
+    // own handler and never gets here — so this is purely the near-miss case.
+    map.on('click', (event) => {
+      // Below this scale the Station markers are hidden, and nothing invisible
+      // should be tappable.
+      if (zoomScaleRef.current < 0.55) return;
+
+      const { lng, lat } = event.lngLat;
+      const nearest = nearestFeature(drawnStationsRef.current, [lng, lat]);
+      if (!nearest) return;
+
+      // The radius is a constant number of pixels — a finger is the same size at
+      // every zoom — so it has to be converted into metres at the zoom in force.
+      const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
+      if (nearest.distance > radiusM) return;
+
+      selectStRef.current(nearest.feature);
+    });
 
     map.on('style.load', () => {
       // In dev, StrictMode double-mounts this effect, so a stale map from the
@@ -893,7 +1031,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     // narrow pre-load window is silently missed, which is an acceptable trade
     // for removing the race.
     if (!map.isStyleLoaded()) return;
-    map.setStyle(theme === 'dark' ? DARK_STYLE : LIGHT_STYLE);
+    // diff:false because the two vector styles differ by more than paint: each
+    // flavour names its own sprite file, and MapLibre's style diffing cannot
+    // express a sprite change. Left to diff, a flip repainted some of the 56
+    // basemap layers and not others, landing on a light ground wearing dark
+    // labels. A full reload costs one re-read of the archive header and is the
+    // only way to be sure the whole basemap changed.
+    map.setStyle(styleFor(theme), { diff: false });
   }, [theme]);
 
   useEffect(() => {
