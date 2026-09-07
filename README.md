@@ -2,7 +2,7 @@
   <img src="public/favicon.svg" width="88" height="88" alt="">
 </p>
 
-<h1 align="center">Metrovalencia Live Map</h1>
+<h1 align="center">vibe_VLCmetroMap</h1>
 
 <p align="center">
   Where every train on the Valencia metro is, right now — and when the next one reaches you.
@@ -13,6 +13,30 @@
 Metrovalencia publishes when a train is <em>due</em> at a station. It does not publish where any train actually <em>is</em>. This app works that out: it takes the live arrival predictions, walks them backwards along the real rail geometry, and draws every train on the map at the position those predictions imply.
 
 It runs as a website and as a native iOS app, from the same code.
+
+## See it working
+
+<p align="center">
+  <img src="docs/demo.gif" width="288" alt="Screen recording: the network with live trains, zooming in, then Alameda and Xàtiva stations opened for their departures">
+</p>
+
+<p align="center">
+  <em>Recorded on an iPhone. <a href="docs/demo.mp4">Full-resolution video</a> (10 s, no audio).</em>
+</p>
+
+**What you are looking at**, in order:
+
+1. **The whole network, live.** Every coloured dot on a line is a train the API is currently reporting, drawn at the position its arrival predictions imply rather than at a station. The counter at the bottom reads *"42 live trains · 20 confirmed at two stations"* — the second number is the trains sighted at two different stations at once, which pins them down far more tightly than a single prediction can.
+
+2. **Zooming in.** Street names and building footprints stay sharp all the way down, because the basemap is vector and ships with the app. Nothing here is being fetched.
+
+3. **Alameda, opened.** The bubble on the map shows the two directions with the next train each way; the panel below gives the detail — `5 → Aeroport · Marítim` and `3 → Rafelbunyol · Alboraia Peris Aragó · Torrent Avinguda +1`, then the individual trains with their unit numbers (#7033, #3040, #9033). `LIVE` and *"confirmed just now"* mean the API answered for this station moments ago.
+
+4. **The countdown running.** Watch the top row go `<1 min` → **Due** while the recording plays. Those countdowns are absolute timestamps ticking down on the device, not repeated polling — which is why they stay correct between refreshes.
+
+5. **Xàtiva, opened.** A different shape of station: both directions are line 9, and the arrows on the bubble point the way the track actually leaves the platform rather than simply up and down.
+
+6. **Zooming back out** to the full network, north to Rafelbunyol and Puçol, south past Picassent.
 
 ## What you can do with it
 
@@ -148,6 +172,17 @@ npm test               # confirm the network still looks sane
 - **`public/line4_osm.geojson`** — line 4's finer OSM alignment, `fetch`ed at runtime rather than imported, so it was never in the bundle. It must live in `public/`: served from `src/` it resolved in dev and 404'd in production, where the failure was swallowed and line 4 quietly fell back to the coarser `metro_lines.json` alignment.
 - **`line4_osm_raw_overpass.json`** (repo root) — the raw Overpass dump that `npm run build:line4` converts into the file above. Committed rather than gitignored, which [ADR-0003](docs/adr/0003-gtfs-feeds-are-refetchable-input.md) would otherwise argue against, because it is **not** currently refetchable: `scripts/fetch_line4_overpass.cjs` needs `node-fetch` and `osmtogeojson`, and neither is a dependency. Gitignore it once that script can actually run.
 - **`public/basemap/`** — the offline basemap, ~35 MB, **gitignored**: a PMTiles extract of the Valencia region from [Protomaps](https://protomaps.com), plus the glyphs and sprites its style needs. Vector rather than raster, because every keyless raster provider stops having real tiles around zoom 16 — Esri's Gray Canvas serves a "map data not yet available" placeholder above it, and CARTO's keyless tiles come back stamped "API KEY REQUIRED". Vector has no such ceiling: the archive stops at zoom 15 and MapLibre draws it sharp at 20, because it is rendering geometry rather than stretching pixels. It is also genuinely offline — read straight off disk in the native app, and by HTTP range request on the web, so a visitor pulls the handful of tiles they look at rather than all 34 MB. Refetchable input rather than committed data, on [ADR-0003](docs/adr/0003-gtfs-feeds-are-refetchable-input.md)'s reasoning: 34 MB of binary has no business in git history. **The app falls back to online raster tiles when it is absent**, so a fresh clone still shows a map — just one that stops resolving past zoom 16.
+- **`docs/demo.gif` and `docs/demo.mp4`** — the recording at the top of this file, both derived from one screen capture off a phone. Committed rather than gitignored because a README that renders nothing is worse than 3 MB of history, but kept deliberately small: the original was a 30 MB, 1080×1920, 60 fps HEVC file, which is both larger than the rest of the repository put together and unplayable outside Safari. To replace them from a new recording:
+
+  ```bash
+  ffmpeg -i recording.MP4 -an -vf "scale=540:-2,fps=30" -c:v libx264 -profile:v main \
+         -pix_fmt yuv420p -crf 28 -movflags +faststart docs/demo.mp4
+  ffmpeg -ss 0.5 -t 10 -i recording.MP4 -vf "fps=10,scale=288:-1:flags=lanczos,palettegen=stats_mode=diff:max_colors=128" pal.png
+  ffmpeg -ss 0.5 -t 10 -i recording.MP4 -i pal.png \
+         -lavfi "fps=10,scale=288:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5" docs/demo.gif
+  ```
+
+  The GIF is what the README shows, because GitHub strips a `<video>` tag pointing at a path inside the repository but renders an animated GIF inline. The MP4 is linked beside it for anyone who wants it at full size.
 - **`src/data/network_overlay.json`** — corrections applied on top of the feed. **Empty is the healthy state.** It exists because the feed bundled in July 2026 had already expired and predated lines 5 and 7 returning east of Alameda, while the live API was reporting trains bound for Marítim. A fresh feed made the overlay redundant; its `history` records why it existed.
 
 **Refetch the feed when positions look wrong.** A GTFS feed carries a service calendar that expires, and a lapsed feed yields a timetable with no trips for today. The scripts always take the newest dated directory.
