@@ -1,6 +1,44 @@
-# Metrovalencia Real-Time Tracker
+<p align="center">
+  <img src="public/favicon.svg" width="88" height="88" alt="">
+</p>
 
-Live train positions on the Metrovalencia network, drawn on real rail geometry.
+<h1 align="center">Metrovalencia Live Map</h1>
+
+<p align="center">
+  Where every train on the Valencia metro is, right now — and when the next one reaches you.
+</p>
+
+---
+
+Metrovalencia publishes when a train is <em>due</em> at a station. It does not publish where any train actually <em>is</em>. This app works that out: it takes the live arrival predictions, walks them backwards along the real rail geometry, and draws every train on the map at the position those predictions imply.
+
+It runs as a website and as a native iOS app, from the same code.
+
+## What you can do with it
+
+**See the whole network moving.** Every train the API knows about, drawn on the actual track alignment rather than a schematic, easing between positions as the predictions update. Lines with no live data fall back to simulated trains — drawn hollow and dashed, so a guess never looks like a reported train.
+
+**Tap a station for its departures.** The next train each way, prominently, then everything else due. Live where the API answered just now, and counting down from memory where it did not.
+
+**Find your nearest station.** One press centres the map on you and opens the departures for the station you are closest to. Hold the same button to take your location back off the map. If the fix is too rough to tell two stations apart, it says so rather than guessing.
+
+**Use it underground.** The basemap ships with the app — around 35 MB of vector tiles covering the whole Valencia region, read straight off disk. No network, no API key, and sharp all the way in to individual buildings.
+
+**Leave it running as a departure board.** `?mode=dashboard` opens a full-screen board for an unattended tablet or a spare monitor. It is bookmarkable, so a kiosk can boot straight into it.
+
+**Find things quickly.** Search any station or line, filter the map to a single line, and switch between a light and a dark map.
+
+## What it is honest about
+
+The app never pretends to know more than it does, and that is deliberate throughout:
+
+- A train marker **fades as its position becomes a guess** — the longer the walk from a known prediction, and the longer since the last sync, the fainter it is drawn.
+- A train that has run out of prediction entirely is fainter still, and separately so.
+- A simulated train is **hollow and dashed**, never mistakable for a live one.
+- Fourteen stations sit on branches the geometry does not have, so trains bound for them are **not drawn at all** rather than drawn in the wrong place ([#2](https://github.com/JieGH/vib_metroValencia/issues/2)).
+- A location fix too imprecise to choose between neighbouring stations **refuses to choose**.
+
+## Quick start
 
 ```bash
 npm install
@@ -8,6 +46,10 @@ npm run fetch:basemap   # the offline map tiles — see Data pipeline
 npm run dev             # http://localhost:5173
 npm test
 ```
+
+The app still runs without `fetch:basemap`; it falls back to online raster tiles that stop resolving past zoom 16.
+
+## For the next person working on this
 
 `CONTEXT.md` is the glossary — read it before naming anything. The decisions behind the design are in `docs/adr/`:
 
