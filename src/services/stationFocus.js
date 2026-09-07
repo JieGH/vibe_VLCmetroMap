@@ -1,8 +1,8 @@
 // Station Focus
 //
 // Everything the UI needs about one Station at one instant: the flat arrivals
-// table the panel draws, and the at-most-two Direction Groups the expanded
-// Station marker draws.
+// table the panel draws, the at-most-two Direction Groups the expanded Station
+// marker draws, and the arrivals those Groups have not already headlined.
 //
 // Direction is the engine's answer, not a string match on the headsign.
 // `resolveDirection` says whether a train is travelling towards increasing
@@ -87,10 +87,19 @@ export const getStationFocus = (stationProps, now = Date.now()) => {
       };
     });
 
+  // Each Direction Group's soonest train is the headline the panel and the
+  // marker both lead with, so listing it again in the table below says the same
+  // thing twice — and at a Station with two trains due, the table becomes a
+  // verbatim repeat of the two rows above it. These are the ones left to say.
+  const headlined = new Set(directions.map((d) => d.arrivals[0]));
+
   return {
     name: stationProps ? stationProps.name : '',
     lines: (stationProps && stationProps.lines) || [],
     arrivals: arrivals.slice().sort((a, b) => a.seconds - b.seconds),
+    laterArrivals: arrivals
+      .filter((arrival) => !headlined.has(arrival))
+      .sort((a, b) => a.seconds - b.seconds),
     directions,
     isFresh: Boolean(cached && cached.isFresh),
     fetchedAt: cached ? cached.fetchedAt : null,

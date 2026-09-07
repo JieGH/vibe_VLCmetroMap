@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Metro Valencia uses your location to centre the map on you and show departures from your nearest station. Your location never leaves the device.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Metro Valencia uses your location to centre the map on you and show departures from your nearest station. Your location never leaves the device.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

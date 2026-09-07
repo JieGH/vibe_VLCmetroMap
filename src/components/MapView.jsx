@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Map as MapLibreMap, Marker, setWorkerUrl } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
+import { noLabels, labels } from 'protomaps-themes-base';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -30,6 +32,25 @@ import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 // maplibre-gl version ever changes.
 setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
 
+// The offline basemap: one PMTiles archive of the Valencia region, read
+// straight off disk in the native app and by HTTP range request on the web, so
+// a visitor pulls the handful of tiles they look at rather than all 34 MB.
+//
+// Vector rather than raster because the complaint that started this was zoom:
+// every raster provider that needs no API key stops having real tiles around
+// zoom 16, and CARTO's keyless tiles come back stamped "API KEY REQUIRED".
+// Vector tiles have no such ceiling — the archive stops at zoom 15 and MapLibre
+// renders it sharp at 20, because it is drawing geometry rather than stretching
+// pixels.
+// Absolute rather than root-relative: MapLibre rejects a relative sprite URL
+// outright ("must be absolute"), and having the archive, glyphs and sprite all
+// resolve the same way keeps the native app — served from capacitor://localhost
+// rather than http — working off the same three lines.
+const BASEMAP_DIR = `${window.location.origin}/basemap`;
+const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
+
+addProtocol('pmtiles', new Protocol().tile);
+
 let line4Osm = null;
 try {
   // eslint-disable-next-line no-undef
@@ -45,10 +66,35 @@ try {
 } catch (error) {
   console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
-import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
+// Absent until `npm run fetch:basemap` has been run — it is refetchable input,
+// not committed data (ADR-0003's rule, and 34 MB of binary has no business in
+// git history).
+//
+// Probed with a one-byte range read rather than a HEAD, because that is exactly
+// the request the archive's own reader makes: a server that answers this will
+// serve the archive, and one that cannot is no use however it answers a HEAD.
+// Vite's dev server, in fact, returns 503 to a HEAD from the browser while
+// serving ranges perfectly well.
+let OFFLINE_BASEMAP_AVAILABLE = false;
+try {
+  // eslint-disable-next-line no-undef
+  const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
+  OFFLINE_BASEMAP_AVAILABLE = probe.ok;
+  if (!probe.ok) {
+    console.warn(
+      `Offline basemap unavailable (HTTP ${probe.status}); falling back to online raster tiles, ` +
+      'which stop resolving past zoom 16. Run `npm run fetch:basemap`.'
+    );
+  }
+} catch (error) {
+  console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
+}
+
+import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -145,12 +191,108 @@ const gtfsStations = (gtfsData && gtfsData.features)
   ? gtfsData.features.filter(f => f.geometry.type === 'Point')
   : [];
 const gtfsStationNames = new Set(gtfsStations.map(f => f.properties.name));
-const stationFeatures = [
+const rawStations = [
   ...gtfsStations,
   ...metroData.features.filter(
     f => f.geometry.type === 'Point' && !gtfsStationNames.has(f.properties.name)
   ),
 ];
+
+// How far a Station is allowed to be from its Line before snapping it there
+// would be a lie rather than a correction. Beyond this it is an Off-Track
+// Station — the geometry omits the branch it actually sits on (ADR-0002), and
+// dragging it onto the wrong track would put it visibly nowhere near where it
+// is. Fira València and Ll. Llarga - Terramelar, 642 m and 546 m out, are the
+// two that stay where the data puts them.
+const SNAP_LIMIT_M = 200;
+
+// Two features this close together, resolving to the same station in the live
+// API, are one Station spelled two ways rather than two Stations.
+const DUPLICATE_LIMIT_M = 150;
+
+const stationApiId = (properties) => {
+  if (!properties || !properties.name) return null;
+  const direct = STATION_ID_MAP[properties.name];
+  if (direct !== undefined) return Number(direct);
+  const lower = STATION_ID_MAP[properties.name.toLowerCase().trim()];
+  return lower === undefined ? null : Number(lower);
+};
+
+// "Pl. Espanya" and "Plaça Espanya" are 99 m apart in the data and both resolve
+// to station 51 in the live API: one interchange drawn as two dots, each
+// showing half its Lines. Merged into whichever came from GTFS — the single
+// source above — carrying the union of both features' Lines.
+const mergeDuplicateStations = (stations) => {
+  const kept = [];
+  const byApiId = new Map();
+
+  for (const station of stations) {
+    const apiId = stationApiId(station.properties);
+    const twin = apiId === null ? null : byApiId.get(apiId);
+
+    if (twin && getDistance(twin.geometry.coordinates, station.geometry.coordinates) < DUPLICATE_LIMIT_M) {
+      const lines = new Set([
+        ...(twin.properties.lines || []),
+        ...(station.properties.lines || []),
+      ]);
+      twin.properties = { ...twin.properties, lines: [...lines] };
+      continue;
+    }
+
+    // Cloned rather than mutated in place: trainPositionEngine imports the same
+    // gtfs_expanded.json objects, and moving a Station under it would shift
+    // every position walked through that Station.
+    const clone = {
+      ...station,
+      properties: { ...station.properties },
+      geometry: { ...station.geometry, coordinates: station.geometry.coordinates.slice() },
+    };
+    kept.push(clone);
+    if (apiId !== null && !byApiId.has(apiId)) byApiId.set(apiId, clone);
+  }
+
+  return kept;
+};
+
+// Station coordinates come from the GTFS Feed and the track alignment from OSM,
+// two surveys that disagree by tens of metres — Xàtiva sits 45 m off the line
+// it serves, which at station zoom is a station floating beside its own track.
+// Snapping the marker onto the alignment the map actually draws is a rendering
+// correction only: the Timetable Walk keeps projecting from the feed's own
+// coordinates, so nothing about where trains are placed changes.
+const snapStationToItsLines = (station) => {
+  const lines = station.properties.lines || [];
+  let best = null;
+
+  for (const lineId of lines) {
+    const geometry = lineCoordsById.get(String(lineId));
+    if (!geometry) continue;
+    const candidate = nearestPointOnPath(geometry, station.geometry.coordinates);
+    if (candidate && (!best || candidate.distance < best.distance)) best = candidate;
+  }
+
+  if (!best || best.distance > SNAP_LIMIT_M) return station;
+
+  station.geometry.coordinates = best.coordinates;
+  return station;
+};
+
+const lineCoordsById = new Map(
+  lineFeatures
+    .filter(f => f.geometry && f.geometry.type === 'LineString')
+    .map(f => [String(f.properties.line), f.geometry.coordinates])
+);
+
+const stationFeatures = mergeDuplicateStations(rawStations).map(snapStationToItsLines);
+
+// Snapped positions are what the map draws, so a Station handed in from
+// somewhere that has not snapped it — userLocation's Nearest Station, say —
+// still has to be drawn and framed at the same place as its own dot.
+const snappedByName = new Map(stationFeatures.map(f => [f.properties.name, f]));
+const snappedCoordinates = (station) => {
+  const snapped = station && snappedByName.get(station.properties.name);
+  return snapped ? snapped.geometry.coordinates : station.geometry.coordinates;
+};
 const lineGeoJSON    = { type: 'FeatureCollection', features: lineFeatures };
 
 // Build a color lookup from line id → color from actual GeoJSON data,
@@ -185,83 +327,134 @@ const DARK_TILES = cartoApiKey ? getCartoTiles('dark_all') : KEYLESS_DARK_TILES;
 const LIGHT_TILES = cartoApiKey ? getCartoTiles('light_all') : KEYLESS_LIGHT_TILES;
 const TILE_ATTRIBUTION = cartoApiKey ? '© OpenStreetMap © CARTO' : '© OpenStreetMap © Esri';
 
-const buildStyle = (tiles, tileSourceId) => ({
+// The Line layers, as a template both basemaps below clone. They sit above the
+// basemap's own geometry and below its labels, so a street name stays readable
+// where a Line crosses it while the Lines themselves are never buried under a
+// road. Cloned rather than shared for the reason given at styleFor.
+const metroLayers = [
+  {
+    id: 'metro-casing',
+    type: 'line',
+    source: 'metro-lines',
+    paint: {
+      'line-color': '#000000',
+      'line-width': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 1.2,
+        8, 1.8,
+        10, 2.6,
+        11.5, 3.4,
+        13, 4.6,
+        15, 6.2,
+        17, 8.5,
+        19, 11.0
+      ],
+      'line-opacity': 0.35,
+      'line-offset': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 0,
+        8, ['*', ['get', 'offset'], 0.15],
+        10, ['*', ['get', 'offset'], 0.35],
+        11.5, ['*', ['get', 'offset'], 0.6],
+        13, ['*', ['get', 'offset'], 0.85],
+        15, ['*', ['get', 'offset'], 1.1],
+        17, ['*', ['get', 'offset'], 1.4],
+        19, ['*', ['get', 'offset'], 1.8]
+      ]
+    },
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+  },
+  {
+    id: 'metro-fill',
+    type: 'line',
+    source: 'metro-lines',
+    paint: {
+      'line-color': ['get', 'color'],
+      'line-width': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 0.75,
+        8, 1.2,
+        10, 1.8,
+        11.5, 2.4,
+        13, 3.4,
+        15, 4.8,
+        17, 6.8,
+        19, 9.0
+      ],
+      'line-offset': [
+        'interpolate', ['linear'], ['zoom'],
+        6, 0,
+        8, ['*', ['get', 'offset'], 0.15],
+        10, ['*', ['get', 'offset'], 0.35],
+        11.5, ['*', ['get', 'offset'], 0.6],
+        13, ['*', ['get', 'offset'], 0.85],
+        15, ['*', ['get', 'offset'], 1.1],
+        17, ['*', ['get', 'offset'], 1.4],
+        19, ['*', ['get', 'offset'], 1.8]
+      ]
+    },
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+  },
+];
+
+// Raster fallback, used only when the offline archive is missing. Esri's Gray
+// Canvas stops having real tiles at zoom 16 and serves a "map data not yet
+// available" placeholder above it, which is exactly why the offline vector
+// basemap exists — but a clone that has not run `npm run fetch:basemap` should
+// still get a map rather than a void.
+const buildRasterStyle = (tiles, tileSourceId) => ({
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
-    [tileSourceId]: { type: 'raster', tiles, tileSize: 256, attribution: TILE_ATTRIBUTION },
+    [tileSourceId]: { type: 'raster', tiles, tileSize: 256, attribution: TILE_ATTRIBUTION, maxzoom: 16 },
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
   },
   layers: [
     { id: `${tileSourceId}-tiles`, type: 'raster', source: tileSourceId },
-    {
-      id: 'metro-casing',
-      type: 'line',
-      source: 'metro-lines',
-      paint: {
-        'line-color': '#000000',
-        'line-width': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 1.2,
-          8, 1.8,
-          10, 2.6,
-          11.5, 3.4,
-          13, 4.6,
-          15, 6.2,
-          17, 8.5,
-          19, 11.0
-        ],
-        'line-opacity': 0.35,
-        'line-offset': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 0,
-          8, ['*', ['get', 'offset'], 0.15],
-          10, ['*', ['get', 'offset'], 0.35],
-          11.5, ['*', ['get', 'offset'], 0.6],
-          13, ['*', ['get', 'offset'], 0.85],
-          15, ['*', ['get', 'offset'], 1.1],
-          17, ['*', ['get', 'offset'], 1.4],
-          19, ['*', ['get', 'offset'], 1.8]
-        ]
-      },
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-    },
-    {
-      id: 'metro-fill',
-      type: 'line',
-      source: 'metro-lines',
-      paint: {
-        'line-color': ['get', 'color'],
-        'line-width': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 0.75,
-          8, 1.2,
-          10, 1.8,
-          11.5, 2.4,
-          13, 3.4,
-          15, 4.8,
-          17, 6.8,
-          19, 9.0
-        ],
-        'line-offset': [
-          'interpolate', ['linear'], ['zoom'],
-          6, 0,
-          8, ['*', ['get', 'offset'], 0.15],
-          10, ['*', ['get', 'offset'], 0.35],
-          11.5, ['*', ['get', 'offset'], 0.6],
-          13, ['*', ['get', 'offset'], 0.85],
-          15, ['*', ['get', 'offset'], 1.1],
-          17, ['*', ['get', 'offset'], 1.4],
-          19, ['*', ['get', 'offset'], 1.8]
-        ]
-      },
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-    },
+    ...structuredClone(metroLayers),
   ],
 });
 
-const DARK_STYLE  = buildStyle(DARK_TILES,  'basemap-dark');
-const LIGHT_STYLE = buildStyle(LIGHT_TILES, 'basemap-light');
+// Protomaps' basemap flavours. 'white' gives the clean near-white ground the
+// app already had; 'dark' rather than 'black' for the other, because 'black'
+// paints earth #141414 under roads #333333 and the structure of the city simply
+// does not survive that little contrast — it reads as an empty screen with
+// Lines floating on it. Each flavour names its own sprite file.
+const THEME_FLAVOURS = { dark: 'dark', light: 'white' };
+
+const buildVectorStyle = (flavour) => ({
+  version: 8,
+  glyphs: `${BASEMAP_DIR}/fonts/{fontstack}/{range}.pbf`,
+  sprite: `${BASEMAP_DIR}/sprites/${flavour}`,
+  sources: {
+    protomaps: {
+      type: 'vector',
+      url: `pmtiles://${BASEMAP_ARCHIVE}`,
+      attribution: '© OpenStreetMap · Protomaps',
+    },
+    'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
+  },
+  // Basemap geometry, then the Lines, then the basemap's labels on top.
+  layers: [
+    ...noLabels('protomaps', flavour),
+    ...structuredClone(metroLayers),
+    ...labels('protomaps', flavour, 'en'),
+  ],
+});
+
+// Built fresh on every call rather than held as two module-level constants.
+// MapLibre takes ownership of the style object it is handed and mutates it, and
+// StrictMode mounts this component twice in dev: the first map consumed the
+// shared object and the second one — the live one — got the leftovers, so the
+// basemap and the Lines both silently failed to draw while the console stayed
+// clean. Toggling the theme appeared to fix it only because that handed over
+// the other, still-untouched object.
+const styleFor = (theme) => (OFFLINE_BASEMAP_AVAILABLE
+  ? buildVectorStyle(theme === 'dark' ? THEME_FLAVOURS.dark : THEME_FLAVOURS.light)
+  : buildRasterStyle(
+    theme === 'dark' ? DARK_TILES : LIGHT_TILES,
+    theme === 'dark' ? 'basemap-dark' : 'basemap-light'
+  ));
 
 // The CSS opacity a vehicle marker is drawn at. For a live train that is its
 // Position Confidence; a Simulated Train keeps its own flat value, because
@@ -345,7 +538,73 @@ const stationBorderColor = (st) => {
 // screen and the map stops being a map.
 const STATION_FOCUS_ZOOM = 14.6;
 
-const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine }) => {
+// The radius, in screen pixels, within which a tap counts as meaning a Station.
+// A Station dot is drawn 10 px across, which is a quarter of the 44 px Apple
+// asks for as a minimum touch target and the reason the map had to be zoomed
+// right in before a station could be hit at all. 22 px gives that 44 px target
+// without drawing anything bigger.
+//
+// Enlarging each marker's own hit box would have been the obvious fix and the
+// wrong one: neighbouring Stations are 99 m apart at the closest and 387 m at
+// the first quartile, so at normal zoom those boxes overlap, and an overlap
+// between DOM elements is settled by which one happens to be on top rather than
+// which one you meant. Resolving the tap to the *nearest* Station within the
+// radius settles it by distance instead, which is the thing the finger was
+// actually aiming at.
+const TAP_RADIUS_PX = 22;
+
+// How close framing the viewer against their Nearest Station is allowed to get.
+// Without a cap, standing 40 m from a platform fills the screen with one
+// junction and the map stops being a map.
+const USER_FRAME_MAX_ZOOM = 15.5;
+
+// A User Location is a single fix, taken once, and it starts going stale
+// immediately — you can walk 500 m in the time it takes to read a departure
+// board. Rather than let a stale dot keep claiming to be current, it fades as
+// it ages, on a floor, for the same reason Position Confidence has one: a
+// position that has become a guess must read as uncertain, not absent.
+const USER_FIX_FADE_MS = 300000;
+const USER_FIX_OPACITY_FLOOR = 0.4;
+
+const userFixOpacity = (ageMs) => {
+  const spent = Math.min(1, Math.max(0, ageMs / USER_FIX_FADE_MS));
+  return (1 - spent * (1 - USER_FIX_OPACITY_FLOOR)).toFixed(3);
+};
+
+// Metres per pixel at a given latitude and zoom. The accuracy circle is a real
+// distance, so it has to be redrawn at every zoom rather than pinned to a pixel
+// size — a fixed circle would claim a different accuracy at every scale.
+const metresPerPixel = (latitude, zoom) =>
+  (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
+
+// What the Station panel and the search bar actually cover right now, so the
+// camera centres on the map still visible rather than behind them. Measured
+// rather than assumed from the CSS: both the bottom sheet's maxHeight:58vh and
+// the right rail's width:min(380px,34vw) are content-sized caps, not fixed
+// sizes, and the panel renders shorter than its cap now that its arrivals
+// table stops at three rows.
+const panelAwarePadding = (map) => {
+  const isLandscape = window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
+  const containerRect = map.getContainer().getBoundingClientRect();
+  const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
+  const panelRect = document.querySelector('.station-panel')?.getBoundingClientRect();
+
+  return isLandscape
+    ? {
+        top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 84) + 12,
+        right: (panelRect ? containerRect.right - panelRect.left : Math.min(380, window.innerWidth * 0.34)) + 16,
+        bottom: 40,
+        left: 40,
+      }
+    : {
+        top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 90) + 12,
+        right: 24,
+        bottom: (panelRect ? containerRect.bottom - panelRect.top : window.innerHeight * 0.58) + 16,
+        left: 24,
+      };
+};
+
+const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
@@ -363,6 +622,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
+  // The Stations actually drawn right now, which is not every Station: a Line
+  // filter or a hovered Line narrows them. A tap must only ever resolve to
+  // something the viewer can currently see.
+  const drawnStationsRef = useRef([]);
   const vehInnerElemsRef= useRef([]); // refs to vehicle inner elements for direct scale updates
 
   useEffect(() => { themeRef.current = theme; }, [theme]);
@@ -468,11 +731,14 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       return true;
     });
 
+    drawnStationsRef.current = [];
+
     filteredStations.forEach((st) => {
       const sid = st.properties.stop_id || st.properties.id || st.properties.name;
       if (!sid) return;
       if (seenStops.has(sid)) return;
       seenStops.add(sid);
+      drawnStationsRef.current.push(st);
 
       const wrapper = document.createElement('div');
       wrapper.className = 'ml-station-marker-wrapper';
@@ -672,7 +938,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
     const map = new MapLibreMap({
       container: containerRef.current,
-      style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE,
+      style: styleFor(theme),
       center: [-0.3763, 39.4699],
       // 12.3 is where updateZoomScale's formula below caps marker scale at its
       // 1.2x maximum, so the default view opens with stations already at their
@@ -696,6 +962,26 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     };
     map.on('zoom', updateZoomScale);
     updateZoomScale();
+
+    // A forgiving tap. This fires only for clicks that reach the map canvas —
+    // a click that lands squarely on a Station marker is handled by the marker's
+    // own handler and never gets here — so this is purely the near-miss case.
+    map.on('click', (event) => {
+      // Below this scale the Station markers are hidden, and nothing invisible
+      // should be tappable.
+      if (zoomScaleRef.current < 0.55) return;
+
+      const { lng, lat } = event.lngLat;
+      const nearest = nearestFeature(drawnStationsRef.current, [lng, lat]);
+      if (!nearest) return;
+
+      // The radius is a constant number of pixels — a finger is the same size at
+      // every zoom — so it has to be converted into metres at the zoom in force.
+      const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
+      if (nearest.distance > radiusM) return;
+
+      selectStRef.current(nearest.feature);
+    });
 
     map.on('style.load', () => {
       // In dev, StrictMode double-mounts this effect, so a stale map from the
@@ -745,13 +1031,19 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     // narrow pre-load window is silently missed, which is an acceptable trade
     // for removing the race.
     if (!map.isStyleLoaded()) return;
-    map.setStyle(theme === 'dark' ? DARK_STYLE : LIGHT_STYLE);
+    // diff:false because the two vector styles differ by more than paint: each
+    // flavour names its own sprite file, and MapLibre's style diffing cannot
+    // express a sprite change. Left to diff, a flip repainted some of the 56
+    // basemap layers and not others, landing on a light ground wearing dark
+    // labels. A full reload costs one re-read of the archive header and is the
+    // only way to be sure the whole basemap changed.
+    map.setStyle(styleFor(theme), { diff: false });
   }, [theme]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !flyTarget) return;
-    const [lng, lat] = flyTarget.geometry.coordinates;
+    const [lng, lat] = snappedCoordinates(flyTarget);
     map.flyTo({
       center: [lng, lat],
       zoom: 14.5,
@@ -799,7 +1091,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     }
     if (!selectedStation) return undefined;
 
-    const coordinates = selectedStation.geometry.coordinates;
+    const coordinates = snappedCoordinates(selectedStation);
 
     const element = document.createElement('div');
     element.className = 'station-focus-node';
@@ -815,30 +1107,9 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     render();
     const id = setInterval(render, 1000);
 
-    // Also reserves the Station panel's own footprint, measured rather than
-    // assumed from its CSS (a bottom sheet with maxHeight:58vh in portrait, a
-    // right rail with width:min(380px,34vw) in landscape): both are content-
-    // sized caps, not fixed sizes, and the panel actually renders shorter than
-    // 58vh now that its arrivals table caps at three rows. The panel shares
-    // this render (same selectedStation update), so it's already in the DOM
-    // once this effect runs.
-    const isLandscape = window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
-    const containerRect = map.getContainer().getBoundingClientRect();
-    const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
-    const panelRect = document.querySelector('.station-panel')?.getBoundingClientRect();
-    const basePadding = isLandscape
-      ? {
-          top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 84) + 12,
-          right: (panelRect ? containerRect.right - panelRect.left : Math.min(380, window.innerWidth * 0.34)) + 16,
-          bottom: 40,
-          left: 40,
-        }
-      : {
-          top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 90) + 12,
-          right: 24,
-          bottom: (panelRect ? containerRect.bottom - panelRect.top : window.innerHeight * 0.58) + 16,
-          left: 24,
-        };
+    // The panel shares this render (same selectedStation update), so it is
+    // already in the DOM once this effect runs and can be measured.
+    const basePadding = panelAwarePadding(map);
 
     map.easeTo({
       center: coordinates,
@@ -854,6 +1125,94 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
     };
   }, [selectedStation]);
+
+  // ── The viewer's own dot ───────────────────────────────────────────────────
+  // A MapLibre Marker rather than a style layer, matching every other marker
+  // here, which also means it survives the setStyle a theme flip performs.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || userLocation.status !== 'located') return undefined;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'user-location-marker';
+    const accuracyRing = document.createElement('div');
+    accuracyRing.className = 'user-location-accuracy';
+    const dot = document.createElement('div');
+    dot.className = 'user-location-dot';
+    wrapper.appendChild(accuracyRing);
+    wrapper.appendChild(dot);
+
+    const marker = new Marker({ element: wrapper, anchor: 'center' })
+      .setLngLat(userLocation.coordinates)
+      .addTo(map);
+
+    const sizeAccuracyRing = () => {
+      if (!Number.isFinite(userLocation.accuracy)) {
+        accuracyRing.style.display = 'none';
+        return;
+      }
+      const scale = metresPerPixel(userLocation.coordinates[1], map.getZoom());
+      const diameter = (2 * userLocation.accuracy) / scale;
+      // Below the dot's own size the ring says nothing the dot does not already
+      // say, and drawing it would only make a precise fix look fuzzy.
+      accuracyRing.style.display = diameter < 26 ? 'none' : '';
+      accuracyRing.style.width = `${diameter}px`;
+      accuracyRing.style.height = `${diameter}px`;
+    };
+
+    const fade = () => {
+      wrapper.style.opacity = userFixOpacity(Date.now() - userLocation.fetchedAt);
+    };
+
+    sizeAccuracyRing();
+    fade();
+    map.on('zoom', sizeAccuracyRing);
+    // Five seconds is one hundredth of the fade's span, so the decay reads as
+    // gradual without a second animation loop running against the vehicles'.
+    const fadeTimer = setInterval(fade, 5000);
+
+    return () => {
+      map.off('zoom', sizeAccuracyRing);
+      clearInterval(fadeTimer);
+      marker.remove();
+    };
+  }, [userLocation]);
+
+  // ── Framing the viewer against their Nearest Station ───────────────────────
+  // Declared after the station-focus effect on purpose. A locate that names a
+  // Station sets both `selectedStation` and `userLocation` in one commit, so
+  // both effects run; React runs them in declaration order, and this one has to
+  // be the camera call that lands. Seeing both points is the whole answer —
+  // centring on the viewer alone says where you are but not how far the train
+  // is.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || userLocation.status !== 'located') return;
+
+    const padding = panelAwarePadding(map);
+
+    if (!userLocation.nearestStation) {
+      // No Station worth naming — too rough a fix, or genuinely nothing near.
+      // Being located is still useful, so the camera still goes there.
+      map.easeTo({
+        center: userLocation.coordinates,
+        zoom: Math.max(map.getZoom(), 14.5),
+        padding,
+        duration: 900,
+        essential: true,
+      });
+      return;
+    }
+
+    const bounds = new LngLatBounds(userLocation.coordinates, userLocation.coordinates);
+    bounds.extend(snappedCoordinates(userLocation.nearestStation));
+    map.fitBounds(bounds, {
+      padding,
+      maxZoom: USER_FRAME_MAX_ZOOM,
+      duration: 900,
+      essential: true,
+    });
+  }, [userLocation]);
 
   return (
     <div

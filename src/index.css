@@ -261,6 +261,125 @@ button:active {
   border-radius: 3px;
 }
 
+/* ── Locate ──────────────────────────────────────────────────────────────── */
+
+.locate-button {
+  position: absolute;
+  right: 16px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  /* Under the Station panel (z-index 30) rather than over it: once the panel is
+     open the button has done its job, and a control floating on top of the
+     departures it just fetched is in the way. */
+  z-index: 25;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: bottom .3s cubic-bezier(0.16, 1, 0.3, 1),
+              right .3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform .1s ease;
+  /* A long press on this button hides the location dot, which iOS would
+     otherwise interpret as a request to select text or raise a callout —
+     either of which eats the gesture before it becomes a hold. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.locate-button:active {
+  transform: scale(0.92);
+}
+
+.locate-button[data-state="locating"] {
+  cursor: progress;
+}
+
+.locate-button[data-state="unavailable"] {
+  color: var(--text-secondary);
+}
+
+/* Portrait docks the panel to the bottom, so the button lifts clear of it;
+   landscape docks it to a right rail, so the button steps left of it instead.
+   820px is LANDSCAPE_BREAKPOINT_PX from utils/layout.js — the same number
+   StationPanel and MapView both split on, so all three agree on where the
+   panel actually is. 58vh is the sheet's maxHeight; when it renders shorter
+   the button floats a little high, which beats measuring from CSS that cannot
+   see it. */
+.locate-button[data-lifted="true"] {
+  bottom: calc(58vh + 16px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 820px) {
+  .locate-button[data-lifted="true"] {
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    right: calc(min(380px, 34vw) + 32px);
+  }
+}
+
+/* ── The viewer's own dot ────────────────────────────────────────────────── */
+
+.user-location-marker {
+  position: relative;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  /* The fade with age is written straight onto this element by MapView; the
+     transition only keeps each five-second step from stepping visibly. */
+  transition: opacity 1s linear;
+}
+
+.user-location-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: #1a73e8;
+  border: 3px solid #fff;
+  box-sizing: border-box;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+}
+
+.user-location-accuracy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(26, 115, 232, .16);
+  border: 1px solid rgba(26, 115, 232, .35);
+  box-sizing: border-box;
+}
+
+/* ── What a locate that found no station has to say ──────────────────────── */
+
+.locate-notice {
+  position: absolute;
+  top: calc(76px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  max-width: min(420px, calc(100vw - 48px));
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  animation: filterBannerIn 0.2s ease-out;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
 /* Responsive Rules for Mobile */
 @media (max-width: 768px) {
   .sidebar {

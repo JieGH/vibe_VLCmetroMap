@@ -96,6 +96,20 @@ _Avoid_: Interchange, key station, hub (ambiguous with Strategic Hub)
 A sweep that fetches live Arrivals for every Major Station at once, subject to the same Arrival Memory pause as any other fetch, building a fuller picture of Vehicle positions than the Strategic Hubs give at boot. Runs every two minutes while the map is visible, because Arrivals age out after about 18 minutes and without it the whole network decays into Simulated Trains.
 _Avoid_: Refresh all, sync all, update all stations
 
+### The Viewer
+
+**User Location**:
+The device's own geographic fix, read on demand when the viewer asks to be located. Deliberately not a "position": Position is spent on Vehicles in this glossary — see Position Uncertainty and Position Confidence — and one word doing both jobs would leave every mention of it ambiguous. A reading taken from the device, never an estimate this app computes.
+_Avoid_: User position, current position, GPS position, my location
+
+**Location Accuracy**:
+Metres of doubt the device itself reports around a User Location. Stated by the operating system rather than derived, which is exactly what separates it from Position Uncertainty — a quantity this app computes from the Timetable Walk. The two measure different things and are never compared or combined.
+_Avoid_: Position uncertainty, GPS error, precision, margin
+
+**Nearest Station**:
+The Station lying the smallest straight-line distance from a User Location. Straight-line rather than along the network, because a viewer walks to a Station rather than riding to it. Undefined beyond a threshold distance: away from the network there is no nearest Station worth naming, only a far one.
+_Avoid_: Closest stop, local station, nearest stop, my station
+
 ### Data Sources
 
 **GTFS Feed**:

@@ -19,13 +19,17 @@
     "preview": "vite preview",
     "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "fetch:basemap": "node scripts/fetch_basemap.cjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.1",
+    "@capacitor/geolocation": "^8.2.2",
     "@capacitor/ios": "^8.5.1",
     "lucide-react": "^1.29.0",
     "maplibre-gl": "^6.2.0",
+    "pmtiles": "^4.5.0",
+    "protomaps-themes-base": "^4.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
