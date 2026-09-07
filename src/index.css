@@ -283,6 +283,13 @@ button:active {
   transition: bottom .3s cubic-bezier(0.16, 1, 0.3, 1),
               right .3s cubic-bezier(0.16, 1, 0.3, 1),
               transform .1s ease;
+  /* A long press on this button hides the location dot, which iOS would
+     otherwise interpret as a request to select text or raise a callout —
+     either of which eats the gesture before it becomes a hold. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .locate-button:active {

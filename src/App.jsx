@@ -77,6 +77,16 @@ function App() {
     if (result.nearestStation) setSelectedStation(result.nearestStation);
   };
 
+  // Holding the locate button clears the dot. The fix is a snapshot that goes
+  // stale on its own — the fade says so — and once it has served its purpose
+  // there was previously no way to take it off the map short of a reload.
+  const handleHideLocation = () => {
+    if (!userLocation) return;
+    setUserLocation(null);
+    setLocateState('idle');
+    setLocateNotice({ text: 'Location hidden.', _ts: Date.now() });
+  };
+
   useEffect(() => {
     if (!locateNotice) return undefined;
     const id = setTimeout(() => setLocateNotice(null), LOCATE_NOTICE_MS);
@@ -221,7 +231,9 @@ function App() {
       <LocateButton
         state={locateState}
         lifted={Boolean(selectedStation)}
+        showingLocation={Boolean(userLocation)}
         onLocate={handleLocate}
+        onHide={handleHideLocation}
       />
 
       {/* Station Focus panel — right in landscape, bottom in portrait */}
