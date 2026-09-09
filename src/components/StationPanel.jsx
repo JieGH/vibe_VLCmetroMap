@@ -6,7 +6,7 @@
 // tablet that is where a thumb rests; bottom in portrait, because on a phone it
 // is the only place a thumb reaches at all.
 import React, { useEffect, useState } from 'react';
-import { X, Radio, Database, Navigation } from 'lucide-react';
+import { X, Radio, Database } from 'lucide-react';
 import arrivalStore from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
@@ -380,7 +380,6 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          <Navigation size={15} />
           Recentre on map
         </button>
       </footer>
