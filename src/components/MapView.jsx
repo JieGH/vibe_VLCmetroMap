@@ -99,7 +99,7 @@ import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../servi
 import trainPositionEngine from '../services/trainPositionEngine';
 import { renderStationHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
-import { lineOpacityExpression, dimmedVehicleOpacity } from '../utils/lineDim';
+import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -469,6 +469,13 @@ const styleFor = (theme) => (OFFLINE_BASEMAP_AVAILABLE
 const vehicleOpacity = (v, selectedStation) =>
   dimmedVehicleOpacity(v.isLive ? (v.positionConfidence ?? 1) : 0.55, v.line, selectedStation).toFixed(2);
 
+// The CSS `animation` a vehicle marker is drawn with. No Station selected
+// means no pulse anywhere; once one is, only a Vehicle on a Line in that
+// Station's Station Chain gets it — everything else, and every Simulated
+// Train regardless of selection, stays static.
+const vehicleAnimation = (v, selectedStation) =>
+  (vehicleShouldPulse(v, selectedStation) ? 'vehiclePulse 2s ease-in-out infinite' : 'none');
+
 // Says in the reader's words — not the model's — why a marker is drawn faint,
 // covering both causes: how far the walk had to reach, and how long since the
 // API last confirmed the train.
@@ -781,7 +788,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         display:flex; align-items:center; justify-content:center;
         color:${v.isLive ? '#fff' : color}; font-size:10px; font-weight:800;
         opacity:${vehicleOpacity(v, selectedStationRef.current)};
-        ${v.isLive ? 'animation: vehiclePulse 2s ease-in-out infinite;' : ''}
+        animation: ${vehicleAnimation(v, selectedStationRef.current)};
         box-sizing:border-box; position:relative;
         transform: scale(${Math.min(1.1, currentScale).toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
@@ -829,6 +836,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
           // syncs land or fail to — so the marker has to follow it rather than
           // keep the opacity it was created with.
           existing.inner.style.opacity = vehicleOpacity(v, selectedStationRef.current);
+          existing.inner.style.animation = vehicleAnimation(v, selectedStationRef.current);
         } else {
           // The API can return a different set of vehicle IDs after a poll.
           // Add new live trains without waiting for a map/style refresh.

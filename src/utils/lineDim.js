@@ -1,11 +1,12 @@
-// Station Focus Dimming
+// Station Focus
 //
 // When a Station is selected, Lines that don't serve it — and the Vehicles
-// running on those Lines — are dimmed rather than hidden. This is separate
-// from the sidebar's Line-visibility filter, which hides non-matching Lines
-// outright via a map `filter` expression; dimming only ever applies among
-// Lines a filter has already let through, expressed as a `line-opacity`
-// paint property so it can never remove a Line the filter kept.
+// running on those Lines — are dimmed rather than hidden, and only Vehicles
+// on Lines that do serve it may pulse. Dimming is separate from the
+// sidebar's Line-visibility filter, which hides non-matching Lines outright
+// via a map `filter` expression; dimming only ever applies among Lines a
+// filter has already let through, expressed as a `line-opacity` paint
+// property so it can never remove a Line the filter kept.
 export const DIM_FACTOR = 0.2;
 
 /**
@@ -49,4 +50,18 @@ export const lineOpacityExpression = (selectedStation, fullOpacity) => {
  */
 export const dimmedVehicleOpacity = (baseOpacity, lineId, selectedStation) => (
   lineServesStation(lineId, selectedStation) ? baseOpacity : baseOpacity * DIM_FACTOR
+);
+
+/**
+ * Whether a Vehicle marker should pulse. With no Station selected, nothing
+ * pulses — the ambient blink is gone by default. Once a Station is selected,
+ * only a live Vehicle running on a Line in that Station's Station Chain
+ * pulses; a Simulated Train (never live) never does, in either state.
+ *
+ * @param {{ isLive?: boolean, line: string|number }} vehicle
+ * @param {{ properties?: { lines?: (string|number)[] } }|null} selectedStation
+ * @returns {boolean}
+ */
+export const vehicleShouldPulse = (vehicle, selectedStation) => (
+  !!vehicle.isLive && !!selectedStation && lineServesStation(vehicle.line, selectedStation)
 );

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { lineServesStation, lineOpacityExpression, dimmedVehicleOpacity, DIM_FACTOR } from './lineDim';
+import {
+  lineServesStation,
+  lineOpacityExpression,
+  dimmedVehicleOpacity,
+  vehicleShouldPulse,
+  DIM_FACTOR,
+} from './lineDim';
 
 const station = { properties: { name: 'Àngel Guimerà', lines: ['3', '5'] } };
 
@@ -52,5 +58,24 @@ describe('dimmedVehicleOpacity', () => {
 
   it('leaves the base opacity untouched when no Station is selected', () => {
     expect(dimmedVehicleOpacity(0.8, '1', null)).toBe(0.8);
+  });
+});
+
+describe('vehicleShouldPulse', () => {
+  it('never pulses with no Station selected, even when live', () => {
+    expect(vehicleShouldPulse({ isLive: true, line: '3' }, null)).toBe(false);
+  });
+
+  it('pulses a live Vehicle on a Line serving the selected Station', () => {
+    expect(vehicleShouldPulse({ isLive: true, line: '3' }, station)).toBe(true);
+  });
+
+  it('stays static for a live Vehicle on a Line not serving the selected Station', () => {
+    expect(vehicleShouldPulse({ isLive: true, line: '1' }, station)).toBe(false);
+  });
+
+  it('never pulses a Simulated Train, selected Station or not', () => {
+    expect(vehicleShouldPulse({ isLive: false, line: '3' }, station)).toBe(false);
+    expect(vehicleShouldPulse({ isLive: false, line: '3' }, null)).toBe(false);
   });
 });
