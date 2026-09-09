@@ -582,6 +582,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
+  // MapLibre still emits a trailing 'click' after some real drag gestures
+  // (notably a touch pan that ends without much velocity), which would
+  // otherwise read as a background tap and dismiss the open Station panel
+  // out from under the viewer mid-gesture.
+  const wasDraggedRef   = useRef(false);
   // The Stations actually drawn right now, which is not every Station: a Line
   // filter or a hovered Line narrows them. A tap must only ever resolve to
   // something the viewer can currently see.
@@ -937,10 +942,19 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     map.on('zoom', updateZoomScale);
     updateZoomScale();
 
+    map.on('dragstart', () => { wasDraggedRef.current = true; });
+    map.on('dragend', () => {
+      // Cleared on the next tick so the 'click' MapLibre fires immediately
+      // after some drag gestures still sees the flag set.
+      setTimeout(() => { wasDraggedRef.current = false; }, 0);
+    });
+
     // A forgiving tap. This fires only for clicks that reach the map canvas —
     // a click that lands squarely on a Station marker is handled by the marker's
     // own handler and never gets here — so this is purely the near-miss case.
     map.on('click', (event) => {
+      if (wasDraggedRef.current) return;
+
       const { lng, lat } = event.lngLat;
       const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
       const nearest =
