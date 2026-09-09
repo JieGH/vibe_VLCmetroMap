@@ -192,6 +192,7 @@ function App() {
             onSelectStation={handleSelectStation}
             onSelectLine={handleSelectLine}
             activeLineFilter={activeLineFilter}
+            selectedStation={selectedStation}
           />
           <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
           <button

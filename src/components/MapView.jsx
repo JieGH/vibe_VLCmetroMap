@@ -7,7 +7,14 @@ import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import lineRenderConfig from '../data/line_render_config.js';
-import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
+import {
+  DEFAULT_MAP_ZOOM,
+  DEFAULT_MAP_CENTER,
+  ZERO_PADDING,
+  calculateFocusZoom,
+  calculateUnfocusCamera,
+  panelAwarePadding as computePanelPadding,
+} from '../utils/mapCamera';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -533,10 +540,6 @@ const stationBorderColor = (st) => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-// The zoom a focused Station eases to. Close enough that the expanded node has
-// room beside its neighbours, not so close that the rest of the Line leaves the
-// screen and the map stops being a map.
-const STATION_FOCUS_ZOOM = 14.6;
 
 // The radius, in screen pixels, within which a tap counts as meaning a Station.
 // A Station dot is drawn 10 px across, which is a quarter of the 44 px Apple
@@ -578,31 +581,13 @@ const metresPerPixel = (latitude, zoom) =>
   (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
 
 // What the Station panel and the search bar actually cover right now, so the
-// camera centres on the map still visible rather than behind them. Measured
-// rather than assumed from the CSS: both the bottom sheet's maxHeight:58vh and
-// the right rail's width:min(380px,34vw) are content-sized caps, not fixed
-// sizes, and the panel renders shorter than its cap now that its arrivals
-// table stops at three rows.
-const panelAwarePadding = (map) => {
-  const isLandscape = window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
-  const containerRect = map.getContainer().getBoundingClientRect();
-  const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
-  const panelRect = document.querySelector('.station-panel')?.getBoundingClientRect();
-
-  return isLandscape
-    ? {
-        top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 84) + 12,
-        right: (panelRect ? containerRect.right - panelRect.left : Math.min(380, window.innerWidth * 0.34)) + 16,
-        bottom: 40,
-        left: 40,
-      }
-    : {
-        top: (searchBarRect ? searchBarRect.bottom - containerRect.top : 90) + 12,
-        right: 24,
-        bottom: (panelRect ? containerRect.bottom - panelRect.top : window.innerHeight * 0.58) + 16,
-        left: 24,
-      };
-};
+// camera centres on the map still visible rather than behind them.
+const panelAwarePadding = (map) =>
+  computePanelPadding({
+    containerRect: map.getContainer().getBoundingClientRect(),
+    searchBarRect: document.querySelector('.search-bar-container')?.getBoundingClientRect(),
+    panelRect: document.querySelector('.station-panel')?.getBoundingClientRect(),
+  });
 
 const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
   const containerRef    = useRef(null);
@@ -620,6 +605,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const selectStRef     = useRef(onSelectStation);
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
+  const preFocusZoomRef = useRef(null); // zoom level before station was focused
+  const userPannedRef   = useRef(false); // tracks if user manually panned while station was focused
+  const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
+  const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
   // The Stations actually drawn right now, which is not every Station: a Line
@@ -939,11 +928,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     const map = new MapLibreMap({
       container: containerRef.current,
       style: styleFor(theme),
-      center: [-0.3763, 39.4699],
+      center: DEFAULT_MAP_CENTER,
       // 12.3 is where updateZoomScale's formula below caps marker scale at its
       // 1.2x maximum, so the default view opens with stations already at their
       // largest, easiest-to-tap size rather than the network's full extent.
-      zoom: 12.3,
+      zoom: DEFAULT_MAP_ZOOM,
     });
 
     const trainCount = document.createElement('div');
@@ -962,6 +951,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     };
     map.on('zoom', updateZoomScale);
     updateZoomScale();
+
+    // Track user manual panning so camera doesn't yank them back on panel dismiss if they panned away
+    map.on('dragstart', () => {
+      userPannedRef.current = true;
+    });
 
     // A forgiving tap. This fires only for clicks that reach the map canvas —
     // a click that lands squarely on a Station marker is handled by the marker's
@@ -1089,7 +1083,38 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (trainCountRef.current) {
       trainCountRef.current.style.visibility = selectedStation ? 'hidden' : '';
     }
-    if (!selectedStation) return undefined;
+
+    if (!selectedStation) {
+      if (prevStationRef.current) {
+        prevStationRef.current = null;
+        const { zoom: targetZoom, padding: targetPadding, shouldAnimateZoom } = calculateUnfocusCamera({
+          currentZoom: map.getZoom(),
+          preFocusZoom: preFocusZoomRef.current,
+          userPanned: userPannedRef.current,
+        });
+        preFocusZoomRef.current = null;
+        userPannedRef.current = false;
+
+        const easeOptions = {
+          center: map.getCenter(),
+          padding: targetPadding,
+          duration: 600,
+          essential: true,
+        };
+        if (shouldAnimateZoom) {
+          easeOptions.zoom = targetZoom;
+        }
+
+        map.easeTo(easeOptions);
+      }
+      return undefined;
+    }
+
+    if (!prevStationRef.current) {
+      preFocusZoomRef.current = map.getZoom();
+    }
+    userPannedRef.current = false;
+    prevStationRef.current = selectedStation;
 
     const coordinates = snappedCoordinates(selectedStation);
 
@@ -1110,10 +1135,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     // The panel shares this render (same selectedStation update), so it is
     // already in the DOM once this effect runs and can be measured.
     const basePadding = panelAwarePadding(map);
+    const targetZoom = calculateFocusZoom(map.getZoom());
 
     map.easeTo({
       center: coordinates,
-      zoom: Math.max(map.getZoom(), STATION_FOCUS_ZOOM),
+      zoom: targetZoom,
       padding: basePadding,
       duration: 900,
       essential: true,
@@ -1187,8 +1213,22 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   // is.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !userLocation || userLocation.status !== 'located') return;
+    if (!map) return;
 
+    if (!userLocation || userLocation.status !== 'located') {
+      if (prevUserLocationRef.current && !selectedStation) {
+        map.easeTo({
+          center: map.getCenter(),
+          padding: ZERO_PADDING,
+          duration: 600,
+          essential: true,
+        });
+      }
+      prevUserLocationRef.current = null;
+      return;
+    }
+
+    prevUserLocationRef.current = userLocation;
     const padding = panelAwarePadding(map);
 
     if (!userLocation.nearestStation) {
@@ -1212,7 +1252,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       duration: 900,
       essential: true,
     });
-  }, [userLocation]);
+  }, [userLocation, selectedStation]);
 
   return (
     <div

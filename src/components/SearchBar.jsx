@@ -8,7 +8,7 @@ import gtfsData from '../data/gtfs_expanded.json';
 const stations = gtfsData.features.filter(f => f.geometry.type === 'Point');
 const lines    = metroData.features.filter(f => f.geometry.type === 'LineString');
 
-const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter }) => {
+const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedStation }) => {
   const [query,       setQuery]       = useState('');
   const [isOpen,      setIsOpen]      = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
@@ -47,9 +47,24 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter }) => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleSelectStation = useCallback((st) => {
-    onSelectStation(st);
-    setQuery(st.properties.name);
+  const selectedStationNameRef = useRef('');
+
+  // Sync search input if station focus was dismissed from outside (e.g. StationPanel close button)
+  useEffect(() => {
+    if (selectedStation && selectedStation.properties?.name) {
+      selectedStationNameRef.current = selectedStation.properties.name;
+    } else if (!selectedStation && selectedStationNameRef.current) {
+      if (query.trim() === selectedStationNameRef.current) {
+        setQuery('');
+      }
+      selectedStationNameRef.current = '';
+    }
+  }, [selectedStation, query]);
+
+  const handleSelectStation = useCallback((station) => {
+    selectedStationNameRef.current = station.properties.name;
+    onSelectStation(station);
+    setQuery(station.properties.name);
     setIsOpen(false);
     setHighlighted(-1);
   }, [onSelectStation]);
@@ -65,12 +80,19 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter }) => {
     setQuery('');
     setIsOpen(false);
     setHighlighted(-1);
-    if (activeLineFilter) onSelectLine(null);
+    selectedStationNameRef.current = '';
+    if (activeLineFilter && activeLineFilter.length > 0) onSelectLine(null);
+    if (onSelectStation) onSelectStation(null);
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e) => {
-    if (!isOpen || allItems.length === 0) return;
+    if (!isOpen || allItems.length === 0) {
+      if (e.key === 'Escape' && query) {
+        handleClear();
+      }
+      return;
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlighted(h => Math.min(h + 1, allItems.length - 1));
@@ -101,7 +123,15 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter }) => {
           ref={inputRef}
           type="text"
           value={query}
-          onChange={e => { setQuery(e.target.value); setIsOpen(true); setHighlighted(-1); }}
+          onChange={e => {
+            const val = e.target.value;
+            setQuery(val);
+            setIsOpen(true);
+            setHighlighted(-1);
+            if (!val.trim() && selectedStation && onSelectStation) {
+              onSelectStation(null);
+            }
+          }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search for a station or line..."
