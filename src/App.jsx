@@ -6,6 +6,7 @@ import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
+import WelcomeScreen from './components/WelcomeScreen';
 import { locate } from './services/userLocation';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
@@ -22,6 +23,7 @@ const readMode = () =>
   new URLSearchParams(window.location.search).get('mode') === 'dashboard' ? 'dashboard' : 'map';
 
 function App() {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -195,6 +197,9 @@ function App() {
   if (mode === 'dashboard') {
     return (
       <div className="app-container">
+        {showWelcome && (
+          <WelcomeScreen onComplete={() => setShowWelcome(false)} />
+        )}
         <DashboardBoard
           theme={theme}
           onExit={() => selectMode('map')}
@@ -210,6 +215,9 @@ function App() {
 
   return (
     <div className="app-container">
+      {showWelcome && (
+        <WelcomeScreen onComplete={() => setShowWelcome(false)} />
+      )}
       {/* Full-screen interactive map */}
       <MapView
         theme={theme}

@@ -536,3 +536,92 @@ button:active {
   z-index: 1200;
   pointer-events: none;
 }
+
+/* ── Welcome / Splash Screen ─────────────────────────────────────────────── */
+
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background-color: #16161f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.welcome-screen--fading {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.welcome-screen-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  animation: welcomeScaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.welcome-screen-logo-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.welcome-screen-logo {
+  width: 88px;
+  height: 88px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+.welcome-screen-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  font-family: inherit;
+}
+
+.welcome-screen-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #a0a0b0;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+@keyframes welcomeScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-screen-content {
+    animation: none;
+  }
+  .welcome-screen {
+    transition: opacity 0.15s ease;
+  }
+}
+
