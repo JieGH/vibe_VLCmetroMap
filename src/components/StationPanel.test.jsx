@@ -2,6 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import StationPanel from './StationPanel';
+import arrivalStore from '../services/arrivalStore';
 
 describe('StationPanel component', () => {
   const sampleStation = {
@@ -47,5 +48,59 @@ describe('StationPanel component', () => {
 
     expect(html).toContain('station-backdrop');
     expect(html).toContain('data-testid="station-backdrop"');
+  });
+
+  it('renders prominent hero badges for primary arrivals and compact badges for later arrivals', () => {
+    const now = Date.now();
+    arrivalStore.memory.set('10', {
+      stationId: 10,
+      stationName: 'Xàtiva',
+      fetchedAt: now,
+      arrivals: [
+        {
+          line: '3',
+          destination: 'Rafelbunyol',
+          vehicleId: '301',
+          lineColor: '#E2001A',
+          lineName: 'Line 3',
+          targetTimestamp: now + 120 * 1000,
+          isLive: true,
+        },
+        {
+          line: '5',
+          destination: 'Aeroport',
+          vehicleId: '502',
+          lineColor: '#00994D',
+          lineName: 'Line 5',
+          targetTimestamp: now + 300 * 1000,
+          isLive: true,
+        },
+        {
+          line: '9',
+          destination: 'Riba-roja de Túria',
+          vehicleId: '903',
+          lineColor: '#996633',
+          lineName: 'Line 9',
+          targetTimestamp: now + 600 * 1000,
+          isLive: true,
+        },
+      ],
+    });
+
+    const html = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+    );
+
+    // Primary arrivals have hero badges (28x26px) and prominent typography (1.35rem)
+    expect(html).toContain('station-arrival-badge--hero');
+    expect(html).toContain('min-width:28px');
+    expect(html).toContain('height:26px');
+    expect(html).toContain('station-arrival-due');
+    expect(html).toContain('font-size:1.35rem');
+
+    // Later arrivals have compact badges (19x19px)
+    expect(html).toContain('station-arrival-badge--compact');
+    expect(html).toContain('min-width:19px');
+    expect(html).toContain('height:19px');
   });
 });

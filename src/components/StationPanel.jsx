@@ -161,58 +161,105 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         </button>
       </header>
 
-      {/* Directions summary — the same split the expanded marker draws. One
-          row per direction rather than side-by-side cards: a two-column grid
-          halved the width available to the destination text, and real names
-          ("Alboraia Peris Aragó · Marítim · Rafelbunyol") wrapped and got cut
-          in that half-width even at two lines. Full width, single line,
-          ellipsis beyond it — still the full name on hover/long-press via
-          title, but the common case reads at a glance instead of wrapping. */}
+      {/* Directions summary — primary headline arrivals for each direction served.
+          This is the primary information the panel is opened for, so it is given
+          hero visual prominence: large Line badge, prominent destination name,
+          and a large, bold arrival countdown timer. */}
       {focus.directions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border-color)', flexShrink: 0 }}>
+        <div
+          className="station-primary-arrivals"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            background: 'var(--border-color)',
+            flexShrink: 0,
+          }}
+        >
           {focus.directions.map((d) => {
             const next = d.arrivals[0];
             return (
               <div
                 key={d.key}
                 title={d.label}
+                className="station-arrival-row"
                 style={{
-                  background: 'var(--bg-panel-solid)', padding: '9px 10px',
-                  display: 'flex', alignItems: 'center', gap: 7,
+                  background: 'var(--bg-panel-solid)',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
                 }}
               >
-                {/* The line badge names which train the countdown belongs to
-                    — a direction can merge more than one Line (two Lines
-                    leaving an interchange the same way), so "next" is only
-                    ever one specific train, not the direction as a whole. */}
+                {/* Hero Line badge for the primary arrival */}
                 {next && (
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 17, height: 17, padding: '0 4px', borderRadius: 5,
-                    background: lineColor(next.line), color: '#000',
-                    fontSize: '.6rem', fontWeight: 900, flexShrink: 0,
-                  }}>
+                  <span
+                    className="station-line-badge station-arrival-badge--hero"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 28,
+                      height: 26,
+                      padding: '0 6px',
+                      borderRadius: 7,
+                      background: lineColor(next.line),
+                      color: '#000',
+                      fontSize: '.82rem',
+                      fontWeight: 900,
+                      flexShrink: 0,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                    }}
+                  >
                     {next.line}
                   </span>
                 )}
-                <span style={{ fontSize: '.7rem', color: 'var(--text-secondary)', flexShrink: 0 }}>→</span>
-                <div style={{
-                  flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 600,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {d.label}
+                <span style={{ fontSize: '.8rem', color: 'var(--text-secondary)', flexShrink: 0 }}>→</span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <div
+                    style={{
+                      fontSize: '.92rem',
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {d.label}
+                  </div>
+                  {next?.vehicleId && (
+                    <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                      Vehicle #{next.vehicleId}
+                    </div>
+                  )}
                 </div>
-                {next && (
-                  /* Deliberately larger than the table below: the soonest train
-                     each way is the answer to the question the panel was opened
-                     to ask, and everything under it is context. */
-                  <div style={{
-                    fontSize: '1.2rem', fontWeight: 800, flexShrink: 0, lineHeight: 1,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: countdownHeat(next.seconds, theme),
-                  }}>
-                    {countdownLabel(next.seconds)}
-                    {next.seconds > 0 && <span style={{ fontSize: '.6rem', fontWeight: 600, marginLeft: 2 }}>min</span>}
+                {next ? (
+                  <div
+                    className="station-arrival-due"
+                    style={{
+                      fontSize: '1.35rem',
+                      fontWeight: 800,
+                      flexShrink: 0,
+                      lineHeight: 1,
+                      fontVariantNumeric: 'tabular-nums',
+                      color: countdownHeat(next.seconds, theme),
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 2,
+                    }}
+                  >
+                    <span>{countdownLabel(next.seconds)}</span>
+                    {next.seconds > 0 && (
+                      <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        min
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    —
                   </div>
                 )}
               </div>
@@ -221,17 +268,13 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         </div>
       )}
 
-      {/* The table. Capped to roughly three rows so the panel stays compact —
-          scrolling this area (not the whole panel) reveals the rest.
-
-          It lists `laterArrivals`, not every arrival: the soonest train each way
-          is already the headline above, and repeating it here made a Station
-          with two trains due render the same two trains twice, once as rows and
-          once as a table. What is left is what the headlines have not said. */}
-      <div style={{ maxHeight: 176, overflowY: 'auto', padding: '4px 8px 8px' }}>
+      {/* Later arrivals table. Capped to roughly three rows so the panel stays compact.
+          This secondary timetable is subordinate to the headline arrivals above:
+          compact Line badge (19px), smaller typography, and compact row spacing. */}
+      <div style={{ maxHeight: 172, overflowY: 'auto', padding: '4px 10px 8px' }}>
         {focus.fetchError && (
           <div role="status" style={{
-            margin: '8px', padding: '8px 10px', borderRadius: 8,
+            margin: '8px 0', padding: '8px 10px', borderRadius: 8,
             background: 'rgba(255,152,0,.14)', color: '#ffb74d', fontSize: '.72rem', lineHeight: 1.35,
           }}>
             {focus.fetchError}
@@ -243,57 +286,59 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
             No live trains arriving soon.
           </p>
         ) : focus.laterArrivals.length === 0 ? (
-          /* Everything due is already in the headlines. Saying so beats an
-             empty table with a header row over nothing. */
           <p style={{ padding: '12px 20px', textAlign: 'center', fontSize: '.74rem', color: 'var(--text-secondary)' }}>
             Nothing further due yet.
           </p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.75rem' }}>
             <caption className="visually-hidden">Later arrivals at {focus.name}</caption>
             <thead>
               <tr style={{
-                fontSize: '.62rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
-                // Stays visible while scrolling past the third row, so the
-                // columns are never unlabelled once there's more to scroll to.
-                position: 'sticky', top: 0, background: 'var(--bg-panel-solid)',
+                fontSize: '.60rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
               }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>Line</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>Towards</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '6px 8px 5px', fontWeight: 700 }}>Due</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>Line</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>Towards</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>Due</th>
               </tr>
             </thead>
             <tbody>
               {focus.laterArrivals.map((a, i) => (
                 <tr key={i} style={{ borderTop: '1px solid var(--border-color)' }}>
-                  {/* Line identity is a labelled badge, never colour alone */}
-                  <td style={{ padding: '7px 8px', width: 1 }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      minWidth: 24, height: 24, padding: '0 6px', borderRadius: 7,
-                      background: lineColor(a.line), color: '#000',
-                      fontSize: '.72rem', fontWeight: 900,
-                    }}>
+                  {/* Compact secondary badge */}
+                  <td style={{ padding: '5px 6px', width: 1 }}>
+                    <span
+                      className="station-line-badge station-arrival-badge--compact"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: 19, height: 19, padding: '0 4px', borderRadius: 5,
+                        background: lineColor(a.line), color: '#000',
+                        fontSize: '.62rem', fontWeight: 800,
+                      }}
+                    >
                       {a.line}
                     </span>
                   </td>
-                  <td style={{ padding: '7px 8px', maxWidth: 0 }}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                    <div style={{
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      fontWeight: 500, fontSize: '.74rem', color: 'var(--text-primary)',
+                    }}>
                       {a.destination}
                     </div>
                     {a.vehicleId && (
-                      <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)' }}>
-                        Train #{a.vehicleId}
+                      <div style={{ fontSize: '.58rem', color: 'var(--text-secondary)' }}>
+                        Vehicle #{a.vehicleId}
                       </div>
                     )}
                   </td>
                   <td style={{
-                    padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap',
-                    fontWeight: 800, fontVariantNumeric: 'tabular-nums',
+                    padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
+                    fontWeight: 700, fontSize: '.74rem', fontVariantNumeric: 'tabular-nums',
                     color: countdownHeat(a.seconds, theme),
                   }}>
                     {countdownLabel(a.seconds)}
-                    {a.seconds > 0 && <span style={{ fontSize: '.62rem', fontWeight: 600, marginLeft: 3 }}>min</span>}
+                    {a.seconds > 0 && <span style={{ fontSize: '.58rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>min</span>}
                   </td>
                 </tr>
               ))}
