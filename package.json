@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:phone": "vite --host",
     "build": "vite build",
+    "postbuild": "npx cap sync ios",
     "test": "vitest run",
     "fetch:gtfs": "node scripts/fetch_gtfs.cjs",
     "build:data": "npm run build:stations && npm run build:segments",

@@ -91,6 +91,12 @@ body {
   font-size: 12px;
   font-weight: 700;
   pointer-events: none;
+  /* Stats moved into the sidebar — this overlay is kept as a live-region
+     aria anchor but is hidden from view. */
+  visibility: hidden;
+  height: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
 /* Glassmorphism Panel Utilities */
@@ -121,18 +127,66 @@ body {
   opacity: 0;
 }
 
-.search-bar-container {
+/* ── Top Navigation Bar: Sidebar Toggle Button + Search Bar ──────────────── */
+
+.top-bar-container {
   position: absolute;
   top: calc(20px + env(safe-area-inset-top, 0px));
-  left: 360px; /* offset from sidebar */
+  left: 360px; /* offset from sidebar when open */
   z-index: 10;
-  width: 420px;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  max-width: calc(100vw - 380px);
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.search-bar-container.sidebar-collapsed {
-  left: 80px;
+.top-bar-container.sidebar-collapsed {
+  left: 20px;
+  max-width: calc(100vw - 40px);
 }
+
+.sidebar-toggle-btn {
+  aspect-ratio: 1 / 1;
+  min-width: 44px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--bg-hover);
+}
+
+.sidebar-toggle-btn:active {
+  transform: scale(0.96);
+}
+
+/* On desktop when sidebar is open, hide the toggle button because the open sidebar has its own close chevron */
+@media (min-width: 769px) {
+  .top-bar-container.sidebar-open .sidebar-toggle-btn {
+    display: none;
+  }
+}
+
+.search-bar-container {
+  width: 420px;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 
 /* Base UI Elements */
 button {
@@ -266,7 +320,7 @@ button:active {
 .locate-button {
   position: absolute;
   right: 16px;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   /* Under the Station panel (z-index 30) rather than over it: once the panel is
      open the button has done its job, and a control floating on top of the
      departures it just fetched is in the way. */
@@ -397,16 +451,31 @@ button:active {
     transform: translateY(120%);
   }
 
-  .search-bar-container {
+  .top-bar-container {
     top: calc(12px + env(safe-area-inset-top, 0px));
     left: 12px;
     right: 12px;
-    width: auto;
+    max-width: none;
+    gap: 8px;
   }
 
-  .search-bar-container.sidebar-collapsed {
+  .top-bar-container.sidebar-open,
+  .top-bar-container.sidebar-collapsed {
     left: 12px;
   }
+
+  .sidebar-toggle-btn {
+    min-width: 42px;
+    display: flex;
+  }
+
+  .search-bar-container {
+    width: auto;
+    max-width: none;
+    flex: 1;
+    min-width: 0;
+  }
+
 
   .station-detail-card {
     right: 12px !important;

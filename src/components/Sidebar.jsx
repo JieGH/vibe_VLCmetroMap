@@ -3,7 +3,7 @@ import { Menu, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 
-const Sidebar = ({ isOpen, onToggleSidebar, activeLineFilter, onSelectLine, onHoverLine }) => {
+const Sidebar = ({ isOpen, onToggleSidebar, activeLineFilter, onSelectLine, onHoverLine, trainStats = { live: 0, confirmed: 0 } }) => {
   // Combine line features from bundled metro JSON and GTFS-generated data.
   const allFeatures = [
     ...metroData.features,
@@ -130,39 +130,46 @@ const Sidebar = ({ isOpen, onToggleSidebar, activeLineFilter, onSelectLine, onHo
             </div>
           </div>
 
-          {/* Quick Info & Footer */}
+          {/* Live Stats & Footer */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              <div>⚡ Live Simulated GPS Data</div>
-              <div>📍 FGV Metrovalència System</div>
+            <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+              Live Network
+            </h2>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{
+                flex: 1, padding: '10px 12px', borderRadius: '10px',
+                background: 'var(--bg-hover)', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                  {trainStats.live}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Live trains
+                </div>
+              </div>
+              <div style={{
+                flex: 1, padding: '10px 12px', borderRadius: '10px',
+                background: 'var(--bg-hover)', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFD100', lineHeight: 1 }}>
+                  {trainStats.confirmed}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Confirmed
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
+              <span>📍 FGV Metrovalència System</span>
+              <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>v{__APP_VERSION__}</span>
             </div>
           </div>
+
         </div>
       </div>
-
-      {/* Floating Toggle Button when Sidebar is Collapsed */}
-      {!isOpen && (
-        <button
-          onClick={onToggleSidebar}
-          className="glass-panel"
-          style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            zIndex: 20,
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: 'var(--shadow-panel)'
-          }}
-          title="Open Sidebar"
-        >
-          <Menu size={20} />
-        </button>
-      )}
     </>
   );
 };
 
 export default Sidebar;
+

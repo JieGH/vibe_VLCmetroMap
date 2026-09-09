@@ -64,6 +64,10 @@ _Avoid_: Max speed, cruise velocity
 One prediction of one Vehicle at one Station. The same Vehicle is routinely sighted at several Stations at once; each is an independent constraint on where it is, and the nearest in time anchors the Timetable Walk because walk error grows with $T$.
 _Avoid_: Observation, ping, report
 
+**Propagation Lag**:
+A fixed per-mode offset, in seconds, between the API's reported Target Arrival Timestamp and the vehicle's true position in reality. Observed empirically (2026-09-09): metro lines run 15 s behind, tram lines 4 and 6 run 10 s behind. Applied by subtracting the lag from the Target Arrival Timestamp at fetch time so the Timetable Walk starts from the corrected epoch rather than the lagged one. Not a function of network age or Position Uncertainty — it is a systematic bias in the upstream data feed.
+_Avoid_: Display delay, clock offset, Position Uncertainty (which is a walk-error term, not a feed-bias term)
+
 **Position Uncertainty**:
 Metres of doubt around a walked position. Two terms, both seconds of doubt converted at the Line's Commercial Speed: √(segments walked) × 30 s, because the GTFS Feed states every time to a whole minute so each Segment Interval carries ±30 s; plus a quarter-second per second unheard beyond one Network Sync interval, for the Vehicle drifting from what the API predicted. The first term is measured from the feed; the second is calibrated, not measured, and awaits the live watch in issue #4. Not a function of age alone — a Target Arrival Timestamp is absolute, so a prediction sitting in memory keeps counting down correctly.
 _Avoid_: Error, margin, tolerance, accuracy
@@ -119,3 +123,9 @@ _Avoid_: Timetable dump, static schedule
 **OSM Rail Geometry**:
 Geospatial railway alignment data extracted from OpenStreetMap via Overpass API queries.
 _Avoid_: Map extract, raw coordinates
+
+### Build & Platforms
+
+**iOS Sync**:
+The synchronization of compiled web distribution assets (`dist/`) into the native Capacitor iOS container (`ios/App/App/public`). Configured as an automatic `postbuild` lifecycle step so every production build (`npm run build`) automatically updates the native iOS app bundle without a separate manual step.
+_Avoid_: Manual sync, Xcode copy

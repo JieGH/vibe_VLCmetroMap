@@ -61,6 +61,22 @@ const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual ref
 const MIN_DISPATCH_INTERVAL_MS = 1000; // 1 second minimum delay between outbound API requests
 const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
 
+// Propagation Lag — real-world observation (2026-09-09): the map displays vehicle
+// positions behind their true location because the API timestamp already lags the
+// physical train. Subtracting the lag from the Target Arrival Timestamp at fetch
+// time moves the displayed position forward to match reality.
+//   Metro lines (1–3, 5, 7–10): 15 s behind reality
+//   Tram lines 4 and 6:         10 s behind reality
+const METRO_PROPAGATION_LAG_MS = 15_000;
+const TRAM_PROPAGATION_LAG_MS  = 10_000;
+const TRAM_LINE_IDS = new Set(['4', '6']);
+
+/** Returns the Propagation Lag in ms for a given line ID string. */
+function propagationLagMs(lineId) {
+  return TRAM_LINE_IDS.has(lineId) ? TRAM_PROPAGATION_LAG_MS : METRO_PROPAGATION_LAG_MS;
+}
+
+
 class ArrivalStore {
   constructor() {
     this.memory = new Map();
@@ -384,10 +400,15 @@ class ArrivalStore {
             // the train to arrive. Preferring it over fetchTime + seconds keeps
             // countdowns honest when the client clock is off, and keeps two
             // sightings of the same train on one timeline so they can be fused.
+            //
+            // Propagation Lag correction: the API timestamp itself lags the
+            // physical train (15 s for metro, 10 s for trams 4 & 6). Subtracting
+            // the lag brings the displayed vehicle position forward to match reality.
             const serverTimestamp = Number(p.trainTimestamp) * 1000;
-            const targetTimestamp = Number.isFinite(serverTimestamp) && serverTimestamp > 0
+            const rawTimestamp = Number.isFinite(serverTimestamp) && serverTimestamp > 0
               ? serverTimestamp
               : fetchTime + (seconds * 1000);
+            const targetTimestamp = rawTimestamp - propagationLagMs(lineId);
 
             return {
               line: lineId,

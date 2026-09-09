@@ -6,7 +6,9 @@ import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
 import LocateButton from './components/LocateButton';
 import { locate } from './services/userLocation';
-import { Sun, Moon, X, LayoutDashboard } from 'lucide-react';
+import arrivalStore from './services/arrivalStore';
+import trainPositionEngine from './services/trainPositionEngine';
+import { Sun, Moon, X, LayoutDashboard, Menu } from 'lucide-react';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -29,6 +31,22 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [locateState, setLocateState] = useState('idle');
   const [locateNotice, setLocateNotice] = useState(null);
+
+  // Live train counts for the sidebar stats panel. Recomputed on every
+  // arrivalStore notification so the numbers stay in sync with the map.
+  const [trainStats, setTrainStats] = useState({ live: 0, confirmed: 0 });
+  useEffect(() => {
+    const computeStats = () => {
+      const vehicles = trainPositionEngine.getLiveVehiclesFromMemory(Date.now());
+      setTrainStats({
+        live: vehicles.length,
+        confirmed: vehicles.filter(v => v.sightingCount > 1).length,
+      });
+    };
+    computeStats();
+    return arrivalStore.subscribe(computeStats);
+  }, []);
+
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -153,52 +171,64 @@ function App() {
         activeLineFilter={activeLineFilter}
         onSelectLine={handleSelectLine}
         onHoverLine={(lineId) => setHoverLine(lineId)}
+        trainStats={trainStats}
       />
 
-      {/* Floating Top Search Bar & Theme Switcher */}
-      <div
-        className={`search-bar-container glass-panel ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}
-        style={{ padding: '8px 16px', display: 'flex', gap: '12px', alignItems: 'center' }}
-      >
-        <SearchBar
-          onSelectStation={handleSelectStation}
-          onSelectLine={handleSelectLine}
-          activeLineFilter={activeLineFilter}
-        />
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
+      {/* Top Navigation Bar: Sidebar Toggle Button + Search Bar & Quick Actions */}
+      <div className={`top-bar-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
         <button
-          onClick={() => selectMode('dashboard')}
-          style={{
-            padding: '8px',
-            borderRadius: '8px',
-            background: 'var(--bg-hover)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-          title="Dashboard mode — a departure board for an ambient display"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="sidebar-toggle-btn glass-panel"
+          title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+          aria-label={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
         >
-          <LayoutDashboard size={18} />
+          <Menu size={20} />
         </button>
-        <button
-          onClick={toggleTheme}
-          style={{
-            padding: '8px',
-            borderRadius: '8px',
-            background: 'var(--bg-hover)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-          title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+        <div
+          className="search-bar-container glass-panel"
+          style={{ padding: '8px 14px', display: 'flex', gap: '10px', alignItems: 'center' }}
         >
-          {theme === 'dark'
-            ? <Sun size={18} color="#FFD100" />
-            : <Moon size={18} color="#004D99" />}
-        </button>
+          <SearchBar
+            onSelectStation={handleSelectStation}
+            onSelectLine={handleSelectLine}
+            activeLineFilter={activeLineFilter}
+          />
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
+          <button
+            onClick={() => selectMode('dashboard')}
+            style={{
+              padding: '8px',
+              borderRadius: '8px',
+              background: 'var(--bg-hover)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+            title="Dashboard mode — a departure board for an ambient display"
+          >
+            <LayoutDashboard size={18} />
+          </button>
+          <button
+            onClick={toggleTheme}
+            style={{
+              padding: '8px',
+              borderRadius: '8px',
+              background: 'var(--bg-hover)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+            title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          >
+            {theme === 'dark'
+              ? <Sun size={18} color="#FFD100" />
+              : <Moon size={18} color="#004D99" />}
+          </button>
+        </div>
       </div>
+
 
       {/* Active Line Filter Banner */}
       {Array.isArray(activeLineFilter) && activeLineFilter.length > 0 && (

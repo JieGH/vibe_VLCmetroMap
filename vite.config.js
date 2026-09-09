@@ -1,8 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Build-time date-stamp injected as a global constant so the running app can
+// always report which build it is. Format: YYYY.MM.DD (UTC). Baked in at
+// compile time — no manual version bump needed.
+const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(buildDate),
+  },
   plugins: [react()],
   optimizeDeps: {
     exclude: ['maplibre-gl']
