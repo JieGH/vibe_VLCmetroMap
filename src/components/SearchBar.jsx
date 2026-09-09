@@ -35,16 +35,25 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     ...filteredStations.map(st => ({ type: 'station', data: st })),
   ];
 
-  // Close on outside click
+  // Close on outside click or touch
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);
         setHighlighted(-1);
+        inputRef.current?.blur();
+        if (typeof window !== 'undefined') {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+        }
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
   }, []);
 
   const selectedStationNameRef = useRef('');
@@ -67,6 +76,11 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     setQuery(station.properties.name);
     setIsOpen(false);
     setHighlighted(-1);
+    inputRef.current?.blur();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }
   }, [onSelectStation]);
 
   const handleSelectLine = useCallback((line) => {
@@ -74,6 +88,11 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     setQuery(`Line ${line.properties.line}`);
     setIsOpen(false);
     setHighlighted(-1);
+    inputRef.current?.blur();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }
   }, [onSelectLine]);
 
   const handleClear = () => {
@@ -83,7 +102,11 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     selectedStationNameRef.current = '';
     if (activeLineFilter && activeLineFilter.length > 0) onSelectLine(null);
     if (onSelectStation) onSelectStation(null);
-    inputRef.current?.focus();
+    inputRef.current?.blur();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -109,6 +132,11 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     } else if (e.key === 'Escape') {
       setIsOpen(false);
       setHighlighted(-1);
+      inputRef.current?.blur();
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+      }
     }
   };
 
@@ -133,6 +161,12 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
             }
           }}
           onFocus={() => setIsOpen(true)}
+          onBlur={() => {
+            if (typeof window !== 'undefined') {
+              window.scrollTo(0, 0);
+              document.body.scrollTop = 0;
+            }
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Search for a station or line..."
           aria-label="Search stations and lines"
@@ -140,7 +174,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
             background: 'transparent',
             border: 'none',
             color: 'var(--text-primary)',
-            fontSize: '0.93rem',
+            fontSize: '16px',
             width: '100%',
             outline: 'none',
           }}

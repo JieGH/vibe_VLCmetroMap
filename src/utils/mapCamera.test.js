@@ -34,41 +34,33 @@ describe('mapCamera', () => {
   describe('calculateUnfocusCamera', () => {
     it('always resets padding to ZERO_PADDING', () => {
       const result = calculateUnfocusCamera({
-        currentZoom: 14.6,
         preFocusZoom: 12.3,
       });
       expect(result.padding).toEqual(ZERO_PADDING);
     });
 
-    it('restores preFocusZoom when exiting station focus without user pan', () => {
+    it('restores preFocusZoom when exiting station focus', () => {
       const result = calculateUnfocusCamera({
-        currentZoom: 14.6,
         preFocusZoom: 12.3,
-        userPanned: false,
       });
       expect(result.zoom).toBe(12.3);
-      expect(result.shouldAnimateZoom).toBe(true);
       expect(result.padding).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
     });
 
-    it('preserves current zoom and suppresses zoom animation if user panned away manually', () => {
+    it('falls back to DEFAULT_MAP_ZOOM if preFocusZoom is null', () => {
       const result = calculateUnfocusCamera({
-        currentZoom: 15.2,
-        preFocusZoom: 12.3,
-        userPanned: true,
-      });
-      expect(result.zoom).toBe(15.2);
-      expect(result.shouldAnimateZoom).toBe(false);
-      expect(result.padding).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
-    });
-
-    it('falls back to DEFAULT_MAP_ZOOM if preFocusZoom is null and user did not pan', () => {
-      const result = calculateUnfocusCamera({
-        currentZoom: 14.6,
         preFocusZoom: null,
       });
       expect(result.zoom).toBe(12.3);
-      expect(result.shouldAnimateZoom).toBe(true);
+      expect(result.padding).toEqual(ZERO_PADDING);
+    });
+
+    it('restores higher preFocusZoom if user entered search while already zoomed in', () => {
+      const result = calculateUnfocusCamera({
+        preFocusZoom: 15.5,
+      });
+      expect(result.zoom).toBe(15.5);
+      expect(result.padding).toEqual(ZERO_PADDING);
     });
   });
 

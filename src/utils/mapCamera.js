@@ -19,30 +19,17 @@ export const calculateFocusZoom = (currentZoom, focusZoom = STATION_FOCUS_ZOOM) 
  * Calculates camera target zoom and padding when exiting station focus.
  *
  * Resets camera padding to zero so dragging, zooming, and viewport bounds are
- * unconstrained. If the user has manually panned while inspecting the station,
- * preserves their current position and zoom rather than disorienting them.
+ * unconstrained, and smoothly restores the pre-focus zoom or default network overview.
  *
- * @param {object} options
- * @param {number} options.currentZoom - The map's current zoom level
+ * @param {object} [options]
  * @param {number | null} [options.preFocusZoom] - Zoom level before station was focused
- * @param {boolean} [options.userPanned=false] - Whether the user manually panned away
  * @param {number} [options.defaultZoom=DEFAULT_MAP_ZOOM] - Fallback overview zoom
- * @returns {{ zoom: number, padding: { top: number, right: number, bottom: number, left: number }, shouldAnimateZoom: boolean }}
+ * @returns {{ zoom: number, padding: { top: number, right: number, bottom: number, left: number } }}
  */
 export const calculateUnfocusCamera = ({
-  currentZoom,
   preFocusZoom = null,
-  userPanned = false,
   defaultZoom = DEFAULT_MAP_ZOOM,
-}) => {
-  if (userPanned) {
-    return {
-      zoom: currentZoom,
-      padding: ZERO_PADDING,
-      shouldAnimateZoom: false,
-    };
-  }
-
+} = {}) => {
   const targetZoom =
     preFocusZoom !== null && preFocusZoom !== undefined
       ? preFocusZoom
@@ -51,7 +38,6 @@ export const calculateUnfocusCamera = ({
   return {
     zoom: targetZoom,
     padding: ZERO_PADDING,
-    shouldAnimateZoom: true,
   };
 };
 

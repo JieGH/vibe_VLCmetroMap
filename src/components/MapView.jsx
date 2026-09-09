@@ -606,7 +606,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const preFocusZoomRef = useRef(null); // zoom level before station was focused
-  const userPannedRef   = useRef(false); // tracks if user manually panned while station was focused
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
@@ -952,11 +951,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     map.on('zoom', updateZoomScale);
     updateZoomScale();
 
-    // Track user manual panning so camera doesn't yank them back on panel dismiss if they panned away
-    map.on('dragstart', () => {
-      userPannedRef.current = true;
-    });
-
     // A forgiving tap. This fires only for clicks that reach the map canvas —
     // a click that lands squarely on a Station marker is handled by the marker's
     // own handler and never gets here — so this is purely the near-miss case.
@@ -1087,25 +1081,18 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!selectedStation) {
       if (prevStationRef.current) {
         prevStationRef.current = null;
-        const { zoom: targetZoom, padding: targetPadding, shouldAnimateZoom } = calculateUnfocusCamera({
-          currentZoom: map.getZoom(),
+        const { zoom: targetZoom, padding: targetPadding } = calculateUnfocusCamera({
           preFocusZoom: preFocusZoomRef.current,
-          userPanned: userPannedRef.current,
         });
         preFocusZoomRef.current = null;
-        userPannedRef.current = false;
 
-        const easeOptions = {
+        map.easeTo({
           center: map.getCenter(),
           padding: targetPadding,
+          zoom: targetZoom,
           duration: 600,
           essential: true,
-        };
-        if (shouldAnimateZoom) {
-          easeOptions.zoom = targetZoom;
-        }
-
-        map.easeTo(easeOptions);
+        });
       }
       return undefined;
     }
@@ -1113,7 +1100,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!prevStationRef.current) {
       preFocusZoomRef.current = map.getZoom();
     }
-    userPannedRef.current = false;
     prevStationRef.current = selectedStation;
 
     const coordinates = snappedCoordinates(selectedStation);
