@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
 
-const inPath = './line4_osm_raw_overpass.json';
+const inPath = './data/line4_osm_raw_overpass.json';
 const outPath = './public/line4_osm.geojson';
 if (!fs.existsSync(inPath)) {
   console.error('Input OSM JSON not found:', inPath);

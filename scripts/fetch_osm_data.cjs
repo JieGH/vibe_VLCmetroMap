@@ -23,8 +23,8 @@ const req = https.request(options, (res) => {
   let data = '';
   res.on('data', (chunk) => data += chunk);
   res.on('end', () => {
-    fs.writeFileSync('osm_data.json', data);
-    console.log('Saved osm_data.json');
+    fs.writeFileSync('data/osm_data.json', data);
+    console.log('Saved data/osm_data.json');
   });
 });
 

@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const data = JSON.parse(fs.readFileSync('osm_data.json', 'utf8'));
+const data = JSON.parse(fs.readFileSync('data/osm_data.json', 'utf8'));
 
 const features = [];
 const stations = new Map();

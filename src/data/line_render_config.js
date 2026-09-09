@@ -6,7 +6,7 @@ const lineRenderConfig = {
     // Real OSM tracks already have true physical curves; no aggressive subdivision needed
     applyTo: []
   },
-  // All lines now use authentic OSM physical track geometries from valencia_rails.json
+  // All lines now use authentic OSM physical track geometries from data/valencia_rails.json
   useGTFS: [],
   // Visual offset spacing (pixels) when lines are displayed side-by-side
   offsetSpacing: 4,
