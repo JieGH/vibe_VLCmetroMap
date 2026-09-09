@@ -328,6 +328,7 @@ function App() {
       {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
         <StationPanel
+          key={selectedStation?.properties?.name || selectedStation?.properties?.apiId || 'station-panel'}
           station={selectedStation}
           theme={theme}
           onClose={() => setSelectedStation(null)}

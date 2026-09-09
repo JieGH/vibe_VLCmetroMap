@@ -76,13 +76,19 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        borderRadius: 16,
         ...(landscape
           // top clears the search bar's own row (its container sits at
           // top:20, height ~52px) — starting level with it let the panel's
           // z-index paint over the theme and dashboard-mode buttons, making
           // them unclickable while a station was focused.
           ? { top: 84, right: 16, maxHeight: 'calc(100vh - 100px)', width: 'min(380px, 34vw)' }
-          : { left: 0, right: 0, bottom: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)', maxHeight: '58vh', borderRadius: '18px 18px 0 0' }),
+          : {
+              left: 12,
+              right: 12,
+              bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+              maxHeight: 'min(58vh, calc(100vh - 120px))',
+            }),
       }}
     >
       {/* Header: which station, and how trustworthy this is */}

@@ -241,12 +241,34 @@ button:active {
   }
 }
 
+@keyframes stationPanelSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stationPanelSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .station-panel {
-  /* cubic-bezier(0.16, 1, 0.3, 1) ("ease-out-expo") front-loads the motion —
-     most of the distance covers in the first third, then eases off gently —
-     which reads as a rise rather than a slide, in either dock: bottom sheet
-     in portrait, right rail in landscape. */
-  animation: slideUp 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: stationPanelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.station-panel[data-landscape="true"] {
+  animation-name: stationPanelSlideInRight;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -490,14 +512,6 @@ button:active {
     max-width: none;
     flex: 1;
     min-width: 0;
-  }
-
-
-  .station-detail-card {
-    right: 12px !important;
-    left: 12px !important;
-    bottom: 12px !important;
-    width: auto !important;
   }
 }
 
