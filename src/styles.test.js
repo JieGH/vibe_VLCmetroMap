@@ -128,10 +128,14 @@ describe('Welcome screen splash styles and animation timings', () => {
     expect(fadeMatch).toContain('pointer-events: none');
   });
 
-  it('paces transit line draw and spotlight bloom gracefully within 1.0s dwell', () => {
-    expect(css).toMatch(/animation:\s*welcomeLineDrawIn\s+0\.36s/);
-    expect(css).toMatch(/animation:\s*welcomeStationSpotlight\s+0\.48s[^;]*0\.36s/);
-    expect(css).toMatch(/animation:\s*welcomeStationCoreBloom\s+0\.44s[^;]*0\.36s/);
+  it('paces the hub Line fan-in and ring bloom gracefully within the hold dwell', () => {
+    expect(css).toMatch(/animation:\s*welcomeLineFanIn\s+0\.45s/);
+    expect(css).toMatch(/animation:\s*welcomeHubRingIn\s+0\.4s[^;]*0\.25s/);
+  });
+
+  it('collapses and fades the hub Lines and ring on exit, not a flat opacity fade', () => {
+    expect(css).toMatch(/\.welcome-screen--fading \.welcome-line\s*\{[^}]*animation:\s*welcomeLineRetract\s+0\.3s/);
+    expect(css).toMatch(/\.welcome-screen--fading \.welcome-hub-ring\s*\{[^}]*animation:\s*welcomeHubRingOut\s+0\.3s/);
   });
 });
 

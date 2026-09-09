@@ -1,6 +1,6 @@
 {
   "appId": "com.jielei.metrovalencia",
-  "appName": "Metro Valencia",
+  "appName": "Xarxa",
   "webDir": "dist",
   "plugins": {
     "CapacitorHttp": {
