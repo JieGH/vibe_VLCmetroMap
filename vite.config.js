@@ -38,7 +38,9 @@ export default defineConfig({
     // Fetch spec), and the API requires one containing contact=, so a browser
     // context has to go through this Node-side proxy, which can set it. The
     // native iOS app has no dev server to proxy through, so it takes a
-    // different path — see arrivalStore.js.
+    // different path — see arrivalStore.js. In production, netlify.toml
+    // reproduces this same redirect+header — keep the User-Agent value in
+    // sync between the two files.
     proxy: {
       '/api/metro': {
         target: 'https://metroapi.alexbadi.es',

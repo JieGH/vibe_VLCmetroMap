@@ -127,7 +127,7 @@ _Avoid_: Map extract, raw coordinates
 ### Build & Platforms
 
 **iOS Sync**:
-The synchronization of compiled web distribution assets (`dist/`) into the native Capacitor iOS container (`ios/App/App/public`). Configured as an automatic `postbuild` lifecycle step so every production build (`npm run build`) automatically updates the native iOS app bundle without a separate manual step.
+The synchronization of compiled web distribution assets (`dist/`) into the native Capacitor iOS container (`ios/App/App/public`). Configured as an automatic `postbuild` lifecycle step so every local production build (`npm run build`) automatically updates the native iOS app bundle without a separate manual step. Skipped on CI build hosts (`CI=true`, e.g. Netlify) since those environments deploy the web build only and have no iOS toolchain to sync into.
 _Avoid_: Manual sync, Xcode copy
 
 **Test & Sync Protocol**:
