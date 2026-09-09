@@ -53,54 +53,52 @@ setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
 // outright ("must be absolute"), and having the archive, glyphs and sprite all
 // resolve the same way keeps the native app — served from capacitor://localhost
 // rather than http — working off the same three lines.
-const BASEMAP_DIR = `${window.location.origin}/basemap`;
+const BASEMAP_DIR = typeof window !== 'undefined' && window.location
+  ? `${window.location.origin}/basemap`
+  : '/basemap';
 const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
 
 addProtocol('pmtiles', new Protocol().tile);
 
 let line4Osm = null;
-try {
-  // eslint-disable-next-line no-undef
-  const response = await fetch('/line4_osm.geojson');
-  if (response.ok) {
-    line4Osm = await response.json();
-  } else {
-    console.warn(
-      `Line 4 OSM geometry unavailable (HTTP ${response.status}); ` +
-      'falling back to the coarser metro_lines.json alignment.'
-    );
+if (typeof window !== 'undefined') {
+  try {
+    // eslint-disable-next-line no-undef
+    const response = await fetch('/line4_osm.geojson');
+    if (response.ok) {
+      line4Osm = await response.json();
+    } else {
+      console.warn(
+        `Line 4 OSM geometry unavailable (HTTP ${response.status}); ` +
+        'falling back to the coarser metro_lines.json alignment.'
+      );
+    }
+  } catch (error) {
+    console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
   }
-} catch (error) {
-  console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
 }
-// Absent until `npm run fetch:basemap` has been run — it is refetchable input,
-// not committed data (ADR-0003's rule, and 34 MB of binary has no business in
-// git history).
-//
-// Probed with a one-byte range read rather than a HEAD, because that is exactly
-// the request the archive's own reader makes: a server that answers this will
-// serve the archive, and one that cannot is no use however it answers a HEAD.
-// Vite's dev server, in fact, returns 503 to a HEAD from the browser while
-// serving ranges perfectly well.
+
 let OFFLINE_BASEMAP_AVAILABLE = false;
-try {
-  // eslint-disable-next-line no-undef
-  const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
-  OFFLINE_BASEMAP_AVAILABLE = probe.ok;
-  if (!probe.ok) {
-    console.warn(
-      `Offline basemap unavailable (HTTP ${probe.status}); falling back to online raster tiles, ` +
-      'which stop resolving past zoom 16. Run `npm run fetch:basemap`.'
-    );
+if (typeof window !== 'undefined') {
+  try {
+    // eslint-disable-next-line no-undef
+    const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
+    OFFLINE_BASEMAP_AVAILABLE = probe.ok;
+    if (!probe.ok) {
+      console.warn(
+        `Offline basemap unavailable (HTTP ${probe.status}); falling back to online raster tiles, ` +
+        'which stop resolving past zoom 16. Run `npm run fetch:basemap`.'
+      );
+    }
+  } catch (error) {
+    console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
   }
-} catch (error) {
-  console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
 }
 
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { getStationFocus } from '../services/stationFocus';
-import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { renderFocusNode } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
@@ -483,55 +481,6 @@ const describePositionDoubt = (v) => {
   return ` • ${basis}, last confirmed ${confirmed}`;
 };
 
-// The expanded Station node's markup. Built as a string because it lives inside
-// a MapLibre Marker, outside React's tree, and is redrawn every second.
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
-  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
-));
-
-const renderFocusNode = (focus, theme) => {
-  const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
-  const text = theme === 'light' ? '#121212' : '#ffffff';
-  const muted = theme === 'light' ? '#5f6368' : '#a0a0b0';
-  const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
-
-  // No destination text here — only badge, arrow and countdown. The full
-  // "Aeroport · Torrent Avinguda" style label lives in the docked Station
-  // panel, which has the width for it; found by testing against real station
-  // names that even two names joined don't fit this bubble's width, and
-  // showing it twice (truncated here, in full in the panel) was the
-  // duplication that made both surfaces read as cluttered.
-  const arms = focus.directions.map((direction) => {
-    const next = direction.arrivals[0];
-    // The arrow points the way the track actually leaves this Station, which is
-    // why each Direction Group carries a bearing. 0° is north; the glyph points
-    // up at rest, so the bearing rotates it directly.
-    const rotation = direction.bearing === null ? 0 : Math.round(direction.bearing);
-    const badge = next
-      ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:${lineColorMap[next.line] || '#8a8a8a'};color:#000;font:900 12px/1 system-ui">${escapeHtml(next.line)}</span>`
-      : '';
-    const due = next
-      ? `<span style="font:800 18px/1 system-ui;font-variant-numeric:tabular-nums;color:${countdownHeat(next.seconds, theme)}">${countdownLabel(next.seconds)}</span>`
-      : `<span style="font:600 11px/1 system-ui;color:${muted}">none</span>`;
-
-    return `
-      <div style="display:flex;align-items:center;gap:9px;padding:8px 12px">
-        <span aria-hidden="true" style="display:inline-block;font:700 14px/1 system-ui;color:${muted};transform:rotate(${rotation}deg)">&#9650;</span>
-        ${badge}
-        <span style="flex:1"></span>
-        ${due}
-      </div>`;
-  }).join(`<div style="height:1px;background:${border}"></div>`);
-
-  return `
-    <div style="min-width:150px;max-width:200px;border-radius:12px;background:${panel};border:1px solid ${border};box-shadow:0 10px 30px rgba(0,0,0,.45);overflow:hidden">
-      <div style="padding:8px 10px 6px;border-bottom:1px solid ${border}">
-        <div style="font:800 13px/1.2 system-ui;color:${text};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(focus.name)}</div>
-        <div style="font:600 9px/1.2 system-ui;letter-spacing:.1em;text-transform:uppercase;color:${focus.isFresh ? '#4CAF50' : '#00B4D8'};margin-top:3px">${focus.isFresh ? 'Live API' : 'From memory'}</div>
-      </div>
-      ${arms || `<div style="padding:9px 10px;font:600 11px/1 system-ui;color:${muted}">No live trains</div>`}
-    </div>`;
-};
 
 /** Picks the first line's color for a station marker border */
 const stationBorderColor = (st) => {

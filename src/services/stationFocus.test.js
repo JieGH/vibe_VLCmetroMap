@@ -57,7 +57,7 @@ describe('bringing a station into focus', () => {
     expect(focus.directions[0].arrivals).toHaveLength(2);
   });
 
-  it('puts several lines heading the same way into one direction', () => {
+  it('sets direction label to the soonest Arrival destination, not multi-terminus chains', () => {
     const now = Date.now();
     remember(ANGEL_GUIMERA, [
       { line: '3', destination: 'Rafelbunyol', inSeconds: 200 },
@@ -71,9 +71,38 @@ describe('bringing a station into focus', () => {
 
     expect(theOtherWay.destinations).toContain('Rafelbunyol');
     expect(theOtherWay.destinations).toContain('Bétera');
-    // The label names every terminus in the group, not just the first.
-    expect(theOtherWay.label).toMatch(/Rafelbunyol/);
-    expect(theOtherWay.label).toMatch(/Bétera/);
+    // Clear destination of the upcoming train only, not multi-destination chains
+    expect(theOtherWay.destination).toBe('Rafelbunyol');
+    expect(theOtherWay.label).toBe('Rafelbunyol');
+  });
+
+  it('places whichever direction has the soonest arrival at the top of the directions list', () => {
+    const now = Date.now();
+    // Test 1: Aeroport (backward) due in 60s, Rafelbunyol (forward) due in 300s
+    remember(ANGEL_GUIMERA, [
+      { line: '3', destination: 'Rafelbunyol', inSeconds: 300 },
+      { line: '3', destination: 'Aeroport', inSeconds: 60 },
+    ], now);
+
+    const focus1 = getStationFocus(ANGEL_GUIMERA, now);
+    expect(focus1.directions).toHaveLength(2);
+    expect(focus1.directions[0].destination).toBe('Aeroport');
+    expect(focus1.directions[0].arrivals[0].seconds).toBe(60);
+    expect(focus1.directions[1].destination).toBe('Rafelbunyol');
+    expect(focus1.directions[1].arrivals[0].seconds).toBe(300);
+
+    // Test 2: Rafelbunyol (forward) due in 45s, Aeroport (backward) due in 240s
+    remember(ANGEL_GUIMERA, [
+      { line: '3', destination: 'Rafelbunyol', inSeconds: 45 },
+      { line: '3', destination: 'Aeroport', inSeconds: 240 },
+    ], now);
+
+    const focus2 = getStationFocus(ANGEL_GUIMERA, now);
+    expect(focus2.directions).toHaveLength(2);
+    expect(focus2.directions[0].destination).toBe('Rafelbunyol');
+    expect(focus2.directions[0].arrivals[0].seconds).toBe(45);
+    expect(focus2.directions[1].destination).toBe('Aeroport');
+    expect(focus2.directions[1].arrivals[0].seconds).toBe(240);
   });
 
   // The marker draws each direction as an arm pointing the way the track

@@ -13,9 +13,6 @@
 import arrivalStore from './arrivalStore';
 import trainPositionEngine from './trainPositionEngine';
 
-// How many termini a Direction Group names before it gives up and counts.
-const MAX_LABELLED_DESTINATIONS = 3;
-
 // Averaged as unit vectors, because bearings wrap: the mean of 350° and 10° is
 // 0°, not 180°.
 const meanBearing = (bearings) => {
@@ -24,13 +21,6 @@ const meanBearing = (bearings) => {
   const x = bearings.reduce((sum, b) => sum + Math.cos(b * toRad), 0);
   const y = bearings.reduce((sum, b) => sum + Math.sin(b * toRad), 0);
   return (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
-};
-
-const label = (destinations) => {
-  if (destinations.length === 0) return 'Onwards';
-  if (destinations.length <= MAX_LABELLED_DESTINATIONS) return destinations.join(' · ');
-  const shown = destinations.slice(0, MAX_LABELLED_DESTINATIONS);
-  return `${shown.join(' · ')} +${destinations.length - shown.length}`;
 };
 
 /**
@@ -72,19 +62,29 @@ export const getStationFocus = (stationProps, now = Date.now()) => {
     }
   }
 
-  // 'forward' before 'backward' always, so a display left running does not
-  // swap its two halves every time a train arrives.
+  // Direction groups are sorted by soonest Arrival countdown, ensuring
+  // whichever Arrival is due first appears at the top of the list.
   const directions = ['forward', 'backward']
     .filter((key) => groups.has(key))
     .map((key) => {
       const group = groups.get(key);
+      const arrivals = group.arrivals.slice().sort((a, b) => a.seconds - b.seconds);
+      const next = arrivals[0];
+      // Display the upcoming Arrival's destination clearly without confusing multi-terminus chains.
+      const destination = (next && next.destination) || group.destinations[0] || 'Onwards';
       return {
         key,
         destinations: group.destinations,
-        label: label(group.destinations),
+        destination,
+        label: destination,
         bearing: meanBearing(group.bearings),
-        arrivals: group.arrivals.slice().sort((a, b) => a.seconds - b.seconds),
+        arrivals,
       };
+    })
+    .sort((a, b) => {
+      const aSeconds = a.arrivals[0] != null ? a.arrivals[0].seconds : Infinity;
+      const bSeconds = b.arrivals[0] != null ? b.arrivals[0].seconds : Infinity;
+      return aSeconds - bSeconds;
     });
 
   // Each Direction Group's soonest train is the headline the panel and the
