@@ -148,18 +148,28 @@ select {
 .top-bar-container {
   position: absolute;
   top: calc(20px + env(safe-area-inset-top, 0px));
-  left: 360px; /* offset from sidebar when open */
   z-index: 40; /* Above station-panel (z-index 30) */
   display: flex;
   align-items: stretch;
   gap: 10px;
-  max-width: calc(100vw - 380px);
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.top-bar-container.sidebar-collapsed {
-  left: 20px;
-  max-width: calc(100vw - 40px);
+@media (min-width: 769px) {
+  .top-bar-container {
+    left: 360px; /* offset from sidebar when open */
+    max-width: calc(100vw - 380px);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .top-bar-container.sidebar-collapsed {
+    left: 20px;
+    max-width: calc(100vw - 40px);
+  }
+
+  /* On desktop when sidebar is open, hide the toggle button because the open sidebar has its own close chevron */
+  .top-bar-container.sidebar-open .sidebar-toggle-btn {
+    display: none;
+  }
 }
 
 .sidebar-toggle-btn {
@@ -187,13 +197,6 @@ select {
 
 .sidebar-toggle-btn:active {
   transform: scale(0.96);
-}
-
-/* On desktop when sidebar is open, hide the toggle button because the open sidebar has its own close chevron */
-@media (min-width: 769px) {
-  .top-bar-container.sidebar-open .sidebar-toggle-btn {
-    display: none;
-  }
 }
 
 .search-bar-container {
@@ -472,17 +475,17 @@ button:active {
     top: calc(12px + env(safe-area-inset-top, 0px));
     left: 12px;
     right: 12px;
+    width: auto;
     max-width: none;
     gap: 8px;
-  }
-
-  .top-bar-container.sidebar-open,
-  .top-bar-container.sidebar-collapsed {
-    left: 12px;
+    transition: none;
   }
 
   .sidebar-toggle-btn {
+    width: 42px;
+    height: 42px;
     min-width: 42px;
+    flex-shrink: 0;
     display: flex;
   }
 
