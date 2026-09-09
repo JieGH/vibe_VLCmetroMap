@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-export const WELCOME_HOLD_DURATION_MS = 700;
+export const WELCOME_HOLD_DURATION_MS = 1000;
 export const WELCOME_FADE_DURATION_MS = 300;
 export const WELCOME_TOTAL_DURATION_MS = WELCOME_HOLD_DURATION_MS + WELCOME_FADE_DURATION_MS;
 
@@ -31,7 +31,7 @@ const WelcomeScreen = ({ onComplete }) => {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    // Hold splash screen for 700ms; +300ms fade = 1.0s total
+    // Hold splash screen for 1000ms; +300ms fade = 1.3s total
     const holdTimer = setTimeout(() => {
       setFading(true);
     }, WELCOME_HOLD_DURATION_MS);
