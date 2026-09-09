@@ -177,13 +177,12 @@ VariantC.label = 'Spinning Compass';
 // (not just a re-drawing loop), inspired by Alameda — Metrovalencia's real
 // four-Line interchange (L3 red, L5 green, L7 orange, L9 brown) — but
 // artistically stylized rather than geometrically accurate: four curved
-// Lines fan into a circular hub, then small train dots orbit the hub in a
-// continuous circle, the way a real interchange's trains would circulate.
-// One shared ~5s timeline (percentage-keyed keyframes, all elements synced
-// to the same 0–100% clock) plays: draw-in (0–30%) → hold with orbiting
-// trains (30–70%) → collapse-and-fade outro (70–90%) → blank gap (90–100%)
-// before looping. A real splash would compress this same three-act shape
-// into ~1.3s; it's slowed down here so the in/out is easy to see.
+// Lines fan into a circular hub. One shared ~5s timeline (percentage-keyed
+// keyframes, all elements synced to the same 0–100% clock) plays: draw-in
+// (0–30%) → hold (30–70%) → collapse-and-fade outro (70–90%) → blank gap
+// (90–100%) before looping. A real splash would compress this same
+// three-act shape into ~1.3s; it's slowed down here so the in/out is easy
+// to see. Branded "Xarxa" per the naming decision on issue #11.
 const ALAMEDA_LINES = [
   { color: '#E2001A', angle: 25 },  // L3
   { color: '#00994D', angle: 130 }, // L5
@@ -218,16 +217,6 @@ const VariantD = () => (
         65% { transform: scale(1.06); opacity: 1; }
         85%, 100% { transform: scale(0.2); opacity: 0; }
       }
-      .proto-d-orbit {
-        transform-origin: 80px 80px;
-        animation: protoDOrbitLife 5s ease-in-out infinite, protoDSpin 3.6s linear infinite;
-      }
-      @keyframes protoDOrbitLife {
-        0%, 25% { opacity: 0; }
-        32%, 70% { opacity: 1; }
-        85%, 100% { opacity: 0; }
-      }
-      @keyframes protoDSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       .proto-d-title { color: #fff; font: 800 22px system-ui; margin-top: 22px;
         animation: protoDTitleLife 5s ease-in-out infinite; }
       .proto-d-sub { color: #9a9aa8; font: 500 12px system-ui; margin-top: 4px;
@@ -248,15 +237,9 @@ const VariantD = () => (
         );
       })}
       <circle cx="80" cy="80" r="16" fill="#101018" stroke="#fff" strokeWidth="2.5" className="proto-d-ring" />
-      <g className="proto-d-orbit">
-        {ALAMEDA_LINES.map(({ color, angle }) => {
-          const [x, y] = toXY(angle, 26);
-          return <circle key={`train-${color}`} cx={x} cy={y} r="3.5" fill={color} stroke="#fff" strokeWidth="1" />;
-        })}
-      </g>
     </svg>
-    <div className="proto-d-title">Metro Valencia</div>
-    <div className="proto-d-sub">Live Map &amp; Real-time Arrivals</div>
+    <div className="proto-d-title">Xarxa</div>
+    <div className="proto-d-sub">Real-time train tracking for the Valencia Metro</div>
   </div>
 );
 VariantD.label = 'Alameda Bloom';
