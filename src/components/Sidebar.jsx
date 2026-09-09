@@ -17,6 +17,7 @@ const Sidebar = ({
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (e.defaultPrevented) return;
         onToggleSidebar();
       }
     };

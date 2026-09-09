@@ -40,8 +40,13 @@ describe('WelcomeScreen component', () => {
     expect(html).toContain('welcome-line--yellow');
     expect(html).toContain('welcome-line--green');
 
+    // No icon box bounding rectangle (floating directly on welcome screen background)
+    expect(html).not.toContain('<rect');
+
     // Central station core, unclipped SVG overflow, and spotlight glow elements
     expect(html).toContain('overflow:visible');
+    expect(html).toContain('width:100%');
+    expect(html).toContain('height:100%');
     expect(html).toContain('welcome-station-spotlight');
     expect(html).toContain('welcomeSpotlightGlow');
     expect(html).toContain('welcome-station-ring');

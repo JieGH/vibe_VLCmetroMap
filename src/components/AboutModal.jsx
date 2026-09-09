@@ -13,6 +13,8 @@ const AboutModal = ({ isOpen, onClose }) => {
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         onClose();
       }
     };

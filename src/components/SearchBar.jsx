@@ -108,6 +108,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   const handleKeyDown = (e) => {
     if (!isOpen || allItems.length === 0) {
       if (e.key === 'Escape' && query) {
+        e.stopPropagation();
         handleClear();
       }
       return;
@@ -126,6 +127,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
         else handleSelectLine(item.data);
       }
     } else if (e.key === 'Escape') {
+      e.stopPropagation();
       setIsOpen(false);
       setHighlighted(-1);
       inputRef.current?.blur();
