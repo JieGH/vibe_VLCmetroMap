@@ -670,7 +670,7 @@ button:active {
 .welcome-line {
   stroke-dasharray: 40;
   stroke-dashoffset: 40;
-  animation: welcomeLineDrawIn 0.24s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+  animation: welcomeLineDrawIn 0.36s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
 }
 
 .welcome-line--red {
@@ -678,14 +678,14 @@ button:active {
 }
 
 .welcome-line--yellow {
-  animation-delay: 0.01s;
-}
-
-.welcome-line--green {
   animation-delay: 0.02s;
 }
 
-/* Station ring, core, and spotlight trigger immediately once lines converge at ~0.26s */
+.welcome-line--green {
+  animation-delay: 0.04s;
+}
+
+/* Station ring, core, and spotlight trigger immediately once lines converge at ~0.36s */
 @keyframes welcomeStationSpotlight {
   0% {
     opacity: 0;
@@ -741,7 +741,7 @@ button:active {
   transform-origin: 32px 32px;
   opacity: 0;
   transform: scale(0);
-  animation: welcomeStationSpotlight 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.26s forwards;
+  animation: welcomeStationSpotlight 0.48s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
   pointer-events: none;
 }
 
@@ -749,14 +749,14 @@ button:active {
   transform-origin: 32px 32px;
   opacity: 0;
   transform: scale(0);
-  animation: welcomeStationRingIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.26s forwards;
+  animation: welcomeStationRingIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
 }
 
 .welcome-station-core {
   transform-origin: 32px 32px;
   opacity: 0;
   transform: scale(0);
-  animation: welcomeStationCoreBloom 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.26s forwards;
+  animation: welcomeStationCoreBloom 0.44s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
 }
 
 @keyframes welcomeScaleIn {

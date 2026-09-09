@@ -2,8 +2,9 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, it, expect } from 'vitest';
 
+const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
+
 describe('Top bar CSS layout stability', () => {
-  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
 
   const extractMediaSection = (queryRegex) => {
     const match = css.match(queryRegex);
@@ -42,8 +43,6 @@ describe('Top bar CSS layout stability', () => {
 });
 
 describe('Global text selection prevention', () => {
-  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
-
   it('disables text selection and touch callout globally on html and body', () => {
     const htmlBodyMatch = css.match(/html,\s*body\s*\{([^}]*)\}/)?.[1] || '';
     expect(htmlBodyMatch).toContain('user-select: none');
@@ -71,8 +70,6 @@ describe('Global text selection prevention', () => {
 });
 
 describe('Sidebar dismiss backdrop', () => {
-  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
-
   it('defines fixed full-screen backdrop under sidebar and top bar', () => {
     const backdropMatch = css.match(/\.sidebar-backdrop\s*\{([^}]*)\}/)?.[1] || '';
     expect(backdropMatch).toContain('position: fixed');
@@ -90,8 +87,6 @@ describe('Sidebar dismiss backdrop', () => {
 });
 
 describe('Font size scaling and menu controls', () => {
-  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
-
   it('defines --font-scale on :root and per data-font-size attribute', () => {
     expect(css).toContain('--font-scale: 1;');
     expect(css).toContain("[data-font-size='small']");
@@ -116,5 +111,29 @@ describe('Font size scaling and menu controls', () => {
     expect(css).toContain('.font-size-option-label');
   });
 });
+
+describe('Welcome screen splash styles and animation timings', () => {
+  it('defines fixed full-screen splash overlay at z-index 10000', () => {
+    const splashMatch = css.match(/\.welcome-screen\s*\{([^}]*)\}/)?.[1] || '';
+    expect(splashMatch).toContain('position: fixed');
+    expect(splashMatch).toContain('inset: 0');
+    expect(splashMatch).toContain('z-index: 10000');
+    expect(splashMatch).toContain('background-color: #16161f');
+  });
+
+  it('fades out smoothly with transition to hidden', () => {
+    const fadeMatch = css.match(/\.welcome-screen--fading\s*\{([^}]*)\}/)?.[1] || '';
+    expect(fadeMatch).toContain('opacity: 0');
+    expect(fadeMatch).toContain('visibility: hidden');
+    expect(fadeMatch).toContain('pointer-events: none');
+  });
+
+  it('paces transit line draw and spotlight bloom gracefully within 1.0s dwell', () => {
+    expect(css).toMatch(/animation:\s*welcomeLineDrawIn\s+0\.36s/);
+    expect(css).toMatch(/animation:\s*welcomeStationSpotlight\s+0\.48s[^;]*0\.36s/);
+    expect(css).toMatch(/animation:\s*welcomeStationCoreBloom\s+0\.44s[^;]*0\.36s/);
+  });
+});
+
 
 

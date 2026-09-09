@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
-export const WELCOME_HOLD_DURATION_MS = 600;
+export const WELCOME_HOLD_DURATION_MS = 1000;
 export const WELCOME_FADE_DURATION_MS = 300;
 export const WELCOME_TOTAL_DURATION_MS = WELCOME_HOLD_DURATION_MS + WELCOME_FADE_DURATION_MS;
 
 /**
- * 0.6-Second Welcome / Splash Screen with Line-Draw & Central Station Spotlight
+ * 1.0-Second Welcome / Splash Screen with Line-Draw & Central Station Spotlight
  *
  * Displays an animated brand mark showing metro lines drawing into the central station,
  * which then blooms open like a spotlight before smoothly fading into the live map.
@@ -15,7 +15,7 @@ const WelcomeScreen = ({ onComplete }) => {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    // Hold splash screen for 600ms (0.6 second)
+    // Hold splash screen for 1000ms (1.0 second)
     const holdTimer = setTimeout(() => {
       setFading(true);
     }, WELCOME_HOLD_DURATION_MS);
