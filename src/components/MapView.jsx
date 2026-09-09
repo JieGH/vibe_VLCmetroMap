@@ -99,6 +99,7 @@ import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../servi
 import trainPositionEngine from '../services/trainPositionEngine';
 import { renderStationHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
+import { lineOpacityExpression, dimmedVehicleOpacity } from '../utils/lineDim';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -463,8 +464,10 @@ const styleFor = (theme) => (OFFLINE_BASEMAP_AVAILABLE
 // The CSS opacity a vehicle marker is drawn at. For a live train that is its
 // Position Confidence; a Simulated Train keeps its own flat value, because
 // hollow and dashed is a different claim about a train, not a fainter one.
-const vehicleOpacity = (v) =>
-  (v.isLive ? (v.positionConfidence ?? 1) : 0.55).toFixed(2);
+// On top of that, a Vehicle running on a Line that doesn't serve the
+// selected Station is dimmed further, same as the Line itself.
+const vehicleOpacity = (v, selectedStation) =>
+  dimmedVehicleOpacity(v.isLive ? (v.positionConfidence ?? 1) : 0.55, v.line, selectedStation).toFixed(2);
 
 // Says in the reader's words — not the model's — why a marker is drawn faint,
 // covering both causes: how far the walk had to reach, and how long since the
@@ -777,7 +780,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         box-shadow:0 0 0 0 ${color};
         display:flex; align-items:center; justify-content:center;
         color:${v.isLive ? '#fff' : color}; font-size:10px; font-weight:800;
-        opacity:${vehicleOpacity(v)};
+        opacity:${vehicleOpacity(v, selectedStationRef.current)};
         ${v.isLive ? 'animation: vehiclePulse 2s ease-in-out infinite;' : ''}
         box-sizing:border-box; position:relative;
         transform: scale(${Math.min(1.1, currentScale).toFixed(3)});
@@ -825,7 +828,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
           // Confidence moves while the train does — the countdown runs down,
           // syncs land or fail to — so the marker has to follow it rather than
           // keep the opacity it was created with.
-          existing.inner.style.opacity = vehicleOpacity(v);
+          existing.inner.style.opacity = vehicleOpacity(v, selectedStationRef.current);
         } else {
           // The API can return a different set of vehicle IDs after a poll.
           // Add new live trains without waiting for a map/style refresh.
@@ -892,6 +895,23 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         // update source data so `line-offset` picks up new offsets
         const src = map.getSource('metro-lines');
         if (src && typeof src.setData === 'function') src.setData({ type: 'FeatureCollection', features: lineFeatures });
+      }
+    };
+    if (map.isStyleLoaded()) apply();
+    else map.once('styledata', apply);
+  };
+
+  // Dims Lines outside the selected Station's Station Chain — and, via
+  // vehicleOpacity, the Vehicles running on them — rather than hiding them.
+  // Independent of applyLineFilter above: that hides non-matching Lines
+  // outright via `filter`, this only ever de-emphasizes a Line the filter
+  // has already let through, via a `line-opacity` paint expression, so the
+  // two can never fight over the same Line.
+  const applyLineDim = (map, selectedStation) => {
+    const apply = () => {
+      if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
+        map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(selectedStation, 1));
+        map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(selectedStation, 0.35));
       }
     };
     if (map.isStyleLoaded()) apply();
@@ -979,6 +999,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       initStationMarkers(map);
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
+      applyLineDim(map, selectedStationRef.current);
       arrivalStore.seedStrategicHubs();
     });
 
@@ -1056,6 +1077,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!map) return;
     if (map.isStyleLoaded()) initStationMarkers(map);
   }, [hoverLine]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    applyLineDim(map, selectedStation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStation]);
 
   // ── Station Focus ──────────────────────────────────────────────────────────
   // Clicking a Station does two things here: the camera eases in to centre it,
