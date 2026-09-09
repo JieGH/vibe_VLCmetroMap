@@ -1,22 +1,13 @@
 [build]
-  command = "npm run build"
+  # fetch:basemap pulls the offline PMTiles basemap archive (gitignored,
+  # ~34 MB, refetched rather than committed — see scripts/fetch_basemap.cjs
+  # and .gitignore). Without it the app still works, falling back to online
+  # raster tiles capped at zoom 16, but the offline archive is what's intended.
+  command = "npm run fetch:basemap && npm run build"
   publish = "dist"
 
-# Mirrors the dev-only proxy in vite.config.js: browser fetch() can never set
-# User-Agent (forbidden header in the Fetch spec), and metroapi.alexbadi.es
-# requires one containing contact=. Netlify performs this redirect itself,
-# server-side, so the restriction doesn't apply.
-[[redirects]]
-  from = "/api/metro/*"
-  to = "https://metroapi.alexbadi.es/:splat"
-  status = 200
-  force = true
-  headers = { User-Agent = "vib-metro-valencia/1.0 (Web; contact=dev@example.com)" }
-
-# TEMP DEBUG — remove after confirming which headers Netlify forwards on proxy redirects
-[[redirects]]
-  from = "/debug-headers"
-  to = "https://httpbin.org/headers"
-  status = 200
-  force = true
-  headers = { User-Agent = "vib-metro-valencia/1.0 (Web; contact=dev@example.com)", X-Test-Debug = "hello-netlify" }
+# /api/metro/* is handled by netlify/functions/metro-proxy.js (see that file
+# for why a plain redirect can't work: Netlify's redirect proxy overwrites
+# any custom User-Agent header, same restriction as Vercel's Edge runtime).
+# The function declares its own route via `export const config = { path }`,
+# so no redirect rule is needed here.
