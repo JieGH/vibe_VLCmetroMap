@@ -103,4 +103,34 @@ describe('StationPanel component', () => {
     expect(html).toContain('min-width:19px');
     expect(html).toContain('height:19px');
   });
+
+  it('renders drag handle in portrait mode and hides it in landscape mode', () => {
+    // In default Node test environment, window is undefined, which defaults to portrait
+    const portraitHtml = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+    );
+    expect(portraitHtml).toContain('data-testid="station-drag-handle"');
+    expect(portraitHtml).toContain('sheet-drag-handle-wrap');
+    expect(portraitHtml).toContain('sheet-drag-handle');
+
+    // In landscape mode (window.innerWidth >= 820)
+    const origWindow = globalThis.window;
+    try {
+      globalThis.window = {
+        innerWidth: 1024,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      };
+      const landscapeHtml = renderToStaticMarkup(
+        <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      );
+      expect(landscapeHtml).not.toContain('data-testid="station-drag-handle"');
+    } finally {
+      if (origWindow === undefined) {
+        delete globalThis.window;
+      } else {
+        globalThis.window = origWindow;
+      }
+    }
+  });
 });

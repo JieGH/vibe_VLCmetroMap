@@ -87,5 +87,23 @@ describe('Sidebar component', () => {
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('title="Large text size"');
   });
+
+  it('renders mobile drag handle with sheet-drag-handle and mobile-only-drag-handle classes', () => {
+    const html = renderToStaticMarkup(
+      <Sidebar
+        isOpen={true}
+        onToggleSidebar={() => {}}
+        activeLineFilter={null}
+        onSelectLine={() => {}}
+        onHoverLine={() => {}}
+        trainStats={{ live: 4, confirmed: 4 }}
+        onOpenAbout={() => {}}
+      />
+    );
+
+    expect(html).toContain('data-testid="sidebar-drag-handle"');
+    expect(html).toContain('sheet-drag-handle-wrap mobile-only-drag-handle');
+    expect(html).toContain('sheet-drag-handle');
+  });
 });
 

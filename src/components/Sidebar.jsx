@@ -1,8 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronLeft, Check, Info } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import { FONT_SIZE_CONFIG } from '../utils/fontSize';
+import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
+import { useDragToDismiss } from '../utils/useDragToDismiss';
+
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT_PX);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+  return isMobile;
+};
 
 const Sidebar = ({
   isOpen,
@@ -15,6 +33,13 @@ const Sidebar = ({
   fontSize = 'default',
   onSelectFontSize,
 }) => {
+  const isMobile = useIsMobile();
+  const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
+    onDismiss: onToggleSidebar,
+    enabled: isMobile && isOpen,
+    threshold: 70,
+  });
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -57,9 +82,21 @@ const Sidebar = ({
       {/* Sidebar Container */}
       <div 
         className={`sidebar glass-panel ${!isOpen ? 'collapsed' : ''}`} 
-        style={{ padding: '20px' }}
+        style={{ padding: '20px', ...dragStyle }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        {/* Mobile drag handle for swipe-down dismiss */}
+        <div
+          className="sheet-drag-handle-wrap mobile-only-drag-handle"
+          data-testid="sidebar-drag-handle"
+          {...handleProps}
+        >
+          <div className="sheet-drag-handle" />
+        </div>
+
+        <div
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}
+          {...(isMobile ? handleProps : {})}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               width: '36px', height: '36px', borderRadius: '10px',
@@ -77,6 +114,7 @@ const Sidebar = ({
 
           <button 
             onClick={onToggleSidebar}
+            onPointerDown={(e) => e.stopPropagation()}
             style={{ 
               padding: '6px', 
               borderRadius: '8px', 

@@ -4,3 +4,7 @@
 // focused Station centers in the space still visible above or beside it
 // rather than behind it.
 export const LANDSCAPE_BREAKPOINT_PX = 820;
+
+// At or below this width, Sidebar renders as a bottom sheet card instead of
+// the left-hand rail.
+export const MOBILE_BREAKPOINT_PX = 768;

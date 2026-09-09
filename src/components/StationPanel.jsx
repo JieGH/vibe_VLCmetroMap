@@ -12,6 +12,7 @@ import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
+import { useDragToDismiss } from '../utils/useDragToDismiss';
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
@@ -35,6 +36,12 @@ const useIsLandscape = () => {
 const StationPanel = ({ station, theme, onClose, onCenter }) => {
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
+
+  const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
+    onDismiss: onClose,
+    enabled: !landscape && Boolean(station),
+    threshold: 70,
+  });
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -112,13 +119,28 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
               maxHeight: 'min(58vh, calc(100vh - 120px))',
             }),
+        ...dragStyle,
       }}
     >
+      {/* Top drag handle indicator for swipe-down to dismiss in portrait mode */}
+      {!landscape && (
+        <div
+          className="sheet-drag-handle-wrap"
+          data-testid="station-drag-handle"
+          {...handleProps}
+        >
+          <div className="sheet-drag-handle" />
+        </div>
+      )}
+
       {/* Header: which station, and how trustworthy this is */}
-      <header style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        gap: 12, padding: '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
-      }}>
+      <header
+        style={{
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+          gap: 12, padding: !landscape ? '6px 16px 12px' : '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
+        }}
+        {...(!landscape ? handleProps : {})}
+      >
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8, overflow: 'hidden' }}>
           <h2 style={{
             fontSize: '1.05rem', fontWeight: 800, lineHeight: 1.15,
@@ -150,6 +172,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
 
         <button
           onClick={onClose}
+          onPointerDown={(e) => e.stopPropagation()}
           aria-label="Close station panel"
           style={{
             width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none',

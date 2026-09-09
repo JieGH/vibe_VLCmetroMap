@@ -161,5 +161,31 @@ describe('Map bottom-right info and attribution collapse', () => {
   });
 });
 
+describe('Bottom sheet drag handle styles', () => {
+  it('configures sheet drag handle wrap with touch-action none and grab cursor', () => {
+    const wrapMatch = css.match(/\.sheet-drag-handle-wrap\s*\{([^}]*)\}/)?.[1] || '';
+    expect(wrapMatch).toContain('touch-action: none');
+    expect(wrapMatch).toContain('cursor: grab');
+    expect(wrapMatch).toContain('display: flex');
+    expect(wrapMatch).toContain('justify-content: center');
+  });
+
+  it('defines centered pill geometry for sheet drag handle', () => {
+    const pillMatch = css.match(/\.sheet-drag-handle\s*\{([^}]*)\}/)?.[1] || '';
+    expect(pillMatch).toContain('width: 36px');
+    expect(pillMatch).toContain('height: 4px');
+    expect(pillMatch).toContain('border-radius: 999px');
+  });
+
+  it('hides mobile-only drag handle on desktop and displays it on mobile viewports', () => {
+    const mobileOnlyRoot = css.match(/\.mobile-only-drag-handle\s*\{([^}]*)\}/)?.[1] || '';
+    expect(mobileOnlyRoot).toContain('display: none');
+
+    const mobileSection = css.match(/@media\s*\(\s*max-width:\s*768px\s*\)\s*\{([\s\S]*?)\n\}/)?.[1] || '';
+    expect(mobileSection).toContain('.mobile-only-drag-handle');
+    expect(mobileSection).toContain('display: flex');
+  });
+});
+
 
 
