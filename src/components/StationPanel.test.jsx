@@ -39,4 +39,13 @@ describe('StationPanel component', () => {
     // Station name rendered
     expect(html).toContain('Xàtiva');
   });
+
+  it('renders station-backdrop behind the floating card for dismiss on outside tap', () => {
+    const html = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+    );
+
+    expect(html).toContain('station-backdrop');
+    expect(html).toContain('data-testid="station-backdrop"');
+  });
 });

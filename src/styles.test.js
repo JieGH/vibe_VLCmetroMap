@@ -55,7 +55,7 @@ describe('Global text selection prevention', () => {
     expect(rootMatch).toContain('user-select: none');
     expect(rootMatch).toContain('-webkit-user-select: none');
 
-    const buttonMatch = css.match(/button\s*\{([^}]*)\}/)?.[1] || '';
+    const buttonMatch = css.match(/(?:^|\n)button\s*\{([^}]*)\}/)?.[1] || '';
     expect(buttonMatch).toContain('user-select: none');
     expect(buttonMatch).toContain('-webkit-user-select: none');
     expect(buttonMatch).toContain('-webkit-touch-callout: none');
@@ -132,6 +132,32 @@ describe('Welcome screen splash styles and animation timings', () => {
     expect(css).toMatch(/animation:\s*welcomeLineDrawIn\s+0\.36s/);
     expect(css).toMatch(/animation:\s*welcomeStationSpotlight\s+0\.48s[^;]*0\.36s/);
     expect(css).toMatch(/animation:\s*welcomeStationCoreBloom\s+0\.44s[^;]*0\.36s/);
+  });
+});
+
+describe('Station dismiss backdrop', () => {
+  it('defines fixed full-screen backdrop under station-panel and above map canvas', () => {
+    const backdropMatch = css.match(/\.station-backdrop\s*\{([^}]*)\}/)?.[1] || '';
+    expect(backdropMatch).toContain('position: fixed');
+    expect(backdropMatch).toContain('inset: 0');
+    expect(backdropMatch).toContain('z-index: 25');
+    expect(backdropMatch).toContain('background: transparent');
+    expect(backdropMatch).toContain('pointer-events: auto');
+  });
+});
+
+describe('Map bottom-right info and attribution collapse', () => {
+  it('positions bottom-right map controls with safe-area insets', () => {
+    const ctrlMatch = css.match(/\.maplibregl-ctrl-bottom-right\s*\{([^}]*)\}/)?.[1] || '';
+    expect(ctrlMatch).toContain('bottom: calc(8px + env(safe-area-inset-bottom, 0px))');
+    expect(ctrlMatch).toContain('right: calc(8px + env(safe-area-inset-right, 0px))');
+  });
+
+  it('keeps bottom-right map info collapsed into compact button by default', () => {
+    expect(css).toContain('.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner');
+    expect(css).toContain('display: none !important');
+    expect(css).toContain('.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-button');
+    expect(css).toContain('display: block !important');
   });
 });
 

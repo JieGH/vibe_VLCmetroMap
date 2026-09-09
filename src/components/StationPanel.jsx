@@ -57,6 +57,21 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
     return () => clearInterval(id);
   }, [station]);
 
+  useEffect(() => {
+    if (!station) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (e.defaultPrevented) return;
+        if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [station, onClose]);
+
   if (!station) return null;
 
   const focus = getStationFocus(station.properties, now);
@@ -67,8 +82,16 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
       : `${Math.round(focus.secondsUnheard / 60)} min ago`;
 
   return (
-    <aside
-      className="glass-panel station-panel"
+    <>
+      {/* Backdrop for closing station panel by tapping outside on the map */}
+      <div
+        className="station-backdrop"
+        onClick={onClose}
+        aria-hidden="true"
+        data-testid="station-backdrop"
+      />
+      <aside
+        className="glass-panel station-panel"
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
@@ -294,7 +317,8 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         </button>
       </footer>
     </aside>
-  );
+  </>
+);
 };
 
 export default StationPanel;

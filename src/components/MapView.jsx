@@ -905,7 +905,20 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       // 1.2x maximum, so the default view opens with stations already at their
       // largest, easiest-to-tap size rather than the network's full extent.
       zoom: DEFAULT_MAP_ZOOM,
+      attributionControl: { compact: true },
     });
+
+    // Ensure bottom-right attribution starts collapsed into the compact info icon
+    const collapseAttribution = () => {
+      const attributionEl = containerRef.current?.querySelector('.maplibregl-ctrl-attrib');
+      if (attributionEl) {
+        attributionEl.classList.add('maplibregl-compact');
+        attributionEl.classList.remove('maplibregl-compact-show');
+        attributionEl.removeAttribute('open');
+      }
+    };
+    collapseAttribution();
+    map.once('load', collapseAttribution);
 
     const trainCount = document.createElement('div');
     trainCount.className = 'line3-train-count glass-panel';
@@ -928,20 +941,18 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     // a click that lands squarely on a Station marker is handled by the marker's
     // own handler and never gets here — so this is purely the near-miss case.
     map.on('click', (event) => {
-      // Below this scale the Station markers are hidden, and nothing invisible
-      // should be tappable.
-      if (zoomScaleRef.current < 0.55) return;
-
       const { lng, lat } = event.lngLat;
-      const nearest = nearestFeature(drawnStationsRef.current, [lng, lat]);
-      if (!nearest) return;
-
-      // The radius is a constant number of pixels — a finger is the same size at
-      // every zoom — so it has to be converted into metres at the zoom in force.
       const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
-      if (nearest.distance > radiusM) return;
+      const nearest =
+        zoomScaleRef.current >= 0.55
+          ? nearestFeature(drawnStationsRef.current, [lng, lat])
+          : null;
 
-      selectStRef.current(nearest.feature);
+      if (nearest && nearest.distance <= radiusM) {
+        selectStRef.current(nearest.feature);
+      } else if (selectedStationRef.current) {
+        selectStRef.current(null);
+      }
     });
 
     map.on('style.load', () => {
@@ -951,6 +962,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       // across instances, so letting a stale callback through would clear the
       // live map's markers and re-attach them to the removed one.
       if (mapRef.current !== map) return;
+      collapseAttribution();
       initStationMarkers(map);
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
