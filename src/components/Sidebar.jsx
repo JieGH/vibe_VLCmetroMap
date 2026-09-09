@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ChevronLeft, Check, Info } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -12,6 +12,18 @@ const Sidebar = ({
   trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onToggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onToggleSidebar]);
+
   // Combine line features from bundled metro JSON and GTFS-generated data.
   const allFeatures = [
     ...metroData.features,
@@ -29,6 +41,14 @@ const Sidebar = ({
 
   return (
     <>
+      {/* Backdrop for closing menu card by tapping outside on the map */}
+      <div
+        className={`sidebar-backdrop ${isOpen ? 'active' : ''}`}
+        onClick={onToggleSidebar}
+        aria-hidden="true"
+        data-testid="sidebar-backdrop"
+      />
+
       {/* Sidebar Container */}
       <div 
         className={`sidebar glass-panel ${!isOpen ? 'collapsed' : ''}`} 

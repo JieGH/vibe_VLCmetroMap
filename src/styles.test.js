@@ -69,3 +69,23 @@ describe('Global text selection prevention', () => {
     expect(inputMatch).toContain('-webkit-touch-callout: default');
   });
 });
+
+describe('Sidebar dismiss backdrop', () => {
+  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
+
+  it('defines fixed full-screen backdrop under sidebar and top bar', () => {
+    const backdropMatch = css.match(/\.sidebar-backdrop\s*\{([^}]*)\}/)?.[1] || '';
+    expect(backdropMatch).toContain('position: fixed');
+    expect(backdropMatch).toContain('inset: 0');
+    expect(backdropMatch).toContain('z-index: 35');
+    expect(backdropMatch).toContain('pointer-events: none');
+    expect(backdropMatch).toContain('opacity: 0');
+  });
+
+  it('enables pointer events when active', () => {
+    const activeMatch = css.match(/\.sidebar-backdrop\.active\s*\{([^}]*)\}/)?.[1] || '';
+    expect(activeMatch).toContain('pointer-events: auto');
+    expect(activeMatch).toContain('opacity: 1');
+  });
+});
+
