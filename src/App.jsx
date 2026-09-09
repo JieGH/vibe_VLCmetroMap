@@ -10,6 +10,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import { locate } from './services/userLocation';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
+import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { Sun, Moon, X, LayoutDashboard, Menu } from 'lucide-react';
 import './index.css';
 
@@ -56,6 +57,15 @@ function App() {
     return arrivalStore.subscribe(computeStats);
   }, []);
 
+  const [fontSize, setFontSize] = useState(getStoredFontSize);
+  useEffect(() => {
+    applyFontSize(fontSize);
+  }, [fontSize]);
+
+  const handleSelectFontSize = (newSize) => {
+    setFontSize(newSize);
+    setStoredFontSize(newSize);
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -238,6 +248,8 @@ function App() {
         onHoverLine={(lineId) => setHoverLine(lineId)}
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
+        fontSize={fontSize}
+        onSelectFontSize={handleSelectFontSize}
       />
 
       {/* Top Navigation Bar: Sidebar Toggle Button + Search Bar & Quick Actions */}

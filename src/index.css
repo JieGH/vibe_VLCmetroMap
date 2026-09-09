@@ -27,8 +27,31 @@
   --color-line-9: #996633; /* Brown */
   --color-line-10: #A8C82B; /* Lime Green (Tram) */
 
+  /* Typography Scaling */
+  --font-scale: 1;
+
   --shadow-panel: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
   --radius: 14px;
+}
+
+[data-font-size='small'] {
+  --font-scale: 0.9;
+}
+
+[data-font-size='default'] {
+  --font-scale: 1;
+}
+
+[data-font-size='large'] {
+  --font-scale: 1.15;
+}
+
+[data-font-size='xlarge'] {
+  --font-scale: 1.3;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale, 1));
 }
 
 [data-theme='light'] {
@@ -80,11 +103,11 @@ body {
   user-select: none;
 }
 
-/* Enforce 16px input size so iOS Safari never triggers automatic 5% viewport auto-zoom */
+/* Enforce minimum 16px input size so iOS Safari never triggers automatic 5% viewport auto-zoom */
 input,
 textarea,
 select {
-  font-size: 16px;
+  font-size: max(16px, calc(16px * var(--font-scale, 1)));
 }
 
 input,
@@ -763,4 +786,56 @@ button:active {
     transition: opacity 0.15s ease;
   }
 }
+
+/* ── Font Size Adjustment Control in Menu ────────────────────────────────── */
+
+.font-size-control-group {
+  display: flex;
+  background: var(--bg-hover);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.font-size-option-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  min-height: 44px;
+}
+
+.font-size-option-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.font-size-option-btn.active {
+  background: var(--bg-panel-solid);
+  color: #FFD100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-weight: 700;
+}
+
+.font-size-option-preview {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.font-size-option-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
 

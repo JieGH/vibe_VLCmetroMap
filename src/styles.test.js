@@ -89,3 +89,32 @@ describe('Sidebar dismiss backdrop', () => {
   });
 });
 
+describe('Font size scaling and menu controls', () => {
+  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
+
+  it('defines --font-scale on :root and per data-font-size attribute', () => {
+    expect(css).toContain('--font-scale: 1;');
+    expect(css).toContain("[data-font-size='small']");
+    expect(css).toContain('--font-scale: 0.9;');
+    expect(css).toContain("[data-font-size='default']");
+    expect(css).toContain('--font-scale: 1;');
+    expect(css).toContain("[data-font-size='large']");
+    expect(css).toContain('--font-scale: 1.15;');
+    expect(css).toContain("[data-font-size='xlarge']");
+    expect(css).toContain('--font-scale: 1.3;');
+  });
+
+  it('scales html font-size dynamically using --font-scale', () => {
+    expect(css).toContain('html {\n  font-size: calc(16px * var(--font-scale, 1));\n}');
+  });
+
+  it('styles font size segmented control in sidebar', () => {
+    expect(css).toContain('.font-size-control-group');
+    expect(css).toContain('.font-size-option-btn');
+    expect(css).toContain('.font-size-option-btn.active');
+    expect(css).toContain('.font-size-option-preview');
+    expect(css).toContain('.font-size-option-label');
+  });
+});
+
+

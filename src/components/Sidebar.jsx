@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { ChevronLeft, Check, Info } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
+import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 
 const Sidebar = ({
   isOpen,
@@ -11,6 +12,8 @@ const Sidebar = ({
   onHoverLine,
   trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
+  fontSize = 'default',
+  onSelectFontSize,
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -155,6 +158,39 @@ const Sidebar = ({
                       </div>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Font Size Adjustment Control */}
+          <div className="sidebar-font-size-section" style={{ paddingTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+                Text Size
+              </h2>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                {FONT_SIZE_CONFIG[fontSize]?.label || 'Default'}
+              </span>
+            </div>
+            <div className="font-size-control-group" role="group" aria-label="Text Size Selection">
+              {Object.values(FONT_SIZE_CONFIG).map((opt) => {
+                const isSelected = fontSize === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onSelectFontSize && onSelectFontSize(opt.id)}
+                    className={`font-size-option-btn ${isSelected ? 'active' : ''}`}
+                    aria-pressed={isSelected}
+                    aria-label={`${opt.label} text size`}
+                    title={`${opt.label} text size`}
+                  >
+                    <span className="font-size-option-preview" style={{ fontSize: `${opt.scale * 0.85}rem` }}>
+                      Aa
+                    </span>
+                    <span className="font-size-option-label">{opt.shortLabel}</span>
+                  </button>
                 );
               })}
             </div>

@@ -56,4 +56,36 @@ describe('Sidebar component', () => {
     expect(html).toContain('Metro Valencia');
     expect(html).toContain('Lines &amp; Services');
   });
+
+  it('renders font size adjustment section with all options and active state', () => {
+    const html = renderToStaticMarkup(
+      <Sidebar
+        isOpen={true}
+        onToggleSidebar={() => {}}
+        activeLineFilter={null}
+        onSelectLine={() => {}}
+        onHoverLine={() => {}}
+        trainStats={{ live: 4, confirmed: 4 }}
+        onOpenAbout={() => {}}
+        fontSize="large"
+        onSelectFontSize={() => {}}
+      />
+    );
+
+    expect(html).toContain('Text Size');
+    expect(html).toContain('Large');
+    expect(html).toContain('font-size-control-group');
+
+    // S, M, L, XL options
+    expect(html).toContain('Small text size');
+    expect(html).toContain('Default text size');
+    expect(html).toContain('Large text size');
+    expect(html).toContain('X-Large text size');
+
+    // Active state on 'large'
+    expect(html).toContain('class="font-size-option-btn active"');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('title="Large text size"');
+  });
 });
+
