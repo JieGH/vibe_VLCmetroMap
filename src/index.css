@@ -64,6 +64,9 @@ body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: auto;
   -webkit-text-size-adjust: 100%;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #root {
@@ -73,6 +76,8 @@ body {
   display: flex;
   overflow: hidden;
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Enforce 16px input size so iOS Safari never triggers automatic 5% viewport auto-zoom */
@@ -80,6 +85,13 @@ input,
 textarea,
 select {
   font-size: 16px;
+}
+
+input,
+textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .app-container {
@@ -214,6 +226,9 @@ button {
   cursor: pointer;
   color: var(--text-primary);
   transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 button:hover {

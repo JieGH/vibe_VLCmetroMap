@@ -40,3 +40,32 @@ describe('Top bar CSS layout stability', () => {
     expect(mobileSection).toContain('flex-shrink: 0');
   });
 });
+
+describe('Global text selection prevention', () => {
+  const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
+
+  it('disables text selection and touch callout globally on html and body', () => {
+    const htmlBodyMatch = css.match(/html,\s*body\s*\{([^}]*)\}/)?.[1] || '';
+    expect(htmlBodyMatch).toContain('user-select: none');
+    expect(htmlBodyMatch).toContain('-webkit-user-select: none');
+    expect(htmlBodyMatch).toContain('-webkit-touch-callout: none');
+  });
+
+  it('disables text selection on root container and buttons', () => {
+    const rootMatch = css.match(/#root\s*\{([^}]*)\}/)?.[1] || '';
+    expect(rootMatch).toContain('user-select: none');
+    expect(rootMatch).toContain('-webkit-user-select: none');
+
+    const buttonMatch = css.match(/button\s*\{([^}]*)\}/)?.[1] || '';
+    expect(buttonMatch).toContain('user-select: none');
+    expect(buttonMatch).toContain('-webkit-user-select: none');
+    expect(buttonMatch).toContain('-webkit-touch-callout: none');
+  });
+
+  it('preserves text selection and editing callouts for editable inputs and textareas', () => {
+    const inputMatch = css.match(/input,\s*textarea\s*\{([^}]*)\}/)?.[1] || '';
+    expect(inputMatch).toContain('user-select: text');
+    expect(inputMatch).toContain('-webkit-user-select: text');
+    expect(inputMatch).toContain('-webkit-touch-callout: default');
+  });
+});
