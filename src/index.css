@@ -202,17 +202,6 @@ textarea {
   }
 }
 
-/* ── Station Dismiss Backdrop ───────────────────────────────────────────── */
-
-.station-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 25; /* Under station-panel (z-index 30), above map canvas (z-index 1) */
-  background: transparent;
-  pointer-events: auto;
-  -webkit-tap-highlight-color: transparent;
-}
-
 /* ── Bottom Sheet Drag Handle ────────────────────────────────────────────── */
 
 .sheet-drag-handle-wrap {

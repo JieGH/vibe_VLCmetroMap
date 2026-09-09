@@ -90,13 +90,6 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
 
   return (
     <>
-      {/* Backdrop for closing station panel by tapping outside on the map */}
-      <div
-        className="station-backdrop"
-        onClick={onClose}
-        aria-hidden="true"
-        data-testid="station-backdrop"
-      />
       <aside
         className="glass-panel station-panel"
       data-landscape={landscape ? 'true' : 'false'}

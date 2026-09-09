@@ -41,13 +41,17 @@ describe('StationPanel component', () => {
     expect(html).toContain('Xàtiva');
   });
 
-  it('renders station-backdrop behind the floating card for dismiss on outside tap', () => {
+  // A full-screen backdrop used to sit above the map canvas to catch an
+  // outside tap and dismiss the panel — but being on top of the map, it also
+  // swallowed drag and scroll-zoom gestures meant for the map itself.
+  // MapView's own click handler already deselects the Station on a
+  // background tap without that side effect, so the backdrop is gone.
+  it('does not render a backdrop over the map that would block drag or zoom', () => {
     const html = renderToStaticMarkup(
       <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
     );
 
-    expect(html).toContain('station-backdrop');
-    expect(html).toContain('data-testid="station-backdrop"');
+    expect(html).not.toContain('station-backdrop');
   });
 
   it('renders prominent hero badges for primary arrivals and compact badges for later arrivals', () => {

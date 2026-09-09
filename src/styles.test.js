@@ -136,13 +136,11 @@ describe('Welcome screen splash styles and animation timings', () => {
 });
 
 describe('Station dismiss backdrop', () => {
-  it('defines fixed full-screen backdrop under station-panel and above map canvas', () => {
-    const backdropMatch = css.match(/\.station-backdrop\s*\{([^}]*)\}/)?.[1] || '';
-    expect(backdropMatch).toContain('position: fixed');
-    expect(backdropMatch).toContain('inset: 0');
-    expect(backdropMatch).toContain('z-index: 25');
-    expect(backdropMatch).toContain('background: transparent');
-    expect(backdropMatch).toContain('pointer-events: auto');
+  // A full-screen, pointer-capturing backdrop over the map blocked drag and
+  // scroll-zoom while a Station was selected. Removed in favour of MapView's
+  // own click handler, which already dismisses on an outside tap.
+  it('no longer defines a full-screen backdrop over the map canvas', () => {
+    expect(css).not.toMatch(/\.station-backdrop\s*\{/);
   });
 });
 
