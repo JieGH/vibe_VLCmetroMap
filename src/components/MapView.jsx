@@ -603,6 +603,8 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
   const selectStRef     = useRef(onSelectStation);
+  const selectedStationRef = useRef(selectedStation);
+  const lastFramedFetchedAtRef = useRef(null); // prevents camera jumps on accuracy refinements
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const preFocusZoomRef = useRef(null); // zoom level before station was focused
@@ -619,6 +621,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   useEffect(() => { themeRef.current = theme; }, [theme]);
   useEffect(() => { filterRef.current = activeLineFilter; }, [activeLineFilter]);
   useEffect(() => { selectStRef.current = onSelectStation; }, [onSelectStation]);
+  useEffect(() => { selectedStationRef.current = selectedStation; }, [selectedStation]);
   useEffect(() => { hoverRef.current = hoverLine; }, [hoverLine]);
 
   const stopAnimation = () => {
@@ -1202,7 +1205,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!map) return;
 
     if (!userLocation || userLocation.status !== 'located') {
-      if (prevUserLocationRef.current && !selectedStation) {
+      if (prevUserLocationRef.current && !selectedStationRef.current) {
         map.easeTo({
           center: map.getCenter(),
           padding: ZERO_PADDING,
@@ -1211,10 +1214,20 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         });
       }
       prevUserLocationRef.current = null;
+      lastFramedFetchedAtRef.current = null;
       return;
     }
 
     prevUserLocationRef.current = userLocation;
+
+    // Only animate the camera once per locate request (keyed by fetchedAt timestamp).
+    // Subsequent accuracy refinements for the same fix update the marker dot and
+    // accuracy ring in place without disrupting the user's view or overriding a station click.
+    if (lastFramedFetchedAtRef.current === userLocation.fetchedAt) {
+      return;
+    }
+    lastFramedFetchedAtRef.current = userLocation.fetchedAt;
+
     const padding = panelAwarePadding(map);
 
     if (!userLocation.nearestStation) {
@@ -1238,7 +1251,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       duration: 900,
       essential: true,
     });
-  }, [userLocation, selectedStation]);
+  }, [userLocation]);
 
   return (
     <div

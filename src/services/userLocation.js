@@ -136,71 +136,41 @@ const withTimeout = (promise, ms) => {
   return Promise.race([promise, stopwatch]).finally(() => clearTimeout(timer));
 };
 
+// Threshold below which a fast fix is considered accurate enough to short-circuit
+// without waiting 3–6s for a high-accuracy satellite fix.
+export const FAST_FIX_MAX_ACCURACY_M = 15;
+
+// Timeout for the fast low-accuracy / cached Stage 1 fix before falling back to high-accuracy fix.
+export const FAST_FIX_TIMEOUT_MS = 2500;
+
+// Freshness window for the Stage 2 high-accuracy fix, ensuring the device queries
+// hardware satellites rather than returning Stage 1's low-accuracy cache.
+export const REFINED_FIX_MAX_AGE_MS = 5000;
+
+let cachedPermission = null;
+
 /**
- * Take one fix of the User Location and say what it is good for.
- *
- * Four statuses, because they are four different things to do about it:
- * 'located' (with or without a Nearest Station), 'denied' (change a setting),
- * 'unavailable' (nothing you can do here), 'timeout' (try again). A 'located'
- * result with no Nearest Station carries a `reason` — 'imprecise' when the fix
- * is too rough to choose, 'out-of-range' when there is genuinely nothing near —
- * because the map does the same thing in both cases and only the sentence
- * differs.
- *
- * @returns {Promise<object>}
+ * Resets the in-memory permission cache. Exported for tests.
  */
-export const locate = async ({
-  provider = defaultProvider,
-  timeoutMs = FIX_TIMEOUT_MS,
-  now = Date.now(),
-} = {}) => {
-  let permission = null;
+export const resetPermissionCache = () => {
+  cachedPermission = null;
+};
+
+const queryRawReading = async (provider, options, timeout) => {
   try {
-    // The plugin throws from here when system location services are switched
-    // off, which is a different fix from "allow this app" and gets its own
-    // sentence.
-    permission = await provider.checkPermissions();
-  } catch (error) {
-    if (!isMethodMissing(error)) return failure('unavailable');
+    const reading = await withTimeout(provider.getCurrentPosition(options), timeout);
+    return { reading, error: null };
+  } catch (err) {
+    return { reading: null, error: classifyError(err) };
   }
+};
 
-  if (permission && permission.location === 'denied') {
-    // iOS will not re-prompt after a hard denial. Asking again burns a round
-    // trip to be told the same thing.
-    return failure('denied');
-  }
+const buildLocatedResult = (reading, now) => {
+  if (!reading || !reading.coords) return null;
 
-  if (permission && permission.location !== 'granted') {
-    try {
-      const requested = await provider.requestPermissions();
-      if (!requested || requested.location !== 'granted') return failure('denied');
-    } catch (error) {
-      if (!isMethodMissing(error)) return failure('unavailable');
-      // No way to ask up front, so the prompt — and any refusal of it — arrives
-      // from getCurrentPosition below instead.
-    }
-  }
-
-  let position;
-  try {
-    position = await withTimeout(
-      provider.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: timeoutMs,
-        maximumAge: FIX_MAX_AGE_MS,
-      }),
-      timeoutMs
-    );
-  } catch (error) {
-    return failure(classifyError(error));
-  }
-
-  if (position === TIMED_OUT) return failure('timeout');
-  if (!position || !position.coords) return failure('unavailable');
-
-  const coordinates = [position.coords.longitude, position.coords.latitude];
-  const accuracy = Number.isFinite(position.coords.accuracy)
-    ? position.coords.accuracy
+  const coordinates = [reading.coords.longitude, reading.coords.latitude];
+  const accuracy = Number.isFinite(reading.coords.accuracy)
+    ? reading.coords.accuracy
     : null;
 
   const located = {
@@ -229,6 +199,155 @@ export const locate = async ({
     distance: nearest.distance,
     message: `${nearest.station.properties.name} · ${Math.round(nearest.distance)} m away`,
   };
+};
+
+/**
+ * Take one fix of the User Location and say what it is good for.
+ *
+ * Four statuses, because they are four different things to do about it:
+ * 'located' (with or without a Nearest Station), 'denied' (change a setting),
+ * 'unavailable' (nothing you can do here), 'timeout' (try again). A 'located'
+ * result with no Nearest Station carries a `reason` — 'imprecise' when the fix
+ * is too rough to choose, 'out-of-range' when there is genuinely nothing near —
+ * because the map does the same thing in both cases and only the sentence
+ * differs.
+ *
+ * @param {object} [options]
+ * @param {object} [options.provider]
+ * @param {number} [options.timeoutMs]
+ * @param {number} [options.now]
+ * @param {Function} [options.onProgressiveFix] Optional callback invoked with the fast Stage 1 fix
+ * @returns {Promise<object>}
+ */
+export const locate = async ({
+  provider = defaultProvider,
+  timeoutMs = FIX_TIMEOUT_MS,
+  now = Date.now(),
+  onProgressiveFix = null,
+} = {}) => {
+  const startTime = Date.now();
+
+  if (cachedPermission !== 'granted') {
+    let permission = null;
+    try {
+      // The plugin throws from here when system location services are switched
+      // off, which is a different fix from "allow this app" and gets its own
+      // sentence.
+      permission = await provider.checkPermissions();
+    } catch (error) {
+      if (!isMethodMissing(error)) return failure('unavailable');
+    }
+
+    if (permission && permission.location === 'denied') {
+      // iOS will not re-prompt after a hard denial. Asking again burns a round
+      // trip to be told the same thing.
+      cachedPermission = 'denied';
+      return failure('denied');
+    }
+
+    if (permission && permission.location !== 'granted') {
+      try {
+        const requested = await provider.requestPermissions();
+        if (!requested || requested.location !== 'granted') {
+          cachedPermission = 'denied';
+          return failure('denied');
+        }
+      } catch (error) {
+        if (!isMethodMissing(error)) return failure('unavailable');
+        // No way to ask up front, so the prompt — and any refusal of it — arrives
+        // from getCurrentPosition below instead.
+      }
+    }
+
+    if (permission && permission.location === 'granted') {
+      cachedPermission = 'granted';
+    }
+  }
+
+  // Stage 1: Fast fix (cell / Wi-Fi / cached fix, enableHighAccuracy: false)
+  const elapsedStage1 = Date.now() - startTime;
+  const stage1Timeout = Math.min(FAST_FIX_TIMEOUT_MS, Math.max(10, timeoutMs - elapsedStage1));
+
+  const { reading: stage1Reading, error: stage1Error } = await queryRawReading(
+    provider,
+    {
+      enableHighAccuracy: false,
+      timeout: stage1Timeout,
+      maximumAge: FIX_MAX_AGE_MS,
+    },
+    stage1Timeout
+  );
+
+  if (stage1Error === 'denied') {
+    cachedPermission = null;
+    return failure('denied');
+  }
+
+  let stage1Result = null;
+  if (stage1Reading && stage1Reading !== TIMED_OUT && stage1Reading.coords) {
+    cachedPermission = 'granted';
+    stage1Result = buildLocatedResult(stage1Reading, now);
+    if (stage1Result) {
+      if (typeof onProgressiveFix === 'function') {
+        onProgressiveFix(stage1Result);
+      }
+      // If Stage 1 is already pinpoint accurate (<= 15m), resolve immediately!
+      if (stage1Result.accuracy !== null && stage1Result.accuracy <= FAST_FIX_MAX_ACCURACY_M) {
+        return stage1Result;
+      }
+    }
+  }
+
+  // Stage 2: Refined high-accuracy fix (enableHighAccuracy: true)
+  const elapsedStage2 = Date.now() - startTime;
+  const remainingTimeout = timeoutMs - elapsedStage2;
+
+  if (remainingTimeout <= 0) {
+    return stage1Result || failure('timeout');
+  }
+
+  const { reading: stage2Reading, error: stage2Error } = await queryRawReading(
+    provider,
+    {
+      enableHighAccuracy: true,
+      timeout: remainingTimeout,
+      maximumAge: REFINED_FIX_MAX_AGE_MS,
+    },
+    remainingTimeout
+  );
+
+  if (stage2Error === 'denied') {
+    cachedPermission = null;
+    return failure('denied');
+  }
+
+  if (stage2Reading === TIMED_OUT) {
+    return stage1Result || failure('timeout');
+  }
+
+  if (!stage2Reading || !stage2Reading.coords) {
+    return stage1Result || failure(stage2Error || 'unavailable');
+  }
+
+  cachedPermission = 'granted';
+  const stage2Result = buildLocatedResult(stage2Reading, now);
+
+  if (stage1Result && stage2Result) {
+    // Preserve Stage 1 fix if Stage 2 is imprecise or has worse accuracy
+    if (stage2Result.reason === 'imprecise' && stage1Result.reason !== 'imprecise') {
+      return stage1Result;
+    }
+    if (
+      Number.isFinite(stage1Result.accuracy) &&
+      Number.isFinite(stage2Result.accuracy) &&
+      stage2Result.accuracy > stage1Result.accuracy
+    ) {
+      return stage1Result;
+    }
+    stage2Result.isRefinement = true;
+  }
+
+  return stage2Result || (stage1Result || failure('unavailable'));
 };
 
 export default locate;

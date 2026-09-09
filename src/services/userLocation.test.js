@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   locate,
   findNearestStation,
+  resetPermissionCache,
   NEAREST_STATION_RANGE_M,
   MAX_USABLE_ACCURACY_M,
 } from './userLocation';
@@ -83,6 +84,10 @@ describe('findNearestStation', () => {
 });
 
 describe('locate', () => {
+  beforeEach(() => {
+    resetPermissionCache();
+  });
+
   it('names the Nearest Station for a good fix near the network', async () => {
     const result = await locate({ provider: fakeProvider() });
 
@@ -271,5 +276,131 @@ describe('locate', () => {
       expect(typeof result.message).toBe('string');
       expect(result.message.length).toBeGreaterThan(0);
     }
+  });
+
+  describe('performance & latency optimizations (Issue #23)', () => {
+    beforeEach(() => {
+      resetPermissionCache();
+    });
+
+    it('caches granted permission across consecutive locate calls', async () => {
+      let checkCount = 0;
+      const provider = fakeProvider();
+      provider.checkPermissions = async () => {
+        checkCount++;
+        return { location: 'granted' };
+      };
+
+      await locate({ provider });
+      expect(checkCount).toBe(1);
+
+      await locate({ provider });
+      expect(checkCount).toBe(1); // Reuses cached permission, avoiding native bridge latency
+    });
+
+    it('clears permission cache if getCurrentPosition fails with denied', async () => {
+      let checkCount = 0;
+      const provider = fakeProvider();
+      provider.checkPermissions = async () => {
+        checkCount++;
+        return { location: 'granted' };
+      };
+
+      await locate({ provider });
+      expect(checkCount).toBe(1);
+
+      // Subsequent call where user revoked permission in device settings
+      provider.getCurrentPosition = async () => {
+        throw geolocationError(1, 'User denied Geolocation');
+      };
+
+      const deniedResult = await locate({ provider });
+      expect(deniedResult.status).toBe('denied');
+
+      // Next call must re-check permissions since cache was cleared
+      provider.getCurrentPosition = async () => fix(NEAR_BENIMACLET);
+      await locate({ provider });
+      expect(checkCount).toBe(2);
+    });
+
+    it('calls onProgressiveFix with stage 1 fix and refines with stage 2 high-accuracy fix', async () => {
+      const calls = [];
+      const provider = fakeProvider();
+      provider.getCurrentPosition = async (options) => {
+        calls.push(options);
+        if (options && options.enableHighAccuracy === false) {
+          return fix(NEAR_BENIMACLET, 65); // Stage 1: cell/Wi-Fi fix (65m)
+        }
+        return fix(BENIMACLET, 8); // Stage 2: refined fix (8m)
+      };
+
+      const progressiveUpdates = [];
+      const result = await locate({
+        provider,
+        onProgressiveFix: (update) => progressiveUpdates.push(update),
+      });
+
+      expect(progressiveUpdates.length).toBe(1);
+      expect(progressiveUpdates[0].accuracy).toBe(65);
+      expect(progressiveUpdates[0].nearestStation.properties.name).toBe('Benimaclet');
+
+      expect(result.accuracy).toBe(8);
+      expect(result.isRefinement).toBe(true);
+      expect(calls.length).toBe(2);
+      expect(calls[0].enableHighAccuracy).toBe(false);
+      expect(calls[0].maximumAge).toBe(30000);
+      expect(calls[1].enableHighAccuracy).toBe(true);
+      expect(calls[1].maximumAge).toBe(5000);
+    });
+
+    it('short-circuits stage 2 when stage 1 fix is already highly accurate (<= 15m)', async () => {
+      const calls = [];
+      const provider = fakeProvider();
+      provider.getCurrentPosition = async (options) => {
+        calls.push(options);
+        return fix(NEAR_BENIMACLET, 10); // High accuracy immediately from cache/assisted fix
+      };
+
+      const result = await locate({ provider });
+      expect(result.accuracy).toBe(10);
+      expect(calls.length).toBe(1);
+      expect(calls[0].enableHighAccuracy).toBe(false);
+    });
+
+    it('gracefully falls back to stage 1 fix if stage 2 high-accuracy fix times out', async () => {
+      const provider = fakeProvider();
+      provider.getCurrentPosition = async (options) => {
+        if (options && options.enableHighAccuracy === false) {
+          return fix(NEAR_BENIMACLET, 45); // Usable cell/Wi-Fi fix
+        }
+        // Stage 2 hangs (e.g. underground metro entrance)
+        return new Promise(() => {});
+      };
+
+      const result = await locate({
+        provider,
+        timeoutMs: 30, // fast timeout for test
+      });
+
+      expect(result.status).toBe('located');
+      expect(result.accuracy).toBe(45);
+      expect(result.nearestStation.properties.name).toBe('Benimaclet');
+    });
+
+    it('preserves stage 1 fix if stage 2 returns a degraded or imprecise reading', async () => {
+      const provider = fakeProvider();
+      provider.getCurrentPosition = async (options) => {
+        if (options && options.enableHighAccuracy === false) {
+          return fix(BENIMACLET, 35); // Usable stage 1 fix
+        }
+        // Stage 2 returns worse accuracy (e.g. 600m / imprecise)
+        return fix(BENIMACLET, 600);
+      };
+
+      const result = await locate({ provider });
+      expect(result.status).toBe('located');
+      expect(result.accuracy).toBe(35);
+      expect(result.nearestStation.properties.name).toBe('Benimaclet');
+    });
   });
 });

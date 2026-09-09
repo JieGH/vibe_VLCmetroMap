@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
@@ -25,6 +25,11 @@ function App() {
   const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
+  const selectedStationRef = useRef(selectedStation);
+  useEffect(() => {
+    selectedStationRef.current = selectedStation;
+  }, [selectedStation]);
+
   const [flyTarget, setFlyTarget] = useState(null);
   const [activeLineFilter, setActiveLineFilter] = useState([]);
   const [hoverLine, setHoverLine] = useState(null);
@@ -66,6 +71,16 @@ function App() {
     setFlyTarget({ ...station, _ts: Date.now() });
   };
 
+  // Applies a User Location fix to the state. Does not displace a Station
+  // the viewer has chosen manually while a background refinement was in flight.
+  const applyUserLocation = (fix, updateStation = true) => {
+    setUserLocation(fix);
+    setLocateNotice({ text: fix.message, _ts: Date.now() });
+    if (updateStation && fix.nearestStation) {
+      setSelectedStation(fix.nearestStation);
+    }
+  };
+
   // The locate button. One press takes a fix, frames it against the Nearest
   // Station and opens that Station's departures — deliberately compounding the
   // three, against the rule three lines above that a Station click never moves
@@ -77,11 +92,21 @@ function App() {
     if (locateState === 'locating') return;
 
     setLocateState('locating');
+    let initialNearestStation = null;
+
     // Always re-acquire rather than re-centring on the fix already held: a dot
     // that is twenty minutes old under a button that looks like it just worked
     // is exactly the lie the fade exists to prevent. `maximumAge` inside
     // locate() makes a repeat press within half a minute cheap anyway.
-    const result = await locate();
+    const result = await locate({
+      onProgressiveFix: (interim) => {
+        if (interim.status === 'located') {
+          initialNearestStation = interim.nearestStation;
+          setLocateState('idle');
+          applyUserLocation(interim, true);
+        }
+      },
+    });
 
     // A timeout goes back to idle rather than sticking on 'unavailable': it is
     // the one failure worth pressing again, and a crossed-out icon says the
@@ -90,9 +115,19 @@ function App() {
     setLocateState(
       result.status === 'located' || result.status === 'timeout' ? 'idle' : 'unavailable'
     );
-    setUserLocation(result.status === 'located' ? result : null);
-    setLocateNotice({ text: result.message, _ts: Date.now() });
-    if (result.nearestStation) setSelectedStation(result.nearestStation);
+
+    if (result.status === 'located') {
+      // Only set the Station if the viewer hasn't selected a different one
+      // in the meantime while high-accuracy refinement completed.
+      const canUpdateStation =
+        !selectedStationRef.current ||
+        (initialNearestStation && selectedStationRef.current === initialNearestStation);
+
+      applyUserLocation(result, canUpdateStation);
+    } else {
+      setUserLocation(null);
+      setLocateNotice({ text: result.message, _ts: Date.now() });
+    }
   };
 
   // Holding the locate button clears the dot. The fix is a snapshot that goes
