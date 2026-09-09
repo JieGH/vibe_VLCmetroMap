@@ -1,9 +1,17 @@
 import React from 'react';
-import { Menu, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, Check, Info } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 
-const Sidebar = ({ isOpen, onToggleSidebar, activeLineFilter, onSelectLine, onHoverLine, trainStats = { live: 0, confirmed: 0 } }) => {
+const Sidebar = ({
+  isOpen,
+  onToggleSidebar,
+  activeLineFilter,
+  onSelectLine,
+  onHoverLine,
+  trainStats = { live: 0, confirmed: 0 },
+  onOpenAbout,
+}) => {
   // Combine line features from bundled metro JSON and GTFS-generated data.
   const allFeatures = [
     ...metroData.features,
@@ -163,6 +171,33 @@ const Sidebar = ({ isOpen, onToggleSidebar, activeLineFilter, onSelectLine, onHo
               <span>📍 FGV Metrovalència System</span>
               <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>v{__APP_VERSION__}</span>
             </div>
+
+            <button
+              type="button"
+              onClick={onOpenAbout}
+              aria-label="Open About and Legal notices"
+              style={{
+                marginTop: '12px',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-hover)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+              }}
+              className="about-legal-btn"
+            >
+              <Info size={14} />
+              <span>About & Legal / Licenses</span>
+            </button>
           </div>
 
         </div>

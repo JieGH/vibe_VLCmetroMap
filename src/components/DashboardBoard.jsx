@@ -25,7 +25,7 @@ const BOARD_STATIONS = [
   { apiId: 34, name: 'Torrent Avinguda', lines: ['1', '2'] },
 ];
 
-const DashboardBoard = ({ theme, onExit }) => {
+const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
   const [now, setNow] = useState(Date.now());
   const [slot, setSlot] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -196,11 +196,30 @@ const DashboardBoard = ({ theme, onExit }) => {
           marginTop: 10, fontSize: 'clamp(10px, 1.3vw, 17px)', color: dim,
         }}>
           <span>{BOARD_STATIONS.map((s, i) => (i === slot ? '●' : '○')).join(' ')} next: {BOARD_STATIONS[(slot + 1) % BOARD_STATIONS.length].name}</span>
-          <span>
-            {focus.secondsUnheard === null ? 'never fetched'
-              : focus.isFresh ? 'live'
-                : `confirmed ${Math.max(1, Math.round(focus.secondsUnheard / 60))} min ago`}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {onOpenAbout && (
+              <button
+                type="button"
+                onClick={onOpenAbout}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: dim,
+                  cursor: 'pointer',
+                  fontSize: 'inherit',
+                  textDecoration: 'underline',
+                  padding: 0,
+                }}
+              >
+                About & Legal
+              </button>
+            )}
+            <span>
+              {focus.secondsUnheard === null ? 'never fetched'
+                : focus.isFresh ? 'live'
+                  : `confirmed ${Math.max(1, Math.round(focus.secondsUnheard / 60))} min ago`}
+            </span>
+          </div>
         </div>
       </footer>
     </div>

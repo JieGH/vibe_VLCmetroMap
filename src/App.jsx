@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
+import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
 import { locate } from './services/userLocation';
 import arrivalStore from './services/arrivalStore';
@@ -24,6 +25,7 @@ function App() {
   const [theme, setTheme] = useState('dark');
   const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
   const selectedStationRef = useRef(selectedStation);
   useEffect(() => {
@@ -193,7 +195,15 @@ function App() {
   if (mode === 'dashboard') {
     return (
       <div className="app-container">
-        <DashboardBoard theme={theme} onExit={() => selectMode('map')} />
+        <DashboardBoard
+          theme={theme}
+          onExit={() => selectMode('map')}
+          onOpenAbout={() => setIsAboutOpen(true)}
+        />
+        <AboutModal
+          isOpen={isAboutOpen}
+          onClose={() => setIsAboutOpen(false)}
+        />
       </div>
     );
   }
@@ -219,6 +229,7 @@ function App() {
         onSelectLine={handleSelectLine}
         onHoverLine={(lineId) => setHoverLine(lineId)}
         trainStats={trainStats}
+        onOpenAbout={() => setIsAboutOpen(true)}
       />
 
       {/* Top Navigation Bar: Sidebar Toggle Button + Search Bar & Quick Actions */}
@@ -323,6 +334,12 @@ function App() {
           onCenter={() => handleCenterStation(selectedStation)}
         />
       )}
+
+      {/* About, Legal & Licenses Modal */}
+      <AboutModal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
+      />
     </div>
   );
 }

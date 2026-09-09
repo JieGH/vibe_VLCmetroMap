@@ -1,7 +1,14 @@
 {
   "name": "vibe-vlc-metro-map",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "Live map of every train on the Valencia metro, positioned from real-time arrival predictions walked back along the actual rail geometry. Offline vector basemap, web + native iOS.",
+  "author": "Jie Lei",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JieGH/vibe_VLCmetroMap.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
