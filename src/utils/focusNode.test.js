@@ -1,55 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { renderFocusNode } from './focusNode';
+import { renderStationHighlight } from './focusNode';
 
-describe('renderFocusNode', () => {
-  const sampleFocus = {
-    name: 'Àngel Guimerà',
-    isFresh: true,
-    directions: [
-      {
-        key: 'backward',
-        destination: 'Aeroport',
-        label: 'Aeroport',
-        arrivals: [{ line: '3', destination: 'Aeroport', seconds: 120 }],
-      },
-      {
-        key: 'forward',
-        destination: 'Rafelbunyol',
-        label: 'Rafelbunyol',
-        arrivals: [{ line: '3', destination: 'Rafelbunyol', seconds: 300 }],
-      },
-    ],
-  };
+describe('renderStationHighlight', () => {
+  const properties = { name: 'Àngel Guimerà', lines: ['3', '5'] };
 
-  it('renders station destination and line logo in each row', () => {
-    const html = renderFocusNode(sampleFocus, 'dark');
+  it('renders the station name', () => {
+    const html = renderStationHighlight(properties, 'dark');
 
     expect(html).toContain('Àngel Guimerà');
-    expect(html).toContain('Aeroport');
-    expect(html).toContain('Rafelbunyol');
-    expect(html).toContain('L3');
-    expect(html).toContain('2 min');
-    expect(html).toContain('5 min');
   });
 
-  it('strictly excludes the directional triangle glyph and bearing rotation', () => {
-    const html = renderFocusNode(sampleFocus, 'dark');
+  it('escapes HTML in the station name', () => {
+    const html = renderStationHighlight({ name: '<b>Evil</b>', lines: [] }, 'dark');
 
-    // Does not include triangle symbol or rotation style
-    expect(html).not.toContain('&#9650;');
-    expect(html).not.toContain('\u25B2');
-    expect(html).not.toContain('transform:rotate');
+    expect(html).not.toContain('<b>Evil</b>');
+    expect(html).toContain('&lt;b&gt;Evil&lt;/b&gt;');
   });
 
-  it('displays the soonest arriving train in the first row', () => {
-    const html = renderFocusNode(sampleFocus, 'dark');
+  it('shows no arrival, countdown, or freshness data', () => {
+    const html = renderStationHighlight(properties, 'dark');
 
-    const aeroportIndex = html.indexOf('Aeroport');
-    const rafelbunyolIndex = html.indexOf('Rafelbunyol');
+    expect(html).not.toMatch(/\bmin\b/);
+    expect(html).not.toContain('Live API');
+    expect(html).not.toContain('From memory');
+    expect(html).not.toContain('none');
+  });
 
-    expect(aeroportIndex).toBeGreaterThan(-1);
-    expect(rafelbunyolIndex).toBeGreaterThan(-1);
-    // Aeroport (120s) appears before Rafelbunyol (300s)
-    expect(aeroportIndex).toBeLessThan(rafelbunyolIndex);
+  it('falls back to a neutral color when the station serves no lines', () => {
+    const html = renderStationHighlight({ name: 'Isolated', lines: [] }, 'dark');
+
+    expect(html).toContain('#8a8a8a');
   });
 });

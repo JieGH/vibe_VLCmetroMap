@@ -659,8 +659,8 @@ button:active {
   border: 0;
 }
 
-/* The expanded Station node on the map. Sits above vehicle markers, because
-   while a Station is in focus it is the thing being read. */
+/* The highlight marker for the selected Station on the map: a visual anchor
+   only, sitting above vehicle markers. Arrivals live in the Station panel. */
 .station-focus-node {
   z-index: 1200;
   pointer-events: none;

@@ -97,8 +97,7 @@ if (typeof window !== 'undefined') {
 
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
-import { getStationFocus } from '../services/stationFocus';
-import { renderFocusNode } from '../utils/focusNode';
+import { renderStationHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
@@ -1060,8 +1059,8 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
   // ── Station Focus ──────────────────────────────────────────────────────────
   // Clicking a Station does two things here: the camera eases in to centre it,
-  // and its marker grows into a node showing both directions with the next
-  // train on each. The node redraws every second so its countdowns tick.
+  // and a compact highlight marker (icon + name) anchors the pick on the map.
+  // Arrivals live only in the Station panel, not on the map.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return undefined;
@@ -1106,17 +1105,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
     const element = document.createElement('div');
     element.className = 'station-focus-node';
+    // A visual anchor only — no countdowns to tick, so it's rendered once per
+    // selection rather than on an interval. Arrivals live in the Station panel.
+    element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
     const marker = new Marker({ element, anchor: 'bottom', offset: [0, -14] })
       .setLngLat(coordinates)
       .addTo(map);
     focusMarkerRef.current = marker;
-
-    const render = () => {
-      const focus = getStationFocus(selectedStation.properties, Date.now());
-      element.innerHTML = renderFocusNode(focus, themeRef.current);
-    };
-    render();
-    const id = setInterval(render, 1000);
 
     // The panel shares this render (same selectedStation update), so it is
     // already in the DOM once this effect runs and can be measured.
@@ -1132,7 +1127,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     });
 
     return () => {
-      clearInterval(id);
       marker.remove();
       if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
     };
