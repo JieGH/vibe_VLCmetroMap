@@ -356,12 +356,10 @@ button:active {
 /* ── Locate ──────────────────────────────────────────────────────────────── */
 
 .locate-button {
-  position: absolute;
-  right: 16px;
-  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
-  /* Under the Station panel (z-index 30) rather than over it: once the panel is
-     open the button has done its job, and a control floating on top of the
-     departures it just fetched is in the way. */
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 25;
   width: 46px;
   height: 46px;
@@ -372,9 +370,7 @@ button:active {
   justify-content: center;
   cursor: pointer;
   color: var(--text-primary);
-  transition: bottom .3s cubic-bezier(0.16, 1, 0.3, 1),
-              right .3s cubic-bezier(0.16, 1, 0.3, 1),
-              transform .1s ease;
+  transition: transform .15s ease, opacity .2s ease, background-color .2s ease;
   /* A long press on this button hides the location dot, which iOS would
      otherwise interpret as a request to select text or raise a callout —
      either of which eats the gesture before it becomes a hold. */
@@ -382,10 +378,11 @@ button:active {
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border-color);
 }
 
 .locate-button:active {
-  transform: scale(0.92);
+  transform: translateY(-50%) scale(0.92);
 }
 
 .locate-button[data-state="locating"] {
@@ -394,24 +391,6 @@ button:active {
 
 .locate-button[data-state="unavailable"] {
   color: var(--text-secondary);
-}
-
-/* Portrait docks the panel to the bottom, so the button lifts clear of it;
-   landscape docks it to a right rail, so the button steps left of it instead.
-   820px is LANDSCAPE_BREAKPOINT_PX from utils/layout.js — the same number
-   StationPanel and MapView both split on, so all three agree on where the
-   panel actually is. 58vh is the sheet's maxHeight; when it renders shorter
-   the button floats a little high, which beats measuring from CSS that cannot
-   see it. */
-.locate-button[data-lifted="true"] {
-  bottom: calc(58vh + 16px + env(safe-area-inset-bottom, 0px));
-}
-
-@media (min-width: 820px) {
-  .locate-button[data-lifted="true"] {
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-    right: calc(min(380px, 34vw) + 32px);
-  }
 }
 
 /* ── The viewer's own dot ────────────────────────────────────────────────── */

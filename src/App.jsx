@@ -327,7 +327,6 @@ function App() {
 
       <LocateButton
         state={locateState}
-        lifted={Boolean(selectedStation)}
         showingLocation={Boolean(userLocation)}
         onLocate={handleLocate}
         onHide={handleHideLocation}
