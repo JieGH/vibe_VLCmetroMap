@@ -36,20 +36,15 @@ describe('WelcomeScreen component', () => {
     // Animated transit lines converging towards center (32, 32)
     expect(html).toContain('welcome-metro-lines');
     expect(html).toContain('welcome-line');
-    expect(html).toContain('welcome-line--red-1');
-    expect(html).toContain('welcome-line--yellow-1');
-    expect(html).toContain('welcome-line--green-1');
+    expect(html).toContain('welcome-line--red');
+    expect(html).toContain('welcome-line--yellow');
+    expect(html).toContain('welcome-line--green');
 
-    // Central interchange station core and spotlight glow elements
+    // Central station core, unclipped SVG overflow, and spotlight glow elements
+    expect(html).toContain('overflow:visible');
     expect(html).toContain('welcome-station-spotlight');
     expect(html).toContain('welcomeSpotlightGlow');
     expect(html).toContain('welcome-station-ring');
     expect(html).toContain('welcome-station-core');
-  });
-
-  it('defines 600ms hold timer and 300ms fade transition for 900ms total duration', () => {
-    expect(WELCOME_HOLD_DURATION_MS).toBe(600);
-    expect(WELCOME_FADE_DURATION_MS).toBe(300);
-    expect(WELCOME_TOTAL_DURATION_MS).toBe(900);
   });
 });

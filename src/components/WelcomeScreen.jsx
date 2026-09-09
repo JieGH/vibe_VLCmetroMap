@@ -7,8 +7,8 @@ export const WELCOME_TOTAL_DURATION_MS = WELCOME_HOLD_DURATION_MS + WELCOME_FADE
 /**
  * 0.6-Second Welcome / Splash Screen with Line-Draw & Central Station Spotlight
  *
- * Displays an animated brand mark showing metro lines drawing into the central interchange
- * station, which then blooms open like a spotlight before smoothly fading into the live map.
+ * Displays an animated brand mark showing metro lines drawing into the central station,
+ * which then blooms open like a spotlight before smoothly fading into the live map.
  */
 const WelcomeScreen = ({ onComplete }) => {
   const [fading, setFading] = useState(false);
@@ -50,6 +50,7 @@ const WelcomeScreen = ({ onComplete }) => {
             height="88"
             className="welcome-screen-logo"
             aria-hidden="true"
+            style={{ overflow: 'visible' }}
           >
             <defs>
               {/* Radial spotlight glow radiating outward from the central station */}
@@ -63,7 +64,7 @@ const WelcomeScreen = ({ onComplete }) => {
 
             <rect width="64" height="64" rx="16" fill="#1e1e2a" />
 
-            {/* Expanding spotlight halo centered at the interchange station (32, 32) */}
+            {/* Expanding spotlight halo centered at the central station (32, 32) */}
             <circle
               cx="32"
               cy="32"
@@ -75,19 +76,19 @@ const WelcomeScreen = ({ onComplete }) => {
             {/* Inward transit line paths: drawn from outer edges to central station (32, 32) */}
             <g fill="none" strokeLinecap="round" strokeWidth="7.5" className="welcome-metro-lines">
               {/* Line 3 (Red) diagonal */}
-              <path stroke="#E2001A" d="M11 53 L 32 32" className="welcome-line welcome-line--red-1" />
-              <path stroke="#E2001A" d="M53 11 L 32 32" className="welcome-line welcome-line--red-2" />
+              <path stroke="#E2001A" d="M11 53 L 32 32" className="welcome-line welcome-line--red" />
+              <path stroke="#E2001A" d="M53 11 L 32 32" className="welcome-line welcome-line--red" />
 
               {/* Line 1 (Yellow) horizontal */}
-              <path stroke="#FFD100" d="M9 32 L 32 32" className="welcome-line welcome-line--yellow-1" />
-              <path stroke="#FFD100" d="M55 32 L 32 32" className="welcome-line welcome-line--yellow-2" />
+              <path stroke="#FFD100" d="M9 32 L 32 32" className="welcome-line welcome-line--yellow" />
+              <path stroke="#FFD100" d="M55 32 L 32 32" className="welcome-line welcome-line--yellow" />
 
               {/* Line 5 (Green) diagonal */}
-              <path stroke="#00994D" d="M11 11 L 32 32" className="welcome-line welcome-line--green-1" />
-              <path stroke="#00994D" d="M53 53 L 32 32" className="welcome-line welcome-line--green-2" />
+              <path stroke="#00994D" d="M11 11 L 32 32" className="welcome-line welcome-line--green" />
+              <path stroke="#00994D" d="M53 53 L 32 32" className="welcome-line welcome-line--green" />
             </g>
 
-            {/* Central interchange station outer ring & glowing core */}
+            {/* Central station outer ring & glowing core */}
             <circle cx="32" cy="32" r="10" fill="#1e1e2a" className="welcome-station-ring" />
             <circle cx="32" cy="32" r="6.5" fill="#ffffff" className="welcome-station-core" />
           </svg>
