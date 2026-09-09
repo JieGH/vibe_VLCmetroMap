@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Mirrors the dev-only proxy in vite.config.js: browser fetch() can never set
+# User-Agent (forbidden header in the Fetch spec), and metroapi.alexbadi.es
+# requires one containing contact=. Netlify performs this redirect itself,
+# server-side, so the restriction doesn't apply.
+[[redirects]]
+  from = "/api/metro/*"
+  to = "https://metroapi.alexbadi.es/:splat"
+  status = 200
+  force = true
+  headers = { User-Agent = "vib-metro-valencia/1.0 (Web; contact=dev@example.com)" }
