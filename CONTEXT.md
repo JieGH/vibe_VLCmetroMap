@@ -129,3 +129,7 @@ _Avoid_: Map extract, raw coordinates
 **iOS Sync**:
 The synchronization of compiled web distribution assets (`dist/`) into the native Capacitor iOS container (`ios/App/App/public`). Configured as an automatic `postbuild` lifecycle step so every production build (`npm run build`) automatically updates the native iOS app bundle without a separate manual step.
 _Avoid_: Manual sync, Xcode copy
+
+**Test & Sync Protocol**:
+The required completion protocol whenever an agent finishes changes: run tests, execute an **iOS Sync** via `npm run build`, and declare `test done` to the user. The user then launches or updates the native app on their physical phone using Xcode's Run (Play) button.
+_Avoid_: Incomplete handoff, unsynced iOS build
