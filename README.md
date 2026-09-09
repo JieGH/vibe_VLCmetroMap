@@ -2,14 +2,26 @@
   <img src="public/favicon.svg" width="88" height="88" alt="">
 </p>
 
-<h1 align="center">vibe_VLCmetroMap</h1>
+<h1 align="center">Xarxa</h1>
 
 <p align="center">
   Where every train on the Valencia metro is, right now — and when the next one reaches you.
 </p>
 
 <p align="center">
-  <a href="https://tangerine-panda-1aeea5.netlify.app"><strong>Open the live map →</strong></a>
+  <a href="https://tangerine-panda-1aeea5.netlify.app">
+    <img src="https://img.shields.io/badge/Live%20Demo-Open%20the%20map-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Open the live map">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://app.netlify.com/sites/tangerine-panda-1aeea5/deploys">
+    <img src="https://api.netlify.com/api/v1/badges/a4a69dad-f39d-40ca-9f1c-317147d39bea/deploy-status" alt="Netlify deploy status">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache 2.0">
+  </a>
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Web-lightgrey.svg" alt="Platforms: iOS and Web">
 </p>
 
 ---
