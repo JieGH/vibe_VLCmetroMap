@@ -1,14 +1,14 @@
 // PROTOTYPE — throwaway UI exploration for issue #47 ("make the splash
 // screen more artistic and fun"). Not wired into the real app by default;
-// only mounts when the URL carries a `?variant=A|B|C` param (see the gate in
-// App.jsx). Never shipped: gated additionally on `import.meta.env.PROD`.
+// only mounts when the URL carries a `?variant=A|B|C|D` param (see the gate
+// in App.jsx). Never shipped: gated additionally on `import.meta.env.PROD`.
 //
-// Three structurally different takes on the splash's art style, switchable
-// via a floating bottom bar. Each variant is fully self-contained (its own
+// Structurally different takes on the splash's art style, switchable via a
+// floating bottom bar. Each variant is fully self-contained (its own
 // <style> block) so deleting this file removes the whole experiment.
 import React, { useEffect, useState } from 'react';
 
-const VARIANTS = ['A', 'B', 'C'];
+const VARIANTS = ['A', 'B', 'C', 'D'];
 
 const LINE_COLORS = ['#E2001A', '#FFD100', '#00994D', '#7A3FA0', '#0072BC', '#8B5A2B'];
 
@@ -172,7 +172,96 @@ const VariantC = () => (
 );
 VariantC.label = 'Spinning Compass';
 
-const VARIANT_COMPONENTS = { A: VariantA, B: VariantB, C: VariantC };
+// ─── Variant D — "Alameda Bloom" ───────────────────────────────────────────
+// Requested follow-up on A: a real explicit intro → hold → outro lifecycle
+// (not just a re-drawing loop), inspired by Alameda — Metrovalencia's real
+// four-Line interchange (L3 red, L5 green, L7 orange, L9 brown) — but
+// artistically stylized rather than geometrically accurate: four curved
+// Lines fan into a circular hub, then small train dots orbit the hub in a
+// continuous circle, the way a real interchange's trains would circulate.
+// One shared ~5s timeline (percentage-keyed keyframes, all elements synced
+// to the same 0–100% clock) plays: draw-in (0–30%) → hold with orbiting
+// trains (30–70%) → collapse-and-fade outro (70–90%) → blank gap (90–100%)
+// before looping. A real splash would compress this same three-act shape
+// into ~1.3s; it's slowed down here so the in/out is easy to see.
+const ALAMEDA_LINES = [
+  { color: '#E2001A', angle: 25 },  // L3
+  { color: '#00994D', angle: 130 }, // L5
+  { color: '#F57C00', angle: 220 }, // L7
+  { color: '#8B5A2B', angle: 310 }, // L9
+];
+const CX = 80;
+const CY = 80;
+const toXY = (deg, r) => {
+  const rad = (deg - 90) * (Math.PI / 180);
+  return [CX + r * Math.cos(rad), CY + r * Math.sin(rad)];
+};
+
+const VariantD = () => (
+  <div className="proto-d-root">
+    <style>{`
+      .proto-d-root { position: fixed; inset: 0; z-index: 20000; background: #101018;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .proto-d-path { fill: none; stroke-linecap: round; stroke-width: 5;
+        stroke-dasharray: 170; animation: protoDPathLife 5s ease-in-out infinite; }
+      @keyframes protoDPathLife {
+        0% { stroke-dashoffset: 170; opacity: 0; }
+        8% { opacity: 0.9; }
+        30%, 65% { stroke-dashoffset: 0; opacity: 1; }
+        80% { stroke-dashoffset: -170; opacity: 0.25; }
+        100% { stroke-dashoffset: -170; opacity: 0; }
+      }
+      .proto-d-ring { transform-origin: 80px 80px; animation: protoDRingLife 5s ease-in-out infinite; }
+      @keyframes protoDRingLife {
+        0% { transform: scale(0.3); opacity: 0; }
+        30% { transform: scale(1); opacity: 1; }
+        65% { transform: scale(1.06); opacity: 1; }
+        85%, 100% { transform: scale(0.2); opacity: 0; }
+      }
+      .proto-d-orbit {
+        transform-origin: 80px 80px;
+        animation: protoDOrbitLife 5s ease-in-out infinite, protoDSpin 3.6s linear infinite;
+      }
+      @keyframes protoDOrbitLife {
+        0%, 25% { opacity: 0; }
+        32%, 70% { opacity: 1; }
+        85%, 100% { opacity: 0; }
+      }
+      @keyframes protoDSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      .proto-d-title { color: #fff; font: 800 22px system-ui; margin-top: 22px;
+        animation: protoDTitleLife 5s ease-in-out infinite; }
+      .proto-d-sub { color: #9a9aa8; font: 500 12px system-ui; margin-top: 4px;
+        animation: protoDTitleLife 5s ease-in-out infinite; }
+      @keyframes protoDTitleLife {
+        0%, 32% { opacity: 0; transform: translateY(6px); }
+        42%, 75% { opacity: 1; transform: translateY(0); }
+        85%, 100% { opacity: 0; transform: translateY(-4px); }
+      }
+    `}</style>
+    <svg viewBox="0 0 160 160" width="200" height="200" aria-hidden="true">
+      {ALAMEDA_LINES.map(({ color, angle }, i) => {
+        const [x0, y0] = toXY(angle, 78);
+        const [mx, my] = toXY(angle, 40);
+        return (
+          <path key={color} className="proto-d-path" style={{ stroke: color, animationDelay: `${i * 0.06}s` }}
+            d={`M ${x0} ${y0} Q ${mx} ${my} 80 80`} />
+        );
+      })}
+      <circle cx="80" cy="80" r="16" fill="#101018" stroke="#fff" strokeWidth="2.5" className="proto-d-ring" />
+      <g className="proto-d-orbit">
+        {ALAMEDA_LINES.map(({ color, angle }) => {
+          const [x, y] = toXY(angle, 26);
+          return <circle key={`train-${color}`} cx={x} cy={y} r="3.5" fill={color} stroke="#fff" strokeWidth="1" />;
+        })}
+      </g>
+    </svg>
+    <div className="proto-d-title">Metro Valencia</div>
+    <div className="proto-d-sub">Live Map &amp; Real-time Arrivals</div>
+  </div>
+);
+VariantD.label = 'Alameda Bloom';
+
+const VARIANT_COMPONENTS = { A: VariantA, B: VariantB, C: VariantC, D: VariantD };
 
 // ─── Switcher chrome ────────────────────────────────────────────────────────
 const readVariant = () => {

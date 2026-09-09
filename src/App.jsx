@@ -26,7 +26,7 @@ const LOCATE_NOTICE_MS = 6000;
 const readMode = () =>
   new URLSearchParams(window.location.search).get('mode') === 'dashboard' ? 'dashboard' : 'map';
 
-// PROTOTYPE (issue #47): visiting the app with `?variant=A|B|C` (dev builds
+// PROTOTYPE (issue #47): visiting the app with `?variant=A|B|C|D` (dev builds
 // only) replaces the real splash with the throwaway art-style switcher.
 const splashPrototypeActive = () =>
   !import.meta.env.PROD && new URLSearchParams(window.location.search).has('variant');
