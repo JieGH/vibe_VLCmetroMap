@@ -12,3 +12,11 @@
   status = 200
   force = true
   headers = { User-Agent = "vib-metro-valencia/1.0 (Web; contact=dev@example.com)" }
+
+# TEMP DEBUG — remove after confirming which headers Netlify forwards on proxy redirects
+[[redirects]]
+  from = "/debug-headers"
+  to = "https://httpbin.org/headers"
+  status = 200
+  force = true
+  headers = { User-Agent = "vib-metro-valencia/1.0 (Web; contact=dev@example.com)", X-Test-Debug = "hello-netlify" }
