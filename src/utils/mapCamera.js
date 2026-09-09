@@ -41,17 +41,26 @@ export const calculateUnfocusCamera = ({
   };
 };
 
+export const PORTRAIT_FOCUS_CLEARANCE_PX = 80;
+
 /**
  * Computes viewport padding so the station centers in the visible area of the map
  * rather than hidden behind the search bar, bottom sheet, or side panel.
+ *
+ * Adds vertical clearance in portrait so the station dot and its arrival popup bubble
+ * float comfortably above the floating timetable card without overlap.
  *
  * @param {object} [options]
  * @param {boolean} [options.isLandscape]
  * @param {DOMRect | { top: number, right: number, bottom: number, left: number }} [options.containerRect]
  * @param {DOMRect | { top?: number, right?: number, bottom?: number, left?: number }} [options.searchBarRect]
  * @param {DOMRect | { top?: number, right?: number, bottom?: number, left?: number }} [options.panelRect]
+ * @param {number} [options.panelHeight] - Explicit layout height of the station panel, immune to in-flight CSS transforms.
+ * @param {number} [options.panelWidth] - Explicit layout width of the station panel.
+ * @param {boolean} [options.hasPanel] - Whether a panel is present or expected.
  * @param {number} [options.viewportWidth]
  * @param {number} [options.viewportHeight]
+ * @param {number} [options.portraitClearance] - Additional vertical clearance (px) above the bottom panel.
  * @returns {{ top: number, right: number, bottom: number, left: number }}
  */
 export const panelAwarePadding = ({
@@ -59,24 +68,65 @@ export const panelAwarePadding = ({
   containerRect,
   searchBarRect,
   panelRect,
+  panelHeight: explicitPanelHeight,
+  panelWidth: explicitPanelWidth,
+  hasPanel = Boolean(panelRect || explicitPanelHeight != null || explicitPanelWidth != null),
   viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024,
   viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768,
+  portraitClearance = hasPanel ? PORTRAIT_FOCUS_CLEARANCE_PX : 0,
 } = {}) => {
   const containerTop = containerRect ? containerRect.top : 0;
   const containerRight = containerRect ? containerRect.right : viewportWidth;
   const containerBottom = containerRect ? containerRect.bottom : viewportHeight;
+  const containerHeight = containerBottom - containerTop;
 
-  return isLandscape
-    ? {
-        top: (searchBarRect && Number.isFinite(searchBarRect.bottom) ? searchBarRect.bottom - containerTop : 84) + 12,
-        right: (panelRect && Number.isFinite(panelRect.left) ? containerRight - panelRect.left : Math.min(380, viewportWidth * 0.34)) + 16,
-        bottom: 40,
-        left: 40,
-      }
-    : {
-        top: (searchBarRect && Number.isFinite(searchBarRect.bottom) ? searchBarRect.bottom - containerTop : 90) + 12,
-        right: 24,
-        bottom: (panelRect && Number.isFinite(panelRect.top) ? containerBottom - panelRect.top : viewportHeight * 0.58) + 16,
-        left: 24,
-      };
+  const topPadding =
+    (searchBarRect && Number.isFinite(searchBarRect.bottom) ? searchBarRect.bottom - containerTop : 84) + 12;
+
+  if (isLandscape) {
+    let panelWidth = 0;
+    if (hasPanel) {
+      const measuredPanelWidth =
+        panelRect && Number.isFinite(panelRect.left) ? containerRight - panelRect.left : null;
+      panelWidth = Math.max(
+        explicitPanelWidth ?? 0,
+        measuredPanelWidth ?? (explicitPanelWidth != null ? 0 : Math.min(380, viewportWidth * 0.34))
+      );
+    }
+
+    return {
+      top: topPadding,
+      right: Math.round(hasPanel ? panelWidth + 16 : 40),
+      bottom: 40,
+      left: 40,
+    };
+  }
+
+  // Portrait mode:
+  let bottomPadding = 40;
+  if (hasPanel) {
+    const measuredPanelHeight =
+      panelRect && Number.isFinite(panelRect.top) && containerBottom > panelRect.top
+        ? containerBottom - panelRect.top
+        : null;
+
+    // Use the maximum of layout height and measured height to ensure in-flight CSS transforms
+    // (e.g. translateY slide-up) do not under-report resting panel height.
+    const panelHeight = Math.max(
+      explicitPanelHeight ?? 0,
+      measuredPanelHeight ?? (explicitPanelHeight != null ? 0 : viewportHeight * 0.45)
+    );
+
+    const rawBottom = panelHeight + portraitClearance;
+    // Guard against viewport over-constraining on small screens, preserving minimum map aperture
+    const maxAllowedBottom = Math.max(80, containerHeight - topPadding - 120);
+    bottomPadding = Math.round(Math.min(rawBottom, maxAllowedBottom));
+  }
+
+  return {
+    top: topPadding,
+    right: 24,
+    bottom: bottomPadding,
+    left: 24,
+  };
 };

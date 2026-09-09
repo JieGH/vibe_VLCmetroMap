@@ -529,14 +529,35 @@ const userFixOpacity = (ageMs) => {
 const metresPerPixel = (latitude, zoom) =>
   (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
 
-// What the Station panel and the search bar actually cover right now, so the
-// camera centres on the map still visible rather than behind them.
-const panelAwarePadding = (map) =>
-  computePanelPadding({
-    containerRect: map.getContainer().getBoundingClientRect(),
-    searchBarRect: document.querySelector('.search-bar-container')?.getBoundingClientRect(),
-    panelRect: document.querySelector('.station-panel')?.getBoundingClientRect(),
+const panelAwarePadding = (map, { hasPanel } = {}) => {
+  const container = map?.getContainer();
+  const containerRect = container ? container.getBoundingClientRect() : undefined;
+  const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
+  const panel = document.querySelector('.station-panel');
+  const isPanelPresent = hasPanel ?? Boolean(panel);
+
+  let panelRect;
+  let panelHeight;
+  let panelWidth;
+
+  if (panel) {
+    panelRect = panel.getBoundingClientRect();
+    // offsetHeight and offsetWidth reflect resting layout dimensions,
+    // immune to in-flight CSS transforms (e.g. translateY slide-up).
+    // Adding 16px accounts for floating card margins.
+    panelHeight = (panel.offsetHeight || 0) + 16;
+    panelWidth = (panel.offsetWidth || 0) + 16;
+  }
+
+  return computePanelPadding({
+    containerRect,
+    searchBarRect,
+    panelRect,
+    panelHeight,
+    panelWidth,
+    hasPanel: isPanelPresent,
   });
+};
 
 const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
   const containerRef    = useRef(null);
@@ -987,6 +1008,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     map.flyTo({
       center: [lng, lat],
       zoom: 14.5,
+      padding: panelAwarePadding(map, { hasPanel: true }),
       essential: true,
       duration: 1200,
     });
@@ -1072,7 +1094,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
     // The panel shares this render (same selectedStation update), so it is
     // already in the DOM once this effect runs and can be measured.
-    const basePadding = panelAwarePadding(map);
+    const basePadding = panelAwarePadding(map, { hasPanel: true });
     const targetZoom = calculateFocusZoom(map.getZoom());
 
     map.easeTo({
@@ -1177,7 +1199,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     }
     lastFramedFetchedAtRef.current = userLocation.fetchedAt;
 
-    const padding = panelAwarePadding(map);
+    const padding = panelAwarePadding(map, { hasPanel: Boolean(userLocation.nearestStation) });
 
     if (!userLocation.nearestStation) {
       // No Station worth naming — too rough a fix, or genuinely nothing near.
