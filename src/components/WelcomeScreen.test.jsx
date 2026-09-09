@@ -1,10 +1,21 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import WelcomeScreen from './WelcomeScreen';
+import WelcomeScreen, {
+  WELCOME_HOLD_DURATION_MS,
+  WELCOME_FADE_DURATION_MS,
+  WELCOME_TOTAL_DURATION_MS,
+} from './WelcomeScreen';
 
 describe('WelcomeScreen component', () => {
-  it('renders initial welcome screen with brand mark and title', () => {
+
+  it('exports 600ms hold duration for snappy startup', () => {
+    expect(WELCOME_HOLD_DURATION_MS).toBe(600);
+    expect(WELCOME_FADE_DURATION_MS).toBe(300);
+    expect(WELCOME_TOTAL_DURATION_MS).toBe(900);
+  });
+
+  it('renders initial welcome screen with line-draw paths and central station spotlight', () => {
     const html = renderToStaticMarkup(<WelcomeScreen onComplete={() => {}} />);
 
     // Container with accessibility role and test id
@@ -21,5 +32,24 @@ describe('WelcomeScreen component', () => {
     expect(html).toContain('#E2001A');
     expect(html).toContain('#FFD100');
     expect(html).toContain('#00994D');
+
+    // Animated transit lines converging towards center (32, 32)
+    expect(html).toContain('welcome-metro-lines');
+    expect(html).toContain('welcome-line');
+    expect(html).toContain('welcome-line--red-1');
+    expect(html).toContain('welcome-line--yellow-1');
+    expect(html).toContain('welcome-line--green-1');
+
+    // Central interchange station core and spotlight glow elements
+    expect(html).toContain('welcome-station-spotlight');
+    expect(html).toContain('welcomeSpotlightGlow');
+    expect(html).toContain('welcome-station-ring');
+    expect(html).toContain('welcome-station-core');
+  });
+
+  it('defines 600ms hold timer and 300ms fade transition for 900ms total duration', () => {
+    expect(WELCOME_HOLD_DURATION_MS).toBe(600);
+    expect(WELCOME_FADE_DURATION_MS).toBe(300);
+    expect(WELCOME_TOTAL_DURATION_MS).toBe(900);
   });
 });

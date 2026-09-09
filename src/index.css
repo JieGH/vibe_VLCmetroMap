@@ -546,8 +546,8 @@ button:active {
   justify-content: center;
   opacity: 1;
   visibility: visible;
-  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: auto;
   user-select: none;
   -webkit-user-select: none;
@@ -565,7 +565,7 @@ button:active {
   align-items: center;
   text-align: center;
   padding: 24px;
-  animation: welcomeScaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: welcomeScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .welcome-screen-logo-wrap {
@@ -577,6 +577,7 @@ button:active {
   justify-content: center;
   margin-bottom: 20px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: welcomeLogoGlow 0.55s ease-out forwards;
 }
 
 .welcome-screen-logo {
@@ -602,6 +603,127 @@ button:active {
   letter-spacing: 0.01em;
 }
 
+/* ── Welcome Screen Transit Line & Spotlight Animations ─────────────────── */
+
+@keyframes welcomeLineDrawIn {
+  0% {
+    stroke-dashoffset: 35;
+    opacity: 0.15;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.welcome-line {
+  stroke-dasharray: 35;
+  stroke-dashoffset: 35;
+  animation: welcomeLineDrawIn 0.28s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+.welcome-line--red-1,
+.welcome-line--red-2 {
+  animation-delay: 0.02s;
+}
+
+.welcome-line--yellow-1,
+.welcome-line--yellow-2 {
+  animation-delay: 0.05s;
+}
+
+.welcome-line--green-1,
+.welcome-line--green-2 {
+  animation-delay: 0.08s;
+}
+
+@keyframes welcomeStationSpotlight {
+  0% {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+  40% {
+    opacity: 0.95;
+    transform: scale(1.1);
+  }
+  75% {
+    opacity: 0.85;
+    transform: scale(1.45);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(1.65);
+  }
+}
+
+@keyframes welcomeStationCoreBloom {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  40% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 8px #ffffff);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px #ffffff);
+  }
+}
+
+@keyframes welcomeStationRingIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes welcomeLogoGlow {
+  0% {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  60% {
+    box-shadow: 0 12px 36px rgba(255, 209, 0, 0.25), 0 0 20px rgba(226, 0, 26, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+  100% {
+    box-shadow: 0 14px 40px rgba(255, 209, 0, 0.35), 0 0 28px rgba(0, 153, 77, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.16);
+  }
+}
+
+.welcome-station-spotlight {
+  transform-origin: 32px 32px;
+  opacity: 0;
+  animation: welcomeStationSpotlight 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.24s forwards;
+  pointer-events: none;
+}
+
+.welcome-station-ring {
+  transform-origin: 32px 32px;
+  animation: welcomeStationRingIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+}
+
+.welcome-station-core {
+  transform-origin: 32px 32px;
+  animation: welcomeStationCoreBloom 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @keyframes welcomeScaleIn {
   from {
     opacity: 0;
@@ -614,8 +736,16 @@ button:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .welcome-screen-content {
+  .welcome-screen-content,
+  .welcome-screen-logo-wrap,
+  .welcome-line,
+  .welcome-station-spotlight,
+  .welcome-station-ring,
+  .welcome-station-core {
     animation: none;
+    transform: none;
+    opacity: 1;
+    stroke-dashoffset: 0;
   }
   .welcome-screen {
     transition: opacity 0.15s ease;
