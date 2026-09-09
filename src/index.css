@@ -131,7 +131,7 @@ select {
   left: 20px;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   width: 320px;
-  z-index: 10;
+  z-index: 40; /* Above station-panel (z-index 30) */
   display: flex;
   flex-direction: column;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
@@ -149,7 +149,7 @@ select {
   position: absolute;
   top: calc(20px + env(safe-area-inset-top, 0px));
   left: 360px; /* offset from sidebar when open */
-  z-index: 10;
+  z-index: 40; /* Above station-panel (z-index 30) */
   display: flex;
   align-items: stretch;
   gap: 10px;

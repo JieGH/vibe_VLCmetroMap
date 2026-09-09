@@ -64,6 +64,18 @@ function App() {
     setSelectedStation(station);
   };
 
+  // Toggle sidebar menu. Opening the menu exits active station focus
+  // so the menu has clear visibility without panel collision.
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      if (next && selectedStationRef.current) {
+        setSelectedStation(null);
+      }
+      return next;
+    });
+  };
+
   // "Center Station on Map" button — explicitly flies to station
   const handleCenterStation = (station) => {
     // Use a new object each time to force the useEffect to re-fire
@@ -202,7 +214,7 @@ function App() {
       {/* Collapsible Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        onToggleSidebar={handleToggleSidebar}
         activeLineFilter={activeLineFilter}
         onSelectLine={handleSelectLine}
         onHoverLine={(lineId) => setHoverLine(lineId)}
@@ -212,7 +224,7 @@ function App() {
       {/* Top Navigation Bar: Sidebar Toggle Button + Search Bar & Quick Actions */}
       <div className={`top-bar-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
         <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          onClick={handleToggleSidebar}
           className="sidebar-toggle-btn glass-panel"
           title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
           aria-label={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}

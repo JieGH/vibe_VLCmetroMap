@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, MapPin, Navigation } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
+import { searchFuzzy } from '../utils/fuzzySearch';
 
 // gtfs_expanded.json is the canonical station set for the whole network; the
 // handful of points in metro_lines.json are a much older subset.
@@ -15,18 +16,13 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   const dropdownRef = useRef(null);
   const inputRef    = useRef(null);
 
-  // Filtered results
+  // Filtered results with Valencian accent-insensitive fuzzy search
   const filteredLines = query.trim()
-    ? lines.filter(l =>
-        l.properties.name.toLowerCase().includes(query.toLowerCase()) ||
-        l.properties.line.includes(query)
-      )
+    ? searchFuzzy(lines, query, l => `${l.properties.name} Line ${l.properties.line} Linia ${l.properties.line}`)
     : [];
 
   const filteredStations = query.trim()
-    ? stations.filter(st =>
-        st.properties.name.toLowerCase().includes(query.toLowerCase())
-      )
+    ? searchFuzzy(stations, query, st => st.properties.name)
     : [];
 
   // Flat ordered list of all results for keyboard nav
