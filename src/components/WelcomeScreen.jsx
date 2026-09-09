@@ -48,7 +48,7 @@ const WelcomeScreen = ({ onComplete }) => {
             viewBox="0 0 64 64"
             className="welcome-screen-logo"
             aria-hidden="true"
-            style={{ overflow: 'visible', width: '100%', height: '100%' }}
+            style={{ overflow: 'visible' }}
           >
             <defs>
               {/* Radial spotlight glow radiating outward from the central station */}

@@ -18,6 +18,7 @@ const Sidebar = ({
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         if (e.defaultPrevented) return;
+        if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) return;
         onToggleSidebar();
       }
     };

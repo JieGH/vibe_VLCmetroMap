@@ -106,11 +106,23 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   };
 
   const handleKeyDown = (e) => {
-    if (!isOpen || allItems.length === 0) {
-      if (e.key === 'Escape' && query) {
-        e.stopPropagation();
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isOpen) {
+        setIsOpen(false);
+        setHighlighted(-1);
+        inputRef.current?.blur();
+        if (typeof window !== 'undefined') {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+        }
+      } else if (query) {
         handleClear();
       }
+      return;
+    }
+    if (!isOpen || allItems.length === 0) {
       return;
     }
     if (e.key === 'ArrowDown') {
@@ -125,15 +137,6 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
         const item = allItems[highlighted];
         if (item.type === 'station') handleSelectStation(item.data);
         else handleSelectLine(item.data);
-      }
-    } else if (e.key === 'Escape') {
-      e.stopPropagation();
-      setIsOpen(false);
-      setHighlighted(-1);
-      inputRef.current?.blur();
-      if (typeof window !== 'undefined') {
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
       }
     }
   };
