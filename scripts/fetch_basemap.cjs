@@ -66,17 +66,25 @@ const ensurePmtilesCli = async () => {
   const cached = path.join(cacheDir, 'pmtiles');
   if (fs.existsSync(cached)) return cached;
 
-  const platform = os.platform() === 'darwin' ? 'Darwin' : 'Linux';
+  const isDarwin = os.platform() === 'darwin';
+  const platform = isDarwin ? 'Darwin' : 'Linux';
   const arch = os.arch() === 'arm64' ? 'arm64' : 'x86_64';
-  const asset = `go-pmtiles-${PMTILES_VERSION}_${platform}_${arch}.zip`;
+  // Darwin assets are hyphenated zips; Linux assets are underscored tarballs.
+  const asset = isDarwin
+    ? `go-pmtiles-${PMTILES_VERSION}_${platform}_${arch}.zip`
+    : `go-pmtiles_${PMTILES_VERSION}_${platform}_${arch}.tar.gz`;
   const url = `https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/${asset}`;
 
   console.log(`  fetching the pmtiles CLI (${platform}/${arch})`);
-  const zip = path.join(cacheDir, asset);
-  await download(url, zip);
-  execFileSync('unzip', ['-o', '-q', zip, 'pmtiles', '-d', cacheDir]);
+  const archive = path.join(cacheDir, asset);
+  await download(url, archive);
+  if (isDarwin) {
+    execFileSync('unzip', ['-o', '-q', archive, 'pmtiles', '-d', cacheDir]);
+  } else {
+    execFileSync('tar', ['-xzf', archive, '-C', cacheDir, 'pmtiles']);
+  }
   fs.chmodSync(cached, 0o755);
-  fs.unlinkSync(zip);
+  fs.unlinkSync(archive);
   return cached;
 };
 
