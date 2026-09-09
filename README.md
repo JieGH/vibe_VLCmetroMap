@@ -8,6 +8,10 @@
   Where every train on the Valencia metro is, right now — and when the next one reaches you.
 </p>
 
+<p align="center">
+  <a href="https://tangerine-panda-1aeea5.netlify.app"><strong>Open the live map →</strong></a>
+</p>
+
 ---
 
 Metrovalencia publishes when a train is <em>due</em> at a station. It does not publish where any train actually <em>is</em>. This app works that out: it takes the live arrival predictions, walks them backwards along the real rail geometry, and draws every train on the map at the position those predictions imply.
@@ -96,7 +100,18 @@ npm run build      # production bundle → dist/
 npm run preview    # serves dist/ as it would be deployed
 ```
 
-`npm run dev` and `dev:phone` proxy `/api/metro/*` to the live arrivals API through Vite's dev server. This isn't optional plumbing — the API requires a `User-Agent` header containing `contact=`, which browser `fetch()` can never set (a forbidden header, by spec, in every browser). The proxy runs in Node, which has no such restriction, and injects it. There is currently no production web deployment; a static host would need an equivalent server-side relay for arrivals to work outside of `dev`.
+`npm run dev` and `dev:phone` proxy `/api/metro/*` to the live arrivals API through Vite's dev server. This isn't optional plumbing — the API requires a `User-Agent` header containing `contact=`, which browser `fetch()` can never set (a forbidden header, by spec, in every browser). The proxy runs in Node, which has no such restriction, and injects it.
+
+### Production deployment (Netlify)
+
+The live site above runs on [Netlify](https://netlify.com), auto-rebuilding and republishing on every push to `main` — no manual deploy step. Netlify reads the build command and publish directory straight from [`netlify.toml`](netlify.toml); no dashboard configuration is needed beyond connecting the repo.
+
+A static host has no dev server, so two things exist purely to cover what the dev proxy above did, and are easy to break by "cleaning up" without knowing why:
+
+- **[`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production. A `netlify.toml` redirect looked like the obvious fix — Netlify's own docs describe custom headers on proxy redirects — but tested against the live deploy, Netlify's redirect proxy silently overwrites any custom `User-Agent` with the real visitor's, the same restriction Vercel's Edge runtime has (undocumented by Netlify). A Netlify Function instead does its own server-side `fetch()`, which carries no such restriction. Its `User-Agent` value must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
+- **`fetch:basemap` runs as part of the Netlify build command**, not just locally: the offline PMTiles archive is gitignored (see [Data pipeline](#data-pipeline)) and 404s in production without it. The `go-pmtiles` CLI it downloads publishes differently-named release assets per OS — hyphenated `.zip` on Darwin, underscored `.tar.gz` on Linux — so the script picks the filename and extraction method for whichever platform the build runs on, Netlify's Linux build image included.
+
+Free-hosting options considered (GitHub Pages, Netlify, Vercel, Cloudflare Pages) and why Netlify won: [`docs/research/free-github-hosting.md`](docs/research/free-github-hosting.md).
 
 ### iOS (native app)
 
