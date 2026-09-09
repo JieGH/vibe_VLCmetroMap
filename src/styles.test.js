@@ -128,7 +128,7 @@ describe('Welcome screen splash styles and animation timings', () => {
     expect(fadeMatch).toContain('pointer-events: none');
   });
 
-  it('paces the hub Line fan-in and ring bloom gracefully within 1.0s dwell', () => {
+  it('paces the hub Line fan-in and ring bloom gracefully within the hold dwell', () => {
     expect(css).toMatch(/animation:\s*welcomeLineFanIn\s+0\.45s/);
     expect(css).toMatch(/animation:\s*welcomeHubRingIn\s+0\.4s[^;]*0\.25s/);
   });

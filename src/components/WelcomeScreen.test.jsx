@@ -9,10 +9,10 @@ import WelcomeScreen, {
 
 describe('WelcomeScreen component', () => {
 
-  it('exports 1000ms hold duration and 1300ms total duration for splash screen', () => {
-    expect(WELCOME_HOLD_DURATION_MS).toBe(1000);
+  it('exports 1200ms hold duration and 1500ms total duration for splash screen', () => {
+    expect(WELCOME_HOLD_DURATION_MS).toBe(1200);
     expect(WELCOME_FADE_DURATION_MS).toBe(300);
-    expect(WELCOME_TOTAL_DURATION_MS).toBe(1300);
+    expect(WELCOME_TOTAL_DURATION_MS).toBe(1500);
   });
 
   it('renders initial welcome screen with Alameda-inspired hub fan-in art', () => {
