@@ -9,9 +9,6 @@ describe('Sidebar component', () => {
       <Sidebar
         isOpen={false}
         onToggleSidebar={() => {}}
-        activeLineFilter={null}
-        onSelectLine={() => {}}
-        onHoverLine={() => {}}
         trainStats={{ live: 4, confirmed: 4 }}
         onOpenAbout={() => {}}
       />
@@ -27,9 +24,6 @@ describe('Sidebar component', () => {
       <Sidebar
         isOpen={true}
         onToggleSidebar={() => {}}
-        activeLineFilter={null}
-        onSelectLine={() => {}}
-        onHoverLine={() => {}}
         trainStats={{ live: 4, confirmed: 4 }}
         onOpenAbout={() => {}}
       />
@@ -40,21 +34,19 @@ describe('Sidebar component', () => {
     expect(html).not.toContain('collapsed');
   });
 
-  it('renders branding title and line list', () => {
+  it('renders branding title and no line list', () => {
     const html = renderToStaticMarkup(
       <Sidebar
         isOpen={true}
         onToggleSidebar={() => {}}
-        activeLineFilter={null}
-        onSelectLine={() => {}}
-        onHoverLine={() => {}}
         trainStats={{ live: 4, confirmed: 4 }}
         onOpenAbout={() => {}}
       />
     );
 
-    expect(html).toContain('Metro Valencia');
-    expect(html).toContain('Lines &amp; Services');
+    expect(html).toContain('Xarxa');
+    expect(html).not.toContain('Metro Valencia');
+    expect(html).not.toContain('Lines &amp; Services');
   });
 
   it('renders font size adjustment section with all options and active state', () => {
@@ -62,9 +54,6 @@ describe('Sidebar component', () => {
       <Sidebar
         isOpen={true}
         onToggleSidebar={() => {}}
-        activeLineFilter={null}
-        onSelectLine={() => {}}
-        onHoverLine={() => {}}
         trainStats={{ live: 4, confirmed: 4 }}
         onOpenAbout={() => {}}
         fontSize="large"
@@ -93,9 +82,6 @@ describe('Sidebar component', () => {
       <Sidebar
         isOpen={true}
         onToggleSidebar={() => {}}
-        activeLineFilter={null}
-        onSelectLine={() => {}}
-        onHoverLine={() => {}}
         trainStats={{ live: 4, confirmed: 4 }}
         onOpenAbout={() => {}}
       />

@@ -12,7 +12,7 @@
 import React, { useEffect, useState } from 'react';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
-import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
 import { useTranslation } from '../i18n';
 
@@ -188,7 +188,11 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
               color: countdownHeat(a.seconds, theme),
             }}>
               {countdownLabel(a.seconds, t('common.due'))}
-              {a.seconds > 0 && <span style={{ fontSize: '.42em', fontWeight: 600, marginLeft: 4 }}>{t('common.min')}</span>}
+              {countdownUnit(a.seconds) && (
+                <span style={{ fontSize: '.42em', fontWeight: 600, marginLeft: 4 }}>
+                  {t(`common.${countdownUnit(a.seconds)}`)}
+                </span>
+              )}
             </span>
           </div>
         ))}

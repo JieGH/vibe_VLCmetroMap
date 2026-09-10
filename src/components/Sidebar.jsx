@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Check, Info, Languages } from 'lucide-react';
-import metroData from '../data/metro_lines.json';
-import gtfsData from '../data/gtfs_expanded.json';
+import { ChevronLeft, Info, Languages } from 'lucide-react';
 import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -26,9 +24,6 @@ const useIsMobile = () => {
 const Sidebar = ({
   isOpen,
   onToggleSidebar,
-  activeLineFilter,
-  onSelectLine,
-  onHoverLine,
   trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
   fontSize = 'default',
@@ -55,21 +50,6 @@ const Sidebar = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onToggleSidebar]);
-
-  // Combine line features from bundled metro JSON and GTFS-generated data.
-  const allFeatures = [
-    ...metroData.features,
-    ...(gtfsData && gtfsData.features ? gtfsData.features : []),
-  ];
-  const lineFeatures = allFeatures.filter(f => f.geometry && f.geometry.type === 'LineString');
-  const seen = new Set();
-  const lines = [];
-  for (const f of lineFeatures) {
-    const id = f.properties && f.properties.line;
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    lines.push({ properties: { line: id, color: f.properties && f.properties.color ? f.properties.color : '#888', name: f.properties && f.properties.name ? f.properties.name : `Line ${id}` } });
-  }
 
   return (
     <>
@@ -109,7 +89,7 @@ const Sidebar = ({
               V
             </div>
             <div>
-              <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.3px' }}>Metro Valencia</h1>
+              <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.3px' }}>Xarxa</h1>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('sidebar.subtitle')}</div>
             </div>
           </div>
@@ -130,81 +110,8 @@ const Sidebar = ({
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-                {t('sidebar.linesAndServices')}
-              </h2>
-              {activeLineFilter && (
-                <button
-                  onClick={() => onSelectLine(null)}
-                  style={{ fontSize: '0.75rem', color: '#FFD100', textDecoration: 'underline' }}
-                >
-                  {t('sidebar.showAll')}
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {lines.map((line) => {
-                const lineId = line.properties.line;
-                const isSelected = Array.isArray(activeLineFilter) && activeLineFilter.includes(lineId);
-
-                return (
-                  <div
-                    key={lineId}
-                    onClick={() => onSelectLine(lineId)}
-                    onMouseEnter={() => onHoverLine && onHoverLine(lineId)}
-                    onMouseLeave={() => onHoverLine && onHoverLine(null)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      background: isSelected ? 'var(--bg-hover-active)' : 'var(--bg-hover)',
-                      border: isSelected ? `1.5px solid ${line.properties.color}` : '1.5px solid transparent',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    className="line-card-hover"
-                  >
-                    <div style={{
-                      width: '32px', height: '32px',
-                      borderRadius: '50%',
-                      background: line.properties.color,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontWeight: 'bold', fontSize: '0.95rem',
-                      boxShadow: `0 0 10px ${line.properties.color}44`
-                    }}>
-                      L{lineId}
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{line.properties.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4CAF50' }}></span>
-                        {t('sidebar.goodService')}
-                      </div>
-                    </div>
-
-                    {isSelected && (
-                      <div style={{
-                        width: '20px', height: '20px', borderRadius: '50%',
-                        background: line.properties.color, color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        <Check size={12} strokeWidth={3} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Font Size Adjustment Control */}
-          <div className="sidebar-font-size-section" style={{ paddingTop: '8px' }}>
+          <div className="sidebar-font-size-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
                 {t('sidebar.textSize')}

@@ -40,7 +40,7 @@ const WelcomeScreen = ({ onComplete }) => {
     <div
       className={`welcome-screen ${fading ? 'welcome-screen--fading' : ''}`}
       role="status"
-      aria-label="Metro Valencia"
+      aria-label="Xarxa"
       data-testid="welcome-screen"
     >
       <div className="welcome-screen-content">
@@ -91,7 +91,7 @@ const WelcomeScreen = ({ onComplete }) => {
             <circle cx="32" cy="32" r="6.5" fill="#ffffff" className="welcome-station-core" />
           </svg>
         </div>
-        <h1 className="welcome-screen-title">Metro Valencia</h1>
+        <h1 className="welcome-screen-title">Xarxa</h1>
         <p className="welcome-screen-subtitle">{t('welcomeScreen.subtitle')}</p>
       </div>
     </div>

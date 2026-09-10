@@ -7,6 +7,7 @@
 export default {
   common: {
     min: 'min',
+    sec: 's',
     due: 'Due',
   },
   app: {
@@ -36,9 +37,6 @@ export default {
     subtitle: 'Real-Time Tracker',
     collapseSidebar: 'Collapse Sidebar',
     expandSidebar: 'Expand Sidebar',
-    linesAndServices: 'Lines & Services',
-    showAll: 'Show All',
-    goodService: 'Good Service',
     textSize: 'Text Size',
     textSizeSelectionAria: 'Text Size Selection',
     fontSizeOptionTitle: '{{label}} text size',

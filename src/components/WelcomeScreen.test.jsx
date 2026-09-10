@@ -21,11 +21,11 @@ describe('WelcomeScreen component', () => {
     // Container with accessibility role and test id
     expect(html).toContain('welcome-screen');
     expect(html).toContain('role="status"');
-    expect(html).toContain('aria-label="Metro Valencia"');
+    expect(html).toContain('aria-label="Xarxa"');
     expect(html).toContain('data-testid="welcome-screen"');
 
     // Title and subtitle
-    expect(html).toContain('Metro Valencia');
+    expect(html).toContain('Xarxa');
     expect(html).toContain('Live Map &amp; Real-time Arrivals');
 
     // Brand mark SVG colors (Line 3 red, Line 1 yellow, Line 5 green)

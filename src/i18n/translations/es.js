@@ -3,6 +3,7 @@
 export default {
   common: {
     min: 'min',
+    sec: 's',
     due: 'Llega',
   },
   app: {
@@ -32,9 +33,6 @@ export default {
     subtitle: 'Seguimiento en tiempo real',
     collapseSidebar: 'Contraer menú',
     expandSidebar: 'Expandir menú',
-    linesAndServices: 'Líneas y servicios',
-    showAll: 'Mostrar todas',
-    goodService: 'Buen servicio',
     textSize: 'Tamaño de texto',
     textSizeSelectionAria: 'Selección de tamaño de texto',
     fontSizeOptionTitle: 'Tamaño de texto {{label}}',

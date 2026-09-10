@@ -39,7 +39,9 @@ function App() {
 
   const [flyTarget, setFlyTarget] = useState(null);
   const [activeLineFilter, setActiveLineFilter] = useState([]);
-  const [hoverLine, setHoverLine] = useState(null);
+  // Always null: nothing currently triggers a line hover, but MapView still
+  // accepts this prop to dim other lines when one does.
+  const hoverLine = null;
   const [userLocation, setUserLocation] = useState(null);
   const [locateState, setLocateState] = useState('idle');
   const [locateNotice, setLocateNotice] = useState(null);
@@ -264,9 +266,6 @@ function App() {
       <Sidebar
         isOpen={isSidebarOpen}
         onToggleSidebar={handleToggleSidebar}
-        activeLineFilter={activeLineFilter}
-        onSelectLine={handleSelectLine}
-        onHoverLine={(lineId) => setHoverLine(lineId)}
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
         fontSize={fontSize}

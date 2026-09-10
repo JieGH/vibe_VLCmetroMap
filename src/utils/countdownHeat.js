@@ -24,9 +24,13 @@ export const HEAT_BACKDROP = {
   light: '#ffffff',
 };
 
+// A train inside this many seconds reads as arrived rather than counted down
+// further — the last few seconds of a countdown are noise, not signal.
+export const DUE_THRESHOLD_SECONDS = 10;
+
 // Ordered hottest first. `maxSeconds` is inclusive.
 export const HEAT_BANDS = [
-  { key: 'due', maxSeconds: 0, dark: '#ff6369', light: '#c62828' },
+  { key: 'due', maxSeconds: DUE_THRESHOLD_SECONDS, dark: '#ff6369', light: '#c62828' },
   { key: 'imminent', maxSeconds: 120, dark: '#ff8b3d', light: '#a34500' },
   { key: 'soon', maxSeconds: 300, dark: '#ffb224', light: '#7a5200' },
   { key: 'waiting', maxSeconds: 600, dark: '#a7c957', light: '#4d7c0f' },
@@ -43,16 +47,28 @@ export const countdownHeat = (seconds, theme) => {
 };
 
 /**
- * The number this ramp is drawn next to: `dueLabel` ("Due" in English), "<1",
- * or whole minutes. Every countdown display in the app reads off this, so the
- * wording can't drift between the map's expanded marker, the Station panel,
- * and the board. `dueLabel` defaults to the English word so callers that
- * don't pass a translation keep their existing behaviour.
+ * The number this ramp is drawn next to: `dueLabel` ("Due" in English) inside
+ * `DUE_THRESHOLD_SECONDS`, whole seconds under a minute, or whole minutes.
+ * Every countdown display in the app reads off this, so the wording can't
+ * drift between the map's expanded marker, the Station panel, and the board.
+ * `dueLabel` defaults to the English word so callers that don't pass a
+ * translation keep their existing behaviour.
  */
 export const countdownLabel = (seconds, dueLabel = 'Due') => {
-  if (seconds <= 0) return dueLabel;
-  if (seconds < 60) return '<1';
+  if (seconds <= DUE_THRESHOLD_SECONDS) return dueLabel;
+  if (seconds < 60) return String(Math.round(seconds));
   return String(Math.round(seconds / 60));
+};
+
+/**
+ * The unit to display beside `countdownLabel`'s number, as an `i18n`
+ * `common.*` key suffix ('sec' or 'min'), or null once the train reads as
+ * Due (no unit to show).
+ */
+export const countdownUnit = (seconds) => {
+  if (seconds <= DUE_THRESHOLD_SECONDS) return null;
+  if (seconds < 60) return 'sec';
+  return 'min';
 };
 
 export default countdownHeat;

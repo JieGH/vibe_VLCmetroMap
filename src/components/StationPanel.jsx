@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Radio, Database } from 'lucide-react';
 import arrivalStore from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
-import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
+import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -269,9 +269,9 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                     }}
                   >
                     <span>{countdownLabel(next.seconds, t('common.due'))}</span>
-                    {next.seconds > 0 && (
+                    {countdownUnit(next.seconds) && (
                       <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                        {t('common.min')}
+                        {t(`common.${countdownUnit(next.seconds)}`)}
                       </span>
                     )}
                   </div>
@@ -356,7 +356,11 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                     color: countdownHeat(a.seconds, theme),
                   }}>
                     {countdownLabel(a.seconds, t('common.due'))}
-                    {a.seconds > 0 && <span style={{ fontSize: '.58rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>{t('common.min')}</span>}
+                    {countdownUnit(a.seconds) && (
+                      <span style={{ fontSize: '.58rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
+                        {t(`common.${countdownUnit(a.seconds)}`)}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
