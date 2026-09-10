@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Check, Info } from 'lucide-react';
+import { ChevronLeft, Check, Info, Languages } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
+import { useTranslation, SUPPORTED_LANGUAGES } from '../i18n';
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(
@@ -34,6 +35,7 @@ const Sidebar = ({
   onSelectFontSize,
 }) => {
   const isMobile = useIsMobile();
+  const { t, language, setLanguage } = useTranslation();
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
     onDismiss: onToggleSidebar,
     enabled: isMobile && isOpen,
@@ -108,7 +110,7 @@ const Sidebar = ({
             </div>
             <div>
               <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.3px' }}>Metro Valencia</h1>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Real-Time Tracker</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('sidebar.subtitle')}</div>
             </div>
           </div>
 
@@ -121,7 +123,7 @@ const Sidebar = ({
               background: 'var(--bg-hover)',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}
-            title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            title={isOpen ? t('sidebar.collapseSidebar') : t('sidebar.expandSidebar')}
           >
             <ChevronLeft size={20} />
           </button>
@@ -131,14 +133,14 @@ const Sidebar = ({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-                Lines & Services
+                {t('sidebar.linesAndServices')}
               </h2>
               {activeLineFilter && (
-                <button 
+                <button
                   onClick={() => onSelectLine(null)}
                   style={{ fontSize: '0.75rem', color: '#FFD100', textDecoration: 'underline' }}
                 >
-                  Show All
+                  {t('sidebar.showAll')}
                 </button>
               )}
             </div>
@@ -182,7 +184,7 @@ const Sidebar = ({
                       <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{line.properties.name}</div>
                       <div style={{ fontSize: '0.75rem', color: '#4CAF50', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4CAF50' }}></span>
-                        Good Service
+                        {t('sidebar.goodService')}
                       </div>
                     </div>
 
@@ -205,15 +207,16 @@ const Sidebar = ({
           <div className="sidebar-font-size-section" style={{ paddingTop: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-                Text Size
+                {t('sidebar.textSize')}
               </h2>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                {FONT_SIZE_CONFIG[fontSize]?.label || 'Default'}
+                {t(`sidebar.fontSize.${FONT_SIZE_CONFIG[fontSize] ? fontSize : 'default'}`)}
               </span>
             </div>
-            <div className="font-size-control-group" role="group" aria-label="Text Size Selection">
+            <div className="font-size-control-group" role="group" aria-label={t('sidebar.textSizeSelectionAria')}>
               {Object.values(FONT_SIZE_CONFIG).map((opt) => {
                 const isSelected = fontSize === opt.id;
+                const label = t(`sidebar.fontSize.${opt.id}`);
                 return (
                   <button
                     key={opt.id}
@@ -221,8 +224,8 @@ const Sidebar = ({
                     onClick={() => onSelectFontSize && onSelectFontSize(opt.id)}
                     className={`font-size-option-btn ${isSelected ? 'active' : ''}`}
                     aria-pressed={isSelected}
-                    aria-label={`${opt.label} text size`}
-                    title={`${opt.label} text size`}
+                    aria-label={t('sidebar.fontSizeOptionTitle', { label })}
+                    title={t('sidebar.fontSizeOptionTitle', { label })}
                   >
                     <span className="font-size-option-preview" style={{ fontSize: `${opt.scale * 0.85}rem` }}>
                       Aa
@@ -234,10 +237,38 @@ const Sidebar = ({
             </div>
           </div>
 
+          {/* Language Selection Control */}
+          <div className="sidebar-language-section" style={{ paddingTop: '8px' }}>
+            <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              <Languages size={12} style={{ verticalAlign: '-1px', marginRight: '4px' }} />
+              {t('sidebar.language')}
+            </h2>
+            <div className="lang-option-group" role="group" aria-label={t('sidebar.language')}>
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const isSelected = language === lang;
+                const name = t(`sidebar.languageNames.${lang}`);
+                return (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setLanguage(lang)}
+                    className={`lang-option-btn ${isSelected ? 'active' : ''}`}
+                    aria-pressed={isSelected}
+                    aria-label={t('sidebar.languageOptionAria', { language: name })}
+                    title={name}
+                  >
+                    <span className="lang-option-preview">{lang.toUpperCase()}</span>
+                    <span className="lang-option-label">{name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Live Stats & Footer */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
             <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-              Live Network
+              {t('sidebar.liveNetwork')}
             </h2>
             <div style={{ display: 'flex', gap: '8px' }}>
               <div style={{
@@ -248,7 +279,7 @@ const Sidebar = ({
                   {trainStats.live}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  Live trains
+                  {t('sidebar.liveTrains')}
                 </div>
               </div>
               <div style={{
@@ -259,19 +290,19 @@ const Sidebar = ({
                   {trainStats.confirmed}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  Confirmed
+                  {t('sidebar.confirmed')}
                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
-              <span>📍 FGV Metrovalència System</span>
+              <span>{t('sidebar.systemLabel')}</span>
               <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>v{__APP_VERSION__}</span>
             </div>
 
             <button
               type="button"
               onClick={onOpenAbout}
-              aria-label="Open About and Legal notices"
+              aria-label={t('sidebar.aboutLegalAria')}
               style={{
                 marginTop: '12px',
                 width: '100%',
@@ -292,7 +323,7 @@ const Sidebar = ({
               className="about-legal-btn"
             >
               <Info size={14} />
-              <span>About & Legal / Licenses</span>
+              <span>{t('sidebar.aboutLegalButton')}</span>
             </button>
           </div>
 

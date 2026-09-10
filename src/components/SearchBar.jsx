@@ -3,6 +3,7 @@ import { Search, X, MapPin, Navigation } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import { searchFuzzy } from '../utils/fuzzySearch';
+import { useTranslation } from '../i18n';
 
 // gtfs_expanded.json is the canonical station set for the whole network; the
 // handful of points in metro_lines.json are a much older subset.
@@ -10,6 +11,7 @@ const stations = gtfsData.features.filter(f => f.geometry.type === 'Point');
 const lines    = metroData.features.filter(f => f.geometry.type === 'LineString');
 
 const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedStation }) => {
+  const { t } = useTranslation();
   const [query,       setQuery]       = useState('');
   const [isOpen,      setIsOpen]      = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
@@ -81,7 +83,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
 
   const handleSelectLine = useCallback((line) => {
     onSelectLine(line.properties.line);
-    setQuery(`Line ${line.properties.line}`);
+    setQuery(t('searchBar.linePrefix', { line: line.properties.line }));
     setIsOpen(false);
     setHighlighted(-1);
     inputRef.current?.blur();
@@ -89,7 +91,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
       window.scrollTo(0, 0);
       document.body.scrollTop = 0;
     }
-  }, [onSelectLine]);
+  }, [onSelectLine, t]);
 
   const handleClear = () => {
     setQuery('');
@@ -169,8 +171,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
             }
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search for a station or line..."
-          aria-label="Search stations and lines"
+          placeholder={t('searchBar.placeholder')}
+          aria-label={t('searchBar.ariaLabel')}
           style={{
             background: 'transparent',
             border: 'none',
@@ -184,7 +186,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
           <button
             onClick={handleClear}
             style={{ padding: '4px', borderRadius: '50%', background: 'var(--bg-hover)', display: 'flex', flexShrink: 0 }}
-            title="Clear search"
+            title={t('searchBar.clearTitle')}
           >
             <X size={14} />
           </button>
@@ -213,7 +215,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
           {filteredLines.length > 0 && (
             <div style={{ padding: '4px 0' }}>
               <div style={{ padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-secondary)' }}>
-                Lines
+                {t('searchBar.lines')}
               </div>
               {filteredLines.map((line) => {
                 const idx = itemIdx++;
@@ -258,7 +260,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
                 <div style={{ height: '1px', background: 'var(--border-color)', margin: '2px 14px 6px' }} />
               )}
               <div style={{ padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-secondary)' }}>
-                Stations
+                {t('searchBar.stations')}
               </div>
               {filteredStations.map((st) => {
                 const idx = itemIdx++;
@@ -286,7 +288,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
                         {st.properties.name}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                        Lines: {(st.properties.lines || []).join(', ')}
+                        {t('searchBar.stationLines', { lines: (st.properties.lines || []).join(', ') })}
                       </div>
                     </div>
                     <Navigation size={12} color="var(--text-secondary)" style={{ flexShrink: 0 }} />

@@ -14,6 +14,7 @@ import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from '../services/arrivalStore
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
+import { useTranslation } from '../i18n';
 
 const ROTATE_MS = 12000;
 
@@ -26,6 +27,12 @@ const BOARD_STATIONS = [
 ];
 
 const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
+  const { t, language } = useTranslation();
+  // Undefined keeps the browser's own locale for English, unchanged from
+  // before i18n existed; es-ES is explicit because a Spanish-language board
+  // should read 24-hour clock time regardless of what locale the browser
+  // itself is set to.
+  const timeLocale = language === 'es' ? 'es-ES' : undefined;
   const [now, setNow] = useState(Date.now());
   const [slot, setSlot] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -84,7 +91,7 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
             fontSize: 'clamp(11px, 1.4vw, 20px)', letterSpacing: '.28em',
             textTransform: 'uppercase', color: dim, fontWeight: 700,
           }}>
-            Departures
+            {t('dashboard.departures')}
           </div>
           <h1 style={{
             fontSize: 'clamp(32px, 7vw, 104px)', fontWeight: 800, lineHeight: 1.2,
@@ -100,13 +107,13 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
             fontSize: 'clamp(28px, 5.4vw, 82px)', fontWeight: 300, lineHeight: 1,
             fontVariantNumeric: 'tabular-nums', color: dim,
           }}>
-            {new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(now).toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}
           </div>
           {/* The only control on the board, and deliberately quiet: an
               unattended display should be hard to tap out of by accident. */}
           <button
             onClick={onExit}
-            title="Back to the map"
+            title={t('dashboard.backToMap')}
             style={{
               minWidth: 44, minHeight: 44, borderRadius: 12, cursor: 'pointer',
               background: 'transparent', border: `1px solid ${rule}`, color: dim,
@@ -132,7 +139,7 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
       }}>
         {rows.length === 0 && (
           <p style={{ fontSize: 'clamp(18px, 2.6vw, 38px)', color: dim, textAlign: 'center' }}>
-            No live predictions for {station.name}
+            {t('dashboard.noLivePredictions', { station: station.name })}
           </p>
         )}
         {rows.map((a, i) => (
@@ -171,7 +178,7 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
               fontSize: 'clamp(15px, 2.2vw, 34px)', color: dim,
               fontVariantNumeric: 'tabular-nums',
             }}>
-              {new Date(a.targetTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(a.targetTimestamp).toLocaleTimeString(timeLocale, { hour: '2-digit', minute: '2-digit' })}
             </span>
 
             <span style={{
@@ -180,8 +187,8 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
               minWidth: 'clamp(96px, 13vw, 210px)',
               color: countdownHeat(a.seconds, theme),
             }}>
-              {countdownLabel(a.seconds)}
-              {a.seconds > 0 && <span style={{ fontSize: '.42em', fontWeight: 600, marginLeft: 4 }}>min</span>}
+              {countdownLabel(a.seconds, t('common.due'))}
+              {a.seconds > 0 && <span style={{ fontSize: '.42em', fontWeight: 600, marginLeft: 4 }}>{t('common.min')}</span>}
             </span>
           </div>
         ))}
@@ -195,7 +202,10 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           marginTop: 10, fontSize: 'clamp(10px, 1.3vw, 17px)', color: dim,
         }}>
-          <span>{BOARD_STATIONS.map((s, i) => (i === slot ? '●' : '○')).join(' ')} next: {BOARD_STATIONS[(slot + 1) % BOARD_STATIONS.length].name}</span>
+          <span>
+            {BOARD_STATIONS.map((s, i) => (i === slot ? '●' : '○')).join(' ')}{' '}
+            {t('dashboard.next', { station: BOARD_STATIONS[(slot + 1) % BOARD_STATIONS.length].name })}
+          </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {onOpenAbout && (
               <button
@@ -211,13 +221,13 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
                   padding: 0,
                 }}
               >
-                About & Legal
+                {t('dashboard.aboutLegal')}
               </button>
             )}
             <span>
-              {focus.secondsUnheard === null ? 'never fetched'
-                : focus.isFresh ? 'live'
-                  : `confirmed ${Math.max(1, Math.round(focus.secondsUnheard / 60))} min ago`}
+              {focus.secondsUnheard === null ? t('dashboard.neverFetched')
+                : focus.isFresh ? t('dashboard.live')
+                  : t('dashboard.confirmedMinAgo', { min: Math.max(1, Math.round(focus.secondsUnheard / 60)) })}
             </span>
           </div>
         </div>

@@ -8,17 +8,7 @@
 // eliminating dynamic repositioning stutters and avoiding clashes with floating cards.
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Navigation, NavigationOff, LoaderCircle } from 'lucide-react';
-
-const LABELS = {
-  idle: 'Centre on me and show my nearest station',
-  locating: 'Finding your location…',
-  unavailable: 'Location is unavailable — tap for details',
-};
-
-// Advertised on the button itself once there is a dot to remove, because a
-// long press is invisible otherwise — nothing on screen suggests holding is
-// worth trying.
-const HIDE_HINT = ' — hold to hide your location';
+import { useTranslation } from '../i18n';
 
 // Long enough not to fire on a slow tap, short enough not to feel like the
 // button has stopped responding. The platform convention on both iOS and
@@ -33,7 +23,14 @@ const LONG_PRESS_MS = 500;
 // press that turned into a drag of the map.
 const LONG_PRESS_SLOP_PX = 10;
 
+const LABEL_KEYS = {
+  idle: 'locate.idle',
+  locating: 'locate.locating',
+  unavailable: 'locate.unavailableLabel',
+};
+
 const LocateButton = ({ state = 'idle', showingLocation = false, onLocate, onHide }) => {
+  const { t } = useTranslation();
   const pressTimer = useRef(null);
   const pressOrigin = useRef(null);
   // Set when the hold has already acted, so the click that follows releasing
@@ -78,7 +75,7 @@ const LocateButton = ({ state = 'idle', showingLocation = false, onLocate, onHid
 
   useEffect(() => cancelPress, [cancelPress]);
 
-  const label = (LABELS[state] || LABELS.idle) + (showingLocation ? HIDE_HINT : '');
+  const label = t(LABEL_KEYS[state] || LABEL_KEYS.idle) + (showingLocation ? t('locate.hideHint') : '');
   const Icon = state === 'locating'
     ? LoaderCircle
     : state === 'unavailable' ? NavigationOff : Navigation;

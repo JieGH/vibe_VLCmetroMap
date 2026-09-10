@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from '../i18n';
 
 export const WELCOME_HOLD_DURATION_MS = 1000;
 export const WELCOME_FADE_DURATION_MS = 300;
@@ -11,6 +12,7 @@ export const WELCOME_TOTAL_DURATION_MS = WELCOME_HOLD_DURATION_MS + WELCOME_FADE
  * which then blooms open like a spotlight before smoothly fading into the live map.
  */
 const WelcomeScreen = ({ onComplete }) => {
+  const { t } = useTranslation();
   const [fading, setFading] = useState(false);
   const [hidden, setHidden] = useState(false);
 
@@ -90,7 +92,7 @@ const WelcomeScreen = ({ onComplete }) => {
           </svg>
         </div>
         <h1 className="welcome-screen-title">Metro Valencia</h1>
-        <p className="welcome-screen-subtitle">Live Map & Real-time Arrivals</p>
+        <p className="welcome-screen-subtitle">{t('welcomeScreen.subtitle')}</p>
       </div>
     </div>
   );

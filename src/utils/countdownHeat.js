@@ -43,12 +43,14 @@ export const countdownHeat = (seconds, theme) => {
 };
 
 /**
- * The number this ramp is drawn next to: "Due", "<1", or whole minutes.
- * Every countdown display in the app reads off this, so the wording can't
- * drift between the map's expanded marker, the Station panel, and the board.
+ * The number this ramp is drawn next to: `dueLabel` ("Due" in English), "<1",
+ * or whole minutes. Every countdown display in the app reads off this, so the
+ * wording can't drift between the map's expanded marker, the Station panel,
+ * and the board. `dueLabel` defaults to the English word so callers that
+ * don't pass a translation keep their existing behaviour.
  */
-export const countdownLabel = (seconds) => {
-  if (seconds <= 0) return 'Due';
+export const countdownLabel = (seconds, dueLabel = 'Due') => {
+  if (seconds <= 0) return dueLabel;
   if (seconds < 60) return '<1';
   return String(Math.round(seconds / 60));
 };

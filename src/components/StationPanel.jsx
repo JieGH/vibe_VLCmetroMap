@@ -13,6 +13,7 @@ import { countdownHeat, countdownLabel } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
+import { useTranslation } from '../i18n';
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
@@ -34,6 +35,7 @@ const useIsLandscape = () => {
 };
 
 const StationPanel = ({ station, theme, onClose, onCenter }) => {
+  const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
 
@@ -83,10 +85,10 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
 
   const focus = getStationFocus(station.properties, now);
   const unheardLabel = focus.secondsUnheard === null
-    ? 'never fetched'
+    ? t('stationPanel.neverFetched')
     : focus.secondsUnheard < 60
-      ? 'just now'
-      : `${Math.round(focus.secondsUnheard / 60)} min ago`;
+      ? t('stationPanel.justNow')
+      : t('stationPanel.minAgo', { min: Math.round(focus.secondsUnheard / 60) });
 
   return (
     <>
@@ -155,18 +157,18 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
             background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
           }}>
             {focus.isFresh
-              ? <><Radio size={9} className="pulse" /> LIVE</>
-              : <><Database size={9} /> MEMORY</>}
+              ? <><Radio size={9} className="pulse" /> {t('stationPanel.live')}</>
+              : <><Database size={9} /> {t('stationPanel.memory')}</>}
           </span>
           <span style={{ fontSize: '.64rem', color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-            confirmed {unheardLabel}
+            {t('stationPanel.confirmedStatus', { time: unheardLabel })}
           </span>
         </div>
 
         <button
           onClick={onClose}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Close station panel"
+          aria-label={t('stationPanel.closeAria')}
           style={{
             width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none',
             background: 'var(--bg-hover)', color: 'var(--text-primary)',
@@ -247,7 +249,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                   </div>
                   {next?.vehicleId && (
                     <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                      Vehicle #{next.vehicleId}
+                      {t('stationPanel.vehicle', { id: next.vehicleId })}
                     </div>
                   )}
                 </div>
@@ -266,10 +268,10 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                       gap: 2,
                     }}
                   >
-                    <span>{countdownLabel(next.seconds)}</span>
+                    <span>{countdownLabel(next.seconds, t('common.due'))}</span>
                     {next.seconds > 0 && (
                       <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                        min
+                        {t('common.min')}
                       </span>
                     )}
                   </div>
@@ -299,23 +301,23 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
 
         {focus.arrivals.length === 0 ? (
           <p style={{ padding: 20, textAlign: 'center', fontSize: '.8rem', color: 'var(--text-secondary)' }}>
-            No live trains arriving soon.
+            {t('stationPanel.noLiveTrains')}
           </p>
         ) : focus.laterArrivals.length === 0 ? (
           <p style={{ padding: '12px 20px', textAlign: 'center', fontSize: '.74rem', color: 'var(--text-secondary)' }}>
-            Nothing further due yet.
+            {t('stationPanel.nothingFurther')}
           </p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.75rem' }}>
-            <caption className="visually-hidden">Later arrivals at {focus.name}</caption>
+            <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
             <thead>
               <tr style={{
                 fontSize: '.60rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                 position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
               }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>Line</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>Towards</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>Due</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
               </tr>
             </thead>
             <tbody>
@@ -344,7 +346,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                     </div>
                     {a.vehicleId && (
                       <div style={{ fontSize: '.58rem', color: 'var(--text-secondary)' }}>
-                        Vehicle #{a.vehicleId}
+                        {t('stationPanel.vehicle', { id: a.vehicleId })}
                       </div>
                     )}
                   </td>
@@ -353,8 +355,8 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
                     fontWeight: 700, fontSize: '.74rem', fontVariantNumeric: 'tabular-nums',
                     color: countdownHeat(a.seconds, theme),
                   }}>
-                    {countdownLabel(a.seconds)}
-                    {a.seconds > 0 && <span style={{ fontSize: '.58rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>min</span>}
+                    {countdownLabel(a.seconds, t('common.due'))}
+                    {a.seconds > 0 && <span style={{ fontSize: '.58rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>{t('common.min')}</span>}
                   </td>
                 </tr>
               ))}
@@ -373,7 +375,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          Recentre on map
+          {t('stationPanel.recentreButton')}
         </button>
       </footer>
     </aside>

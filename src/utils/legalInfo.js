@@ -46,6 +46,60 @@ export const APP_LEGAL_INFO = {
   },
 };
 
+// Spanish (Spain) translation of the same legal metadata, mirroring
+// APP_LEGAL_INFO's shape exactly so AboutModal can pick either by language.
+export const APP_LEGAL_INFO_ES = {
+  name: 'Metro Valencia',
+  subtitle: 'Seguimiento en tiempo real',
+  author: 'Jie Lei',
+  year: '2026',
+  copyright: '© 2026 Jie Lei',
+  licenseSpdx: 'Apache-2.0',
+  licenseName: 'Licencia Apache 2.0',
+  licenseSummary:
+    'Con licencia bajo la Licencia Apache, versión 2.0 (la "Licencia"). Puedes usar, distribuir y modificar esta aplicación conforme a los términos de la Licencia.',
+  disclaimer:
+    'Este software se distribuye "TAL CUAL", SIN GARANTÍAS NI CONDICIONES DE NINGÚN TIPO, ni expresas ni implícitas.',
+  attributions: {
+    operator: {
+      title: 'Metrovalencia / FGV',
+      text: 'Metrovalencia es una marca registrada de Ferrocarrils de la Generalitat Valenciana (FGV). Las líneas de la red, sus denominaciones, los colores de marca y los horarios programados son propiedad de FGV. Esta aplicación independiente no está afiliada, mantenida ni respaldada por FGV.',
+    },
+    arrivals: {
+      title: 'Llegadas en tiempo real',
+      text: 'Las predicciones de llegada y las cuentas atrás en directo se obtienen de fuentes públicas GTFS-RT a través de metroapi.alexbadi.es.',
+    },
+    osm: {
+      title: 'Colaboradores de OpenStreetMap',
+      text: 'El mapa base de calles y la geometría de las vías © colaboradores de OpenStreetMap, con licencia Open Database License (ODbL).',
+    },
+    protomaps: {
+      title: 'Mosaicos vectoriales de Protomaps',
+      text: 'Extractos de mapa base vectorial sin conexión impulsados por la tecnología PMTiles de Protomaps.',
+    },
+    maplibre: {
+      title: 'MapLibre GL JS',
+      text: 'Renderizado de mapas web y vectoriales interactivos impulsado por el motor de código abierto MapLibre GL (licencia BSD de 3 cláusulas).',
+    },
+  },
+  privacy: {
+    title: 'Privacidad y datos del dispositivo',
+    points: [
+      'Tu ubicación se consulta solo en el dispositivo cuando solicitas la navegación a la estación más cercana, y nunca se registra, almacena ni transmite a ningún servidor.',
+      'Cero telemetría: sin analíticas de usuario, cookies de seguimiento, identificadores publicitarios ni cuentas obligatorias.',
+    ],
+  },
+};
+
+/**
+ * The legal metadata for `lang`, falling back to the English (canonical)
+ * object for any language this app doesn't ship a translation for.
+ * @param {string} lang
+ */
+export function getLegalInfo(lang) {
+  return lang === 'es' ? APP_LEGAL_INFO_ES : APP_LEGAL_INFO;
+}
+
 /**
  * Checks if a string contains raw GitHub, GitLab, or git repository links.
  * @param {string} text
@@ -90,6 +144,9 @@ export function validateLegalMetadata() {
 
   if (hasRawRepoLinks(APP_LEGAL_INFO)) {
     violations.push('Legal metadata contains raw repository links');
+  }
+  if (hasRawRepoLinks(APP_LEGAL_INFO_ES)) {
+    violations.push('Spanish legal metadata contains raw repository links');
   }
 
   return {

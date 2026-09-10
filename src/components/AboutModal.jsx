@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X, ShieldCheck, FileText, Database } from 'lucide-react';
-import { APP_LEGAL_INFO } from '../utils/legalInfo';
+import { getLegalInfo } from '../utils/legalInfo';
+import { useTranslation } from '../i18n';
 
 /**
  * Native-feeling About & Legal / Licenses modal.
@@ -8,6 +9,7 @@ import { APP_LEGAL_INFO } from '../utils/legalInfo';
  * attributions cleanly without exposing raw developer repository links.
  */
 const AboutModal = ({ isOpen, onClose }) => {
+  const { t, language } = useTranslation();
   useEffect(() => {
     if (!isOpen) return;
 
@@ -24,7 +26,8 @@ const AboutModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const { attributions, privacy } = APP_LEGAL_INFO;
+  const legalInfo = getLegalInfo(language);
+  const { attributions, privacy } = legalInfo;
 
   return (
     <div
@@ -97,10 +100,10 @@ const AboutModal = ({ isOpen, onClose }) => {
                 id="about-modal-title"
                 style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}
               >
-                {APP_LEGAL_INFO.name}
+                {legalInfo.name}
               </h2>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                {APP_LEGAL_INFO.subtitle} · <span style={{ fontVariantNumeric: 'tabular-nums' }}>v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}</span>
+                {legalInfo.subtitle} · <span style={{ fontVariantNumeric: 'tabular-nums' }}>v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}</span>
               </div>
             </div>
           </div>
@@ -108,7 +111,7 @@ const AboutModal = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close About and Legal modal"
+            aria-label={t('aboutModal.closeAria')}
             style={{
               width: '32px',
               height: '32px',
@@ -160,13 +163,13 @@ const AboutModal = ({ isOpen, onClose }) => {
               }}
             >
               <FileText size={16} color="#FFD100" />
-              <span>Copyright & License</span>
+              <span>{t('aboutModal.copyrightLicense')}</span>
             </div>
             <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {APP_LEGAL_INFO.copyright}
+              {legalInfo.copyright}
             </p>
             <p style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-              {APP_LEGAL_INFO.licenseSummary}
+              {legalInfo.licenseSummary}
             </p>
             <div
               style={{
@@ -178,7 +181,7 @@ const AboutModal = ({ isOpen, onClose }) => {
                 lineHeight: 1.4,
               }}
             >
-              {APP_LEGAL_INFO.disclaimer}
+              {legalInfo.disclaimer}
             </div>
           </section>
 
@@ -196,7 +199,7 @@ const AboutModal = ({ isOpen, onClose }) => {
               }}
             >
               <Database size={16} color="#4CAF50" />
-              <span>Data & Attributions</span>
+              <span>{t('aboutModal.dataAttributions')}</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -279,7 +282,7 @@ const AboutModal = ({ isOpen, onClose }) => {
               transition: 'background 0.2s ease',
             }}
           >
-            Done
+            {t('aboutModal.done')}
           </button>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   calculateUnfocusCamera,
   panelAwarePadding as computePanelPadding,
 } from '../utils/mapCamera';
+import { useTranslation, translate } from '../i18n';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -478,16 +479,20 @@ const vehicleAnimation = (v, selectedStation) =>
 
 // Says in the reader's words — not the model's — why a marker is drawn faint,
 // covering both causes: how far the walk had to reach, and how long since the
-// API last confirmed the train.
-const describePositionDoubt = (v) => {
+// API last confirmed the train. Takes `lang` rather than reading it from a
+// hook because this runs inside MapView's long-lived, mount-once marker
+// effect (see languageRef below) — a plain function reading a ref-held
+// language stays correct across a language switch, where a value captured by
+// the effect's own closure at mount would not.
+const describePositionDoubt = (v, lang) => {
   if (!v.isLive || v.positionConfidence >= 1) return '';
   const confirmed = v.secondsUnheard < 60
-    ? 'just now'
-    : `${Math.round(v.secondsUnheard / 60)} min ago`;
+    ? translate(lang, 'mapView.justNow')
+    : translate(lang, 'mapView.minAgo', { min: Math.round(v.secondsUnheard / 60) });
   const basis = v.isDeadReckoned
-    ? 'position estimated past its last prediction'
-    : `position estimated ±${v.positionUncertaintyMetres} m`;
-  return ` • ${basis}, last confirmed ${confirmed}`;
+    ? translate(lang, 'mapView.deadReckoned')
+    : translate(lang, 'mapView.uncertainty', { metres: v.positionUncertaintyMetres });
+  return translate(lang, 'mapView.lastConfirmed', { basis, time: confirmed });
 };
 
 
@@ -569,6 +574,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
 };
 
 const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
+  const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
@@ -579,6 +585,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   // wrapper structure built far away in createVehicleMarker.
   const markerMapRef    = useRef(new globalThis.Map());
   const themeRef        = useRef(theme);
+  const languageRef     = useRef(language);
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
   const selectStRef     = useRef(onSelectStation);
@@ -603,6 +610,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const vehInnerElemsRef= useRef([]); // refs to vehicle inner elements for direct scale updates
 
   useEffect(() => { themeRef.current = theme; }, [theme]);
+  useEffect(() => { languageRef.current = language; }, [language]);
   useEffect(() => { filterRef.current = activeLineFilter; }, [activeLineFilter]);
   useEffect(() => { selectStRef.current = onSelectStation; }, [onSelectStation]);
   useEffect(() => { selectedStationRef.current = selectedStation; }, [selectedStation]);
@@ -659,27 +667,29 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   // Says plainly whether a marker is a reported train or a headway guess, and
   // how many independent sightings pin it down.
   const describeVehicle = (v) => {
+    const lang = languageRef.current;
     if (!v.isLive) {
-      return `L${v.line} → ${v.direction} • simulated from the timetable, not a reported train`;
+      return translate(lang, 'mapView.vehicleSimulated', { line: v.line, direction: v.direction });
     }
     const eta = v.secondsToTarget <= 0
-      ? 'at platform'
-      : `${Math.round(v.secondsToTarget / 60)} min to`;
-    const pin = v.sightingCount > 1 ? ` • ${v.sightingCount} sightings` : '';
-    return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}${describePositionDoubt(v)}`;
+      ? translate(lang, 'mapView.atPlatform')
+      : translate(lang, 'mapView.etaMinTo', { min: Math.round(v.secondsToTarget / 60) });
+    const pin = v.sightingCount > 1 ? translate(lang, 'mapView.sightings', { count: v.sightingCount }) : '';
+    return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}${describePositionDoubt(v, lang)}`;
   };
 
   const updateTrainCount = () => {
     if (!trainCountRef.current) return;
+    const lang = languageRef.current;
     const now = Date.now();
     const liveVehicles = trainPositionEngine.getLiveVehiclesFromMemory(now);
     if (liveVehicles.length > 0) {
       const pinned = liveVehicles.filter(v => v.sightingCount > 1).length;
       trainCountRef.current.textContent = pinned > 0
-        ? `${liveVehicles.length} live trains · ${pinned} confirmed at two stations`
-        : `${liveVehicles.length} live trains`;
+        ? translate(lang, 'mapView.trainCountPinned', { count: liveVehicles.length, pinned })
+        : translate(lang, 'mapView.trainCountLive', { count: liveVehicles.length });
     } else {
-      trainCountRef.current.textContent = 'No live predictions — showing simulated trains';
+      trainCountRef.current.textContent = translate(lang, 'mapView.trainCountNone');
     }
   };
 

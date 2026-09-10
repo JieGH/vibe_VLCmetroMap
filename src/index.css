@@ -859,7 +859,13 @@ button:active {
 
 /* ── Font Size Adjustment Control in Menu ────────────────────────────────── */
 
-.font-size-control-group {
+/* Shared "segmented control" look for a row of mutually-exclusive option
+   buttons. font-size-option-* is the original (Text Size); lang-option-*
+   reuses the same rules for the Language switcher below it — kept as
+   separate class names rather than reused font-size-* ones so a Language
+   button's class doesn't misdescribe what it's for. */
+.font-size-control-group,
+.lang-option-group {
   display: flex;
   background: var(--bg-hover);
   border-radius: 10px;
@@ -868,7 +874,8 @@ button:active {
   border: 1px solid var(--border-color);
 }
 
-.font-size-option-btn {
+.font-size-option-btn,
+.lang-option-btn {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -884,24 +891,28 @@ button:active {
   min-height: 44px;
 }
 
-.font-size-option-btn:hover {
+.font-size-option-btn:hover,
+.lang-option-btn:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
 }
 
-.font-size-option-btn.active {
+.font-size-option-btn.active,
+.lang-option-btn.active {
   background: var(--bg-panel-solid);
   color: #FFD100;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   font-weight: 700;
 }
 
-.font-size-option-preview {
+.font-size-option-preview,
+.lang-option-preview {
   font-weight: 700;
   line-height: 1.2;
 }
 
-.font-size-option-label {
+.font-size-option-label,
+.lang-option-label {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.4px;

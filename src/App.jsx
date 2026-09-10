@@ -11,6 +11,7 @@ import { locate } from './services/userLocation';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
+import { useTranslation } from './i18n';
 import { Sun, Moon, X, LayoutDashboard, Menu } from 'lucide-react';
 import './index.css';
 
@@ -24,6 +25,7 @@ const readMode = () =>
   new URLSearchParams(window.location.search).get('mode') === 'dashboard' ? 'dashboard' : 'map';
 
 function App() {
+  const { t } = useTranslation();
   const [showWelcome, setShowWelcome] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [mode, setMode] = useState(readMode);
@@ -97,11 +99,30 @@ function App() {
     setFlyTarget({ ...station, _ts: Date.now() });
   };
 
+  // Turns a locate() result into the sentence shown in the notice — built
+  // from status/reason/station rather than read off result.message, so the
+  // notice follows the UI language even though userLocation.js's own message
+  // stays English-only (it is a library function, not UI).
+  const describeLocateResult = (result) => {
+    if (result.status !== 'located') {
+      return t(`locate.${result.status}`);
+    }
+    if (result.reason === 'imprecise') return t('locate.imprecise');
+    if (result.reason === 'out-of-range') return t('locate.outOfRange');
+    if (result.nearestStation) {
+      return t('locate.nearestStation', {
+        station: result.nearestStation.properties.name,
+        distance: Math.round(result.distance),
+      });
+    }
+    return result.message;
+  };
+
   // Applies a User Location fix to the state. Does not displace a Station
   // the viewer has chosen manually while a background refinement was in flight.
   const applyUserLocation = (fix, updateStation = true) => {
     setUserLocation(fix);
-    setLocateNotice({ text: fix.message, _ts: Date.now() });
+    setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
     if (updateStation && fix.nearestStation) {
       setSelectedStation(fix.nearestStation);
     }
@@ -152,7 +173,7 @@ function App() {
       applyUserLocation(result, canUpdateStation);
     } else {
       setUserLocation(null);
-      setLocateNotice({ text: result.message, _ts: Date.now() });
+      setLocateNotice({ text: describeLocateResult(result), _ts: Date.now() });
     }
   };
 
@@ -163,7 +184,7 @@ function App() {
     if (!userLocation) return;
     setUserLocation(null);
     setLocateState('idle');
-    setLocateNotice({ text: 'Location hidden.', _ts: Date.now() });
+    setLocateNotice({ text: t('app.locationHidden'), _ts: Date.now() });
   };
 
   useEffect(() => {
@@ -257,8 +278,8 @@ function App() {
         <button
           onClick={handleToggleSidebar}
           className="sidebar-toggle-btn glass-panel"
-          title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
-          aria-label={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+          title={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
+          aria-label={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
         >
           <Menu size={20} />
         </button>
@@ -284,7 +305,7 @@ function App() {
               justifyContent: 'center',
               flexShrink: 0,
             }}
-            title="Dashboard mode — a departure board for an ambient display"
+            title={t('app.dashboardModeTitle')}
           >
             <LayoutDashboard size={18} />
           </button>
@@ -299,7 +320,7 @@ function App() {
               justifyContent: 'center',
               flexShrink: 0,
             }}
-            title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            title={theme === 'dark' ? t('app.switchToLightTheme') : t('app.switchToDarkTheme')}
           >
             {theme === 'dark'
               ? <Sun size={18} color="#FFD100" />
@@ -319,9 +340,9 @@ function App() {
             background: getLineColor(activeLineFilter[0]),
             borderColor: 'transparent',
           }}
-          title="Click to clear filter"
+          title={t('app.clearFilterTitle')}
         >
-          <span>Lines {activeLineFilter.join(', ')} only</span>
+          <span>{t('app.lineFilterBanner', { lines: activeLineFilter.join(', ') })}</span>
           <X size={13} style={{ opacity: 0.85 }} />
         </button>
       )}
@@ -331,7 +352,7 @@ function App() {
         <button
           className="locate-notice glass-panel"
           onClick={() => setLocateNotice(null)}
-          title="Dismiss"
+          title={t('app.dismissTitle')}
         >
           {locateNotice.text}
         </button>
