@@ -92,7 +92,8 @@ export default {
     done: 'Done',
   },
   appBanner: {
-    banner: 'Get the Android app for faster live trains',
+    banner: 'Get the Android app',
+    bannerSub: 'Faster live trains, straight from FGV',
     dismissAria: 'Dismiss',
     sheetTitle: 'Get the Android app',
     why: 'The app reads live trains straight from FGV, the metro operator’s own feed, from your own connection. It sees about 80% of the trains due in the next 20 minutes and updates faster.',

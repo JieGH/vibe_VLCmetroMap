@@ -85,7 +85,10 @@ const AppDownloadBanner = ({ hidden = false }) => {
         <div className="app-banner glass-panel">
           <button type="button" className="app-banner-open" onClick={() => setOpen(true)}>
             <Smartphone size={14} color="#FFD100" />
-            <span>{t('appBanner.banner')}</span>
+            <span className="app-banner-text">
+              <strong>{t('appBanner.banner')}</strong>
+              <span>{t('appBanner.bannerSub')}</span>
+            </span>
           </button>
           <button type="button" className="app-banner-x" onClick={dismiss} aria-label={t('appBanner.dismissAria')}>
             <X size={13} />

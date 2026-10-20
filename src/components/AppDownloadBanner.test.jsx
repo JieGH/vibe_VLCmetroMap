@@ -17,15 +17,16 @@ describe('AppDownloadBanner', () => {
     asUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8)');
     const html = renderToStaticMarkup(<AppDownloadBanner />);
     expect(html).toContain('app-banner');
-    expect(html).toContain('Get the Android app for faster live trains');
+    expect(html).toContain('Get the Android app');
+    expect(html).toContain('Faster live trains, straight from FGV');
     expect(html).not.toContain('app-banner-sheet');
   });
 
   it('shows the same banner to an iPhone and to a desktop browser', () => {
     asUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app for faster live trains');
+    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app');
     asUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
-    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app for faster live trains');
+    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app');
   });
 
   it('steps aside while a panel or notice owns that space', () => {
