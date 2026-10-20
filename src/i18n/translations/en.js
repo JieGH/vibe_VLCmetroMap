@@ -91,6 +91,18 @@ export default {
     dataAttributions: 'Data & Attributions',
     done: 'Done',
   },
+  appBanner: {
+    banner: 'Get the Android app for faster live trains',
+    dismissAria: 'Dismiss',
+    sheetTitle: 'Get the Android app',
+    why: 'The app reads live trains straight from FGV, the metro operator’s own feed, from your own connection. It sees about 80% of the trains due in the next 20 minutes and updates faster.',
+    websiteLimit: 'This website cannot do that: FGV refuses connections from the server that hosts it. So the website uses an older third-party relay instead, which limits how often it can ask and sees only about 37% of the trains due.',
+    download: 'Download the Android app',
+    installNote: 'Android 7 or newer. It is not on Google Play, so Android will ask you to allow installing from your browser and may warn the app is unverified: it is a test-signed build.',
+    iphoneNote: 'iPhone: there is no download yet. The iOS app can be built from the source code on GitHub.',
+    releaseNotes: 'Release notes',
+    done: 'Not now',
+  },
   welcomeScreen: {
     subtitle: 'Live Map & Real-time Arrivals',
   },

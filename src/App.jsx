@@ -7,6 +7,7 @@ import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
 import WelcomeScreen from './components/WelcomeScreen';
+import AppDownloadBanner from './components/AppDownloadBanner';
 import { locate } from './services/userLocation';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
@@ -374,6 +375,9 @@ function App() {
           onCenter={() => handleCenterStation(selectedStation)}
         />
       )}
+
+      {/* Invitation to the Android app; steps aside for panels at the bottom edge */}
+      <AppDownloadBanner hidden={showWelcome || Boolean(selectedStation) || isSidebarOpen} />
 
       {/* About, Legal & Licenses Modal */}
       <AboutModal
