@@ -120,7 +120,7 @@ The live site above runs on [Netlify](https://netlify.com), auto-rebuilding and 
 
 A static host has no dev server, so two things exist purely to cover what the dev proxy above did, and are easy to break by "cleaning up" without knowing why:
 
-- **[`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production, forwarding `/api/metro/*` to FGV's live feed so the browser build stays same-origin. Its FGV target must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
+- **[`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production, forwarding `/api/metro/*` to FGV's live feed so the browser build stays same-origin. FGV does not answer Netlify's servers, so it falls back to the earlier relay and reshapes its rows to FGV's; see [`docs/fgv-api.md`](docs/fgv-api.md). Its FGV target must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
 - **`fetch:basemap` runs as part of the Netlify build command**, not just locally: the offline PMTiles archive is gitignored (see [Data pipeline](#data-pipeline)) and 404s in production without it. The `go-pmtiles` CLI it downloads publishes differently-named release assets per OS — hyphenated `.zip` on Darwin, underscored `.tar.gz` on Linux — so the script picks the filename and extraction method for whichever platform the build runs on, Netlify's Linux build image included.
 
 Free-hosting options considered (GitHub Pages, Netlify, Vercel, Cloudflare Pages) and why Netlify won: [`docs/research/free-github-hosting.md`](docs/research/free-github-hosting.md).
