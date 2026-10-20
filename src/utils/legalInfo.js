@@ -22,7 +22,7 @@ export const APP_LEGAL_INFO = {
     },
     arrivals: {
       title: 'Real-Time Arrivals',
-      text: 'Live arrival predictions and countdown estimations are derived from public GTFS-RT transit feeds via metroapi.alexbadi.es.',
+      text: 'Live arrival predictions come from the real-time feed of Ferrocarrils de la Generalitat Valenciana (FGV), operator of Metrovalencia. Countdowns and train positions are estimated by this app from those predictions.',
     },
     osm: {
       title: 'OpenStreetMap Contributors',
@@ -67,7 +67,7 @@ export const APP_LEGAL_INFO_ES = {
     },
     arrivals: {
       title: 'Llegadas en tiempo real',
-      text: 'Las predicciones de llegada y las cuentas atrás en directo se obtienen de fuentes públicas GTFS-RT a través de metroapi.alexbadi.es.',
+      text: 'Las predicciones de llegada en directo proceden del servicio en tiempo real de Ferrocarrils de la Generalitat Valenciana (FGV), operadora de Metrovalencia. Las cuentas atrás y las posiciones de los trenes las estima esta aplicación a partir de esas predicciones.',
     },
     osm: {
       title: 'Colaboradores de OpenStreetMap',

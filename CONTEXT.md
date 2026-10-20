@@ -37,7 +37,7 @@ The absolute wall-clock epoch timestamp (`fetchedAt + seconds * 1000`) when a ve
 _Avoid_: Due date, deadline, scheduled epoch
 
 **Rate Budget**:
-The consumption limit of upstream real-time API requests, managed by client-side TTL caching, request deduplication, and cooldown throttling.
+The restraint the app keeps on requests to FGV's live feed, managed by client-side TTL caching, request deduplication, dispatch spacing, and cooldown throttling. FGV has shown no rate limit (ADR-0005), so the budget is courtesy and headroom rather than a known ceiling; a hung request spends one retry from it.
 _Avoid_: Request ceiling, throttle counter
 
 **Timetable Walk**:
@@ -65,7 +65,7 @@ One prediction of one Vehicle at one Station. The same Vehicle is routinely sigh
 _Avoid_: Observation, ping, report
 
 **Propagation Lag**:
-A fixed per-mode offset, in seconds, between the API's reported Target Arrival Timestamp and the vehicle's true position in reality. Observed empirically (2026-09-09): metro lines run 15 s behind, tram lines 4 and 6 run 10 s behind. Applied by subtracting the lag from the Target Arrival Timestamp at fetch time so the Timetable Walk starts from the corrected epoch rather than the lagged one. Not a function of network age or Position Uncertainty — it is a systematic bias in the upstream data feed.
+A fixed per-mode offset, in seconds, between the Target Arrival Timestamp the feed implies (response time + seconds) and the vehicle's true position in reality. Observed empirically (2026-09-09): metro lines run 15 s behind, tram lines run 10 s behind — measured on 4 and 6 and applied to all four tram Lines (4, 6, 8, 10). Applied by subtracting the lag from the Target Arrival Timestamp at fetch time so the Timetable Walk starts from the corrected epoch rather than the lagged one. Not a function of network age or Position Uncertainty — it is a systematic bias in the upstream data feed.
 _Avoid_: Display delay, clock offset, Position Uncertainty (which is a walk-error term, not a feed-bias term)
 
 **Position Uncertainty**:

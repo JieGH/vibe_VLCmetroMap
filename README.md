@@ -112,7 +112,7 @@ npm run build      # production bundle → dist/
 npm run preview    # serves dist/ as it would be deployed
 ```
 
-`npm run dev` and `dev:phone` proxy `/api/metro/*` to the live arrivals API through Vite's dev server. This isn't optional plumbing — the API requires a `User-Agent` header containing `contact=`, which browser `fetch()` can never set (a forbidden header, by spec, in every browser). The proxy runs in Node, which has no such restriction, and injects it.
+`npm run dev` and `dev:phone` proxy `/api/metro/*` to FGV's live arrivals feed through Vite's dev server. This isn't optional plumbing — FGV's CORS policy admits only FGV's own sites, so a browser cannot call the feed directly; a same-origin proxy can. The native iOS app has no such limit and calls FGV directly. See [ADR-0005](docs/adr/0005-live-arrivals-come-straight-from-fgv.md).
 
 ### Production deployment (Netlify)
 
@@ -120,7 +120,7 @@ The live site above runs on [Netlify](https://netlify.com), auto-rebuilding and 
 
 A static host has no dev server, so two things exist purely to cover what the dev proxy above did, and are easy to break by "cleaning up" without knowing why:
 
-- **[`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production. A `netlify.toml` redirect looked like the obvious fix — Netlify's own docs describe custom headers on proxy redirects — but tested against the live deploy, Netlify's redirect proxy silently overwrites any custom `User-Agent` with the real visitor's, the same restriction Vercel's Edge runtime has (undocumented by Netlify). A Netlify Function instead does its own server-side `fetch()`, which carries no such restriction. Its `User-Agent` value must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
+- **[`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production, forwarding `/api/metro/*` to FGV's live feed so the browser build stays same-origin. Its FGV target must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
 - **`fetch:basemap` runs as part of the Netlify build command**, not just locally: the offline PMTiles archive is gitignored (see [Data pipeline](#data-pipeline)) and 404s in production without it. The `go-pmtiles` CLI it downloads publishes differently-named release assets per OS — hyphenated `.zip` on Darwin, underscored `.tar.gz` on Linux — so the script picks the filename and extraction method for whichever platform the build runs on, Netlify's Linux build image included.
 
 Free-hosting options considered (GitHub Pages, Netlify, Vercel, Cloudflare Pages) and why Netlify won: [`docs/research/free-github-hosting.md`](docs/research/free-github-hosting.md).
@@ -195,6 +195,7 @@ npm test               # confirm the network still looks sane
 
 - **`src/data/gtfs_expanded.json`** — every station with the lines it serves, plus line geometry.
 - **`src/data/segment_times.json`** — median seconds between consecutive station arrivals, per line. ~440 segments, 12 KB. This is what the walk spends.
+- **`src/data/live_stations.json`** — the Strategic Hubs and Major Stations the app asks FGV about. Chosen by measured coverage, not by hand: `npm run sweep` asks FGV about every Station, saves the sweep under `data/sweeps/`, and recommends the set that sees the most live Vehicles; `npm run sweep -- report data/sweeps/*.json` merges saved sweeps. Re-sweep when the timetable changes.
 - **`src/data/metro_lines.json`** — the Track Geometry the engine projects onto. Simplified to 3 m tolerance by `npm run build:geometry` (5,747 → 988 points, 414 KB → 29 KB) because the engine imports it synchronously, so it ships in the JS chunk and has to be small. The script stamps the file and **refuses to run on an already-stamped one** — re-running would measure drift against its own output. To re-simplify: `git checkout src/data/metro_lines.json` first, then run it. Always follow with `npm test`: the track-geometry-fidelity tests fail if simplification drops a station out of a chain.
 - **`public/line4_osm.geojson`** — line 4's finer OSM alignment, `fetch`ed at runtime rather than imported, so it was never in the bundle. It must live in `public/`: served from `src/` it resolved in dev and 404'd in production, where the failure was swallowed and line 4 quietly fell back to the coarser `metro_lines.json` alignment.
 - **`data/line4_osm_raw_overpass.json`** — the raw Overpass dump that `npm run build:line4` converts into the file above. Committed rather than gitignored, which [ADR-0003](docs/adr/0003-gtfs-feeds-are-refetchable-input.md) would otherwise argue against, because it is **not** currently refetchable: `scripts/fetch_line4_overpass.cjs` needs `node-fetch` and `osmtogeojson`, and neither is a dependency. Gitignore it once that script can actually run.
@@ -217,7 +218,7 @@ npm test               # confirm the network still looks sane
 ## Known limits
 
 - **Branches.** A line is modelled as one polyline with a scalar distance along it, which cannot represent a fork. Lines 5 and 7 run north to Machado, line 1 to Torrent Avinguda, and line 8 through the line 6 corridor, but none of those branches are in `metro_lines.json`. Stations more than 250 m off their line's geometry are held out of its chain and listed in `trainPositionEngine.offTrackStations` — better an honest gap than a train drawn on the wrong track.
-- **Station ids.** The GTFS `stop_id` space and the live API's id space disagree for most stations; `/api/metro/prevision/<id>` uses the API's. Never hand-write one — derive it from `paradas_api.json`. A wrong id fails silently, and `npm test` guards the ones we hardcode.
+- **Station ids.** The GTFS `stop_id` space and the live API's id space disagree for most stations; `/api/metro/horarios-prevision-3/<id>` uses the API's. Never hand-write one — derive it from `paradas_api.json`. A wrong id fails silently, and `npm test` guards the ones we hardcode.
 - **The eastern stations have no arrival endpoint.** Ayora, Amistat and Aragó carry trains and appear in search, but the API exposes no station id for them, so they have no arrivals card of their own.
 - **Markers sometimes never appear in `npm run dev`.** A `StrictMode` double-mount races MapLibre's `style.load` over shared marker refs, so the map can load with no stations and no trains at all. It looks exactly like broken data and it is not — it does not happen in a production build. Reload, or see [#8](https://github.com/JieGH/vib_metroValencia/issues/8). Check `vite preview` before believing a rendering bug is real.
 
@@ -228,7 +229,7 @@ npm test               # confirm the network still looks sane
 **What data the app touches, and where it goes:**
 
 - **The GTFS schedule** ([`google_transit_feed`](https://www.metrovalencia.es/google_transit_feed/google_transit.zip)) is fetched by a build script (`npm run fetch:gtfs`), never at runtime by a visitor's device. It becomes the small, committed JSON files described above.
-- **Live arrival predictions** are fetched from [metroapi.alexbadi.es](https://metroapi.alexbadi.es), a third-party API that itself reads FGV's live feed — this project did not build it and cannot vouch for its uptime or accuracy, only for what it does with what comes back.
+- **Live arrival predictions** are fetched from FGV's own real-time feed — the undocumented endpoint FGV's official app uses, which needs no key. The native app calls it directly; the web build goes through the same-origin proxy above. FGV answers each Station with at most 8 upcoming trains and no train positions, so this project cannot vouch for its uptime or accuracy, only for what it does with what comes back. See [ADR-0005](docs/adr/0005-live-arrivals-come-straight-from-fgv.md).
 - **Track geometry** comes from [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via the Overpass API.
 - **The offline basemap** is a [Protomaps](https://protomaps.com) extract, itself built from OpenStreetMap.
 
@@ -239,4 +240,4 @@ npm test               # confirm the network still looks sane
 
 **License.** The code in this repository is [Apache 2.0](LICENSE). That covers this project's code — not FGV's data, not OpenStreetMap's, and not Metrovalencia's brand, each of which carries its own terms.
 
-**Thanks** to FGV for publishing the GTFS feed this runs on, to the maintainer of metroapi.alexbadi.es for the live arrivals API, to OpenStreetMap's contributors for the geometry, and to Protomaps for making an offline-first basemap possible without a tile-server bill.
+**Thanks** to FGV for publishing the GTFS feed and the live arrivals this runs on, to OpenStreetMap's contributors for the geometry, and to Protomaps for making an offline-first basemap possible without a tile-server bill.
