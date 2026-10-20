@@ -376,8 +376,17 @@ function App() {
         />
       )}
 
-      {/* Invitation to the Android app; steps aside for panels at the bottom edge */}
-      <AppDownloadBanner hidden={showWelcome || Boolean(selectedStation) || isSidebarOpen} />
+      {/* Invitation to the Android app, under the search bar; steps aside for the
+          panels and notices that share that space */}
+      <AppDownloadBanner
+        hidden={
+          showWelcome ||
+          Boolean(selectedStation) ||
+          isSidebarOpen ||
+          Boolean(locateNotice) ||
+          (Array.isArray(activeLineFilter) && activeLineFilter.length > 0)
+        }
+      />
 
       {/* About, Legal & Licenses Modal */}
       <AboutModal

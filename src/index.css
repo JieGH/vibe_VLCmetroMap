@@ -584,16 +584,32 @@ button:active {
 
 .app-banner {
   position: absolute;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
+  /* Just under the search bar, where the line-filter banner and the locate
+     notice also appear, so App hides this one while either is showing. */
+  top: calc(76px + env(safe-area-inset-top, 0px));
+  /* Centred with auto margins rather than left: 50% + translate, which would
+     cap the width at half the screen and wrap the text. */
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
   z-index: 15;
   display: flex;
   align-items: center;
-  max-width: calc(100vw - 96px);
+  max-width: min(420px, calc(100vw - 32px));
   border-radius: 20px;
   background: var(--bg-panel-solid);
   animation: filterBannerIn 0.2s ease-out;
+}
+
+/* On a wide screen the search bar hugs the left edge, so sit under it there.
+   The banner is hidden while the sidebar is open, so no offset is needed. */
+@media (min-width: 769px) {
+  .app-banner {
+    left: 20px;
+    right: auto;
+    margin: 0;
+  }
 }
 
 .app-banner-open {
@@ -608,7 +624,10 @@ button:active {
   color: var(--text-primary);
   cursor: pointer;
   text-align: left;
+  line-height: 1.25;
 }
+
+.app-banner-open svg { flex-shrink: 0; }
 
 .app-banner-x {
   display: flex;

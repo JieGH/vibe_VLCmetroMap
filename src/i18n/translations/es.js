@@ -88,7 +88,7 @@ export default {
     done: 'Hecho',
   },
   appBanner: {
-    banner: 'Descarga la app Android para trenes en directo más rápidos',
+    banner: 'Descarga la app Android: trenes más rápidos',
     dismissAria: 'Cerrar',
     sheetTitle: 'Descarga la app Android',
     why: 'La app lee los trenes de FGV, el feed propio del operador del metro, directamente desde tu propia conexión. Ve cerca del 80 % de los trenes que llegan en los próximos 20 minutos y se actualiza más rápido.',

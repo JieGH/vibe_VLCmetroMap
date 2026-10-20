@@ -54,7 +54,7 @@ export const AppDownloadSheet = ({ onClose }) => {
 };
 
 /**
- * A small banner at the bottom of the map inviting visitors to the app.
+ * A small banner under the search bar inviting visitors to the app.
  * Pressing it opens the explanation; its own close button hides it for good.
  * Never shown on iPhone (no download exists) or inside the native app.
  */

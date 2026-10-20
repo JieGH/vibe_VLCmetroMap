@@ -26,7 +26,7 @@ describe('AppDownloadBanner', () => {
     expect(renderToStaticMarkup(<AppDownloadBanner />)).toBe('');
   });
 
-  it('steps aside while a panel owns the bottom of the screen', () => {
+  it('steps aside while a panel or notice owns that space', () => {
     asUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8)');
     expect(renderToStaticMarkup(<AppDownloadBanner hidden />)).toBe('');
   });
