@@ -64,7 +64,9 @@ Trains are grouped under each Line that has any:
 
 The web build requests `/api/metro/horarios-prevision-3/{id}`; both proxies rewrite that to the FGV path above.
 
-**Observed 2026-10-20: the Netlify Function cannot reach FGV.** From a home connection in Spain the endpoint answers in about 0.4 s. From the deployed Netlify Function every request ends after about 11 s with `TypeError: fetch failed` (HTTP 502), which is a connection that never completes rather than an HTTP error. That fits FGV dropping traffic from datacenter addresses, as `/ap18/` already does for outside callers, but the cause has not been confirmed.
+**Observed 2026-10-20: the Netlify Function cannot reach FGV.** From a home connection in Spain the endpoint answers in about 0.4 s. From the deployed Netlify Function every request ends after about 11 s with `TypeError: fetch failed` (HTTP 502), which is a connection that never completes rather than an HTTP error. A diagnostic run from the function (AWS us-east-2, 3.19.68.39) showed the FGV endpoint with plain headers, the same endpoint with browser headers, and the FGV homepage all timing out, while the old relay answered in 1.8 s. So headers are not the cause: FGV drops connections from that address range or from outside Spain, as `/ap18/` already does for outside callers. Which of the two has not been tested.
+
+The function therefore serves the public website from the old relay by default, reshaping its rows to FGV's grouping. `METRO_SOURCE` overrides that: `auto` tries FGV first and falls back, `fgv` uses FGV alone.
 
 ## Other paths on the same API
 

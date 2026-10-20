@@ -5,9 +5,16 @@
 // FGV does not answer connections from Netlify's servers (observed
 // 2026-10-20: every request ends in `fetch failed` after ~11 s, from a US
 // datacenter, while the same URL answers in 0.4 s from Spain). So when FGV is
-// unreachable this falls back to the relay the app used before ADR-0005, and
-// reshapes its rows into FGV's shape so the app has one format to parse. The
-// native app is unaffected: it calls FGV directly from the phone.
+// unreachable the public website uses the relay the app used before ADR-0005,
+// and reshapes its rows into FGV's shape so the app has one format to parse.
+// The native app is unaffected: it calls FGV directly from the phone, and
+// `npm run dev` proxies to FGV from a Spanish connection.
+//
+// METRO_SOURCE (a Netlify environment variable) picks what this function does:
+//   relay (default)  the relay only. What the public website needs today.
+//   auto             FGV first, the relay if FGV is unreachable. For a host
+//                    that FGV does answer.
+//   fgv              FGV only, no fallback.
 const FGV_BASE = 'https://www.fgv.es/fgv/app/es/api/v1/V';
 const RELAY_BASE = 'https://metroapi.alexbadi.es';
 // The app abandons a request after 4 s, so FGV gets only part of that.
@@ -16,6 +23,11 @@ const RELAY_TIMEOUT_MS = 2000;
 // After FGV fails, skip it for a while so only the first request pays the wait.
 const FGV_RETRY_AFTER_MS = 5 * 60 * 1000;
 const STATION_PATH = /^\/horarios-prevision-3\/(\d+)$/;
+
+const sourceMode = () => {
+  const mode = process.env.METRO_SOURCE;
+  return mode === 'auto' || mode === 'fgv' ? mode : 'relay';
+};
 
 let fgvBlockedUntil = 0;
 export const resetFgvBlock = () => { fgvBlockedUntil = 0; };
@@ -52,7 +64,9 @@ export default async (req) => {
   const path = url.pathname.replace(/^\/api\/metro/, '');
   const stationId = path.match(STATION_PATH)?.[1];
 
-  if (Date.now() >= fgvBlockedUntil) {
+  const mode = sourceMode();
+
+  if (mode !== 'relay' && Date.now() >= fgvBlockedUntil) {
     try {
       const upstream = await fetch(`${FGV_BASE}${path}${url.search}`, {
         method: req.method,
@@ -61,6 +75,7 @@ export default async (req) => {
       });
       return reply(await upstream.text(), upstream.status, upstream.headers.get('content-type'));
     } catch {
+      if (mode === 'fgv') return reply(JSON.stringify({ error: 'FGV unreachable' }), 502);
       fgvBlockedUntil = Date.now() + FGV_RETRY_AFTER_MS;
     }
   }

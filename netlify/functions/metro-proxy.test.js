@@ -18,9 +18,48 @@ const unreachable = () => Promise.reject(new TypeError('fetch failed'));
 const request = () => new Request('https://site.test/api/metro/horarios-prevision-3/17');
 
 beforeEach(() => resetFgvBlock());
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
-describe('metro-proxy', () => {
+describe('metro-proxy by default', () => {
+  it('asks only the relay, never FGV, and regroups its rows into FGV shape', async () => {
+    const fetch = vi.fn(async () => json(relayBody));
+    vi.stubGlobal('fetch', fetch);
+
+    const res = await handler(request());
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][0]).not.toMatch(/fgv\.es/);
+    expect((await res.json()).previsiones.map(g => g.line)).toEqual(['1', '5']);
+  });
+
+  it('treats an unknown METRO_SOURCE as the default', async () => {
+    vi.stubEnv('METRO_SOURCE', 'nonsense');
+    const fetch = vi.fn(async () => json(relayBody));
+    vi.stubGlobal('fetch', fetch);
+
+    await handler(request());
+
+    expect(fetch.mock.calls[0][0]).not.toMatch(/fgv\.es/);
+  });
+});
+
+describe('metro-proxy with METRO_SOURCE=fgv', () => {
+  it('returns 502 when FGV is unreachable, without asking the relay', async () => {
+    vi.stubEnv('METRO_SOURCE', 'fgv');
+    const fetch = vi.fn(unreachable);
+    vi.stubGlobal('fetch', fetch);
+
+    expect((await handler(request())).status).toBe(502);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('metro-proxy with METRO_SOURCE=auto', () => {
+  beforeEach(() => vi.stubEnv('METRO_SOURCE', 'auto'));
+
   it('relays FGV untouched when FGV answers', async () => {
     const fetch = vi.fn(async () => json(fgvBody));
     vi.stubGlobal('fetch', fetch);
