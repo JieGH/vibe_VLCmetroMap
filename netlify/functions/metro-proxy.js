@@ -1,24 +1,91 @@
 // Replaces the dev-only Vite proxy (vite.config.js) in production. FGV's CORS
 // policy admits only FGV's own sites, so the browser build reaches FGV's live
-// feed through this same-origin route instead. Keep the target in sync with
-// vite.config.js. See ADR-0005.
+// feed through this same-origin route instead. See ADR-0005.
+//
+// FGV does not answer connections from Netlify's servers (observed
+// 2026-10-20: every request ends in `fetch failed` after ~11 s, from a US
+// datacenter, while the same URL answers in 0.4 s from Spain). So when FGV is
+// unreachable the public website uses the relay the app used before ADR-0005,
+// and reshapes its rows into FGV's shape so the app has one format to parse.
+// The native app is unaffected: it calls FGV directly from the phone, and
+// `npm run dev` proxies to FGV from a Spanish connection.
+//
+// METRO_SOURCE (a Netlify environment variable) picks what this function does:
+//   relay (default)  the relay only. What the public website needs today.
+//   auto             FGV first, the relay if FGV is unreachable. For a host
+//                    that FGV does answer.
+//   fgv              FGV only, no fallback.
 const FGV_BASE = 'https://www.fgv.es/fgv/app/es/api/v1/V';
+const RELAY_BASE = 'https://metroapi.alexbadi.es';
+// The app abandons a request after 4 s, so FGV gets only part of that.
+const FGV_TIMEOUT_MS = 1500;
+const RELAY_TIMEOUT_MS = 2000;
+// After FGV fails, skip it for a while so only the first request pays the wait.
+const FGV_RETRY_AFTER_MS = 5 * 60 * 1000;
+const STATION_PATH = /^\/horarios-prevision-3\/(\d+)$/;
+
+const sourceMode = () => {
+  const mode = process.env.METRO_SOURCE;
+  return mode === 'auto' || mode === 'fgv' ? mode : 'relay';
+};
+
+let fgvBlockedUntil = 0;
+export const resetFgvBlock = () => { fgvBlockedUntil = 0; };
+
+const reply = (body, status, contentType) =>
+  new Response(body, { status, headers: { 'Content-Type': contentType || 'application/json' } });
+
+// The relay returns one flat row per train; FGV groups trains under each Line.
+function regroupByLine(relayBody) {
+  const lines = new Map();
+  for (const row of relayBody.previsiones || []) {
+    const line = String(row.line ?? row.line_id);
+    if (!lines.has(line)) lines.set(line, { line, line_id: line, trains: [] });
+    lines.get(line).trains.push({ destino: row.destino, seconds: row.seconds, vehicle: row.vehicle });
+  }
+  return { previsiones: [...lines.values()] };
+}
+
+async function viaRelay(stationId) {
+  const upstream = await fetch(`${RELAY_BASE}/prevision/${stationId}/parse`, {
+    headers: {
+      // The relay requires a contact= User-Agent, which a browser cannot send.
+      'User-Agent': 'vib-metro-valencia/1.0 (Web; contact=dev@example.com)',
+      'Accept': 'application/json',
+    },
+    signal: AbortSignal.timeout(RELAY_TIMEOUT_MS),
+  });
+  if (!upstream.ok) return reply(await upstream.text(), upstream.status, upstream.headers.get('content-type'));
+  return reply(JSON.stringify(regroupByLine(await upstream.json())), 200);
+}
 
 export default async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api\/metro/, '');
-  const target = `${FGV_BASE}${path}${url.search}`;
+  const stationId = path.match(STATION_PATH)?.[1];
 
-  const upstream = await fetch(target, {
-    method: req.method,
-    headers: { 'Accept': req.headers.get('accept') || 'application/json' },
-  });
+  const mode = sourceMode();
 
-  const body = await upstream.text();
-  return new Response(body, {
-    status: upstream.status,
-    headers: { 'Content-Type': upstream.headers.get('content-type') || 'application/json' },
-  });
+  if (mode !== 'relay' && Date.now() >= fgvBlockedUntil) {
+    try {
+      const upstream = await fetch(`${FGV_BASE}${path}${url.search}`, {
+        method: req.method,
+        headers: { 'Accept': req.headers.get('accept') || 'application/json' },
+        signal: AbortSignal.timeout(FGV_TIMEOUT_MS),
+      });
+      return reply(await upstream.text(), upstream.status, upstream.headers.get('content-type'));
+    } catch {
+      if (mode === 'fgv') return reply(JSON.stringify({ error: 'FGV unreachable' }), 502);
+      fgvBlockedUntil = Date.now() + FGV_RETRY_AFTER_MS;
+    }
+  }
+
+  if (!stationId) return reply(JSON.stringify({ error: 'FGV unreachable' }), 502);
+  try {
+    return await viaRelay(stationId);
+  } catch {
+    return reply(JSON.stringify({ error: 'FGV and relay unreachable' }), 502);
+  }
 };
 
 export const config = { path: '/api/metro/*' };

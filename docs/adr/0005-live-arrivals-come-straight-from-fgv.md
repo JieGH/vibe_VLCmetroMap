@@ -48,6 +48,8 @@ On a fourth sweep held out of the choice (18:42 UTC), the new Major Stations saw
 
 **The endpoint is undocumented.** FGV can move or close it without notice. `npm run sweep` doubles as a health check: a sweep with few usable Stations is the first sign. If it moves, the URL lives in three places: `arrivalStore.js`, the Vite proxy and the Netlify Function, plus the sweep script.
 
+**FGV does not answer Netlify.** Observed on 2026-10-20, after the change shipped: the Netlify Function's request to FGV never completes (`fetch failed` after ~11 s), while the same URL answers in 0.4 s from Spain. Local builds and the native app, both on residential connections, were unaffected, which is why testing missed it. The two sources therefore coexist: the native app and `npm run dev` use FGV, and the Netlify Function serves the public website from the relay ADR-0005 otherwise retired, reshaping its rows to FGV's. Its `METRO_SOURCE` environment variable (`relay` by default, `auto` to try FGV first for 1.5 s and fall back, `fgv` for FGV alone) lets a host that FGV does answer switch over without a code change. See `docs/fgv-api.md`.
+
 **No rate limit has been seen.** A full 143-Station sweep at three concurrent requests drew no 429. The store keeps its 429 backoff and 1 s dispatch spacing anyway; they cost nothing and the limit could appear.
 
-**There is one fewer party to depend on and thank.** Thanks to the maintainer of `metroapi.alexbadi.es`, whose wrapper carried the live Arrivals until this change.
+**The relay is still a fallback for the web build only.** Thanks to the maintainer of `metroapi.alexbadi.es`, whose wrapper carried the live Arrivals until this change.
