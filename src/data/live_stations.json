@@ -1,0 +1,18 @@
+{
+  "strategicHubs": [
+    { "id": 17, "name": "Àngel Guimerà" },
+    { "id": 115, "name": "Marítim" },
+    { "id": 33, "name": "Torrent" }
+  ],
+  "majorStations": [
+    { "id": 12, "name": "Benimaclet" },
+    { "id": 34, "name": "Torrent Avinguda" },
+    { "id": 83, "name": "Dr. Lluch" },
+    { "id": 190, "name": "Alacant" },
+    { "id": 17, "name": "Àngel Guimerà" },
+    { "id": 115, "name": "Marítim" },
+    { "id": 121, "name": "Aeroport" },
+    { "id": 186, "name": "Riba-roja de Túria" },
+    { "id": 1, "name": "Rafelbunyol" }
+  ]
+}

@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import metroData from '../data/metro_lines.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import paradasApi from '../data/paradas_api.json';
+import liveStations from '../data/live_stations.json';
 
 // Build complete 141-station API ID map
 export const STATION_ID_MAP = {};
@@ -23,31 +24,13 @@ STATION_ID_MAP['pl. espanya'] = 51;
 STATION_ID_MAP['Plaça Espanya'] = 51;
 STATION_ID_MAP['plaça espanya'] = 51;
 
-// 3 Strategic Hubs that cover all major corridors with minimal API calls.
-// Every id here must be the station's id in paradas_api.json — 122 is Francesc
-// Cubells, not Marítim, and seeding it left lines 5 and 7 with no live trains
-// at all. `npm test` guards this.
-export const STRATEGIC_HUBS = [
-  { id: 17, name: 'Àngel Guimerà', lines: ['1', '2', '3', '5', '9'] },
-  { id: 115, name: 'Marítim', lines: ['5', '6', '7', '8'] },
-  { id: 33, name: 'Torrent', lines: ['1', '2', '7'] },
-];
-
-// Fetched together by a Network Sync. Four stations would cover all ten lines
-// (Benimaclet, Torrent Avinguda, Dr. Lluch, Alacant); the rest are termini and
-// interchanges added for geographic spread, because a train far from every
-// queried station has a long chain to walk and accumulates more error.
-export const MAJOR_STATIONS = [
-  { id: 12, name: 'Benimaclet' },
-  { id: 34, name: 'Torrent Avinguda' },
-  { id: 83, name: 'Dr. Lluch' },
-  { id: 190, name: 'Alacant' },
-  { id: 17, name: 'Àngel Guimerà' },
-  { id: 115, name: 'Marítim' },
-  { id: 121, name: 'Aeroport' },
-  { id: 186, name: 'Riba-roja de Túria' },
-  { id: 1, name: 'Rafelbunyol' },
-];
+// The Strategic Hubs (queried at boot) and Major Stations (fetched together by
+// a Network Sync) live in live_stations.json so that `npm run sweep` measures
+// exactly the sets the app uses. Every id there must be the station's id in
+// paradas_api.json — 122 is Francesc Cubells, not Marítim, and seeding it
+// left lines 5 and 7 with no live trains at all. `npm test` guards this.
+export const STRATEGIC_HUBS = liveStations.strategicHubs;
+export const MAJOR_STATIONS = liveStations.majorStations;
 
 // How often a Network Sync sweeps the Major Stations. Long enough to stay well
 // inside the upstream rate budget, short enough that no prediction reaches the
