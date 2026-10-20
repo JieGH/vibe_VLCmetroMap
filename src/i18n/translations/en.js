@@ -91,6 +91,12 @@ export default {
     dataAttributions: 'Data & Attributions',
     done: 'Done',
   },
+  whatsNew: {
+    banner: "What's new",
+    sheetTitle: "What's new",
+    closeAria: "Close what's new",
+    done: 'Got it',
+  },
   welcomeScreen: {
     subtitle: 'Live Map & Real-time Arrivals',
   },
