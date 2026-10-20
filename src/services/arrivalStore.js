@@ -67,6 +67,10 @@ const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
 // time moves the displayed position forward to match reality.
 //   Metro lines (1–3, 5, 7–10): 15 s behind reality
 //   Tram lines 4 and 6:         10 s behind reality
+// Live predictions for one Station, from the endpoint FGV's own app uses.
+// Undocumented: it can move without notice. See ADR-0005.
+const FGV_PREVISION_URL = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3';
+
 const METRO_PROPAGATION_LAG_MS = 15_000;
 const TRAM_PROPAGATION_LAG_MS  = 10_000;
 const TRAM_LINE_IDS = new Set(['4', '6']);
@@ -357,23 +361,17 @@ class ArrivalStore {
       const timeoutId = setTimeout(() => controller.abort(), 4500);
 
       try {
-        // The API requires a User-Agent containing contact=, which browser
-        // fetch can never set (a forbidden header, unconditionally, in every
-        // browser). A browser context has no way around that but a Node-side
-        // relay, so it goes through the dev-server proxy below. The native
-        // app has no such server to relay through, but CapacitorHttp (enabled
-        // in capacitor.config.json) patches fetch to run over native
-        // networking instead of the WebView's, which is not subject to the
-        // forbidden-header list, so it can set User-Agent directly.
-        const isNative = Capacitor.isNativePlatform();
-        const url = isNative
-          ? `https://metroapi.alexbadi.es/prevision/${stationId}/parse`
-          : `/api/metro/prevision/${stationId}/parse`;
+        // FGV's CORS policy admits only FGV's own sites, so a browser has to
+        // reach it through the same-origin /api/metro proxy (Vite in dev, a
+        // Netlify Function in production). The native app has no such limit:
+        // CapacitorHttp (enabled in capacitor.config.json) runs fetch over
+        // native networking, so it calls FGV directly. See ADR-0005.
+        const url = Capacitor.isNativePlatform()
+          ? `${FGV_PREVISION_URL}/${stationId}`
+          : `/api/metro/horarios-prevision-3/${stationId}`;
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: isNative
-            ? { 'Accept': 'application/json', 'User-Agent': 'vib-metro-valencia/1.0 (Native iOS; contact=dev@example.com)' }
-            : { 'Accept': 'application/json' },
+          headers: { 'Accept': 'application/json' },
         });
 
         if (!response.ok) {
@@ -386,9 +384,15 @@ class ArrivalStore {
         const data = await response.json().catch(() => null);
         if (data && Array.isArray(data.previsiones)) {
           const fetchTime = Date.now();
-          const parsedArrivals = data.previsiones.map((p) => {
-            const seconds = Number(p.seconds ?? 0);
-            const lineId = String(p.line || p.line_id || '');
+          // FGV groups trains under each Line; flatten them, carrying the
+          // group's Line onto each train. A train without a destination or a
+          // countdown cannot be placed, so it is dropped rather than shown.
+          const trains = data.previsiones.flatMap((group) =>
+            (Array.isArray(group?.trains) ? group.trains : []).map(t => ({ ...t, line: group.line ?? group.line_id }))
+          ).filter(t => t.destino && typeof t.seconds === 'number' && Number.isFinite(t.seconds));
+          const parsedArrivals = trains.map((p) => {
+            const seconds = p.seconds;
+            const lineId = String(p.line ?? '');
             const lineFeature = metroData.features.find(
               f => f.properties.line === lineId && f.geometry.type === 'LineString'
             );
@@ -396,25 +400,21 @@ class ArrivalStore {
             const defaultColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#FFD100' : lineId === '3' ? '#E2001A' : lineId === '5' ? '#00994D' : '#8F6DB8');
             const lineColor = (imageLineColors && imageLineColors[lineId]) ? imageLineColors[lineId] : defaultColor;
 
-            // The API stamps each prediction with the absolute epoch it expects
-            // the train to arrive. Preferring it over fetchTime + seconds keeps
-            // countdowns honest when the client clock is off, and keeps two
-            // sightings of the same train on one timeline so they can be fused.
+            // FGV sends only seconds-to-arrival, so the Target Arrival
+            // Timestamp is anchored on the response time. Every sighting from
+            // one sweep shares the client clock, which keeps them on one
+            // timeline for fusing.
             //
-            // Propagation Lag correction: the API timestamp itself lags the
-            // physical train (15 s for metro, 10 s for trams 4 & 6). Subtracting
-            // the lag brings the displayed vehicle position forward to match reality.
-            const serverTimestamp = Number(p.trainTimestamp) * 1000;
-            const rawTimestamp = Number.isFinite(serverTimestamp) && serverTimestamp > 0
-              ? serverTimestamp
-              : fetchTime + (seconds * 1000);
-            const targetTimestamp = rawTimestamp - propagationLagMs(lineId);
+            // Propagation Lag correction: the feed lags the physical train
+            // (15 s for metro, 10 s for trams). Subtracting the lag brings the
+            // displayed vehicle position forward to match reality.
+            const targetTimestamp = fetchTime + (seconds * 1000) - propagationLagMs(lineId);
 
             return {
               line: lineId,
               lineName,
               lineColor,
-              destination: p.destino || p.destination,
+              destination: p.destino,
               targetTimestamp,
               initialSeconds: seconds,
               isLive: true,
