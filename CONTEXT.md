@@ -89,11 +89,11 @@ A Vehicle generated from a headway guess for a Line with no live Arrivals. Never
 _Avoid_: Mock vehicle, fake train, ghost train
 
 **Strategic Hub**:
-One of a fixed 3-Station boot set, queried automatically when the map opens, chosen for combined Line coverage across the network rather than any single-Station threshold.
+One of a fixed 3-Station boot set, queried automatically when the map opens: the three Stations that together see the most live Vehicles, as measured by `npm run sweep`. Also the first three Major Stations, so the Network Sync that follows boot finds them fresh and skips them.
 _Avoid_: Boot station, seed station
 
 **Major Station**:
-A Station served by more than 3 Lines (or, for the 2 Lines with no such Station, the Station closest to qualifying), forming the fixed list a Network Sync fetches.
+One of the fixed list a Network Sync fetches, chosen by measured coverage: the set of Stations that together see the most live Vehicles due within 20 minutes, across several sweeps (`npm run sweep`). Not chosen by how many Lines a Station serves — FGV answers each Station with at most 8 trains across all its Lines, so a busy interchange hears only one or two per Line (ADR-0005).
 _Avoid_: Interchange, key station, hub (ambiguous with Strategic Hub)
 
 **Network Sync**:

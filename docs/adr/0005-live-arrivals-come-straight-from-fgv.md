@@ -31,7 +31,16 @@ FGV's own feed was found by reading the open-source Valencia Transit Reloaded ap
 
 ## Consequences
 
-**FGV returns at most 8 trains per Station, shared across every Line and both directions.** A five-Line interchange like Àngel Guimerà therefore hears only one or two trains per Line. The old Major Stations had been chosen to touch every Line, and so saw only 37% of Vehicles due within 20 min (Line 1: 17%). Station choice is now a coverage problem: `npm run sweep` measures it, and `live_stations.json` holds the result.
+**FGV returns at most 8 trains per Station, shared across every Line and both directions.** A five-Line interchange like Àngel Guimerà therefore hears only one or two trains per Line. The old Major Stations had been chosen to touch every Line, and so saw only 37% of Vehicles due within 20 min (Line 1: 17%). Station choice is now a coverage problem: `npm run sweep` measures it, and `live_stations.json` holds the result. Across three sweeps (2026-10-20, 18:10, 18:20 and 18:30 UTC; 277 sightings due within 20 min):
+
+| Set | Stations | Vehicles seen | Metro | Tram | Weakest Line |
+|---|---|---|---|---|---|
+| Old Major Stations | 9 | 36% | 41% | 30% | L1 14% |
+| New Major Stations | 18 | 84% | 87% | 80% | L10 64% |
+| Old Strategic Hubs | 3 | 22% | 34% | 5% | L4, L10 0% |
+| New Strategic Hubs | 3 | 25% | 22% | 29% | L5, L8, L10 0% |
+
+Eighteen was chosen over fifteen (78%) and twenty (87%): it clears 80% with every Line but L10 above 80%. Because the Hubs are the first three Major Stations, a sync costs 15 new requests — about 20 s at the 1 s dispatch spacing, well inside the 120 s interval. All three sweeps fell within one evening hour; re-sweep at other times of day (`npm run sweep`, then `npm run sweep -- report --write data/sweeps/*.json`) before trusting the list off-peak.
 
 **The endpoint is undocumented.** FGV can move or close it without notice. `npm run sweep` doubles as a health check: a sweep with few usable Stations is the first sign. If it moves, the URL lives in three places: `arrivalStore.js`, the Vite proxy and the Netlify Function, plus the sweep script.
 

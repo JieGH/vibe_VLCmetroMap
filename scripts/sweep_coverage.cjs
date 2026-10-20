@@ -15,7 +15,8 @@
 //       Report coverage over one or more saved sweeps, and recommend the best
 //       N Major Stations (default 18) and N Strategic Hubs (default 3).
 //       Merge sweeps taken at different times so the choice does not fit one
-//       moment.
+//       moment. Add --write to save the recommendation to live_stations.json
+//       instead of printing it, so no Station id is ever typed by hand.
 
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +24,8 @@ const path = require('path');
 const projectRoot = path.resolve(__dirname, '..');
 const sweepDir = path.join(projectRoot, 'data', 'sweeps');
 const stations = require('../src/data/paradas_api.json');
-const live = require('../src/data/live_stations.json');
+const liveStationsPath = path.join(projectRoot, 'src', 'data', 'live_stations.json');
+const live = require(liveStationsPath);
 
 const FGV_PREVISION_URL = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3';
 // Same attempt budget as the app (see arrivalStore.js): ~6% of requests hang.
@@ -131,7 +133,7 @@ function printCoverage(label, ids, byStation, universe) {
   console.log(`  ${perLine.join('  ')}`);
 }
 
-function report(sweeps, { size, hubs }) {
+function report(sweeps, { size, hubs, write }) {
   const failed = sweeps.reduce((n, s) => n + s.stations.filter(st => !st.ok).length, 0);
   const total = sweeps.reduce((n, s) => n + s.stations.length, 0);
   console.log(`${sweeps.length} sweep(s): ${sweeps.map(s => s.takenAt).join(', ')}`);
@@ -149,8 +151,14 @@ function report(sweeps, { size, hubs }) {
   printCoverage('Recommended Strategic Hubs', hubPick, byStation, universe);
   printCoverage('Recommended Major Stations', majorPick, byStation, universe);
 
-  const asJson = ids => `[\n${ids.map(id => `  ${JSON.stringify({ id, name: nameOf.get(id) })}`).join(',\n')}\n]`;
-  console.log(`\nstrategicHubs:\n${asJson(hubPick)}\nmajorStations:\n${asJson(majorPick)}`);
+  const asJson = ids => `[\n${ids.map(id => `    ${JSON.stringify({ id, name: nameOf.get(id) })}`).join(',\n')}\n  ]`;
+  const json = `{\n  "strategicHubs": ${asJson(hubPick)},\n  "majorStations": ${asJson(majorPick)}\n}\n`;
+  if (write) {
+    fs.writeFileSync(liveStationsPath, json);
+    console.log(`\nwrote ${path.relative(projectRoot, liveStationsPath)}`);
+  } else {
+    console.log(`\n${json}`);
+  }
 }
 
 function flag(args, name, fallback) {
@@ -160,10 +168,11 @@ function flag(args, name, fallback) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const opts = { size: flag(args, '--size', 18), hubs: flag(args, '--hubs', 3) };
+  const opts = { size: flag(args, '--size', 18), hubs: flag(args, '--hubs', 3), write: args.includes('--write') };
 
   if (args[0] === 'report') {
-    const files = args.slice(1).filter((a, i, all) => !a.startsWith('--') && !all[i - 1]?.startsWith('--'));
+    const valued = new Set(['--size', '--hubs']);
+    const files = args.slice(1).filter((a, i, all) => !a.startsWith('--') && !valued.has(all[i]) && !valued.has(all[i - 1]));
     if (!files.length) throw new Error('report needs at least one sweep file');
     report(files.map(f => JSON.parse(fs.readFileSync(f, 'utf8'))), opts);
     return;

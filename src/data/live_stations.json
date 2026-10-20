@@ -1,18 +1,27 @@
 {
   "strategicHubs": [
-    { "id": 17, "name": "Àngel Guimerà" },
-    { "id": 115, "name": "Marítim" },
-    { "id": 33, "name": "Torrent" }
+    {"id":12,"name":"Benimaclet"},
+    {"id":25,"name":"Jesús"},
+    {"id":101,"name":"La Granja"}
   ],
   "majorStations": [
-    { "id": 12, "name": "Benimaclet" },
-    { "id": 34, "name": "Torrent Avinguda" },
-    { "id": 83, "name": "Dr. Lluch" },
-    { "id": 190, "name": "Alacant" },
-    { "id": 17, "name": "Àngel Guimerà" },
-    { "id": 115, "name": "Marítim" },
-    { "id": 121, "name": "Aeroport" },
-    { "id": 186, "name": "Riba-roja de Túria" },
-    { "id": 1, "name": "Rafelbunyol" }
+    {"id":12,"name":"Benimaclet"},
+    {"id":25,"name":"Jesús"},
+    {"id":101,"name":"La Granja"},
+    {"id":119,"name":"Manises"},
+    {"id":85,"name":"La Cadena"},
+    {"id":33,"name":"Torrent"},
+    {"id":191,"name":"Russafa"},
+    {"id":22,"name":"Ayora"},
+    {"id":77,"name":"Moncada - Alfara"},
+    {"id":122,"name":"Francesc Cubells"},
+    {"id":3,"name":"Massamagrell"},
+    {"id":16,"name":"Xàtiva"},
+    {"id":131,"name":"Sant Miquel dels Reis"},
+    {"id":58,"name":"Les Carolines - Fira"},
+    {"id":92,"name":"Pont de Fusta"},
+    {"id":9,"name":"Alboraia Peris Aragó"},
+    {"id":41,"name":"Carlet"},
+    {"id":67,"name":"L'Eliana"}
   ]
 }
