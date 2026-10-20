@@ -76,6 +76,36 @@ const METRO_PROPAGATION_LAG_MS = 15_000;
 const TRAM_PROPAGATION_LAG_MS  = 10_000;
 const TRAM_LINE_IDS = new Set(['4', '6', '8', '10']);
 
+// About 6% of FGV requests never answer at all — no status, no error — while
+// the median answer takes ~0.4 s and p90 ~0.9 s (sweep of 2026-10-20). So an
+// attempt is abandoned well past p90 and tried exactly once more.
+const FGV_ATTEMPT_TIMEOUT_MS = 4000;
+const FGV_ATTEMPTS = 2;
+
+/**
+ * Fetch one Station's predictions, retrying once when an attempt hangs or the
+ * network fails. An HTTP error status is an answer, so it is returned as-is,
+ * never retried. The body is read inside the same timeout as the request.
+ */
+async function fetchPrevision(url) {
+  for (let attempt = 1; ; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FGV_ATTEMPT_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = response.ok ? await response.json().catch(() => null) : null;
+      return { response, data };
+    } catch (err) {
+      if (attempt >= FGV_ATTEMPTS) throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 /** Returns the Propagation Lag in ms for a given line ID string. */
 function propagationLagMs(lineId) {
   return TRAM_LINE_IDS.has(lineId) ? TRAM_PROPAGATION_LAG_MS : METRO_PROPAGATION_LAG_MS;
@@ -358,9 +388,6 @@ class ArrivalStore {
       }
       this.lastRequestTimestamp = Date.now();
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4500);
-
       try {
         // FGV's CORS policy admits only FGV's own sites, so a browser has to
         // reach it through the same-origin /api/metro proxy (Vite in dev, a
@@ -370,10 +397,7 @@ class ArrivalStore {
         const url = Capacitor.isNativePlatform()
           ? `${FGV_PREVISION_URL}/${stationId}`
           : `/api/metro/horarios-prevision-3/${stationId}`;
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: { 'Accept': 'application/json' },
-        });
+        const { response, data } = await fetchPrevision(url);
 
         if (!response.ok) {
           if (response.status === 429) {
@@ -382,7 +406,6 @@ class ArrivalStore {
           throw new Error(`HTTP ${response.status}`);
         }
 
-        const data = await response.json().catch(() => null);
         if (data && Array.isArray(data.previsiones)) {
           const fetchTime = Date.now();
           // FGV groups trains under each Line; flatten them, carrying the
@@ -453,7 +476,7 @@ class ArrivalStore {
             return Object.assign(projected, {
               isFromCache: true,
               fetchedAt: existingEntry.fetchedAt,
-              fetchError: 'Live update paused (rate limit). Showing countdown from earlier sync.',
+              fetchError: 'Live update failed. Showing countdown from earlier sync.',
             });
           }
         }
@@ -465,7 +488,6 @@ class ArrivalStore {
           fetchedAt: Date.now(),
         });
       } finally {
-        clearTimeout(timeoutId);
         this.inFlightRequests.delete(key);
       }
     })();

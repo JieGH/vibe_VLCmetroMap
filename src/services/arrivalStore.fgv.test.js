@@ -28,6 +28,12 @@ const respondWith = (body) => vi.fn(async () => ({
   ok: true, status: 200, json: async () => body,
 }));
 
+// About 6% of FGV requests never answer at all: no status, no error, until
+// the caller gives up. This stands in for one.
+const hang = (_url, { signal }) => new Promise((_resolve, reject) => {
+  signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+});
+
 const ANGEL_GUIMERA = { apiId: 17, name: 'Àngel Guimerà' };
 
 beforeEach(() => {
@@ -90,6 +96,62 @@ describe('live Arrivals fetched from FGV', () => {
     const [arrival] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
 
     expect(arrival.targetTimestamp).toBe(NOW + (300 - lagSeconds) * 1000);
+  });
+
+  it('gives up on a request that hangs and asks once more', async () => {
+    const fetch = vi.fn(hang).mockImplementationOnce(hang)
+      .mockImplementationOnce(respondWith(fgvPayload([[3, [['Aeroport', 529, 3114]]]])));
+    vi.stubGlobal('fetch', fetch);
+
+    const pending = arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+    await vi.advanceTimersByTimeAsync(10_000);
+    const arrivals = await pending;
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(arrivals.map(a => a.vehicleId)).toEqual(['3114']);
+    expect(arrivals.fetchError).toBeNull();
+  });
+
+  it('keeps counting down from Arrival Memory when both attempts hang', async () => {
+    // Heard from 90 s ago, so past the memory pause and due a refresh.
+    arrivalStore.memory.set('17', {
+      stationId: 17, stationName: 'Àngel Guimerà', fetchedAt: NOW - 90_000,
+      arrivals: [{ line: '1', destination: 'Bétera', vehicleId: '1143', targetTimestamp: NOW + 120_000, isLive: true }],
+    });
+    const fetch = vi.fn(hang);
+    vi.stubGlobal('fetch', fetch);
+
+    const pending = arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+    await vi.advanceTimersByTimeAsync(10_000);
+    const arrivals = await pending;
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(arrivals.map(a => a.vehicleId)).toEqual(['1143']);
+    expect(arrivals.isFromCache).toBe(true);
+    expect(arrivals.fetchError).toBeTruthy();
+  });
+
+  it('reports the Station unavailable when both attempts hang and nothing is remembered', async () => {
+    const fetch = vi.fn(hang);
+    vi.stubGlobal('fetch', fetch);
+
+    const pending = arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+    await vi.advanceTimersByTimeAsync(10_000);
+    const arrivals = await pending;
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(arrivals).toHaveLength(0);
+    expect(arrivals.fetchError).toBeTruthy();
+  });
+
+  it('takes an HTTP error as an answer and does not ask again', async () => {
+    const fetch = vi.fn(async () => ({ ok: false, status: 503, json: async () => null }));
+    vi.stubGlobal('fetch', fetch);
+
+    const arrivals = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(arrivals.fetchError).toBeTruthy();
   });
 
   it('goes through the same-origin proxy on the web', async () => {
