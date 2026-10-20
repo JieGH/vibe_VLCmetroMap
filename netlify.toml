@@ -6,8 +6,7 @@
   command = "npm run fetch:basemap && npm run build"
   publish = "dist"
 
-# /api/metro/* is handled by netlify/functions/metro-proxy.js (see that file
-# for why a plain redirect can't work: Netlify's redirect proxy overwrites
-# any custom User-Agent header, same restriction as Vercel's Edge runtime).
-# The function declares its own route via `export const config = { path }`,
-# so no redirect rule is needed here.
+# /api/metro/* is handled by netlify/functions/metro-proxy.js, which forwards
+# to FGV's live feed (see that file and ADR-0005). The function declares its
+# own route via `export const config = { path }`, so no redirect rule is
+# needed here.

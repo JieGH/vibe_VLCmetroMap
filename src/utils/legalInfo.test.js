@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   APP_LEGAL_INFO,
+  APP_LEGAL_INFO_ES,
   containsRepoUrls,
   hasRawRepoLinks,
   validateLegalMetadata,
@@ -43,8 +44,18 @@ describe('APP_LEGAL_INFO metadata', () => {
 
     // Live arrival feed
     expect(attributions.arrivals.title).toContain('Arrivals');
-    expect(attributions.arrivals.text).toContain('GTFS');
   });
+
+  // Live Arrivals come straight from FGV's own feed (ADR-0005); crediting a
+  // relay, or calling the feed GTFS-RT, would misstate where they come from.
+  it.each([['en', APP_LEGAL_INFO], ['es', APP_LEGAL_INFO_ES]])(
+    'credits FGV for live arrivals in %s, naming no third-party API',
+    (_lang, info) => {
+      const { text } = info.attributions.arrivals;
+      expect(text).toContain('Ferrocarrils de la Generalitat Valenciana');
+      expect(text).not.toMatch(/alexbadi|GTFS-RT|https?:\/\//i);
+    },
+  );
 
   it('includes privacy and on-device location policy', () => {
     const { privacy } = APP_LEGAL_INFO;

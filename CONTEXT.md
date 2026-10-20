@@ -37,7 +37,7 @@ The absolute wall-clock epoch timestamp (`fetchedAt + seconds * 1000`) when a ve
 _Avoid_: Due date, deadline, scheduled epoch
 
 **Rate Budget**:
-The consumption limit of upstream real-time API requests, managed by client-side TTL caching, request deduplication, and cooldown throttling.
+The restraint the app keeps on requests to FGV's live feed, managed by client-side TTL caching, request deduplication, dispatch spacing, and cooldown throttling. FGV has shown no rate limit (ADR-0005), so the budget is courtesy and headroom rather than a known ceiling; a hung request spends one retry from it.
 _Avoid_: Request ceiling, throttle counter
 
 **Timetable Walk**:
@@ -65,7 +65,7 @@ One prediction of one Vehicle at one Station. The same Vehicle is routinely sigh
 _Avoid_: Observation, ping, report
 
 **Propagation Lag**:
-A fixed per-mode offset, in seconds, between the API's reported Target Arrival Timestamp and the vehicle's true position in reality. Observed empirically (2026-09-09): metro lines run 15 s behind, tram lines 4 and 6 run 10 s behind. Applied by subtracting the lag from the Target Arrival Timestamp at fetch time so the Timetable Walk starts from the corrected epoch rather than the lagged one. Not a function of network age or Position Uncertainty — it is a systematic bias in the upstream data feed.
+A fixed per-mode offset, in seconds, between the Target Arrival Timestamp the feed implies (response time + seconds) and the vehicle's true position in reality. Observed empirically (2026-09-09): metro lines run 15 s behind, tram lines run 10 s behind — measured on 4 and 6 and applied to all four tram Lines (4, 6, 8, 10). Applied by subtracting the lag from the Target Arrival Timestamp at fetch time so the Timetable Walk starts from the corrected epoch rather than the lagged one. Not a function of network age or Position Uncertainty — it is a systematic bias in the upstream data feed.
 _Avoid_: Display delay, clock offset, Position Uncertainty (which is a walk-error term, not a feed-bias term)
 
 **Position Uncertainty**:
@@ -89,11 +89,11 @@ A Vehicle generated from a headway guess for a Line with no live Arrivals. Never
 _Avoid_: Mock vehicle, fake train, ghost train
 
 **Strategic Hub**:
-One of a fixed 3-Station boot set, queried automatically when the map opens, chosen for combined Line coverage across the network rather than any single-Station threshold.
+One of a fixed 4-Station boot set, queried automatically when the map opens, just before the first Network Sync: the Stations that together reach the most Lines, then the most live Vehicles, as measured by `npm run sweep`. Chosen for Lines rather than Vehicles because they are the whole map for the first few seconds, and a Line with no live Vehicle is drawn only with Simulated Trains. Also the first four Major Stations, so the Network Sync that follows boot finds them fresh and skips them.
 _Avoid_: Boot station, seed station
 
 **Major Station**:
-A Station served by more than 3 Lines (or, for the 2 Lines with no such Station, the Station closest to qualifying), forming the fixed list a Network Sync fetches.
+One of the fixed list a Network Sync fetches, chosen by measured coverage: the set of Stations that together see the most live Vehicles due within 20 minutes, across several sweeps (`npm run sweep`). Not chosen by how many Lines a Station serves — FGV answers each Station with at most 8 trains across all its Lines, so a busy interchange hears only one or two per Line (ADR-0005).
 _Avoid_: Interchange, key station, hub (ambiguous with Strategic Hub)
 
 **Network Sync**:

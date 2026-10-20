@@ -1018,7 +1018,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
       applyLineDim(map, selectedStationRef.current);
-      arrivalStore.seedStrategicHubs();
+      arrivalStore.bootNetwork();
     });
 
     // Predictions age out after about 18 minutes, so without a repeat sweep the

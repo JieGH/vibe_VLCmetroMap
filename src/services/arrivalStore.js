@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import metroData from '../data/metro_lines.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import paradasApi from '../data/paradas_api.json';
+import liveStations from '../data/live_stations.json';
 
 // Build complete 141-station API ID map
 export const STATION_ID_MAP = {};
@@ -23,31 +24,13 @@ STATION_ID_MAP['pl. espanya'] = 51;
 STATION_ID_MAP['Plaça Espanya'] = 51;
 STATION_ID_MAP['plaça espanya'] = 51;
 
-// 3 Strategic Hubs that cover all major corridors with minimal API calls.
-// Every id here must be the station's id in paradas_api.json — 122 is Francesc
-// Cubells, not Marítim, and seeding it left lines 5 and 7 with no live trains
-// at all. `npm test` guards this.
-export const STRATEGIC_HUBS = [
-  { id: 17, name: 'Àngel Guimerà', lines: ['1', '2', '3', '5', '9'] },
-  { id: 115, name: 'Marítim', lines: ['5', '6', '7', '8'] },
-  { id: 33, name: 'Torrent', lines: ['1', '2', '7'] },
-];
-
-// Fetched together by a Network Sync. Four stations would cover all ten lines
-// (Benimaclet, Torrent Avinguda, Dr. Lluch, Alacant); the rest are termini and
-// interchanges added for geographic spread, because a train far from every
-// queried station has a long chain to walk and accumulates more error.
-export const MAJOR_STATIONS = [
-  { id: 12, name: 'Benimaclet' },
-  { id: 34, name: 'Torrent Avinguda' },
-  { id: 83, name: 'Dr. Lluch' },
-  { id: 190, name: 'Alacant' },
-  { id: 17, name: 'Àngel Guimerà' },
-  { id: 115, name: 'Marítim' },
-  { id: 121, name: 'Aeroport' },
-  { id: 186, name: 'Riba-roja de Túria' },
-  { id: 1, name: 'Rafelbunyol' },
-];
+// The Strategic Hubs (queried at boot) and Major Stations (fetched together by
+// a Network Sync) live in live_stations.json so that `npm run sweep` measures
+// exactly the sets the app uses. Every id there must be the station's id in
+// paradas_api.json — 122 is Francesc Cubells, not Marítim, and seeding it
+// left lines 5 and 7 with no live trains at all. `npm test` guards this.
+export const STRATEGIC_HUBS = liveStations.strategicHubs;
+export const MAJOR_STATIONS = liveStations.majorStations;
 
 // How often a Network Sync sweeps the Major Stations. Long enough to stay well
 // inside the upstream rate budget, short enough that no prediction reaches the
@@ -61,15 +44,50 @@ const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual ref
 const MIN_DISPATCH_INTERVAL_MS = 1000; // 1 second minimum delay between outbound API requests
 const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
 
+// Live predictions for one Station, from the endpoint FGV's own app uses.
+// Undocumented: it can move without notice. See ADR-0005.
+const FGV_PREVISION_URL = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3';
+
 // Propagation Lag — real-world observation (2026-09-09): the map displays vehicle
-// positions behind their true location because the API timestamp already lags the
+// positions behind their true location because the feed already lags the
 // physical train. Subtracting the lag from the Target Arrival Timestamp at fetch
 // time moves the displayed position forward to match reality.
-//   Metro lines (1–3, 5, 7–10): 15 s behind reality
-//   Tram lines 4 and 6:         10 s behind reality
+//   Metro lines (1–3, 5, 7, 9): 15 s behind reality
+//   Tram lines (4, 6, 8, 10):   10 s behind reality
+// The tram figure was observed on 4 and 6 and holds for every tram Line.
 const METRO_PROPAGATION_LAG_MS = 15_000;
 const TRAM_PROPAGATION_LAG_MS  = 10_000;
-const TRAM_LINE_IDS = new Set(['4', '6']);
+const TRAM_LINE_IDS = new Set(['4', '6', '8', '10']);
+
+// About 6% of FGV requests never answer at all — no status, no error — while
+// the median answer takes ~0.4 s and p90 ~0.9 s (sweep of 2026-10-20). So an
+// attempt is abandoned well past p90 and tried exactly once more.
+const FGV_ATTEMPT_TIMEOUT_MS = 4000;
+const FGV_ATTEMPTS = 2;
+
+/**
+ * Fetch one Station's predictions, retrying once when an attempt hangs or the
+ * network fails. An HTTP error status is an answer, so it is returned as-is,
+ * never retried. The body is read inside the same timeout as the request.
+ */
+async function fetchPrevision(url) {
+  for (let attempt = 1; ; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FGV_ATTEMPT_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = response.ok ? await response.json().catch(() => null) : null;
+      return { response, data };
+    } catch (err) {
+      if (attempt >= FGV_ATTEMPTS) throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 /** Returns the Propagation Lag in ms for a given line ID string. */
 function propagationLagMs(lineId) {
@@ -157,7 +175,18 @@ class ArrivalStore {
   }
 
   /**
-   * Seeds the network with the minimal 3-hub stations on initial map boot.
+   * Opens the live network: the Strategic Hubs first, for a picture within
+   * seconds, then a full Network Sync rather than leaving only the Hubs on
+   * the map for a whole sync interval. The Hubs are the
+   * first Major Stations, so the sync finds them fresh and skips them.
+   */
+  async bootNetwork() {
+    await this.seedStrategicHubs();
+    await this.syncNetwork();
+  }
+
+  /**
+   * Seeds the network with the Strategic Hubs on initial map boot.
    * Dispatches sequentially with a 1.2s delay to respect rate limits.
    */
   async seedStrategicHubs() {
@@ -191,7 +220,7 @@ class ArrivalStore {
   /**
    * Fetch every Major Station in one pass.
    *
-   * Without this the map only ever holds the three boot hubs, so every live
+   * Without this the map only ever holds the Strategic Hubs, so every live
    * train ages out roughly 18 minutes after load and the whole network silently
    * reverts to simulated trains. Stations still inside their memory pause cost
    * no request, so a repeat sync is cheap.
@@ -353,28 +382,16 @@ class ArrivalStore {
       }
       this.lastRequestTimestamp = Date.now();
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4500);
-
       try {
-        // The API requires a User-Agent containing contact=, which browser
-        // fetch can never set (a forbidden header, unconditionally, in every
-        // browser). A browser context has no way around that but a Node-side
-        // relay, so it goes through the dev-server proxy below. The native
-        // app has no such server to relay through, but CapacitorHttp (enabled
-        // in capacitor.config.json) patches fetch to run over native
-        // networking instead of the WebView's, which is not subject to the
-        // forbidden-header list, so it can set User-Agent directly.
-        const isNative = Capacitor.isNativePlatform();
-        const url = isNative
-          ? `https://metroapi.alexbadi.es/prevision/${stationId}/parse`
-          : `/api/metro/prevision/${stationId}/parse`;
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: isNative
-            ? { 'Accept': 'application/json', 'User-Agent': 'vib-metro-valencia/1.0 (Native iOS; contact=dev@example.com)' }
-            : { 'Accept': 'application/json' },
-        });
+        // FGV's CORS policy admits only FGV's own sites, so a browser has to
+        // reach it through the same-origin /api/metro proxy (Vite in dev, a
+        // Netlify Function in production). The native app has no such limit:
+        // CapacitorHttp (enabled in capacitor.config.json) runs fetch over
+        // native networking, so it calls FGV directly. See ADR-0005.
+        const url = Capacitor.isNativePlatform()
+          ? `${FGV_PREVISION_URL}/${stationId}`
+          : `/api/metro/horarios-prevision-3/${stationId}`;
+        const { response, data } = await fetchPrevision(url);
 
         if (!response.ok) {
           if (response.status === 429) {
@@ -383,12 +400,17 @@ class ArrivalStore {
           throw new Error(`HTTP ${response.status}`);
         }
 
-        const data = await response.json().catch(() => null);
         if (data && Array.isArray(data.previsiones)) {
           const fetchTime = Date.now();
-          const parsedArrivals = data.previsiones.map((p) => {
-            const seconds = Number(p.seconds ?? 0);
-            const lineId = String(p.line || p.line_id || '');
+          // FGV groups trains under each Line; flatten them, carrying the
+          // group's Line onto each train. A train without a destination or a
+          // countdown cannot be placed, so it is dropped rather than shown.
+          const trains = data.previsiones.flatMap((group) =>
+            (Array.isArray(group?.trains) ? group.trains : []).map(t => ({ ...t, line: group.line ?? group.line_id }))
+          ).filter(t => t.destino && typeof t.seconds === 'number' && Number.isFinite(t.seconds));
+          const parsedArrivals = trains.map((p) => {
+            const seconds = p.seconds;
+            const lineId = String(p.line ?? '');
             const lineFeature = metroData.features.find(
               f => f.properties.line === lineId && f.geometry.type === 'LineString'
             );
@@ -396,25 +418,21 @@ class ArrivalStore {
             const defaultColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#FFD100' : lineId === '3' ? '#E2001A' : lineId === '5' ? '#00994D' : '#8F6DB8');
             const lineColor = (imageLineColors && imageLineColors[lineId]) ? imageLineColors[lineId] : defaultColor;
 
-            // The API stamps each prediction with the absolute epoch it expects
-            // the train to arrive. Preferring it over fetchTime + seconds keeps
-            // countdowns honest when the client clock is off, and keeps two
-            // sightings of the same train on one timeline so they can be fused.
+            // FGV sends only seconds-to-arrival, so the Target Arrival
+            // Timestamp is anchored on the response time. Every sighting from
+            // one sweep shares the client clock, which keeps them on one
+            // timeline for fusing.
             //
-            // Propagation Lag correction: the API timestamp itself lags the
-            // physical train (15 s for metro, 10 s for trams 4 & 6). Subtracting
-            // the lag brings the displayed vehicle position forward to match reality.
-            const serverTimestamp = Number(p.trainTimestamp) * 1000;
-            const rawTimestamp = Number.isFinite(serverTimestamp) && serverTimestamp > 0
-              ? serverTimestamp
-              : fetchTime + (seconds * 1000);
-            const targetTimestamp = rawTimestamp - propagationLagMs(lineId);
+            // Propagation Lag correction: the feed lags the physical train
+            // (15 s for metro, 10 s for trams). Subtracting the lag brings the
+            // displayed vehicle position forward to match reality.
+            const targetTimestamp = fetchTime + (seconds * 1000) - propagationLagMs(lineId);
 
             return {
               line: lineId,
               lineName,
               lineColor,
-              destination: p.destino || p.destination,
+              destination: p.destino,
               targetTimestamp,
               initialSeconds: seconds,
               isLive: true,
@@ -452,7 +470,7 @@ class ArrivalStore {
             return Object.assign(projected, {
               isFromCache: true,
               fetchedAt: existingEntry.fetchedAt,
-              fetchError: 'Live update paused (rate limit). Showing countdown from earlier sync.',
+              fetchError: 'Live update failed. Showing countdown from earlier sync.',
             });
           }
         }
@@ -464,7 +482,6 @@ class ArrivalStore {
           fetchedAt: Date.now(),
         });
       } finally {
-        clearTimeout(timeoutId);
         this.inFlightRequests.delete(key);
       }
     })();
