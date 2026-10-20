@@ -597,8 +597,12 @@ button:active {
   display: flex;
   align-items: center;
   max-width: min(420px, calc(100vw - 32px));
-  border-radius: 20px;
-  background: var(--bg-panel-solid);
+  border-radius: 22px;
+  /* Brand yellow with dark text, so it reads on the dark and the light map
+     alike and is not mistaken for another map control. */
+  background: #FFD100;
+  border: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.12);
   animation: filterBannerIn 0.2s ease-out;
 }
 
@@ -621,7 +625,7 @@ button:active {
   background: none;
   font-size: 0.74rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #1a1a1a;
   cursor: pointer;
   text-align: left;
   line-height: 1.25;
@@ -631,8 +635,8 @@ button:active {
 
 /* Two lines: the ask, then why. */
 .app-banner-text { display: flex; flex-direction: column; gap: 1px; }
-.app-banner-text strong { font-size: 0.8rem; font-weight: 800; }
-.app-banner-text span { font-size: 0.7rem; font-weight: 500; color: var(--text-secondary); }
+.app-banner-text strong { font-size: 0.86rem; font-weight: 800; }
+.app-banner-text span { font-size: 0.72rem; font-weight: 600; color: rgba(26, 26, 26, 0.78); }
 
 .app-banner-x {
   display: flex;
@@ -643,8 +647,8 @@ button:active {
   margin-right: 4px;
   border: none;
   border-radius: 50%;
-  background: none;
-  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.1);
+  color: #1a1a1a;
   cursor: pointer;
   flex-shrink: 0;
 }
