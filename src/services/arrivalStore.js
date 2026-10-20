@@ -61,19 +61,20 @@ const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual ref
 const MIN_DISPATCH_INTERVAL_MS = 1000; // 1 second minimum delay between outbound API requests
 const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
 
-// Propagation Lag — real-world observation (2026-09-09): the map displays vehicle
-// positions behind their true location because the API timestamp already lags the
-// physical train. Subtracting the lag from the Target Arrival Timestamp at fetch
-// time moves the displayed position forward to match reality.
-//   Metro lines (1–3, 5, 7–10): 15 s behind reality
-//   Tram lines 4 and 6:         10 s behind reality
 // Live predictions for one Station, from the endpoint FGV's own app uses.
 // Undocumented: it can move without notice. See ADR-0005.
 const FGV_PREVISION_URL = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3';
 
+// Propagation Lag — real-world observation (2026-09-09): the map displays vehicle
+// positions behind their true location because the feed already lags the
+// physical train. Subtracting the lag from the Target Arrival Timestamp at fetch
+// time moves the displayed position forward to match reality.
+//   Metro lines (1–3, 5, 7, 9): 15 s behind reality
+//   Tram lines (4, 6, 8, 10):   10 s behind reality
+// The tram figure was observed on 4 and 6 and holds for every tram Line.
 const METRO_PROPAGATION_LAG_MS = 15_000;
 const TRAM_PROPAGATION_LAG_MS  = 10_000;
-const TRAM_LINE_IDS = new Set(['4', '6']);
+const TRAM_LINE_IDS = new Set(['4', '6', '8', '10']);
 
 /** Returns the Propagation Lag in ms for a given line ID string. */
 function propagationLagMs(lineId) {

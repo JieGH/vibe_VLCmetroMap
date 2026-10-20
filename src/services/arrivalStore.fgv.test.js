@@ -80,6 +80,18 @@ describe('live Arrivals fetched from FGV', () => {
     expect(arrivals.map(a => a.vehicleId)).toEqual(['3113']);
   });
 
+  // The feed lags the physical train: 10 s on every tram Line, 15 s on metro.
+  it.each([
+    ['4', 10], ['6', 10], ['8', 10], ['10', 10],
+    ['1', 15], ['2', 15], ['3', 15], ['5', 15], ['7', 15], ['9', 15],
+  ])('pulls a Line %s Arrival %i s forward for Propagation Lag', async (line, lagSeconds) => {
+    vi.stubGlobal('fetch', respondWith(fgvPayload([[Number(line), [['Somewhere', 300, 9999]]]])));
+
+    const [arrival] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+
+    expect(arrival.targetTimestamp).toBe(NOW + (300 - lagSeconds) * 1000);
+  });
+
   it('goes through the same-origin proxy on the web', async () => {
     const fetch = respondWith(fgvPayload([]));
     vi.stubGlobal('fetch', fetch);
