@@ -6,7 +6,7 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => capacitor.native },
 }));
 
-import { arrivalStore } from './arrivalStore';
+import { arrivalStore, STRATEGIC_HUBS, MAJOR_STATIONS } from './arrivalStore';
 
 const NOW = Date.UTC(2026, 9, 20, 17, 30, 0);
 const FGV_PREVISION = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3/';
@@ -171,5 +171,22 @@ describe('live Arrivals fetched from FGV', () => {
     await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
 
     expect(fetch.mock.calls[0][0]).toBe(`${FGV_PREVISION}17`);
+  });
+});
+
+describe('booting the live network', () => {
+  it('fetches every Major Station straight away, Strategic Hubs first, each once', async () => {
+    const fetch = respondWith(fgvPayload([]));
+    vi.stubGlobal('fetch', fetch);
+
+    const boot = arrivalStore.bootNetwork();
+    await vi.runAllTimersAsync();
+    await boot;
+
+    const fetchedIds = fetch.mock.calls.map(([url]) => Number(url.split('/').pop()));
+    const hubIds = STRATEGIC_HUBS.map(s => s.id);
+    expect(fetchedIds.slice(0, hubIds.length)).toEqual(hubIds);
+    expect([...fetchedIds].sort((a, b) => a - b))
+      .toEqual(MAJOR_STATIONS.map(s => s.id).sort((a, b) => a - b));
   });
 });

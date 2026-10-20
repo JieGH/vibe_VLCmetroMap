@@ -175,7 +175,18 @@ class ArrivalStore {
   }
 
   /**
-   * Seeds the network with the minimal 3-hub stations on initial map boot.
+   * Opens the live network: the Strategic Hubs first, for a picture within
+   * seconds, then a full Network Sync rather than leaving only the Hubs on
+   * the map for a whole sync interval. The Hubs are the
+   * first Major Stations, so the sync finds them fresh and skips them.
+   */
+  async bootNetwork() {
+    await this.seedStrategicHubs();
+    await this.syncNetwork();
+  }
+
+  /**
+   * Seeds the network with the Strategic Hubs on initial map boot.
    * Dispatches sequentially with a 1.2s delay to respect rate limits.
    */
   async seedStrategicHubs() {
