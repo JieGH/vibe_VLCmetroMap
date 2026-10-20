@@ -30,6 +30,8 @@ Metrovalencia publishes when a train is <em>due</em> at a station. It does not p
 
 It runs as a website and as a native iOS app, from the same code.
 
+> **For the full experience, build it and run it on your iPhone.** The live demo above cannot reach FGV's live feed: FGV drops every connection from the web host (Netlify, on Amazon servers in the US), so the website has to read an older third-party relay instead, which rate-limits and shows fewer trains. The iOS app reads FGV directly from your phone's own connection, which FGV does answer, and sees about 80% of the trains due within 20 minutes. You need a Mac with Xcode and a free Apple ID: see [iOS (native app)](#ios-native-app). The reason is in [`docs/fgv-api.md`](docs/fgv-api.md).
+
 ## See it working
 
 <p align="center">
@@ -155,7 +157,7 @@ First launch, iOS blocks the app as an "Untrusted Developer": on the phone, go t
 
 Two things exist purely to make this build path work, and are easy to break by "cleaning up" without knowing why:
 
-- **`capacitor.config.json`'s `plugins.CapacitorHttp.enabled`.** WKWebView's `fetch` is still browser `fetch` — it can't set `User-Agent` either. Enabling `CapacitorHttp` patches `fetch` to route through native networking instead, which isn't subject to that restriction. `arrivalStore.js` checks `Capacitor.isNativePlatform()` and only sends the header on that path; the web build keeps using the dev-server proxy above.
+- **`capacitor.config.json`'s `plugins.CapacitorHttp.enabled`.** WKWebView's `fetch` is still browser `fetch` — it can't set `User-Agent` either. Enabling `CapacitorHttp` patches `fetch` to route through native networking instead, which isn't subject to that restriction. `arrivalStore.js` checks `Capacitor.isNativePlatform()` and on that path calls FGV directly, which is why the app sees FGV when the website cannot; the web build uses the same-origin proxy above.
 - **`public/vendor/maplibre/`.** MapLibre resolves its own web-worker URL from `import.meta.url`, which Vite's bundler never emits as an actual file — the map's lines and tiles render in `npm run dev` (Vite serves the real file from `node_modules` directly) but silently fail in any production build, native app included. These two files are an unmodified copy of MapLibre's worker and its shared chunk, kept as static assets so the path always resolves. If `maplibre-gl` is upgraded, re-copy both files from `node_modules/maplibre-gl/dist/`.
 
 ## How a train gets on the map
@@ -218,6 +220,7 @@ npm test               # confirm the network still looks sane
 ## Known limits
 
 - **Branches.** A line is modelled as one polyline with a scalar distance along it, which cannot represent a fork. Lines 5 and 7 run north to Machado, line 1 to Torrent Avinguda, and line 8 through the line 6 corridor, but none of those branches are in `metro_lines.json`. Stations more than 250 m off their line's geometry are held out of its chain and listed in `trainPositionEngine.offTrackStations` — better an honest gap than a train drawn on the wrong track.
+- **The website cannot reach FGV.** FGV never answers connections from Netlify's servers: a diagnostic from the deployed function (AWS us-east-2) timed out on FGV's API, with plain and browser-like headers alike, and on the FGV homepage, while the old relay answered in 1.8 s. So the public website serves live arrivals from that relay ([`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)), with its rate limits and thinner coverage, and only the iOS app and `npm run dev` (from a Spanish connection) use FGV. A proxy hosted somewhere FGV does answer would fix it; set `METRO_SOURCE` to switch the function over. Details in [`docs/fgv-api.md`](docs/fgv-api.md) and [ADR-0005](docs/adr/0005-live-arrivals-come-straight-from-fgv.md).
 - **Station ids.** The GTFS `stop_id` space and the live API's id space disagree for most stations; `/api/metro/horarios-prevision-3/<id>` uses the API's. Never hand-write one — derive it from `paradas_api.json`. A wrong id fails silently, and `npm test` guards the ones we hardcode.
 - **The eastern stations have no arrival endpoint.** Ayora, Amistat and Aragó carry trains and appear in search, but the API exposes no station id for them, so they have no arrivals card of their own.
 - **Markers sometimes never appear in `npm run dev`.** A `StrictMode` double-mount races MapLibre's `style.load` over shared marker refs, so the map can load with no stations and no trains at all. It looks exactly like broken data and it is not — it does not happen in a production build. Reload, or see [#8](https://github.com/JieGH/vib_metroValencia/issues/8). Check `vite preview` before believing a rendering bug is real.
