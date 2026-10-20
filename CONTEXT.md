@@ -89,7 +89,7 @@ A Vehicle generated from a headway guess for a Line with no live Arrivals. Never
 _Avoid_: Mock vehicle, fake train, ghost train
 
 **Strategic Hub**:
-One of a fixed 3-Station boot set, queried automatically when the map opens: the three Stations that together see the most live Vehicles, as measured by `npm run sweep`. Also the first three Major Stations, so the Network Sync that follows boot finds them fresh and skips them.
+One of a fixed 4-Station boot set, queried automatically when the map opens, just before the first Network Sync: the Stations that together reach the most Lines, then the most live Vehicles, as measured by `npm run sweep`. Chosen for Lines rather than Vehicles because they are the whole map for the first few seconds, and a Line with no live Vehicle is drawn only with Simulated Trains. Also the first four Major Stations, so the Network Sync that follows boot finds them fresh and skips them.
 _Avoid_: Boot station, seed station
 
 **Major Station**:

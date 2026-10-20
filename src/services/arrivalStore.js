@@ -220,7 +220,7 @@ class ArrivalStore {
   /**
    * Fetch every Major Station in one pass.
    *
-   * Without this the map only ever holds the three boot hubs, so every live
+   * Without this the map only ever holds the Strategic Hubs, so every live
    * train ages out roughly 18 minutes after load and the whole network silently
    * reverts to simulated trains. Stations still inside their memory pause cost
    * no request, so a repeat sync is cheap.

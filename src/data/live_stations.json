@@ -1,26 +1,29 @@
 {
   "strategicHubs": [
-    {"id":12,"name":"Benimaclet"},
-    {"id":25,"name":"Jesús"},
-    {"id":101,"name":"La Granja"}
+    {"id":17,"name":"Àngel Guimerà"},
+    {"id":115,"name":"Marítim"},
+    {"id":88,"name":"La Carrasca"},
+    {"id":191,"name":"Russafa"}
   ],
   "majorStations": [
+    {"id":17,"name":"Àngel Guimerà"},
+    {"id":115,"name":"Marítim"},
+    {"id":88,"name":"La Carrasca"},
+    {"id":191,"name":"Russafa"},
+    {"id":101,"name":"La Granja"},
+    {"id":33,"name":"Torrent"},
+    {"id":119,"name":"Manises"},
     {"id":12,"name":"Benimaclet"},
     {"id":25,"name":"Jesús"},
-    {"id":101,"name":"La Granja"},
-    {"id":119,"name":"Manises"},
-    {"id":85,"name":"La Cadena"},
-    {"id":33,"name":"Torrent"},
-    {"id":191,"name":"Russafa"},
-    {"id":22,"name":"Ayora"},
     {"id":77,"name":"Moncada - Alfara"},
-    {"id":122,"name":"Francesc Cubells"},
     {"id":3,"name":"Massamagrell"},
-    {"id":16,"name":"Xàtiva"},
     {"id":131,"name":"Sant Miquel dels Reis"},
     {"id":58,"name":"Les Carolines - Fira"},
-    {"id":92,"name":"Pont de Fusta"},
+    {"id":83,"name":"Dr. Lluch"},
     {"id":9,"name":"Alboraia Peris Aragó"},
+    {"id":92,"name":"Pont de Fusta"},
+    {"id":122,"name":"Francesc Cubells"},
+    {"id":22,"name":"Ayora"},
     {"id":41,"name":"Carlet"},
     {"id":67,"name":"L'Eliana"}
   ]

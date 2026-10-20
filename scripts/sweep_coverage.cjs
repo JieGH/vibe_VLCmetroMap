@@ -12,8 +12,9 @@
 //   npm run sweep
 //       Sweep every Station once, save it under data/sweeps/, and report.
 //   npm run sweep -- report [--size N] [--hubs N] <sweep.json>...
-//       Report coverage over one or more saved sweeps, and recommend the best
-//       N Major Stations (default 18) and N Strategic Hubs (default 3).
+//       Report coverage over one or more saved sweeps, and recommend N
+//       Strategic Hubs (default 4) picked to reach every Line, then the best
+//       N Major Stations (default 20) starting from those Hubs.
 //       Merge sweeps taken at different times so the choice does not fit one
 //       moment. Add --write to save the recommendation to live_stations.json
 //       instead of printing it, so no Station id is ever typed by hand.
@@ -95,21 +96,40 @@ function covered(byStation, ids) {
   return out;
 }
 
-function greedy(byStation, size) {
-  const chosen = [];
-  const got = new Set();
+// A Line as seen in one sweep, so a Line reached in two sweeps counts twice.
+const sweepLineOf = key => key.split('|').slice(0, 2).join('|');
+
+// Picks Stations one at a time, each the one that adds the most Vehicles not
+// yet seen. With linesFirst it adds the most Lines not yet seen, and Vehicles
+// only break ties: that is how the Strategic Hubs are picked, so the map has
+// a live Vehicle on every Line it can within seconds of opening. Starting from
+// `seed` keeps the Hubs first among the Major Stations.
+function pickStations(byStation, size, { seed = [], linesFirst = false } = {}) {
+  const chosen = [...seed];
+  const seenVehicles = covered(byStation, seed);
+  const seenLines = new Set([...seenVehicles].map(sweepLineOf));
   while (chosen.length < size) {
     let best = null;
-    let gain = 0;
-    for (const [id, seen] of byStation) {
+    let bestLines = 0;
+    let bestVehicles = 0;
+    for (const [id, vehicles] of byStation) {
       if (chosen.includes(id)) continue;
-      let g = 0;
-      seen.forEach(k => { if (!got.has(k)) g++; });
-      if (g > gain) { gain = g; best = id; }
+      const newVehicles = [...vehicles].filter(k => !seenVehicles.has(k));
+      const newLines = linesFirst
+        ? new Set(newVehicles.map(sweepLineOf).filter(l => !seenLines.has(l))).size
+        : 0;
+      if (newLines > bestLines || (newLines === bestLines && newVehicles.length > bestVehicles)) {
+        best = id;
+        bestLines = newLines;
+        bestVehicles = newVehicles.length;
+      }
     }
     if (best === null) break;
     chosen.push(best);
-    byStation.get(best).forEach(k => got.add(k));
+    byStation.get(best).forEach(k => {
+      seenVehicles.add(k);
+      seenLines.add(sweepLineOf(k));
+    });
   }
   return chosen;
 }
@@ -146,8 +166,8 @@ function report(sweeps, { size, hubs, write }) {
   printCoverage('Current Strategic Hubs', live.strategicHubs.map(s => s.id), byStation, universe);
   printCoverage('Current Major Stations', live.majorStations.map(s => s.id), byStation, universe);
 
-  const hubPick = greedy(byStation, hubs);
-  const majorPick = greedy(byStation, size);
+  const hubPick = pickStations(byStation, hubs, { linesFirst: true });
+  const majorPick = pickStations(byStation, size, { seed: hubPick });
   printCoverage('Recommended Strategic Hubs', hubPick, byStation, universe);
   printCoverage('Recommended Major Stations', majorPick, byStation, universe);
 
@@ -168,7 +188,7 @@ function flag(args, name, fallback) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const opts = { size: flag(args, '--size', 18), hubs: flag(args, '--hubs', 3), write: args.includes('--write') };
+  const opts = { size: flag(args, '--size', 20), hubs: flag(args, '--hubs', 4), write: args.includes('--write') };
 
   if (args[0] === 'report') {
     const valued = new Set(['--size', '--hubs']);

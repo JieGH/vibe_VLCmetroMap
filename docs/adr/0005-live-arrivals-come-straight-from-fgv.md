@@ -36,11 +36,15 @@ FGV's own feed was found by reading the open-source Valencia Transit Reloaded ap
 | Set | Stations | Vehicles seen | Metro | Tram | Weakest Line |
 |---|---|---|---|---|---|
 | Old Major Stations | 9 | 36% | 41% | 30% | L1 14% |
-| New Major Stations | 18 | 84% | 87% | 80% | L10 64% |
+| New Major Stations | 20 | 86% | 87% | 84% | L10 64% |
 | Old Strategic Hubs | 3 | 22% | 34% | 5% | L4, L10 0% |
-| New Strategic Hubs | 3 | 25% | 22% | 29% | L5, L8, L10 0% |
+| New Strategic Hubs | 4 | 29% | 21% | 39% | L1, L3 14% |
 
-Eighteen was chosen over fifteen (78%) and twenty (87%): it clears 80% with every Line but L10 above 80%. Because the Hubs are the first three Major Stations, a sync costs 15 new requests — about 20 s at the 1 s dispatch spacing, well inside the 120 s interval. All three sweeps fell within one evening hour; re-sweep at other times of day (`npm run sweep`, then `npm run sweep -- report --write data/sweeps/*.json`) before trusting the list off-peak.
+On a fourth sweep held out of the choice (18:42 UTC), the new Major Stations saw 82% against the old set's 37%, and the new Hubs 29% against 22%.
+
+**The Strategic Hubs are picked for Lines, not Vehicles.** They are the whole map until the first Network Sync lands, and three Stations picked for Vehicles alone left Lines 5, 8 and 10 with no live Vehicle at all, drawn only with Simulated Trains. No three Stations reach all ten Lines in every sweep; four do.
+
+**The Major Stations start from the Hubs**, so the first Network Sync, which runs straight after boot, skips them. Seeding costs coverage at eighteen (82%, with L1 and L2 down about 15 points), so the list is twenty, which recovers both. A sync costs 16 new requests — about 20 s at the 1 s dispatch spacing, well inside the 120 s interval. All three sweeps fell within one evening hour; re-sweep at other times of day (`npm run sweep`, then `npm run sweep -- report --write data/sweeps/*.json`) before trusting the list off-peak.
 
 **The endpoint is undocumented.** FGV can move or close it without notice. `npm run sweep` doubles as a health check: a sweep with few usable Stations is the first sign. If it moves, the URL lives in three places: `arrivalStore.js`, the Vite proxy and the Netlify Function, plus the sweep script.
 
