@@ -21,14 +21,26 @@ describe('AppDownloadBanner', () => {
     expect(html).not.toContain('app-banner-sheet');
   });
 
-  it('says nothing to an iPhone, which has no download', () => {
+  it('shows the same banner to an iPhone and to a desktop browser', () => {
     asUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-    expect(renderToStaticMarkup(<AppDownloadBanner />)).toBe('');
+    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app for faster live trains');
+    asUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app for faster live trains');
   });
 
   it('steps aside while a panel or notice owns that space', () => {
     asUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8)');
     expect(renderToStaticMarkup(<AppDownloadBanner hidden />)).toBe('');
+  });
+});
+
+describe('AppDownloadSheet on iPhone', () => {
+  it('explains the situation but offers no APK to download', () => {
+    const html = renderToStaticMarkup(<AppDownloadSheet ios onClose={() => {}} />);
+    expect(html).toContain('FGV refuses connections');
+    expect(html).toContain('no download yet');
+    expect(html).not.toContain(APK_URL);
+    expect(html).not.toContain('app-banner-download');
   });
 });
 

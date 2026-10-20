@@ -7,7 +7,7 @@ import {
 } from '../utils/appDownload';
 
 /** Why the app is better than this website, and where to get it. */
-export const AppDownloadSheet = ({ onClose }) => {
+export const AppDownloadSheet = ({ onClose, ios = false }) => {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -40,9 +40,15 @@ export const AppDownloadSheet = ({ onClose }) => {
         <div className="app-banner-body">
           <p>{t('appBanner.why')}</p>
           <p>{t('appBanner.websiteLimit')}</p>
-          <a className="app-banner-download" href={APK_URL}>{t('appBanner.download')}</a>
-          <p className="app-banner-note">{t('appBanner.installNote')}</p>
-          <p className="app-banner-note">{t('appBanner.iphoneNote')}</p>
+          {ios ? (
+            <p className="app-banner-note">{t('appBanner.iphoneNote')}</p>
+          ) : (
+            <>
+              <a className="app-banner-download" href={APK_URL}>{t('appBanner.download')}</a>
+              <p className="app-banner-note">{t('appBanner.installNote')}</p>
+              <p className="app-banner-note">{t('appBanner.iphoneNote')}</p>
+            </>
+          )}
           <a className="app-banner-link" href={RELEASE_URL} target="_blank" rel="noopener noreferrer">
             {t('appBanner.releaseNotes')}
           </a>
@@ -56,17 +62,16 @@ export const AppDownloadSheet = ({ onClose }) => {
 /**
  * A small banner under the search bar inviting visitors to the app.
  * Pressing it opens the explanation; its own close button hides it for good.
- * Never shown on iPhone (no download exists) or inside the native app.
+ * Shown everywhere except inside the native app, which is already the app.
+ * On iPhone the sheet has no download button, because no iOS download exists.
  */
 const AppDownloadBanner = ({ hidden = false }) => {
   const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(wasBannerDismissed);
   const [open, setOpen] = useState(false);
 
-  const offerable =
-    typeof navigator !== 'undefined' &&
-    !isIosDevice(navigator.userAgent, navigator.maxTouchPoints) &&
-    !Capacitor.isNativePlatform();
+  const offerable = typeof navigator !== 'undefined' && !Capacitor.isNativePlatform();
+  const ios = typeof navigator !== 'undefined' && isIosDevice(navigator.userAgent, navigator.maxTouchPoints);
 
   const dismiss = (e) => {
     e.stopPropagation();
@@ -87,7 +92,7 @@ const AppDownloadBanner = ({ hidden = false }) => {
           </button>
         </div>
       )}
-      {open && <AppDownloadSheet onClose={() => setOpen(false)} />}
+      {open && <AppDownloadSheet ios={ios} onClose={() => setOpen(false)} />}
     </>
   );
 };
