@@ -37,27 +37,43 @@ const SPRITES = ['white', 'dark'];
 
 const root = path.resolve(__dirname, '..');
 const outDir = path.join(root, 'public', 'basemap');
-const cacheDir = path.join(root, '.cache');
+// Store in node_modules/.cache so CI (Netlify) persists the CLI and extracted
+// basemap across builds instead of re-walking the 100 GB remote archive every push.
+const cacheDir = path.join(root, 'node_modules', '.cache', 'metrovalencia-basemap');
 
 const download = async (url, destination) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`${response.status} for ${url}`);
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.writeFileSync(destination, Buffer.from(await response.arrayBuffer()));
-  return fs.statSync(destination).size;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`${response.status} for ${url}`);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.writeFileSync(destination, Buffer.from(await response.arrayBuffer()));
+      return fs.statSync(destination).size;
+    } catch (err) {
+      if (attempt >= 3) throw err;
+    }
+  }
 };
 
 // Protomaps publishes a build a day. Today's may not exist yet depending on the
-// hour, so walk back until one does rather than pinning a date that will rot.
-const findLatestBuild = async () => {
-  for (let daysBack = 0; daysBack < 21; daysBack++) {
+// hour, so walk back until we find up to 3 recent candidate builds.
+const findRecentBuilds = async (maxCandidates = 3) => {
+  const candidates = [];
+  for (let daysBack = 0; daysBack < 21 && candidates.length < maxCandidates; daysBack++) {
     const day = new Date(Date.now() - daysBack * 86400000);
     const stamp = day.toISOString().slice(0, 10).replace(/-/g, '');
     const url = `https://build.protomaps.com/${stamp}.pmtiles`;
-    const response = await fetch(url, { method: 'HEAD' });
-    if (response.ok) return url;
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) candidates.push(url);
+    } catch {
+      // ignore transient HEAD failure
+    }
   }
-  throw new Error('No Protomaps daily build found in the last 21 days');
+  if (candidates.length === 0) {
+    throw new Error('No Protomaps daily build found in the last 21 days');
+  }
+  return candidates;
 };
 
 // The extract is a range-request walk over a 100 GB remote archive, which is
@@ -94,21 +110,49 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
   fs.mkdirSync(outDir, { recursive: true });
   fs.mkdirSync(cacheDir, { recursive: true });
 
-  const cli = await ensurePmtilesCli();
-  const build = await findLatestBuild();
-  console.log(`Extracting ${BBOX} from ${build}`);
-
   const archive = path.join(outDir, 'valencia.pmtiles');
-  execFileSync(cli, ['extract', build, archive, `--bbox=${BBOX}`], { stdio: 'inherit' });
-  console.log(`  ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
+  const cachedArchive = path.join(cacheDir, 'valencia.pmtiles');
+
+  if (fs.existsSync(archive) && fs.statSync(archive).size > 10_000_000) {
+    console.log(`  reusing existing ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
+  } else if (fs.existsSync(cachedArchive) && fs.statSync(cachedArchive).size > 10_000_000) {
+    fs.copyFileSync(cachedArchive, archive);
+    console.log(`  restored cached ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
+  } else {
+    const cli = await ensurePmtilesCli();
+    const builds = await findRecentBuilds(3);
+    let extracted = false;
+    let lastError = null;
+    for (const build of builds) {
+      try {
+        console.log(`Extracting ${BBOX} from ${build}`);
+        execFileSync(cli, ['extract', build, archive, `--bbox=${BBOX}`], { stdio: 'inherit' });
+        if (fs.existsSync(archive) && fs.statSync(archive).size > 10_000_000) {
+          fs.copyFileSync(archive, cachedArchive);
+          extracted = true;
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        try { fs.unlinkSync(archive); } catch { /* ignore */ }
+      }
+    }
+    if (!extracted) throw lastError || new Error('pmtiles extract failed');
+    console.log(`  ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
+  }
 
   let glyphBytes = 0;
   for (const fontstack of FONTSTACKS) {
     for (const range of RANGES) {
-      glyphBytes += await download(
-        `${ASSETS}/fonts/${encodeURIComponent(fontstack)}/${range}.pbf`,
-        path.join(outDir, 'fonts', fontstack, `${range}.pbf`)
-      );
+      const dest = path.join(outDir, 'fonts', fontstack, `${range}.pbf`);
+      if (fs.existsSync(dest) && fs.statSync(dest).size > 0) {
+        glyphBytes += fs.statSync(dest).size;
+      } else {
+        glyphBytes += await download(
+          `${ASSETS}/fonts/${encodeURIComponent(fontstack)}/${range}.pbf`,
+          dest
+        );
+      }
     }
   }
   console.log(`  fonts — ${mb(glyphBytes)} across ${FONTSTACKS.length * RANGES.length} files`);
@@ -116,15 +160,24 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
   let spriteBytes = 0;
   for (const sprite of SPRITES) {
     for (const extension of ['json', 'png']) {
-      spriteBytes += await download(
-        `${ASSETS}/sprites/v4/${sprite}.${extension}`,
-        path.join(outDir, 'sprites', `${sprite}.${extension}`)
-      );
+      const dest = path.join(outDir, 'sprites', `${sprite}.${extension}`);
+      if (fs.existsSync(dest) && fs.statSync(dest).size > 0) {
+        spriteBytes += fs.statSync(dest).size;
+      } else {
+        spriteBytes += await download(
+          `${ASSETS}/sprites/v4/${sprite}.${extension}`,
+          dest
+        );
+      }
     }
   }
   console.log(`  sprites — ${mb(spriteBytes)}`);
   console.log('Done. `npm run build` then `npx cap sync ios` puts it in the app.');
 })().catch((error) => {
   console.error(`fetch:basemap failed — ${error.message}`);
+  if (process.env.CI) {
+    console.warn('Continuing CI build without offline PMTiles archive (app will fall back to online raster tiles).');
+    process.exit(0);
+  }
   process.exit(1);
 });
