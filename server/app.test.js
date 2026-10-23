@@ -230,12 +230,12 @@ describe('FGV prevision proxy', () => {
     expect(fgv).toHaveBeenCalledTimes(2);
   });
 
-  it('sends one duplicate after 1000 ms, takes the first answer and aborts the other', async () => {
+  it('sends one duplicate after 1200 ms, takes the first answer and aborts the other', async () => {
     const slow = hangs();
     fgv.mockImplementationOnce(slow.fn).mockImplementationOnce(async () => ok());
     const pending = api(1400);
     await reached(1);
-    await tick(999);
+    await tick(1199);
     expect(fgv).toHaveBeenCalledTimes(1);
     await tick(1);
     const res = await pending;
@@ -250,7 +250,7 @@ describe('FGV prevision proxy', () => {
     fgv.mockImplementationOnce(() => new Promise(r => { first = () => r(ok('{"who":"first"}')); })).mockImplementationOnce(hangs().fn);
     const pending = api(1500);
     await reached(1);
-    await tick(1000);
+    await tick(1200);
     first();
     expect(await (await pending).text()).toBe('{"who":"first"}');
   });
@@ -300,23 +300,23 @@ describe('FGV prevision proxy', () => {
     expect(fgv).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps at most 4 requests to FGV in flight and starts a waiting one as a slot frees', async () => {
+  it('keeps at most 8 requests to FGV in flight and starts a waiting one as a slot frees', async () => {
     const releases = [];
     let open = 0, peak = 0;
     fgv.mockImplementation(() => new Promise(r => {
       open++; peak = Math.max(peak, open);
       releases.push(() => { open--; r(ok()); });
     }));
-    const all = Array.from({ length: 6 }, (_, i) => api(2000 + i));
-    await reached(4);
+    const all = Array.from({ length: 10 }, (_, i) => api(2000 + i));
+    await reached(8);
     await tick(500);
-    expect(fgv).toHaveBeenCalledTimes(4);
+    expect(fgv).toHaveBeenCalledTimes(8);
     releases.shift()();
     await tick(10);
-    expect(fgv).toHaveBeenCalledTimes(5);
-    while (releases.length || fgv.mock.calls.length < 6) { releases.shift()?.(); await tick(10); }
-    expect((await Promise.all(all)).map(r => r.status)).toEqual([200, 200, 200, 200, 200, 200]);
-    expect(peak).toBe(4);
+    expect(fgv).toHaveBeenCalledTimes(9);
+    while (releases.length || fgv.mock.calls.length < 10) { releases.shift()?.(); await tick(10); }
+    expect((await Promise.all(all)).map(r => r.status)).toEqual(Array(10).fill(200));
+    expect(peak).toBe(8);
   });
 
   it('returns 404 for every other /api path and never calls FGV', async () => {

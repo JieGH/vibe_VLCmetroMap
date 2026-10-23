@@ -41,7 +41,10 @@ export const NETWORK_SYNC_INTERVAL_MS = 120000;
 
 const CACHE_TTL_MS = 60000; // 60 seconds strict memory pause per station
 const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual refreshes
-const MAX_CONCURRENT_REQUESTS = 4; // prevision requests one client keeps in flight at once
+// Prevision requests one client keeps in flight at once. The web build sits behind
+// the local server's global upstream cap and shared cache, so it can go wider;
+// native calls FGV directly with no shared bound, so it stays courteous at 4.
+const MAX_CONCURRENT_REQUESTS = Capacitor.isNativePlatform() ? 4 : 8;
 const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
 
 // Live predictions for one Station, from the endpoint FGV's own app uses.
