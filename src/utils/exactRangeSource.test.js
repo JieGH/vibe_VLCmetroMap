@@ -50,6 +50,15 @@ describe('ExactRangeSource', () => {
     expect(new Headers(init.headers).get('range')).toBe('bytes=16384-16483');
   });
 
+  it('refuses a whole-file 200 for a range that does not start at 0', async () => {
+    // A server that ignores Range sends the file from byte 0, so its first
+    // bytes are not the ones asked for.
+    const { response } = overLongResponse(1000, 1000, { status: 200 });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+
+    await expect(new ExactRangeSource(URL_).getBytes(16384, 100)).rejects.toThrow();
+  });
+
   it('stops reading once it has enough and cancels the rest of the body', async () => {
     const { response, state } = overLongResponse(1_000_000, 100);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));

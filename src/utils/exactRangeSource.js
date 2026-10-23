@@ -23,6 +23,11 @@ export class ExactRangeSource {
     if (!response.ok) {
       throw new Error(`Basemap range request failed: HTTP ${response.status}`);
     }
+    // A 200 means the server ignored Range and sent the file from byte 0, so
+    // its first bytes are only the right ones when the range starts there.
+    if (response.status === 200 && offset > 0) {
+      throw new Error('Basemap server ignored the range request');
+    }
 
     // A weak etag cannot validate a byte range, so pmtiles ignores it too.
     const newEtag = response.headers.get('Etag');
