@@ -1,38 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
+import {
+  WELCOME_MIN_HOLD_MS,
+  WELCOME_MAX_HOLD_MS,
+  WELCOME_FADE_DURATION_MS,
+  createWelcomeSchedule,
+  markWelcomeSeen,
+} from '../utils/welcomeSchedule';
 
-export const WELCOME_HOLD_DURATION_MS = 1000;
-export const WELCOME_FADE_DURATION_MS = 300;
-export const WELCOME_TOTAL_DURATION_MS = WELCOME_HOLD_DURATION_MS + WELCOME_FADE_DURATION_MS;
+export { WELCOME_MIN_HOLD_MS, WELCOME_MAX_HOLD_MS, WELCOME_FADE_DURATION_MS };
 
 /**
- * 1.0-Second Welcome / Splash Screen with Line-Draw & Central Station Spotlight
+ * Brief Welcome / Splash Screen with Line-Draw & Central Station Spotlight
  *
  * Displays an animated brand mark showing metro lines drawing into the central station,
- * which then blooms open like a spotlight before smoothly fading into the live map.
+ * which then blooms open like a spotlight. It holds at least 0.5 s, then fades into the
+ * live map as soon as the map reports `ready` (or at 1.0 s at the latest). The fade is
+ * requested as soon as `ready` arrives, with a CSS transition-delay covering the rest of
+ * the minimum hold, so it runs on the compositor even while the main thread is busy.
  */
-const WelcomeScreen = ({ onComplete }) => {
+const WelcomeScreen = ({ ready = false, onComplete }) => {
   const { t } = useTranslation();
   const [fading, setFading] = useState(false);
+  const [fadeDelay, setFadeDelay] = useState(0);
   const [hidden, setHidden] = useState(false);
+  const scheduleRef = useRef(null);
+  const initialReadyRef = useRef(ready);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
-    // Hold splash screen for 1000ms (1.0 second)
-    const holdTimer = setTimeout(() => {
-      setFading(true);
-    }, WELCOME_HOLD_DURATION_MS);
+    const schedule = createWelcomeSchedule({
+      ready: initialReadyRef.current,
+      onFade: (delayMs) => { setFadeDelay(delayMs); setFading(true); },
+      onComplete: () => {
+        setHidden(true);
+        markWelcomeSeen();
+        if (onCompleteRef.current) onCompleteRef.current();
+      },
+    });
+    scheduleRef.current = schedule;
+    return () => schedule.cancel();
+    // The clock starts once on mount; later `ready` changes are fed below.
+  }, []);
 
-    // After 300ms fade-out transition, completely unmount from DOM
-    const dismissTimer = setTimeout(() => {
-      setHidden(true);
-      if (onComplete) onComplete();
-    }, WELCOME_TOTAL_DURATION_MS);
-
-    return () => {
-      clearTimeout(holdTimer);
-      clearTimeout(dismissTimer);
-    };
-  }, [onComplete]);
+  useEffect(() => { scheduleRef.current?.setReady(ready); }, [ready]);
 
   if (hidden) return null;
 
@@ -42,6 +54,7 @@ const WelcomeScreen = ({ onComplete }) => {
       role="status"
       aria-label="Xarxa"
       data-testid="welcome-screen"
+      style={fading ? { transitionDelay: `${fadeDelay}ms` } : undefined}
     >
       <div className="welcome-screen-content">
         <div className="welcome-screen-logo-wrap">
