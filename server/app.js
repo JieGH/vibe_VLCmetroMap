@@ -93,7 +93,7 @@ const sendText = (res, status, body, type = 'application/json') => {
   res.end(body);
 };
 
-export function createApp({ root, fetch, now } = {}) {
+export function createApp({ root, fetch, now = () => Date.now() } = {}) {
   const assets = loadAssets(root);
   const getPrevision = createPrevisionClient({ fetch, now });
 
@@ -105,6 +105,8 @@ export function createApp({ root, fetch, now } = {}) {
       'Content-Type': upstream.contentType,
       'Content-Length': Buffer.byteLength(upstream.body),
       'Cache-Control': 'no-store',
+      // How long ago FGV answered: the client anchors Arrival timestamps on it.
+      ...(upstream.status === 200 && { 'X-Prevision-Age-Ms': Math.max(0, Math.round(now() - upstream.fetchedAt)) }),
     });
     res.end(upstream.body);
   }

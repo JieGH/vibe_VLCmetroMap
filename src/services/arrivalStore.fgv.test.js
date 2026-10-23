@@ -278,3 +278,25 @@ describe('the bounded parallel queue', () => {
     expect(gate.peak).toBe(4);
   });
 });
+
+describe('the server cache age contract', () => {
+  const withAge = (age) => vi.fn(async () => ({
+    ok: true, status: 200,
+    headers: new Headers(age === undefined ? {} : { 'X-Prevision-Age-Ms': age }),
+    json: async () => fgvPayload([[3, [['Aeroport', 300, 3114]]]]),
+  }));
+
+  it('places Arrivals exactly as much earlier as the answer is old', async () => {
+    vi.stubGlobal('fetch', withAge('5000'));
+    const [aged] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+    expect(aged.targetTimestamp).toBe(NOW + 285_000 - 5000);
+    expect(arrivalStore.memory.get('17').fetchedAt).toBe(NOW - 5000);
+  });
+
+  it.each([[undefined], ['abc'], ['-3'], ['']])('treats a missing or invalid age (%s) as fresh', async (age) => {
+    vi.stubGlobal('fetch', withAge(age));
+    const [fresh] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+    expect(fresh.targetTimestamp).toBe(NOW + 285_000);
+    expect(arrivalStore.memory.get('17').fetchedAt).toBe(NOW);
+  });
+});
