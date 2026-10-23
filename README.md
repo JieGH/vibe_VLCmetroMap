@@ -172,7 +172,7 @@ Two things exist purely to make this build path work, and are easy to break by "
 
 ## How a train gets on the map
 
-1. **Boot.** `arrivalStore.seedStrategicHubs()` fetches three interchange stations.
+1. **Boot.** The first Network Sync dispatches the four Strategic Hubs first, through the bounded queue, so the map has its whole-network picture as early as possible.
 2. **Predictions land.** The API answers "vehicle 5301 reaches Àngel Guimerà in 415s", stamped with an absolute `trainTimestamp`. `arrivalStore` keeps these in memory and in `sessionStorage`.
 3. **Positions are walked.** `trainPositionEngine` steps back along the line's station chain from the station a train is due at, spending each segment's real timetabled interval and dwelling at each platform, until the countdown is used up. Where the same vehicle is predicted at two stations, the nearest sighting anchors the walk and the pair settles the direction.
 4. **The map animates.** `MapView` samples the engine each frame and eases each marker towards its new anchor.

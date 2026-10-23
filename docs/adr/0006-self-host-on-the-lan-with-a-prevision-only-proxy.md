@@ -49,6 +49,6 @@ Two other tickets came out partly or not at all. **#78** (per-frame work) met it
 
 The cache makes a second sync within 10 s nearly free, so measure cold loads more than 10 s apart.
 
-Costs. The server is one more thing to run and keep reachable, with no authentication. A prediction may be up to 10 s older than the client's request, which the age contract keeps honest. The FGV URL now lives in `server/prevision.js` as well (see `docs/fgv-api.md`). The 8-train cap, the Netlify block and the undocumented endpoint from ADR-0005 are unchanged.
+Costs. The server is one more thing to run and keep reachable, with no authentication. A prediction may be up to 10 s older than the client's request, which the age contract keeps honest. The FGV URL now lives in `server/prevision.js` and `scripts/measure_latency.cjs` as well (see `docs/fgv-api.md`). The 8-train cap, the Netlify block and the undocumented endpoint from ADR-0005 are unchanged.
 
 Final measurement: see PR #81.

@@ -82,5 +82,5 @@ Seen but unused: `estaciones`, `lineas`, `incidencias`, and `POST horarios-onlin
 ## If it breaks
 
 1. `npm run sweep`. Few usable Stations means the endpoint moved or closed.
-2. The URL lives in `src/services/arrivalStore.js`, `vite.config.js`, `netlify/functions/metro-proxy.js`, `server/prevision.js` and `scripts/sweep_coverage.cjs`.
+2. The URL lives in `src/services/arrivalStore.js`, `vite.config.js`, `netlify/functions/metro-proxy.js`, `server/prevision.js`, `scripts/measure_latency.cjs` and `scripts/sweep_coverage.cjs`.
 3. Read the open-source Valencia Transit Reloaded app for the current path.
