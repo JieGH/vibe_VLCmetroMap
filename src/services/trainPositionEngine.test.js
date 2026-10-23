@@ -374,7 +374,7 @@ describe('how confident a placed train is', () => {
   it('drops a dead-reckoned train to the floor however fresh its prediction is', () => {
     const now = Date.now();
     const approaching = vehicleAt('Xàtiva', 120, now);
-    const pastDue = vehicleAt('Xàtiva', -35, now);
+    const pastDue = vehicleAt('Xàtiva', -18, now);
 
     expect(pastDue.isDeadReckoned).toBe(true);
     expect(pastDue.positionConfidence).toBe(MIN_POSITION_CONFIDENCE);

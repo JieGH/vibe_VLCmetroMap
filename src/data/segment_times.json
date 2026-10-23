@@ -2,10 +2,10 @@
   "generatedAt": "2026-09-04T21:31:15.684Z",
   "source": "20260902_084044_Metro_Valencia",
   "note": "Median seconds between consecutive station arrivals, keyed \"fromStopId>toStopId\". Includes dwell at the origin station; subtract dwellSeconds to get running time.",
-  "dwellSeconds": 25,
+  "dwellSeconds": 12.5,
   "networkFallback": {
     "metresPerSecond": 7,
-    "minSeconds": 40,
+    "minSeconds": 27.5,
     "samples": 415
   },
   "lines": {
@@ -94,7 +94,7 @@
       "segmentCount": 79,
       "fallback": {
         "metresPerSecond": 11.01,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 79
       }
     },
@@ -170,7 +170,7 @@
       "segmentCount": 66,
       "fallback": {
         "metresPerSecond": 9.05,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 66
       }
     },
@@ -232,7 +232,7 @@
       "segmentCount": 52,
       "fallback": {
         "metresPerSecond": 7.14,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 52
       }
     },
@@ -303,7 +303,7 @@
       "segmentCount": 61,
       "fallback": {
         "metresPerSecond": 4.84,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 51
       }
     },
@@ -353,7 +353,7 @@
       "segmentCount": 40,
       "fallback": {
         "metresPerSecond": 6.48,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 40
       }
     },
@@ -399,7 +399,7 @@
       "segmentCount": 36,
       "fallback": {
         "metresPerSecond": 4.1,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 29
       }
     },
@@ -445,7 +445,7 @@
       "segmentCount": 36,
       "fallback": {
         "metresPerSecond": 6.14,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 36
       }
     },
@@ -467,7 +467,7 @@
       "segmentCount": 12,
       "fallback": {
         "metresPerSecond": 5.81,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 6
       }
     },
@@ -521,7 +521,7 @@
       "segmentCount": 44,
       "fallback": {
         "metresPerSecond": 7.47,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 44
       }
     },
@@ -545,7 +545,7 @@
       "segmentCount": 14,
       "fallback": {
         "metresPerSecond": 5.31,
-        "minSeconds": 40,
+        "minSeconds": 27.5,
         "samples": 12
       }
     }
