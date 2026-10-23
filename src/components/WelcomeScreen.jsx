@@ -22,12 +22,13 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
   const [fading, setFading] = useState(false);
   const [hidden, setHidden] = useState(false);
   const scheduleRef = useRef(null);
+  const initialReadyRef = useRef(ready);
   const onCompleteRef = useRef(onComplete);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
     const schedule = createWelcomeSchedule({
-      ready,
+      ready: initialReadyRef.current,
       onFade: () => setFading(true),
       onComplete: () => {
         setHidden(true);
