@@ -29,7 +29,8 @@
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "fetch:basemap": "node scripts/fetch_basemap.cjs",
-    "sweep": "node scripts/sweep_coverage.cjs"
+    "sweep": "node scripts/sweep_coverage.cjs",
+    "measure": "node scripts/measure_latency.cjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.1",
