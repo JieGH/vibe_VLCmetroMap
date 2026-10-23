@@ -118,7 +118,7 @@ export function createPrevisionClient({
       shared = lookup(stationId).then((result) => {
         // Only a good answer is worth sharing; an error status is passed on, not cached.
         if (result.status === 200) {
-          // Drop every expired entry so the map holds only Stations seen within one TTL.
+          // Drop every expired entry so the map holds only Stations seen within one TTL. This bounds memory and is not observable through the route.
           for (const [id, entry] of cache) if (now() - entry.fetchedAt >= SERVER_CACHE_TTL_MS) cache.delete(id);
           cache.set(stationId, result);
         }

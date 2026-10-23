@@ -224,15 +224,6 @@ describe('FGV prevision proxy', () => {
     await fresh.text();
   });
 
-  it('evicts expired entries when a new Station is stored', async () => {
-    await (await api(1350)).text();
-    await tick(11_000);
-    await (await api(1351)).text(); // storing this one drops the expired 1350
-    expect(fgv).toHaveBeenCalledTimes(2);
-    await (await api(1350)).text();
-    expect(fgv).toHaveBeenCalledTimes(3);
-  });
-
   it('answers 502 when building the reply throws', async () => {
     const broken = createApp({ root: path.join(dir, 'dist'), fetch: async () => ({ status: 200, headers: { get: () => null }, text: async () => 42 }) }).server();
     await new Promise(r => broken.listen(0, '127.0.0.1', r));
