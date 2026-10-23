@@ -128,10 +128,10 @@ describe('Welcome screen splash styles and animation timings', () => {
     expect(fadeMatch).toContain('pointer-events: none');
   });
 
-  it('paces transit line draw and spotlight bloom gracefully within 1.0s dwell', () => {
-    expect(css).toMatch(/animation:\s*welcomeLineDrawIn\s+0\.36s/);
-    expect(css).toMatch(/animation:\s*welcomeStationSpotlight\s+0\.48s[^;]*0\.36s/);
-    expect(css).toMatch(/animation:\s*welcomeStationCoreBloom\s+0\.44s[^;]*0\.36s/);
+  it('paces transit line draw and spotlight bloom gracefully within the 0.5s minimum hold', () => {
+    expect(css).toMatch(/animation:\s*welcomeLineDrawIn\s+0\.22s/);
+    expect(css).toMatch(/animation:\s*welcomeStationSpotlight\s+0\.3s[^;]*0\.2s/);
+    expect(css).toMatch(/animation:\s*welcomeStationCoreBloom\s+0\.28s[^;]*0\.2s/);
   });
 });
 

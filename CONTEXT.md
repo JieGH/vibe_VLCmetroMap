@@ -37,7 +37,7 @@ The absolute wall-clock epoch timestamp (`fetchedAt + seconds * 1000`) when a ve
 _Avoid_: Due date, deadline, scheduled epoch
 
 **Rate Budget**:
-The restraint the app keeps on requests to FGV's live feed, managed by client-side TTL caching, request deduplication, dispatch spacing, and cooldown throttling. FGV has shown no rate limit (ADR-0005), so the budget is courtesy and headroom rather than a known ceiling; a hung request spends one retry from it.
+The restraint the app keeps on requests to FGV's live feed, managed by client-side TTL caching, request deduplication, a bounded number of requests in flight at once, and cooldown throttling. FGV has shown no rate limit (ADR-0005), so the budget is courtesy and headroom rather than a known ceiling; a hung request spends one hedged duplicate from it on the local server, or one retry on the native app, which calls FGV directly (ADR-0006).
 _Avoid_: Request ceiling, throttle counter
 
 **Timetable Walk**:
@@ -89,7 +89,7 @@ A Vehicle generated from a headway guess for a Line with no live Arrivals. Never
 _Avoid_: Mock vehicle, fake train, ghost train
 
 **Strategic Hub**:
-One of a fixed 4-Station boot set, queried automatically when the map opens, just before the first Network Sync: the Stations that together reach the most Lines, then the most live Vehicles, as measured by `npm run sweep`. Chosen for Lines rather than Vehicles because they are the whole map for the first few seconds, and a Line with no live Vehicle is drawn only with Simulated Trains. Also the first four Major Stations, so the Network Sync that follows boot finds them fresh and skips them.
+One of a fixed 4-Station boot set, queried automatically when the map opens, as the first Stations of the first Network Sync: the Stations that together reach the most Lines, then the most live Vehicles, as measured by `npm run sweep`. Chosen for Lines rather than Vehicles because they are the whole map for the first few seconds, and a Line with no live Vehicle is drawn only with Simulated Trains. Also the first four Major Stations, so the Network Sync dispatches them first and the map has its whole-network picture as early as possible.
 _Avoid_: Boot station, seed station
 
 **Major Station**:
@@ -97,7 +97,7 @@ One of the fixed list a Network Sync fetches, chosen by measured coverage: the s
 _Avoid_: Interchange, key station, hub (ambiguous with Strategic Hub)
 
 **Network Sync**:
-A sweep that fetches live Arrivals for every Major Station at once, subject to the same Arrival Memory pause as any other fetch, building a fuller picture of Vehicle positions than the Strategic Hubs give at boot. Runs every two minutes while the map is visible, because Arrivals age out after about 18 minutes and without it the whole network decays into Simulated Trains.
+A sweep that fetches live Arrivals for every Major Station, Hubs first, a bounded number at a time, subject to the same Arrival Memory pause as any other fetch, building a fuller picture of Vehicle positions than the Strategic Hubs give at boot. Runs every two minutes while the map is visible, because Arrivals age out after about 18 minutes and without it the whole network decays into Simulated Trains.
 _Avoid_: Refresh all, sync all, update all stations
 
 ### The Viewer

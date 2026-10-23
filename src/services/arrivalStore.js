@@ -41,7 +41,10 @@ export const NETWORK_SYNC_INTERVAL_MS = 120000;
 
 const CACHE_TTL_MS = 60000; // 60 seconds strict memory pause per station
 const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual refreshes
-const MIN_DISPATCH_INTERVAL_MS = 1000; // 1 second minimum delay between outbound API requests
+// Prevision requests one client keeps in flight at once. The web build sits behind
+// the local server's global upstream cap and shared cache, so it can go wider;
+// native calls FGV directly with no shared bound, so it stays courteous at 4.
+const MAX_CONCURRENT_REQUESTS = Capacitor.isNativePlatform() ? 4 : 8;
 const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
 
 // Live predictions for one Station, from the endpoint FGV's own app uses.
@@ -100,9 +103,10 @@ class ArrivalStore {
     this.memory = new Map();
     this.inFlightRequests = new Map();
     this.listeners = new Set();
-    this.lastRequestTimestamp = 0;
+    this.activeRequests = 0;
+    this.requestQueue = [];
+    this.notifyPending = false;
     this.rateLimitedUntil = 0;
-    this.isSeedingHubs = false;
     this.isSyncingNetwork = false;
     this.lastNetworkSyncAt = 0;
 
@@ -168,57 +172,52 @@ class ArrivalStore {
     return () => this.listeners.delete(listener);
   }
 
+  // Answers often land in bursts; listeners hear about a burst once, on the
+  // next frame (or a microtask where there are no frames, as in tests / SSR).
   notify() {
-    this.listeners.forEach((fn) => {
-      try { fn(); } catch { /* ignore */ }
-    });
+    if (this.notifyPending) return;
+    this.notifyPending = true;
+    const flush = () => {
+      this.notifyPending = false;
+      this.listeners.forEach((fn) => {
+        try { fn(); } catch { /* ignore */ }
+      });
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
+    else if (typeof queueMicrotask === 'function') queueMicrotask(flush);
+    else setTimeout(flush, 0);
   }
 
   /**
-   * Opens the live network: the Strategic Hubs first, for a picture within
-   * seconds, then a full Network Sync rather than leaving only the Hubs on
-   * the map for a whole sync interval. The Hubs are the
-   * first Major Stations, so the sync finds them fresh and skips them.
+   * Opens the live network with one full Network Sync. The sweep dispatches the
+   * Strategic Hubs first, so the busiest picture lands within the first round
+   * of requests, and the other Major Stations follow without a gap.
    */
   async bootNetwork() {
-    await this.seedStrategicHubs();
     await this.syncNetwork();
   }
 
   /**
-   * Seeds the network with the Strategic Hubs on initial map boot.
-   * Dispatches sequentially with a 1.2s delay to respect rate limits.
+   * Waits for one of the MAX_CONCURRENT_REQUESTS prevision slots. Slots are
+   * handed out in arrival order, so a sweep's dispatch order is its fetch order.
    */
-  async seedStrategicHubs() {
-    if (this.isSeedingHubs) return;
-    const now = Date.now();
-
-    // Skip network seeding if memory already contains fresh predictions (< 60s)
-    const hasFreshHubs = STRATEGIC_HUBS.every(h => {
-      const entry = this.memory.get(String(h.id));
-      return entry && (now - entry.fetchedAt) < CACHE_TTL_MS;
-    });
-    if (hasFreshHubs) return;
-
-    this.isSeedingHubs = true;
-
-    for (let i = 0; i < STRATEGIC_HUBS.length; i++) {
-      const hub = STRATEGIC_HUBS[i];
-      try {
-        await this.getStationArrivals({ apiId: hub.id, name: hub.name }, { forceRefresh: false });
-      } catch {
-        // Continue to next hub on failure
-      }
-      if (i < STRATEGIC_HUBS.length - 1) {
-        await new Promise(r => setTimeout(r, 1200));
-      }
+  acquireRequestSlot() {
+    if (this.activeRequests < MAX_CONCURRENT_REQUESTS) {
+      this.activeRequests += 1;
+      return Promise.resolve();
     }
+    return new Promise(resolve => this.requestQueue.push(resolve));
+  }
 
-    this.isSeedingHubs = false;
+  releaseRequestSlot() {
+    const next = this.requestQueue.shift();
+    if (next) next(); // the slot passes straight to the next waiter
+    else this.activeRequests -= 1;
   }
 
   /**
-   * Fetch every Major Station in one pass.
+   * Fetch every Major Station in one pass, Strategic Hubs first, through a
+   * bounded parallel queue.
    *
    * Without this the map only ever holds the Strategic Hubs, so every live
    * train ages out roughly 18 minutes after load and the whole network silently
@@ -232,8 +231,15 @@ class ArrivalStore {
     let fetched = 0;
     let skipped = 0;
 
-    try {
-      for (const station of MAJOR_STATIONS) {
+    const hubIds = new Set(STRATEGIC_HUBS.map(h => String(h.id)));
+    const ordered = [
+      ...STRATEGIC_HUBS,
+      ...MAJOR_STATIONS.filter(s => !hubIds.has(String(s.id))),
+    ];
+    let next = 0;
+    const worker = async () => {
+      while (next < ordered.length) {
+        const station = ordered[next++];
         const entry = this.memory.get(String(station.id));
         if (entry && (Date.now() - entry.fetchedAt) < CACHE_TTL_MS) {
           skipped += 1;
@@ -246,6 +252,10 @@ class ArrivalStore {
           // One station failing must not abandon the rest of the sweep.
         }
       }
+    };
+
+    try {
+      await Promise.all(Array.from({ length: MAX_CONCURRENT_REQUESTS }, worker));
     } finally {
       this.isSyncingNetwork = false;
       this.lastNetworkSyncAt = Date.now();
@@ -375,12 +385,8 @@ class ArrivalStore {
 
     // Create execution promise
     const fetchPromise = (async () => {
-      // Respect dispatch pacing between requests
-      const timeSinceLast = Date.now() - this.lastRequestTimestamp;
-      if (timeSinceLast < MIN_DISPATCH_INTERVAL_MS) {
-        await new Promise(r => setTimeout(r, MIN_DISPATCH_INTERVAL_MS - timeSinceLast));
-      }
-      this.lastRequestTimestamp = Date.now();
+      // Never more than MAX_CONCURRENT_REQUESTS prevision requests in flight
+      await this.acquireRequestSlot();
 
       try {
         // FGV's CORS policy admits only FGV's own sites, so a browser has to
@@ -401,7 +407,13 @@ class ArrivalStore {
         }
 
         if (data && Array.isArray(data.previsiones)) {
-          const fetchTime = Date.now();
+          // The local server may answer from its short cache and says how old
+          // the answer is. Anchoring on when FGV actually answered keeps a
+          // cached reply from displacing Vehicles; no header (Netlify, the Vite
+          // proxy, the native app's direct call) means a fresh answer.
+          const ageHeader = response.headers?.get?.('X-Prevision-Age-Ms');
+          const ageMs = /^\d+$/.test(ageHeader ?? '') ? Number(ageHeader) : 0;
+          const fetchTime = Date.now() - ageMs;
           // FGV groups trains under each Line; flatten them, carrying the
           // group's Line onto each train. A train without a destination or a
           // countdown cannot be placed, so it is dropped rather than shown.
@@ -452,7 +464,7 @@ class ArrivalStore {
           this.persistToSessionStorage();
           this.notify();
 
-          const projected = this.projectArrivals(updatedEntry, fetchTime);
+          const projected = this.projectArrivals(updatedEntry, Date.now());
           return Object.assign(projected, {
             isFromCache: false,
             fetchedAt: fetchTime,
@@ -482,6 +494,7 @@ class ArrivalStore {
           fetchedAt: Date.now(),
         });
       } finally {
+        this.releaseRequestSlot();
         this.inFlightRequests.delete(key);
       }
     })();

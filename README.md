@@ -114,6 +114,18 @@ npm run preview    # serves dist/ as it would be deployed
 
 `npm run dev` and `dev:phone` proxy `/api/metro/*` to FGV's live arrivals feed through Vite's dev server. This isn't optional plumbing — FGV's CORS policy admits only FGV's own sites, so a browser cannot call the feed directly; a same-origin proxy can. The native iOS app has no such limit and calls FGV directly. See [ADR-0005](docs/adr/0005-live-arrivals-come-straight-from-fgv.md).
 
+### Self-hosting on your network
+
+`npm run serve` is a small production server for running the map from your own machine, with no dependencies beyond Node. It serves `dist/` with brotli/gzip compression, long-lived caching for hashed assets, and range requests for the offline basemap, and it proxies FGV's live arrivals (and nothing else) so the whole app works.
+
+```bash
+npm run build                 # once, and after every change
+npm run serve                 # prints: Serving dist/ on http://192.168.x.x:8080
+npm run serve -- --port 9000  # or PORT=9000 npm run serve
+```
+
+Open the printed address on a phone on the same Wi-Fi. The server listens on every network interface (`0.0.0.0`) with no authentication, so run it only on a network you trust. The machine needs to reach `www.fgv.es`, which answers connections from Spain.
+
 ### Production deployment (Netlify)
 
 The live site above runs on [Netlify](https://netlify.com), auto-rebuilding and republishing on every push to `main` — no manual deploy step. Netlify reads the build command and publish directory straight from [`netlify.toml`](netlify.toml); no dashboard configuration is needed beyond connecting the repo.
@@ -174,7 +186,7 @@ Two things exist purely to make this build path work, and are easy to break by "
 
 ## How a train gets on the map
 
-1. **Boot.** `arrivalStore.seedStrategicHubs()` fetches three interchange stations.
+1. **Boot.** The first Network Sync dispatches the four Strategic Hubs first, through the bounded queue, so the map has its whole-network picture as early as possible.
 2. **Predictions land.** The API answers "vehicle 5301 reaches Àngel Guimerà in 415s", stamped with an absolute `trainTimestamp`. `arrivalStore` keeps these in memory and in `sessionStorage`.
 3. **Positions are walked.** `trainPositionEngine` steps back along the line's station chain from the station a train is due at, spending each segment's real timetabled interval and dwelling at each platform, until the countdown is used up. Where the same vehicle is predicted at two stations, the nearest sighting anchors the walk and the pair settles the direction.
 4. **The map animates.** `MapView` samples the engine each frame and eases each marker towards its new anchor.
