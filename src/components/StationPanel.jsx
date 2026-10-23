@@ -6,7 +6,7 @@
 // tablet that is where a thumb rests; bottom in portrait, because on a phone it
 // is the only place a thumb reaches at all.
 import React, { useEffect, useState } from 'react';
-import { X, Radio, Database } from 'lucide-react';
+import { X, Radio, Database, CheckCircle2, Clock } from 'lucide-react';
 import arrivalStore from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
@@ -136,7 +136,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         }}
         {...(!landscape ? handleProps : {})}
       >
-        <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8, overflow: 'hidden' }}>
+        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
           <h2 style={{
             fontSize: '1.05rem', fontWeight: 800, lineHeight: 1.15,
             letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -147,21 +147,36 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
 
           {/* Live API vs memory. Two different claims, so they never share a
               treatment: one was fetched now, the other is a countdown running
-              on from an older fetch. Sharing the name's line rather than a row
-              of its own is what makes the compacted header fit in one line. */}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-            padding: '2px 7px', borderRadius: 999, fontSize: '.62rem', fontWeight: 700,
-            letterSpacing: '.03em', whiteSpace: 'nowrap',
-            color: focus.isFresh ? '#4CAF50' : '#00B4D8',
-            background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
-          }}>
+              on from an older fetch. Rendered as compact symbols rather than
+              text so the station name has full breathing room. */}
+          <span
+            className="station-status-badge"
+            title={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
+            aria-label={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              width: 22, height: 22, borderRadius: '50%',
+              color: focus.isFresh ? '#4CAF50' : '#00B4D8',
+              background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
+            }}
+          >
             {focus.isFresh
-              ? <><Radio size={9} className="pulse" /> {t('stationPanel.live')}</>
-              : <><Database size={9} /> {t('stationPanel.memory')}</>}
+              ? <Radio size={12} className="pulse" />
+              : <Database size={12} />}
           </span>
-          <span style={{ fontSize: '.64rem', color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-            {t('stationPanel.confirmedStatus', { time: unheardLabel })}
+          <span
+            className="station-confirmed-badge"
+            title={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+            aria-label={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              color: focus.secondsUnheard !== null && focus.secondsUnheard < 60 ? '#4CAF50' : 'var(--text-secondary)',
+              flexShrink: 0,
+            }}
+          >
+            {focus.secondsUnheard !== null && focus.secondsUnheard < 60
+              ? <CheckCircle2 size={13} />
+              : <Clock size={13} />}
           </span>
         </div>
 
@@ -179,117 +194,8 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         </button>
       </header>
 
-      {/* Directions summary — primary headline arrivals for each direction served.
-          This is the primary information the panel is opened for, so it is given
-          hero visual prominence: large Line badge, prominent destination name,
-          and a large, bold arrival countdown timer. */}
-      {focus.directions.length > 0 && (
-        <div
-          className="station-primary-arrivals"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            background: 'var(--border-color)',
-            flexShrink: 0,
-          }}
-        >
-          {focus.directions.map((d) => {
-            const next = d.arrivals[0];
-            return (
-              <div
-                key={d.key}
-                title={d.label}
-                className="station-arrival-row"
-                style={{
-                  background: 'var(--bg-panel-solid)',
-                  padding: '12px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                }}
-              >
-                {/* Hero Line badge for the primary arrival */}
-                {next && (
-                  <span
-                    className="station-line-badge station-arrival-badge--hero"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 28,
-                      height: 26,
-                      padding: '0 6px',
-                      borderRadius: 7,
-                      background: lineColor(next.line),
-                      color: '#000',
-                      fontSize: '.82rem',
-                      fontWeight: 900,
-                      flexShrink: 0,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                    }}
-                  >
-                    {next.line}
-                  </span>
-                )}
-                <span style={{ fontSize: '.8rem', color: 'var(--text-secondary)', flexShrink: 0 }}>→</span>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <div
-                    style={{
-                      fontSize: '.92rem',
-                      fontWeight: 700,
-                      color: 'var(--text-primary)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {d.label}
-                  </div>
-                  {next?.vehicleId && (
-                    <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                      {t('stationPanel.vehicle', { id: next.vehicleId })}
-                    </div>
-                  )}
-                </div>
-                {next ? (
-                  <div
-                    className="station-arrival-due"
-                    style={{
-                      fontSize: '1.35rem',
-                      fontWeight: 800,
-                      flexShrink: 0,
-                      lineHeight: 1,
-                      fontVariantNumeric: 'tabular-nums',
-                      color: countdownHeat(next.seconds, theme),
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      gap: 2,
-                    }}
-                  >
-                    <span>{countdownLabel(next.seconds, t('common.due'))}</span>
-                    {countdownUnit(next.seconds) && (
-                      <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                        {t(`common.${countdownUnit(next.seconds)}`)}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    —
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Later arrivals table. Capped to roughly three rows so the panel stays compact.
-          This secondary timetable is subordinate to the headline arrivals above:
-          compact Line badge (19px), smaller typography, and compact row spacing. */}
-      <div style={{ maxHeight: 172, overflowY: 'auto', padding: '4px 10px 8px' }}>
+      {/* Unified arrivals table ranked by closest arrival time. */}
+      <div style={{ maxHeight: 240, overflowY: 'auto', padding: '4px 10px 8px' }}>
         {focus.fetchError && (
           <div role="status" style={{
             margin: '8px 0', padding: '8px 10px', borderRadius: 8,
@@ -303,61 +209,59 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
           <p style={{ padding: 20, textAlign: 'center', fontSize: '.8rem', color: 'var(--text-secondary)' }}>
             {t('stationPanel.noLiveTrains')}
           </p>
-        ) : focus.laterArrivals.length === 0 ? (
-          <p style={{ padding: '12px 20px', textAlign: 'center', fontSize: '.74rem', color: 'var(--text-secondary)' }}>
-            {t('stationPanel.nothingFurther')}
-          </p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.75rem' }}>
+          <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem' }}>
             <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
             <thead>
               <tr style={{
-                fontSize: '.60rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                fontSize: '.62rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                 position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
               }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '6px 8px 5px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
               </tr>
             </thead>
             <tbody>
-              {focus.laterArrivals.map((a, i) => (
-                <tr key={i} style={{ borderTop: '1px solid var(--border-color)' }}>
-                  {/* Compact secondary badge */}
-                  <td style={{ padding: '5px 6px', width: 1 }}>
+              {focus.arrivals.map((a, i) => (
+                <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)' }}>
+                  <td style={{ padding: '7px 8px', width: 1 }}>
                     <span
-                      className="station-line-badge station-arrival-badge--compact"
+                      className="station-line-badge"
                       style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        minWidth: 19, height: 19, padding: '0 4px', borderRadius: 5,
+                        minWidth: 24, height: 24, padding: '0 6px', borderRadius: 7,
                         background: lineColor(a.line), color: '#000',
-                        fontSize: '.62rem', fontWeight: 800,
+                        fontSize: '.72rem', fontWeight: 900,
                       }}
                     >
                       {a.line}
                     </span>
                   </td>
-                  <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                  <td style={{ padding: '7px 8px', maxWidth: 0 }}>
                     <div style={{
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontWeight: 500, fontSize: '.74rem', color: 'var(--text-primary)',
+                      fontWeight: 600, fontSize: '.82rem', color: 'var(--text-primary)',
                     }}>
                       {a.destination}
                     </div>
                     {a.vehicleId && (
-                      <div style={{ fontSize: '.58rem', color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)' }}>
                         {t('stationPanel.vehicle', { id: a.vehicleId })}
                       </div>
                     )}
                   </td>
-                  <td style={{
-                    padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
-                    fontWeight: 700, fontSize: '.74rem', fontVariantNumeric: 'tabular-nums',
-                    color: countdownHeat(a.seconds, theme),
-                  }}>
+                  <td
+                    className="station-arrival-due"
+                    style={{
+                      padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap',
+                      fontWeight: 800, fontSize: '.88rem', fontVariantNumeric: 'tabular-nums',
+                      color: countdownHeat(a.seconds, theme),
+                    }}
+                  >
                     {countdownLabel(a.seconds, t('common.due'))}
                     {countdownUnit(a.seconds) && (
-                      <span style={{ fontSize: '.58rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
+                      <span style={{ fontSize: '.62rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
                         {t(`common.${countdownUnit(a.seconds)}`)}
                       </span>
                     )}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Xarxa</string>
+    <string name="title_activity_main">Xarxa</string>
+    <string name="package_name">com.jielei.Xarxa</string>
+    <string name="custom_url_scheme">com.jielei.Xarxa</string>
+</resources>

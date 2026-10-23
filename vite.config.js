@@ -34,21 +34,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 1300,
   },
   server: {
-    // Browser fetch() can never set User-Agent (a forbidden header in the
-    // Fetch spec), and the API requires one containing contact=, so a browser
-    // context has to go through this Node-side proxy, which can set it. The
-    // native iOS app has no dev server to proxy through, so it takes a
-    // different path — see arrivalStore.js. In production, netlify.toml
-    // reproduces this same redirect+header — keep the User-Agent value in
-    // sync between the two files.
+    // FGV's CORS policy admits only FGV's own sites, so a browser has to reach
+    // its live feed through this same-origin proxy. The native iOS app calls
+    // FGV directly — see arrivalStore.js. In production
+    // netlify/functions/metro-proxy.js does the same forwarding; keep the two
+    // targets in sync. See ADR-0005.
     proxy: {
       '/api/metro': {
-        target: 'https://metroapi.alexbadi.es',
+        target: 'https://www.fgv.es',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/metro/, ''),
-        headers: {
-          'User-Agent': 'vib-metro-valencia/1.0 (Web; contact=dev@example.com)'
-        }
+        rewrite: (path) => path.replace(/^\/api\/metro/, '/fgv/app/es/api/v1/V'),
       }
     }
   }

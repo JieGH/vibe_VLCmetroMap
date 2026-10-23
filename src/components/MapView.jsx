@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
+import { Protocol, PMTiles } from 'pmtiles';
+import { Capacitor } from '@capacitor/core';
+import { createBoundedRangeSource } from '../utils/boundedRangeSource';
 import { noLabels, labels } from 'protomaps-themes-base';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
@@ -59,12 +61,22 @@ const BASEMAP_DIR = typeof window !== 'undefined' && window.location
   : '/basemap';
 const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
 
-addProtocol('pmtiles', new Protocol().tile);
+const pmtilesProtocol = new Protocol();
+// Android's local web server answers a range request with the rest of the
+// whole archive rather than the slice asked for, which corrupts every tile
+// read. See boundedRangeSource.js.
+if (Capacitor.getPlatform() === 'android') {
+  pmtilesProtocol.add(new PMTiles(createBoundedRangeSource(BASEMAP_ARCHIVE)));
+}
+addProtocol('pmtiles', pmtilesProtocol.tile);
 
+// Both startup fetches are independent, so they run concurrently: the module
+// evaluates in max(geometry, probe) instead of their sum.
 let line4Osm = null;
-if (typeof window !== 'undefined') {
+let OFFLINE_BASEMAP_AVAILABLE = false;
+
+const loadLine4Osm = async () => {
   try {
-    // eslint-disable-next-line no-undef
     const response = await fetch('/line4_osm.geojson');
     if (response.ok) {
       line4Osm = await response.json();
@@ -77,12 +89,10 @@ if (typeof window !== 'undefined') {
   } catch (error) {
     console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
   }
-}
+};
 
-let OFFLINE_BASEMAP_AVAILABLE = false;
-if (typeof window !== 'undefined') {
+const probeOfflineBasemap = async () => {
   try {
-    // eslint-disable-next-line no-undef
     const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
     OFFLINE_BASEMAP_AVAILABLE = probe.ok;
     if (!probe.ok) {
@@ -94,6 +104,11 @@ if (typeof window !== 'undefined') {
   } catch (error) {
     console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
   }
+};
+
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line no-undef
+  await Promise.all([loadLine4Osm(), probeOfflineBasemap()]);
 }
 
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
@@ -573,7 +588,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
-const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
+const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -589,6 +604,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
   const selectStRef     = useRef(onSelectStation);
+  const onReadyRef      = useRef(onReady);
   const selectedStationRef = useRef(selectedStation);
   const lastFramedFetchedAtRef = useRef(null); // prevents camera jumps on accuracy refinements
   const trainCountRef   = useRef(null);
@@ -678,11 +694,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}${describePositionDoubt(v, lang)}`;
   };
 
-  const updateTrainCount = () => {
+  // `liveVehicles` is the frame's live Vehicles, already walked by the caller.
+  const updateTrainCount = (liveVehicles) => {
     if (!trainCountRef.current) return;
     const lang = languageRef.current;
-    const now = Date.now();
-    const liveVehicles = trainPositionEngine.getLiveVehiclesFromMemory(now);
     if (liveVehicles.length > 0) {
       const pinned = liveVehicles.filter(v => v.sightingCount > 1).length;
       trainCountRef.current.textContent = pinned > 0
@@ -815,7 +830,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         .setLngLat(v.coordinates)
         .addTo(map);
 
-      markerMapRef.current.set(v.id, { marker, inner });
+      markerMapRef.current.set(v.id, {
+        marker,
+        inner,
+        title: wrapper.title,
+        opacity: vehicleOpacity(v, selectedStationRef.current),
+        animation: vehicleAnimation(v, selectedStationRef.current),
+      });
     };
 
     visible.forEach(createVehicleMarker);
@@ -823,7 +844,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     const animate = () => {
       const now = Date.now();
       const currentVehicles = trainPositionEngine.getAllVehicles(now);
-      updateTrainCount();
+      updateTrainCount(currentVehicles.filter(v => v.isLive));
       let currentVisible = currentVehicles;
       if (Array.isArray(filterRef.current) && filterRef.current.length > 0) {
         currentVisible = currentVisible.filter(v => filterRef.current.includes(String(v.line)));
@@ -841,12 +862,25 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         const existing = markerMapRef.current.get(v.id);
         if (existing) {
           existing.marker.setLngLat(v.coordinates);
-          existing.marker.getElement().title = describeVehicle(v);
           // Confidence moves while the train does — the countdown runs down,
           // syncs land or fail to — so the marker has to follow it rather than
-          // keep the opacity it was created with.
-          existing.inner.style.opacity = vehicleOpacity(v, selectedStationRef.current);
-          existing.inner.style.animation = vehicleAnimation(v, selectedStationRef.current);
+          // keep the opacity it was created with. Each value is written only
+          // when it changed; most frames change none of them.
+          const title = describeVehicle(v);
+          if (existing.title !== title) {
+            existing.title = title;
+            existing.marker.getElement().title = title;
+          }
+          const opacity = vehicleOpacity(v, selectedStationRef.current);
+          if (existing.opacity !== opacity) {
+            existing.opacity = opacity;
+            existing.inner.style.opacity = opacity;
+          }
+          const animation = vehicleAnimation(v, selectedStationRef.current);
+          if (existing.animation !== animation) {
+            existing.animation = animation;
+            existing.inner.style.animation = animation;
+          }
         } else {
           // The API can return a different set of vehicle IDs after a poll.
           // Add new live trains without waiting for a map/style refresh.
@@ -967,7 +1001,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     trainCount.setAttribute('aria-live', 'polite');
     containerRef.current.appendChild(trainCount);
     trainCountRef.current = trainCount;
-    updateTrainCount();
+    updateTrainCount(trainPositionEngine.getLiveVehiclesFromMemory(Date.now()));
     mapRef.current = map;
 
     const updateZoomScale = () => {
@@ -1006,6 +1040,12 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       }
     });
 
+    // Boots on map mount, not style.load. Calling it on every mount is safe:
+    // syncNetwork returns early while a sweep is in flight (StrictMode's double
+    // mount) and skips Stations inside their memory pause (returning from
+    // dashboard mode), so no Station is dispatched twice.
+    arrivalStore.bootNetwork();
+
     map.on('style.load', () => {
       // In dev, StrictMode double-mounts this effect, so a stale map from the
       // first mount can still be sitting on a pending style.load when the
@@ -1014,11 +1054,15 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       // live map's markers and re-attach them to the removed one.
       if (mapRef.current !== map) return;
       collapseAttribution();
+      if (onReadyRef.current) {
+        const notifyReady = onReadyRef.current;
+        onReadyRef.current = null; // first style.load only; theme swaps reload the style
+        notifyReady();
+      }
       initStationMarkers(map);
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
       applyLineDim(map, selectedStationRef.current);
-      arrivalStore.seedStrategicHubs();
     });
 
     // Predictions age out after about 18 minutes, so without a repeat sweep the
