@@ -44,6 +44,23 @@ describe('metro-proxy by default', () => {
 
     expect(fetch.mock.calls[0][0]).not.toMatch(/fgv\.es/);
   });
+
+  it('preserves trainTimestamp from the relay so sightings across spaced requests fuse', async () => {
+    const fetch = vi.fn(async () => json({
+      previsiones: [{ line: '3', destino: 'Aeroport', seconds: 199, vehicle: 3132, trainTimestamp: 1792785266 }],
+    }));
+    vi.stubGlobal('fetch', fetch);
+
+    const res = await handler(request());
+    const body = await res.json();
+
+    expect(body.previsiones[0].trains[0]).toEqual({
+      destino: 'Aeroport',
+      seconds: 199,
+      vehicle: 3132,
+      trainTimestamp: 1792785266,
+    });
+  });
 });
 
 describe('metro-proxy with METRO_SOURCE=fgv', () => {

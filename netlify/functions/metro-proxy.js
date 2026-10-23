@@ -22,7 +22,7 @@ const FGV_TIMEOUT_MS = 1500;
 const RELAY_TIMEOUT_MS = 2000;
 // After FGV fails, skip it for a while so only the first request pays the wait.
 const FGV_RETRY_AFTER_MS = 5 * 60 * 1000;
-const STATION_PATH = /^\/horarios-prevision-3\/(\d+)$/;
+const STATION_PATH = /^\/(?:horarios-prevision-3\/(\d+)|prevision\/(\d+)\/parse)$/;
 
 const sourceMode = () => {
   const mode = process.env.METRO_SOURCE;
@@ -41,7 +41,9 @@ function regroupByLine(relayBody) {
   for (const row of relayBody.previsiones || []) {
     const line = String(row.line ?? row.line_id);
     if (!lines.has(line)) lines.set(line, { line, line_id: line, trains: [] });
-    lines.get(line).trains.push({ destino: row.destino, seconds: row.seconds, vehicle: row.vehicle });
+    const train = { destino: row.destino, seconds: row.seconds, vehicle: row.vehicle };
+    if (row.trainTimestamp !== undefined) train.trainTimestamp = row.trainTimestamp;
+    lines.get(line).trains.push(train);
   }
   return { previsiones: [...lines.values()] };
 }
@@ -62,7 +64,8 @@ async function viaRelay(stationId) {
 export default async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api\/metro/, '');
-  const stationId = path.match(STATION_PATH)?.[1];
+  const match = path.match(STATION_PATH);
+  const stationId = match?.[1] || match?.[2];
 
   const mode = sourceMode();
 

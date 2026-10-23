@@ -6,7 +6,7 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => capacitor.native },
 }));
 
-import { arrivalStore, STRATEGIC_HUBS, MAJOR_STATIONS } from './arrivalStore';
+import { arrivalStore, STRATEGIC_HUBS, MAJOR_STATIONS, RELAY_STRATEGIC_HUBS, RELAY_MAJOR_STATIONS } from './arrivalStore';
 
 const NOW = Date.UTC(2026, 9, 20, 17, 30, 0);
 const FGV_PREVISION = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3/';
@@ -43,11 +43,13 @@ beforeEach(() => {
   arrivalStore.inFlightRequests.clear();
   arrivalStore.activeRequests = 0;
   arrivalStore.requestQueue = [];
+  arrivalStore.lastRequestTimestamp = 0;
   arrivalStore.rateLimitedUntil = 0;
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.useRealTimers();
 });
 
@@ -318,3 +320,48 @@ describe('the server cache age contract', () => {
     expect(arrivalStore.memory.get('17').fetchedAt).toBe(NOW);
   });
 });
+
+describe('Netlify relay mode (old API data)', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_METRO_SOURCE', 'relay');
+  });
+
+  it('sweeps the relay Strategic Hubs and Major Stations sequentially with 1s spacing', async () => {
+    const dispatchTimes = [];
+    const fetch = vi.fn(async () => {
+      dispatchTimes.push(Date.now());
+      return { ok: true, status: 200, json: async () => fgvPayload([]) };
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const sync = arrivalStore.syncNetwork();
+    await vi.runAllTimersAsync();
+    const result = await sync;
+
+    const hubIds = RELAY_STRATEGIC_HUBS.map(s => s.id);
+    const expectedIds = [...new Set([...hubIds, ...RELAY_MAJOR_STATIONS.map(s => s.id)])];
+    expect(result).toEqual({ fetched: expectedIds.length, skipped: 0 });
+    const fetchedIds = fetch.mock.calls.map(([url]) => Number(url.split('/').pop()));
+    expect(fetchedIds.slice(0, hubIds.length)).toEqual(hubIds);
+    expect([...fetchedIds].sort((a, b) => a - b))
+      .toEqual([...expectedIds].sort((a, b) => a - b));
+    for (let i = 1; i < dispatchTimes.length; i++) {
+      expect(dispatchTimes[i] - dispatchTimes[i - 1]).toBeGreaterThanOrEqual(1000);
+    }
+  });
+
+  it('prefers server trainTimestamp when present so spaced relay sightings share one timeline', async () => {
+    const serverEpochSec = Math.floor(NOW / 1000) + 240;
+    vi.stubGlobal('fetch', respondWith({
+      previsiones: [{
+        line: '3',
+        line_id: '3',
+        trains: [{ destino: 'Aeroport', seconds: 200, vehicle: 3132, trainTimestamp: serverEpochSec }],
+      }],
+    }));
+
+    const [arrival] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+    expect(arrival.targetTimestamp).toBe(serverEpochSec * 1000 - 15_000);
+  });
+});
+

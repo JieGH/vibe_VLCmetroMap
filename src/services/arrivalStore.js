@@ -32,6 +32,37 @@ STATION_ID_MAP['plaça espanya'] = 51;
 export const STRATEGIC_HUBS = liveStations.strategicHubs;
 export const MAJOR_STATIONS = liveStations.majorStations;
 
+// On Netlify (where FGV refuses connections and the function proxies the
+// metroapi.alexbadi.es relay), use the 3 Strategic Hubs and 9 Major Stations
+// from the relay configuration, dispatched sequentially at 1 req/s so the
+// relay never rate-limits the sweep with HTTP 429.
+export const RELAY_STRATEGIC_HUBS = [
+  { id: 17, name: 'Àngel Guimerà', lines: ['1', '2', '3', '5', '9'] },
+  { id: 115, name: 'Marítim', lines: ['5', '6', '7', '8'] },
+  { id: 33, name: 'Torrent', lines: ['1', '2', '7'] },
+];
+
+export const RELAY_MAJOR_STATIONS = [
+  { id: 12, name: 'Benimaclet' },
+  { id: 34, name: 'Torrent Avinguda' },
+  { id: 83, name: 'Dr. Lluch' },
+  { id: 190, name: 'Alacant' },
+  { id: 17, name: 'Àngel Guimerà' },
+  { id: 115, name: 'Marítim' },
+  { id: 121, name: 'Aeroport' },
+  { id: 186, name: 'Riba-roja de Túria' },
+  { id: 1, name: 'Rafelbunyol' },
+];
+
+const RELAY_MIN_DISPATCH_INTERVAL_MS = 1000;
+
+export function isRelaySource() {
+  if (Capacitor.isNativePlatform()) return false;
+  if (import.meta.env?.VITE_METRO_SOURCE === 'relay') return true;
+  if (typeof window !== 'undefined' && /\.netlify\.app$/i.test(window.location?.hostname || '')) return true;
+  return false;
+}
+
 // How often a Network Sync sweeps the Major Stations. Long enough to stay well
 // inside the upstream rate budget, short enough that no prediction reaches the
 // 18-minute age-out before being replaced. It lives here rather than with the
@@ -105,6 +136,7 @@ class ArrivalStore {
     this.listeners = new Set();
     this.activeRequests = 0;
     this.requestQueue = [];
+    this.lastRequestTimestamp = 0;
     this.notifyPending = false;
     this.rateLimitedUntil = 0;
     this.isSyncingNetwork = false;
@@ -202,7 +234,8 @@ class ArrivalStore {
    * handed out in arrival order, so a sweep's dispatch order is its fetch order.
    */
   acquireRequestSlot() {
-    if (this.activeRequests < MAX_CONCURRENT_REQUESTS) {
+    const limit = isRelaySource() ? 1 : MAX_CONCURRENT_REQUESTS;
+    if (this.activeRequests < limit) {
       this.activeRequests += 1;
       return Promise.resolve();
     }
@@ -231,10 +264,15 @@ class ArrivalStore {
     let fetched = 0;
     let skipped = 0;
 
-    const hubIds = new Set(STRATEGIC_HUBS.map(h => String(h.id)));
+    const relay = isRelaySource();
+    const hubs = relay ? RELAY_STRATEGIC_HUBS : STRATEGIC_HUBS;
+    const majors = relay ? RELAY_MAJOR_STATIONS : MAJOR_STATIONS;
+    const concurrency = relay ? 1 : MAX_CONCURRENT_REQUESTS;
+
+    const hubIds = new Set(hubs.map(h => String(h.id)));
     const ordered = [
-      ...STRATEGIC_HUBS,
-      ...MAJOR_STATIONS.filter(s => !hubIds.has(String(s.id))),
+      ...hubs,
+      ...majors.filter(s => !hubIds.has(String(s.id))),
     ];
     let next = 0;
     const worker = async () => {
@@ -255,7 +293,7 @@ class ArrivalStore {
     };
 
     try {
-      await Promise.all(Array.from({ length: MAX_CONCURRENT_REQUESTS }, worker));
+      await Promise.all(Array.from({ length: concurrency }, worker));
     } finally {
       this.isSyncingNetwork = false;
       this.lastNetworkSyncAt = Date.now();
@@ -388,6 +426,17 @@ class ArrivalStore {
       // Never more than MAX_CONCURRENT_REQUESTS prevision requests in flight
       await this.acquireRequestSlot();
 
+      // When using the old API relay (Netlify), enforce 1s spacing between
+      // outbound requests so metroapi.alexbadi.es never rate-limits with 429.
+      if (isRelaySource()) {
+        const timeSinceLastDispatch = Date.now() - this.lastRequestTimestamp;
+        if (this.lastRequestTimestamp > 0 && timeSinceLastDispatch < RELAY_MIN_DISPATCH_INTERVAL_MS) {
+          const delay = RELAY_MIN_DISPATCH_INTERVAL_MS - timeSinceLastDispatch;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        this.lastRequestTimestamp = Date.now();
+      }
+
       try {
         // FGV's CORS policy admits only FGV's own sites, so a browser has to
         // reach it through the same-origin /api/metro proxy (Vite in dev, a
@@ -414,12 +463,14 @@ class ArrivalStore {
           const ageHeader = response.headers?.get?.('X-Prevision-Age-Ms');
           const ageMs = /^\d+$/.test(ageHeader ?? '') ? Number(ageHeader) : 0;
           const fetchTime = Date.now() - ageMs;
-          // FGV groups trains under each Line; flatten them, carrying the
-          // group's Line onto each train. A train without a destination or a
-          // countdown cannot be placed, so it is dropped rather than shown.
-          const trains = data.previsiones.flatMap((group) =>
-            (Array.isArray(group?.trains) ? group.trains : []).map(t => ({ ...t, line: group.line ?? group.line_id }))
-          ).filter(t => t.destino && typeof t.seconds === 'number' && Number.isFinite(t.seconds));
+          // FGV groups trains under each Line; the old relay returns flat rows
+          // (or regrouped rows with trainTimestamp). Support both shapes.
+          const trains = data.previsiones.flatMap((group) => {
+            if (Array.isArray(group?.trains)) {
+              return group.trains.map(t => ({ ...t, line: group.line ?? group.line_id }));
+            }
+            return group && typeof group === 'object' ? [{ ...group, line: group.line ?? group.line_id }] : [];
+          }).filter(t => (t.destino || t.destination) && typeof t.seconds === 'number' && Number.isFinite(t.seconds));
           const parsedArrivals = trains.map((p) => {
             const seconds = p.seconds;
             const lineId = String(p.line ?? '');
@@ -430,21 +481,25 @@ class ArrivalStore {
             const defaultColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#FFD100' : lineId === '3' ? '#E2001A' : lineId === '5' ? '#00994D' : '#8F6DB8');
             const lineColor = (imageLineColors && imageLineColors[lineId]) ? imageLineColors[lineId] : defaultColor;
 
-            // FGV sends only seconds-to-arrival, so the Target Arrival
-            // Timestamp is anchored on the response time. Every sighting from
-            // one sweep shares the client clock, which keeps them on one
-            // timeline for fusing.
+            // When the old API relay provides trainTimestamp (epoch seconds),
+            // prefer it so sightings across sequential 1s-spaced requests share
+            // one server timeline and fuse into Confirmed vehicles. FGV omits
+            // trainTimestamp, so it anchors on fetchTime + seconds * 1000.
             //
             // Propagation Lag correction: the feed lags the physical train
             // (15 s for metro, 10 s for trams). Subtracting the lag brings the
             // displayed vehicle position forward to match reality.
-            const targetTimestamp = fetchTime + (seconds * 1000) - propagationLagMs(lineId);
+            const serverTimestamp = Number(p.trainTimestamp) * 1000;
+            const rawTimestamp = Number.isFinite(serverTimestamp) && serverTimestamp > 0
+              ? serverTimestamp
+              : fetchTime + (seconds * 1000);
+            const targetTimestamp = rawTimestamp - propagationLagMs(lineId);
 
             return {
               line: lineId,
               lineName,
               lineColor,
-              destination: p.destino,
+              destination: p.destino || p.destination,
               targetTimestamp,
               initialSeconds: seconds,
               isLive: true,
