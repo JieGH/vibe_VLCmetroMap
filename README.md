@@ -165,6 +165,20 @@ First launch, iOS blocks the app as an "Untrusted Developer": on the phone, go t
 
 **After any code change**, re-run `npm run ios:sync` before hitting Run again in Xcode — it rebuilds the web bundle and re-copies it into the native project. Xcode doesn't watch `src/` itself.
 
+### Android (native app)
+
+The same Capacitor wrapper exists for Android in [`android/`](android/), so the app reads FGV directly from the phone there too, as on iOS. It has been scaffolded but **not yet built or run**: the machine it was added on had no Java or Android SDK.
+
+**Prerequisites:** [Android Studio](https://developer.android.com/studio) (it bundles the JDK and SDK), and an Android phone with USB debugging on, or an emulator.
+
+```bash
+npm install
+npm run android:sync   # npm run build, then copies dist/ into the Android project
+npm run android:open   # opens android/ in Android Studio
+```
+
+Then press **Run** (▶) with your phone or an emulator selected. After any code change, re-run `npm run android:sync`. The location permissions for the locate button are declared in `android/app/src/main/AndroidManifest.xml`.
+
 Two things exist purely to make this build path work, and are easy to break by "cleaning up" without knowing why:
 
 - **`capacitor.config.json`'s `plugins.CapacitorHttp.enabled`.** WKWebView's `fetch` is still browser `fetch` — it can't set `User-Agent` either. Enabling `CapacitorHttp` patches `fetch` to route through native networking instead, which isn't subject to that restriction. `arrivalStore.js` checks `Capacitor.isNativePlatform()` and only sends the header on that path; the web build keeps using the dev-server proxy above.

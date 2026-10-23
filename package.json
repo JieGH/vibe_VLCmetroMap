@@ -29,11 +29,14 @@
     "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
     "fetch:basemap": "node scripts/fetch_basemap.cjs",
     "sweep": "node scripts/sweep_coverage.cjs",
     "measure": "node scripts/measure_latency.cjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.1",
     "@capacitor/geolocation": "^8.2.2",
     "@capacitor/ios": "^8.5.1",

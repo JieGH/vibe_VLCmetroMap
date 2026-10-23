@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
+import { Protocol, PMTiles } from 'pmtiles';
+import { Capacitor } from '@capacitor/core';
+import { createBoundedRangeSource } from '../utils/boundedRangeSource';
 import { noLabels, labels } from 'protomaps-themes-base';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
@@ -59,7 +61,14 @@ const BASEMAP_DIR = typeof window !== 'undefined' && window.location
   : '/basemap';
 const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
 
-addProtocol('pmtiles', new Protocol().tile);
+const pmtilesProtocol = new Protocol();
+// Android's local web server answers a range request with the rest of the
+// whole archive rather than the slice asked for, which corrupts every tile
+// read. See boundedRangeSource.js.
+if (Capacitor.getPlatform() === 'android') {
+  pmtilesProtocol.add(new PMTiles(createBoundedRangeSource(BASEMAP_ARCHIVE)));
+}
+addProtocol('pmtiles', pmtilesProtocol.tile);
 
 // Both startup fetches are independent, so they run concurrently: the module
 // evaluates in max(geometry, probe) instead of their sum.
