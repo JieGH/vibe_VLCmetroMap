@@ -586,7 +586,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
-const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation }) => {
+const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -602,6 +602,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
   const selectStRef     = useRef(onSelectStation);
+  const onReadyRef      = useRef(onReady);
   const selectedStationRef = useRef(selectedStation);
   const lastFramedFetchedAtRef = useRef(null); // prevents camera jumps on accuracy refinements
   const trainCountRef   = useRef(null);
@@ -1051,6 +1052,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       // live map's markers and re-attach them to the removed one.
       if (mapRef.current !== map) return;
       collapseAttribution();
+      if (onReadyRef.current) {
+        const notifyReady = onReadyRef.current;
+        onReadyRef.current = null; // first style.load only; theme swaps reload the style
+        notifyReady();
+      }
       initStationMarkers(map);
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
