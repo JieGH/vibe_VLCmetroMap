@@ -103,6 +103,20 @@ body {
   user-select: none;
 }
 
+/* The Android app draws its interface a little smaller (see utils/uiScale.js).
+   Zoom scales lengths but not viewport units, so the full-screen containers
+   are stretched by the same factor to keep filling the screen. */
+html.ui-zoomed {
+  zoom: var(--ui-zoom);
+}
+
+html.ui-zoomed,
+html.ui-zoomed body,
+html.ui-zoomed #root {
+  height: calc(100dvh / var(--ui-zoom));
+  min-height: calc(100vh / var(--ui-zoom));
+}
+
 /* Enforce minimum 16px input size so iOS Safari never triggers automatic 5% viewport auto-zoom */
 input,
 textarea,
