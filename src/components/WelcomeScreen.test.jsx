@@ -71,50 +71,63 @@ describe('WelcomeScreen dismissal schedule', () => {
     return { schedule, onFade, onComplete };
   };
 
-  it('dismisses at 500 + 200 ms when ready from the start', () => {
+  it('starts a delayed fade at once when ready from the start, completing at 500 + 200 ms', () => {
     const { onFade, onComplete } = start(true);
-    vi.advanceTimersByTime(499);
-    expect(onFade).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
     expect(onFade).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(199);
+    expect(onFade).toHaveBeenCalledWith(500);
+    vi.advanceTimersByTime(699);
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('dismisses at 1000 + 200 ms when ready never arrives', () => {
+  it('fades with no delay at 1000 ms when ready never arrives', () => {
     const { onFade, onComplete } = start(false);
     vi.advanceTimersByTime(999);
     expect(onFade).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onFade).toHaveBeenCalledTimes(1);
+    expect(onFade).toHaveBeenCalledWith(0);
     vi.advanceTimersByTime(199);
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('dismisses at 700 + 200 ms when ready turns true at 700 ms', () => {
+  it('fades at once with no delay when ready turns true at 700 ms', () => {
     const { schedule, onFade, onComplete } = start(false);
     vi.advanceTimersByTime(700);
     expect(onFade).not.toHaveBeenCalled();
     schedule.setReady(true);
     expect(onFade).toHaveBeenCalledTimes(1);
+    expect(onFade).toHaveBeenCalledWith(0);
     vi.advanceTimersByTime(199);
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('waits out the minimum hold when ready turns true early', () => {
-    const { schedule, onFade } = start(false);
-    vi.advanceTimersByTime(100);
-    schedule.setReady(true);
-    vi.advanceTimersByTime(399);
+  it('ready at 200 ms: onFade(300) at 200 ms, onComplete at 700 ms', () => {
+    const { schedule, onFade, onComplete } = start(false);
+    vi.advanceTimersByTime(200);
     expect(onFade).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
+    schedule.setReady(true);
     expect(onFade).toHaveBeenCalledTimes(1);
+    expect(onFade).toHaveBeenCalledWith(300);
+    vi.advanceTimersByTime(499);
+    expect(onComplete).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('measures elapsed time with an injectable clock', () => {
+    vi.useFakeTimers();
+    let t = 0;
+    const onFade = vi.fn();
+    const schedule = createWelcomeSchedule({ ready: false, onFade, onComplete: () => {}, now: () => t });
+    t = 120;
+    schedule.setReady(true);
+    expect(onFade).toHaveBeenCalledWith(380);
   });
 
   it('calls onComplete exactly once however long it runs', () => {
@@ -128,7 +141,7 @@ describe('WelcomeScreen dismissal schedule', () => {
   });
 
   it('fires nothing after cancel', () => {
-    const { schedule, onFade, onComplete } = start(true);
+    const { schedule, onFade, onComplete } = start(false);
     schedule.cancel();
     vi.advanceTimersByTime(5000);
     expect(onFade).not.toHaveBeenCalled();

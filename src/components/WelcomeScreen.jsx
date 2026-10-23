@@ -15,11 +15,14 @@ export { WELCOME_MIN_HOLD_MS, WELCOME_MAX_HOLD_MS, WELCOME_FADE_DURATION_MS };
  *
  * Displays an animated brand mark showing metro lines drawing into the central station,
  * which then blooms open like a spotlight. It holds at least 0.5 s, then fades into the
- * live map as soon as the map reports `ready` (or at 1.0 s at the latest).
+ * live map as soon as the map reports `ready` (or at 1.0 s at the latest). The fade is
+ * requested as soon as `ready` arrives, with a CSS transition-delay covering the rest of
+ * the minimum hold, so it runs on the compositor even while the main thread is busy.
  */
 const WelcomeScreen = ({ ready = false, onComplete }) => {
   const { t } = useTranslation();
   const [fading, setFading] = useState(false);
+  const [fadeDelay, setFadeDelay] = useState(0);
   const [hidden, setHidden] = useState(false);
   const scheduleRef = useRef(null);
   const initialReadyRef = useRef(ready);
@@ -29,7 +32,7 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
   useEffect(() => {
     const schedule = createWelcomeSchedule({
       ready: initialReadyRef.current,
-      onFade: () => setFading(true),
+      onFade: (delayMs) => { setFadeDelay(delayMs); setFading(true); },
       onComplete: () => {
         setHidden(true);
         markWelcomeSeen();
@@ -51,6 +54,7 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
       role="status"
       aria-label="Xarxa"
       data-testid="welcome-screen"
+      style={fading ? { transitionDelay: `${fadeDelay}ms` } : undefined}
     >
       <div className="welcome-screen-content">
         <div className="welcome-screen-logo-wrap">
