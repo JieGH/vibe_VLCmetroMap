@@ -41,7 +41,8 @@ beforeEach(() => {
   capacitor.native = false;
   arrivalStore.memory.clear();
   arrivalStore.inFlightRequests.clear();
-  arrivalStore.lastRequestTimestamp = 0;
+  arrivalStore.activeRequests = 0;
+  arrivalStore.requestQueue = [];
   arrivalStore.rateLimitedUntil = 0;
 });
 
@@ -188,5 +189,77 @@ describe('booting the live network', () => {
     expect(fetchedIds.slice(0, hubIds.length)).toEqual(hubIds);
     expect([...fetchedIds].sort((a, b) => a - b))
       .toEqual(MAJOR_STATIONS.map(s => s.id).sort((a, b) => a - b));
+  });
+});
+
+describe('the bounded parallel queue', () => {
+  // A fetch that answers only when the test lets it, so requests pile up in flight.
+  const gatedFetch = () => {
+    const gate = { inFlight: 0, peak: 0, total: 0, pending: [] };
+    gate.fetch = vi.fn(() => new Promise((resolve) => {
+      gate.inFlight += 1; gate.total += 1;
+      gate.peak = Math.max(gate.peak, gate.inFlight);
+      gate.pending.push(() => {
+        gate.inFlight -= 1;
+        resolve({ ok: true, status: 200, json: async () => fgvPayload([]) });
+      });
+    }));
+    gate.drain = async () => {
+      while (gate.total < MAJOR_STATIONS.length || gate.pending.length) {
+        await vi.advanceTimersByTimeAsync(0);
+        gate.pending.splice(0).forEach(answer => answer());
+      }
+    };
+    return gate;
+  };
+
+  it('never has more than 4 requests in flight during a sync', async () => {
+    const gate = gatedFetch();
+    vi.stubGlobal('fetch', gate.fetch);
+
+    const sync = arrivalStore.syncNetwork();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(gate.inFlight).toBe(4);
+    await gate.drain();
+    const result = await sync;
+
+    expect(gate.peak).toBe(4);
+    expect(result).toEqual({ fetched: MAJOR_STATIONS.length, skipped: 0 });
+  });
+
+  it('skips Stations inside their memory pause and survives a failing Station', async () => {
+    const fresh = MAJOR_STATIONS[5];
+    const broken = MAJOR_STATIONS[7];
+    arrivalStore.memory.set(String(fresh.id), { arrivals: [], fetchedAt: NOW });
+    const fetch = vi.fn(async (url) => {
+      if (url.endsWith(`/${broken.id}`)) throw new Error('boom');
+      return { ok: true, status: 200, json: async () => fgvPayload([]) };
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const sync = arrivalStore.syncNetwork();
+    await vi.runAllTimersAsync();
+    const result = await sync;
+
+    const fetchedIds = fetch.mock.calls.map(([url]) => Number(url.split('/').pop()));
+    expect(fetchedIds).not.toContain(Number(fresh.id));
+    expect(result.skipped).toBe(1);
+    expect(result.fetched + result.skipped).toBe(MAJOR_STATIONS.length);
+  });
+
+  it('shares the same bound with single-Station requests', async () => {
+    const gate = gatedFetch();
+    vi.stubGlobal('fetch', gate.fetch);
+
+    const taps = MAJOR_STATIONS.slice(0, 6).map(s =>
+      arrivalStore.getStationArrivals({ apiId: s.id, name: s.name }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(gate.inFlight).toBe(4);
+    while (gate.pending.length || gate.total < 6) {
+      await vi.advanceTimersByTimeAsync(0);
+      gate.pending.splice(0).forEach(answer => answer());
+    }
+    await Promise.all(taps);
+    expect(gate.peak).toBe(4);
   });
 });
