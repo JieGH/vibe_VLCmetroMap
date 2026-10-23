@@ -311,7 +311,7 @@ describe('the server cache age contract', () => {
     expect(arrivalStore.memory.get('17').fetchedAt).toBe(NOW - 5000);
   });
 
-  it.each([[undefined], ['abc'], ['-3'], ['']])('treats a missing or invalid age (%s) as fresh', async (age) => {
+  it.each([[undefined], ['abc'], ['-3'], [''], ['1.5'], ['1e3']])('treats a missing or invalid age (%s) as fresh', async (age) => {
     vi.stubGlobal('fetch', withAge(age));
     const [fresh] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
     expect(fresh.targetTimestamp).toBe(NOW + 285_000);

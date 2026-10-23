@@ -409,10 +409,11 @@ class ArrivalStore {
         if (data && Array.isArray(data.previsiones)) {
           // The local server may answer from its short cache and says how old
           // the answer is. Anchoring on when FGV actually answered keeps a
-          // cached reply from displacing trains; no header (Netlify, the Vite
+          // cached reply from displacing Vehicles; no header (Netlify, the Vite
           // proxy, the native app's direct call) means a fresh answer.
-          const ageMs = Number(response.headers?.get?.('X-Prevision-Age-Ms'));
-          const fetchTime = Date.now() - (Number.isFinite(ageMs) && ageMs > 0 ? ageMs : 0);
+          const ageHeader = response.headers?.get?.('X-Prevision-Age-Ms');
+          const ageMs = /^\d+$/.test(ageHeader ?? '') ? Number(ageHeader) : 0;
+          const fetchTime = Date.now() - ageMs;
           // FGV groups trains under each Line; flatten them, carrying the
           // group's Line onto each train. A train without a destination or a
           // countdown cannot be placed, so it is dropped rather than shown.
