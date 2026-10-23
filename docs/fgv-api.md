@@ -61,6 +61,7 @@ Trains are grouped under each Line that has any:
 | Native iOS app | Directly. CapacitorHttp runs `fetch` over native networking, which has no CORS. |
 | Vite dev and `vite preview` | The `/api/metro` proxy in `vite.config.js`. |
 | Production web | `netlify/functions/metro-proxy.js`. |
+| Self-hosted (`npm run serve`) | `server/prevision.js`, with hedging and a 10 s cache (ADR-0006). |
 
 The web build requests `/api/metro/horarios-prevision-3/{id}`; both proxies rewrite that to the FGV path above.
 
@@ -81,5 +82,5 @@ Seen but unused: `estaciones`, `lineas`, `incidencias`, and `POST horarios-onlin
 ## If it breaks
 
 1. `npm run sweep`. Few usable Stations means the endpoint moved or closed.
-2. The URL lives in `src/services/arrivalStore.js`, `vite.config.js`, `netlify/functions/metro-proxy.js` and `scripts/sweep_coverage.cjs`.
+2. The URL lives in `src/services/arrivalStore.js`, `vite.config.js`, `netlify/functions/metro-proxy.js`, `server/prevision.js` and `scripts/sweep_coverage.cjs`.
 3. Read the open-source Valencia Transit Reloaded app for the current path.

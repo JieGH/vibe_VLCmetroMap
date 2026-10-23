@@ -6,6 +6,8 @@ Date: 2026-10-20
 
 Accepted. Replaces `metroapi.alexbadi.es` as the source of every live Arrival.
 
+Partly superseded by [ADR-0006](0006-self-host-on-the-lan-with-a-prevision-only-proxy.md): its 1 s dispatch spacing is replaced by a bounded-concurrency queue, its client timeout and retry for the web build by the server's hedge and deadline, and its same-origin proxy for self-hosting by the local server's prevision route. The rest stands.
+
 ## Context
 
 Live Arrivals came from `metroapi.alexbadi.es`, a third-party wrapper. A sweep of all 143 Stations on 2026-10-20, run against it and against FGV at the same instant, showed:
