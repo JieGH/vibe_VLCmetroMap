@@ -54,13 +54,22 @@ describe('StationPanel component', () => {
     expect(html).not.toContain('station-backdrop');
   });
 
-  it('renders prominent hero badges for primary arrivals and compact badges for later arrivals', () => {
+  it('renders all arrival trains in a single unified list ranked by closest arrival time', () => {
     const now = Date.now();
     arrivalStore.memory.set('10', {
       stationId: 10,
       stationName: 'Xàtiva',
       fetchedAt: now,
       arrivals: [
+        {
+          line: '9',
+          destination: 'Riba-roja de Túria',
+          vehicleId: '903',
+          lineColor: '#996633',
+          lineName: 'Line 9',
+          targetTimestamp: now + 600 * 1000,
+          isLive: true,
+        },
         {
           line: '3',
           destination: 'Rafelbunyol',
@@ -71,21 +80,12 @@ describe('StationPanel component', () => {
           isLive: true,
         },
         {
-          line: '5',
-          destination: 'Aeroport',
-          vehicleId: '502',
-          lineColor: '#00994D',
-          lineName: 'Line 5',
-          targetTimestamp: now + 300 * 1000,
-          isLive: true,
-        },
-        {
-          line: '9',
-          destination: 'Riba-roja de Túria',
-          vehicleId: '903',
-          lineColor: '#996633',
-          lineName: 'Line 9',
-          targetTimestamp: now + 600 * 1000,
+          line: '3',
+          destination: 'Rafelbunyol',
+          vehicleId: '302',
+          lineColor: '#E2001A',
+          lineName: 'Line 3',
+          targetTimestamp: now + 240 * 1000,
           isLive: true,
         },
       ],
@@ -95,17 +95,23 @@ describe('StationPanel component', () => {
       <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
     );
 
-    // Primary arrivals have hero badges (28x26px) and prominent typography (1.35rem)
-    expect(html).toContain('station-arrival-badge--hero');
-    expect(html).toContain('min-width:28px');
-    expect(html).toContain('height:26px');
-    expect(html).toContain('station-arrival-due');
-    expect(html).toContain('font-size:1.35rem');
+    // No split into primary big rows vs compact rest rows
+    expect(html).not.toContain('station-primary-arrivals');
+    expect(html).not.toContain('station-arrival-badge--hero');
+    expect(html).not.toContain('station-arrival-badge--compact');
 
-    // Later arrivals have compact badges (19x19px)
-    expect(html).toContain('station-arrival-badge--compact');
-    expect(html).toContain('min-width:19px');
-    expect(html).toContain('height:19px');
+    // Unified table contains all arrivals with uniform badge and row styling
+    expect(html).toContain('station-arrivals-table');
+    expect(html).toContain('station-line-badge');
+    expect(html).toContain('station-arrival-due');
+
+    // Ranked strictly by closest arrival time: #301 (2 min) -> #302 (4 min) -> #903 (10 min)
+    const idx301 = html.indexOf('Vehicle #301');
+    const idx302 = html.indexOf('Vehicle #302');
+    const idx903 = html.indexOf('Vehicle #903');
+    expect(idx301).toBeGreaterThan(-1);
+    expect(idx302).toBeGreaterThan(idx301);
+    expect(idx903).toBeGreaterThan(idx302);
   });
 
   it('renders drag handle in portrait mode and hides it in landscape mode', () => {
@@ -136,5 +142,59 @@ describe('StationPanel component', () => {
         globalThis.window = origWindow;
       }
     }
+  });
+
+  it('renders live/memory and confirmed status as symbols instead of text in header', () => {
+    const now = Date.now();
+    arrivalStore.memory.set('10', {
+      stationId: 10,
+      stationName: 'Xàtiva',
+      fetchedAt: now,
+      arrivals: [
+        {
+          line: '3',
+          destination: 'Rafelbunyol',
+          vehicleId: '301',
+          lineColor: '#E2001A',
+          lineName: 'Line 3',
+          targetTimestamp: now + 120 * 1000,
+          isLive: true,
+        },
+      ],
+    });
+
+    const liveHtml = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+    );
+    expect(liveHtml).toContain('station-status-badge');
+    expect(liveHtml).toContain('station-confirmed-badge');
+    expect(liveHtml).not.toContain('>LIVE<');
+    expect(liveHtml).not.toContain('>confirmed just now<');
+
+    // Stale memory state
+    arrivalStore.memory.set('10', {
+      stationId: 10,
+      stationName: 'Xàtiva',
+      fetchedAt: now - 120 * 1000,
+      arrivals: [
+        {
+          line: '3',
+          destination: 'Rafelbunyol',
+          vehicleId: '301',
+          lineColor: '#E2001A',
+          lineName: 'Line 3',
+          targetTimestamp: now + 120 * 1000,
+          isLive: true,
+        },
+      ],
+    });
+
+    const memoryHtml = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+    );
+    expect(memoryHtml).toContain('station-status-badge');
+    expect(memoryHtml).toContain('station-confirmed-badge');
+    expect(memoryHtml).not.toContain('>MEMORY<');
+    expect(memoryHtml).not.toContain('>confirmed 2 min ago<');
   });
 });
