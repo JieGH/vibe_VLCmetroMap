@@ -51,4 +51,4 @@ The cache makes a second sync within 10 s nearly free, so measure cold loads mor
 
 Costs. The server is one more thing to run and keep reachable, with no authentication. A prediction may be up to 10 s older than the client's request, which the age contract keeps honest. The FGV URL now lives in `server/prevision.js` and `scripts/measure_latency.cjs` as well (see `docs/fgv-api.md`). The 8-train cap, the Netlify block and the undocumented endpoint from ADR-0005 are unchanged.
 
-Final measurement: see PR #81.
+Final measurement, 2026-10-23: the baseline build (`vite preview`) and the final build (`npm run serve`), interleaved on the LAN. Full first Network Sync, cold: 26.0 s → 3.9 s (median of 6 loads; 23.9–33.3 s → 3.6–4.2 s). Proxy hangs: 4 of 60 → 0 of 60. First live Vehicle: 1976 → 1846 ms, set by FGV's first answer that evening. Vehicle positions were identical to the pixel when both builds were fed the same Arrival Memory at a frozen instant. Full tables are in PR #81.
