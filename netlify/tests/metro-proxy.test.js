@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import handler, { resetFgvBlock } from './metro-proxy.js';
+import handler, { resetFgvBlock } from '../functions/metro-proxy.js';
 
 const FGV_URL = /fgv\.es\/fgv\/app\/es\/api\/v1\/V\/horarios-prevision-3\/17$/;
 
