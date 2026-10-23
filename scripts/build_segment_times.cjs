@@ -34,7 +34,7 @@ const outPath = path.join(projectRoot, 'src', 'data', 'segment_times.json');
 // Metrovalencia holds a platform for roughly this long. GTFS records
 // arrival == departure for every stop in this feed, so a segment interval is
 // "dwell at the origin + running time"; the engine needs the two apart.
-const DWELL_SECONDS = 25;
+const DWELL_SECONDS = 12.5;
 
 const readCsv = (name) => {
   const lines = fs.readFileSync(path.join(gtfsDir, name), 'utf8').trim().split('\n');

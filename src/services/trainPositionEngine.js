@@ -56,11 +56,11 @@ export const projectPointOntoPolyline = (point, coords, cumDists) => {
   return { distAlongTrack: bestDistAlong, perpDistance: minPerpDist };
 };
 
-const DWELL_SECONDS = segmentTimes.dwellSeconds ?? 25;
+const DWELL_SECONDS = segmentTimes.dwellSeconds ?? 12.5;
 
 // A prediction this far past its arrival time is stale enough to drop, and one
 // this far out has accumulated too much walk error to place with confidence.
-const MAX_SECONDS_PAST = 40;
+const MAX_SECONDS_PAST = 20;
 const MAX_SECONDS_AHEAD = 1080;
 
 // Several lines serve branches their polyline in metro_lines.json does not

@@ -76,7 +76,7 @@ const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual ref
 // the local server's global upstream cap and shared cache, so it can go wider;
 // native calls FGV directly with no shared bound, so it stays courteous at 4.
 const MAX_CONCURRENT_REQUESTS = Capacitor.isNativePlatform() ? 4 : 8;
-const DWELL_GRACE_PERIOD_MS = 40000; // 40 seconds dwell before train rolls off
+const DWELL_GRACE_PERIOD_MS = 20000; // 20 seconds dwell before train rolls off
 
 // Live predictions for one Station, from the endpoint FGV's own app uses.
 // Undocumented: it can move without notice. See ADR-0005.
