@@ -30,34 +30,41 @@ export const markWelcomeSeen = (storage = defaultStorage()) => {
   }
 };
 
+const defaultNow = () => (
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now()
+);
+
 /**
- * Starts the splash clock. The fade begins once the minimum hold has passed and
- * the map is ready, or at the maximum hold regardless; onComplete follows one
- * fade later, exactly once.
+ * Starts the splash clock. As soon as the map is ready the fade is requested
+ * with `onFade(delayMs)`, where delayMs is the remainder of the minimum hold
+ * (0 once it has passed), so a compositor-driven CSS transition can wait it out
+ * without needing the main thread at that moment. The maximum hold fades with no
+ * delay regardless. onComplete follows delay + one fade later; both fire once.
  */
-export const createWelcomeSchedule = ({ ready, onFade, onComplete }) => {
-  let isReady = Boolean(ready);
-  let minHoldPassed = false;
+export const createWelcomeSchedule = ({ ready, onFade, onComplete, now = defaultNow }) => {
   let fadeStarted = false;
   const timers = [];
+  const startedAt = now();
 
-  const startFade = () => {
+  const startFade = (delayMs) => {
     if (fadeStarted) return;
     fadeStarted = true;
-    onFade();
-    timers.push(setTimeout(onComplete, WELCOME_FADE_DURATION_MS));
+    onFade(delayMs);
+    timers.push(setTimeout(onComplete, delayMs + WELCOME_FADE_DURATION_MS));
   };
-  const maybeFade = () => {
-    if (minHoldPassed && isReady) startFade();
+  const fadeWhenReady = () => {
+    const elapsed = now() - startedAt;
+    startFade(Math.max(0, Math.round(WELCOME_MIN_HOLD_MS - elapsed)));
   };
 
-  timers.push(setTimeout(() => { minHoldPassed = true; maybeFade(); }, WELCOME_MIN_HOLD_MS));
-  timers.push(setTimeout(startFade, WELCOME_MAX_HOLD_MS));
+  timers.push(setTimeout(() => startFade(0), WELCOME_MAX_HOLD_MS));
+  if (ready) fadeWhenReady();
 
   return {
     setReady(value) {
-      isReady = Boolean(value);
-      maybeFade();
+      if (value) fadeWhenReady();
     },
     cancel() {
       timers.forEach(clearTimeout);
