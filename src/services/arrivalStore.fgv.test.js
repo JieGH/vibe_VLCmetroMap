@@ -192,6 +192,21 @@ describe('booting the live network', () => {
   });
 });
 
+describe('booting twice back to back', () => {
+  it('dispatches each Station at most once', async () => {
+    const fetch = respondWith(fgvPayload([]));
+    vi.stubGlobal('fetch', fetch);
+
+    const first = arrivalStore.bootNetwork();
+    const second = arrivalStore.bootNetwork();
+    await vi.runAllTimersAsync();
+    await Promise.all([first, second]);
+
+    const fetchedIds = fetch.mock.calls.map(([url]) => Number(url.split('/').pop()));
+    expect(new Set(fetchedIds).size).toBe(fetchedIds.length);
+  });
+});
+
 describe('the bounded parallel queue', () => {
   // A fetch that answers only when the test lets it, so requests pile up in flight.
   const gatedFetch = () => {

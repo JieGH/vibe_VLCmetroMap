@@ -102,10 +102,6 @@ if (typeof window !== 'undefined') {
   await Promise.all([loadLine4Osm(), probeOfflineBasemap()]);
 }
 
-// The network boot starts on map mount, not on style.load; this keeps
-// StrictMode's double mount from starting it twice.
-let networkBootStarted = false;
-
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { renderStationHighlight } from '../utils/focusNode';
@@ -1016,10 +1012,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       }
     });
 
-    if (!networkBootStarted) {
-      networkBootStarted = true;
-      arrivalStore.bootNetwork();
-    }
+    // Boots on map mount, not style.load. Calling it on every mount is safe:
+    // syncNetwork returns early while a sweep is in flight (StrictMode's double
+    // mount) and skips Stations inside their memory pause (returning from
+    // dashboard mode), so no Station is dispatched twice.
+    arrivalStore.bootNetwork();
 
     map.on('style.load', () => {
       // In dev, StrictMode double-mounts this effect, so a stale map from the
