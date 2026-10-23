@@ -14,6 +14,10 @@ android {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            // The offline basemap is read by HTTP range request, one tile at a
+            // time. Deflated inside the APK it cannot be seeked, so every tile
+            // request fails and the map draws no streets. Store it raw.
+            noCompress 'pmtiles'
         }
     }
     buildTypes {
