@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
+import { Protocol, PMTiles } from 'pmtiles';
+import { ExactRangeSource } from '../utils/exactRangeSource';
 import { noLabels, labels } from 'protomaps-themes-base';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
@@ -59,7 +60,13 @@ const BASEMAP_DIR = typeof window !== 'undefined' && window.location
   : '/basemap';
 const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
 
-addProtocol('pmtiles', new Protocol().tile);
+// The archive is registered with a source that reads only the bytes it asked
+// for, on every platform: Capacitor's Android server answers a range request
+// with a body that runs to the end of the file, which pmtiles' default source
+// rejects, leaving the map without streets. The key is the style's URL.
+const basemapProtocol = new Protocol();
+basemapProtocol.add(new PMTiles(new ExactRangeSource(BASEMAP_ARCHIVE)));
+addProtocol('pmtiles', basemapProtocol.tile);
 
 // Both startup fetches are independent, so they run concurrently: the module
 // evaluates in max(geometry, probe) instead of their sum.
