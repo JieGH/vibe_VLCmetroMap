@@ -7,6 +7,7 @@ import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
 import WelcomeScreen from './components/WelcomeScreen';
+import { hasSeenWelcome } from './utils/welcomeSchedule';
 import { locate } from './services/userLocation';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
@@ -26,7 +27,8 @@ const readMode = () =>
 
 function App() {
   const { t } = useTranslation();
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(() => !hasSeenWelcome());
+  const [mapReady, setMapReady] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -231,7 +233,7 @@ function App() {
     return (
       <div className="app-container">
         {showWelcome && (
-          <WelcomeScreen onComplete={() => setShowWelcome(false)} />
+          <WelcomeScreen ready onComplete={() => setShowWelcome(false)} />
         )}
         <DashboardBoard
           theme={theme}
@@ -249,7 +251,7 @@ function App() {
   return (
     <div className="app-container">
       {showWelcome && (
-        <WelcomeScreen onComplete={() => setShowWelcome(false)} />
+        <WelcomeScreen ready={mapReady} onComplete={() => setShowWelcome(false)} />
       )}
       {/* Full-screen interactive map */}
       <MapView
@@ -260,6 +262,7 @@ function App() {
         activeLineFilter={activeLineFilter}
         hoverLine={hoverLine}
         userLocation={userLocation}
+        onReady={() => setMapReady(true)}
       />
 
       {/* Collapsible Sidebar */}
