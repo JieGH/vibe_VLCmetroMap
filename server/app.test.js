@@ -1,0 +1,202 @@
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createApp } from './app.js';
+
+const BIG_JS = `console.log(${JSON.stringify('metro '.repeat(2000))});`;
+const PMTILES = Buffer.from(Array.from({ length: 1000 }, (_, i) => i % 251));
+const fgvBody = JSON.stringify({ previsiones: [{ line: 1, trains: [{ destino: 'Bétera', seconds: 60, vehicle: 1 }] }] });
+
+let dir, server, base, upstream;
+
+beforeAll(async () => {
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'serve-'));
+  fs.mkdirSync(path.join(dir, 'dist/assets'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'dist/basemap'));
+  fs.writeFileSync(path.join(dir, 'secret.txt'), 'outside dist');
+  fs.writeFileSync(path.join(dir, 'dist/index.html'), '<!doctype html><title>app</title>' + '<p>x</p>'.repeat(200));
+  fs.writeFileSync(path.join(dir, 'dist/assets/index-AbCd1234.js'), BIG_JS);
+  fs.writeFileSync(path.join(dir, 'dist/line4.geojson'), JSON.stringify({ type: 'FeatureCollection', features: [], pad: 'z'.repeat(500) }));
+  fs.writeFileSync(path.join(dir, 'dist/favicon.png'), 'png');
+  fs.writeFileSync(path.join(dir, 'dist/basemap/valencia.pmtiles'), PMTILES);
+
+  upstream = vi.fn(async () => new Response(fgvBody, { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-cache, private, max-age=31536000' } }));
+  server = createApp({ root: path.join(dir, 'dist'), fetch: (...a) => upstream(...a) }).server();
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  base = `http://127.0.0.1:${server.address().port}`;
+});
+afterAll(() => {
+  server.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// fetch() would decode content-encoding for us; keep bodies raw.
+const get = (p, headers = {}, method = 'GET') => fetch(base + p, { method, headers: { 'accept-encoding': 'identity', ...headers } });
+
+describe('compression', () => {
+  it('serves brotli when accepted, and the body decodes to the original', async () => {
+    const res = await get('/assets/index-AbCd1234.js', { 'accept-encoding': 'br, gzip' });
+    expect(res.headers.get('content-encoding')).toBe('br');
+    expect(res.headers.get('vary')).toBe('Accept-Encoding');
+    expect(res.headers.get('content-type')).toMatch(/^text\/javascript/);
+    const raw = Buffer.from(await res.arrayBuffer());
+    // undici already decoded it; the transferred length proves it was compressed
+    expect(raw.toString()).toBe(BIG_JS);
+    expect(Number(res.headers.get('content-length'))).toBeLessThan(BIG_JS.length);
+  });
+
+  it('falls back to gzip, then to identity', async () => {
+    expect((await get('/assets/index-AbCd1234.js', { 'accept-encoding': 'gzip' })).headers.get('content-encoding')).toBe('gzip');
+    const plain = await get('/assets/index-AbCd1234.js');
+    expect(plain.headers.get('content-encoding')).toBeNull();
+    expect(plain.headers.get('vary')).toBe('Accept-Encoding');
+    expect(await plain.text()).toBe(BIG_JS);
+  });
+
+  it('compresses geojson too, and never an image', async () => {
+    expect((await get('/line4.geojson', { 'accept-encoding': 'br' })).headers.get('content-encoding')).toBe('br');
+    expect((await get('/favicon.png', { 'accept-encoding': 'br, gzip' })).headers.get('content-encoding')).toBeNull();
+  });
+
+  it('gives each encoding its own strong ETag', async () => {
+    const [br, gz, id] = await Promise.all(['br', 'gzip', 'identity'].map(e => get('/index.html', { 'accept-encoding': e })));
+    const tags = [br, gz, id].map(r => r.headers.get('etag'));
+    expect(new Set(tags).size).toBe(3);
+    expect(tags.every(t => /^"[^"]+"$/.test(t))).toBe(true);
+  });
+});
+
+describe('caching', () => {
+  it('marks hashed assets immutable', async () => {
+    expect((await get('/assets/index-AbCd1234.js')).headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+  });
+
+  it('revalidates index.html and unhashed files, answering If-None-Match with 304', async () => {
+    for (const p of ['/', '/index.html', '/line4.geojson']) {
+      const first = await get(p);
+      expect(first.headers.get('cache-control')).toBe('no-cache');
+      const etag = first.headers.get('etag');
+      const again = await get(p, { 'if-none-match': etag });
+      expect(again.status).toBe(304);
+      expect(await again.text()).toBe('');
+    }
+    expect((await get('/index.html', { 'if-none-match': '"stale"' })).status).toBe(200);
+  });
+
+  it('304s on the encoded variant tag', async () => {
+    const etag = (await get('/index.html', { 'accept-encoding': 'br' })).headers.get('etag');
+    expect((await get('/index.html', { 'accept-encoding': 'br', 'if-none-match': etag })).status).toBe(304);
+  });
+});
+
+describe('PMTiles archive', () => {
+  const url = '/basemap/valencia.pmtiles';
+
+  it('answers a range with a plain 206 and the right Content-Range', async () => {
+    const res = await get(url, { range: 'bytes=10-19', 'accept-encoding': 'br, gzip' });
+    expect(res.status).toBe(206);
+    expect(res.headers.get('content-range')).toBe('bytes 10-19/1000');
+    expect(res.headers.get('content-length')).toBe('10');
+    expect(res.headers.get('content-encoding')).toBeNull();
+    expect(res.headers.get('accept-ranges')).toBe('bytes');
+    expect(res.headers.get('content-type')).toBe('application/vnd.pmtiles');
+    expect(res.headers.get('etag')).toBeTruthy();
+    expect(Buffer.from(await res.arrayBuffer()).equals(PMTILES.subarray(10, 20))).toBe(true);
+  });
+
+  it('supports open-ended and suffix ranges and clamps the end', async () => {
+    expect((await get(url, { range: 'bytes=990-' })).headers.get('content-range')).toBe('bytes 990-999/1000');
+    expect((await get(url, { range: 'bytes=-5' })).headers.get('content-range')).toBe('bytes 995-999/1000');
+    expect((await get(url, { range: 'bytes=900-5000' })).headers.get('content-range')).toBe('bytes 900-999/1000');
+  });
+
+  it('answers an unsatisfiable range with 416', async () => {
+    const res = await get(url, { range: 'bytes=1000-' });
+    expect(res.status).toBe(416);
+    expect(res.headers.get('content-range')).toBe('bytes */1000');
+  });
+
+  it('serves the whole archive uncompressed without a Range header', async () => {
+    const res = await get(url, { 'accept-encoding': 'br, gzip' });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-encoding')).toBeNull();
+    expect(res.headers.get('accept-ranges')).toBe('bytes');
+    expect(Buffer.from(await res.arrayBuffer()).equals(PMTILES)).toBe(true);
+  });
+});
+
+describe('paths', () => {
+  it('refuses path traversal, plain and encoded', async () => {
+    for (const p of ['/../secret.txt', '/%2e%2e/secret.txt', '/assets/..%2f..%2fsecret.txt', '/%00']) {
+      const res = await get(p, { accept: 'text/html' });
+      expect([400, 404]).toContain(res.status);
+      expect(await res.text()).not.toContain('outside dist');
+    }
+    // fetch() normalises "/../", so send the raw request line too
+    const raw = await new Promise(resolve => {
+      import('node:net').then(({ default: net }) => {
+        const s = net.connect(server.address().port, '127.0.0.1', () => s.write('GET /../secret.txt HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n'));
+        let out = '';
+        s.on('data', d => (out += d)).on('close', () => resolve(out));
+      });
+    });
+    expect(raw).toMatch(/^HTTP\/1.1 (400|404)/);
+    expect(raw).not.toContain('outside dist');
+  });
+
+  it('falls back to index.html for navigations only', async () => {
+    const nav = await get('/some/station/17', { accept: 'text/html,application/xhtml+xml' });
+    expect(nav.status).toBe(200);
+    expect(await nav.text()).toContain('<title>app</title>');
+    expect((await get('/some/station/17', { accept: '*/*' })).status).toBe(404);
+    expect((await get('/assets/missing-12345678.js', { accept: 'text/html' })).status).toBe(404);
+    expect((await get('/missing.png')).status).toBe(404);
+  });
+
+  it('answers HEAD without a body', async () => {
+    const res = await get('/index.html', {}, 'HEAD');
+    expect(res.status).toBe(200);
+    expect(Number(res.headers.get('content-length'))).toBeGreaterThan(0);
+    expect(await res.text()).toBe('');
+  });
+});
+
+describe('FGV prevision proxy', () => {
+  it('forwards a numeric Station id to FGV and passes the answer through', async () => {
+    upstream.mockClear();
+    const res = await get('/api/metro/horarios-prevision-3/17');
+    expect(upstream).toHaveBeenCalledTimes(1);
+    expect(upstream.mock.calls[0][0]).toBe('https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3/17');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('application/json');
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(await res.text()).toBe(fgvBody);
+  });
+
+  it('passes an FGV error status and body through', async () => {
+    upstream.mockResolvedValueOnce(new Response('{"error":"nope"}', { status: 429, headers: { 'content-type': 'application/json' } }));
+    const res = await get('/api/metro/horarios-prevision-3/17');
+    expect(res.status).toBe(429);
+    expect(await res.text()).toBe('{"error":"nope"}');
+  });
+
+  it('returns 502 when FGV is unreachable and 504 when it never answers', async () => {
+    upstream.mockRejectedValueOnce(new TypeError('fetch failed'));
+    expect((await get('/api/metro/horarios-prevision-3/17')).status).toBe(502);
+    upstream.mockRejectedValueOnce(Object.assign(new Error('timeout'), { name: 'TimeoutError' }));
+    expect((await get('/api/metro/horarios-prevision-3/17')).status).toBe(504);
+  });
+
+  it('returns 404 for every other /api path and never calls FGV', async () => {
+    upstream.mockClear();
+    for (const p of ['/api/metro/horarios-prevision-3/abc', '/api/metro/horarios-prevision-3/17/extra', '/api/metro/horarios-prevision-3/', '/api/metro/other/17', '/api/metro/horarios-prevision-3/17%2f..%2fx', '/api/other', '/api/']) {
+      expect([400, 404], p).toContain((await get(p)).status);
+    }
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it('only allows GET on the route', async () => {
+    expect((await get('/api/metro/horarios-prevision-3/17', {}, 'POST')).status).toBe(405);
+  });
+});

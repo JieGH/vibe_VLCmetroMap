@@ -25,6 +25,7 @@
     "fetch:line4": "node --no-warnings scripts/fetch_line4_overpass.cjs",
     "lint": "oxlint",
     "preview": "vite preview",
+    "serve": "node server/index.js",
     "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
