@@ -61,10 +61,13 @@ const BASEMAP_ARCHIVE = `${BASEMAP_DIR}/valencia.pmtiles`;
 
 addProtocol('pmtiles', new Protocol().tile);
 
+// Both startup fetches are independent, so they run concurrently: the module
+// evaluates in max(geometry, probe) instead of their sum.
 let line4Osm = null;
-if (typeof window !== 'undefined') {
+let OFFLINE_BASEMAP_AVAILABLE = false;
+
+const loadLine4Osm = async () => {
   try {
-    // eslint-disable-next-line no-undef
     const response = await fetch('/line4_osm.geojson');
     if (response.ok) {
       line4Osm = await response.json();
@@ -77,12 +80,10 @@ if (typeof window !== 'undefined') {
   } catch (error) {
     console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
   }
-}
+};
 
-let OFFLINE_BASEMAP_AVAILABLE = false;
-if (typeof window !== 'undefined') {
+const probeOfflineBasemap = async () => {
   try {
-    // eslint-disable-next-line no-undef
     const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
     OFFLINE_BASEMAP_AVAILABLE = probe.ok;
     if (!probe.ok) {
@@ -94,7 +95,16 @@ if (typeof window !== 'undefined') {
   } catch (error) {
     console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
   }
+};
+
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line no-undef
+  await Promise.all([loadLine4Osm(), probeOfflineBasemap()]);
 }
+
+// The network boot starts on map mount, not on style.load; this keeps
+// StrictMode's double mount from starting it twice.
+let networkBootStarted = false;
 
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
@@ -1006,6 +1016,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       }
     });
 
+    if (!networkBootStarted) {
+      networkBootStarted = true;
+      arrivalStore.bootNetwork();
+    }
+
     map.on('style.load', () => {
       // In dev, StrictMode double-mounts this effect, so a stale map from the
       // first mount can still be sitting on a pending style.load when the
@@ -1018,7 +1033,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       initVehicleLoop(map);
       applyLineFilter(map, filterRef.current);
       applyLineDim(map, selectedStationRef.current);
-      arrivalStore.bootNetwork();
     });
 
     // Predictions age out after about 18 minutes, so without a repeat sweep the
