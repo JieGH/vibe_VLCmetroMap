@@ -52,10 +52,10 @@ function App() {
   useEffect(() => {
     const computeStats = () => {
       const vehicles = trainPositionEngine.getLiveVehiclesFromMemory(Date.now());
-      setTrainStats({
-        live: vehicles.length,
-        confirmed: vehicles.filter(v => v.sightingCount > 1).length,
-      });
+      const live = vehicles.length;
+      const confirmed = vehicles.filter(v => v.sightingCount > 1).length;
+      // Same numbers: hand React the same object so it skips the commit.
+      setTrainStats(prev => (prev.live === live && prev.confirmed === confirmed ? prev : { live, confirmed }));
     };
     computeStats();
     return arrivalStore.subscribe(computeStats);

@@ -684,11 +684,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     return `L${v.line} → ${v.direction} • ${eta} ${v.targetStation}${pin}${describePositionDoubt(v, lang)}`;
   };
 
-  const updateTrainCount = () => {
+  // `liveVehicles` is the frame's live Vehicles, already walked by the caller.
+  const updateTrainCount = (liveVehicles) => {
     if (!trainCountRef.current) return;
     const lang = languageRef.current;
-    const now = Date.now();
-    const liveVehicles = trainPositionEngine.getLiveVehiclesFromMemory(now);
     if (liveVehicles.length > 0) {
       const pinned = liveVehicles.filter(v => v.sightingCount > 1).length;
       trainCountRef.current.textContent = pinned > 0
@@ -821,7 +820,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         .setLngLat(v.coordinates)
         .addTo(map);
 
-      markerMapRef.current.set(v.id, { marker, inner });
+      markerMapRef.current.set(v.id, {
+        marker,
+        inner,
+        title: wrapper.title,
+        opacity: vehicleOpacity(v, selectedStationRef.current),
+        animation: vehicleAnimation(v, selectedStationRef.current),
+      });
     };
 
     visible.forEach(createVehicleMarker);
@@ -829,7 +834,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     const animate = () => {
       const now = Date.now();
       const currentVehicles = trainPositionEngine.getAllVehicles(now);
-      updateTrainCount();
+      updateTrainCount(currentVehicles.filter(v => v.isLive));
       let currentVisible = currentVehicles;
       if (Array.isArray(filterRef.current) && filterRef.current.length > 0) {
         currentVisible = currentVisible.filter(v => filterRef.current.includes(String(v.line)));
@@ -847,12 +852,25 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         const existing = markerMapRef.current.get(v.id);
         if (existing) {
           existing.marker.setLngLat(v.coordinates);
-          existing.marker.getElement().title = describeVehicle(v);
           // Confidence moves while the train does — the countdown runs down,
           // syncs land or fail to — so the marker has to follow it rather than
-          // keep the opacity it was created with.
-          existing.inner.style.opacity = vehicleOpacity(v, selectedStationRef.current);
-          existing.inner.style.animation = vehicleAnimation(v, selectedStationRef.current);
+          // keep the opacity it was created with. Each value is written only
+          // when it changed; most frames change none of them.
+          const title = describeVehicle(v);
+          if (existing.title !== title) {
+            existing.title = title;
+            existing.marker.getElement().title = title;
+          }
+          const opacity = vehicleOpacity(v, selectedStationRef.current);
+          if (existing.opacity !== opacity) {
+            existing.opacity = opacity;
+            existing.inner.style.opacity = opacity;
+          }
+          const animation = vehicleAnimation(v, selectedStationRef.current);
+          if (existing.animation !== animation) {
+            existing.animation = animation;
+            existing.inner.style.animation = animation;
+          }
         } else {
           // The API can return a different set of vehicle IDs after a poll.
           // Add new live trains without waiting for a map/style refresh.
@@ -973,7 +991,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     trainCount.setAttribute('aria-live', 'polite');
     containerRef.current.appendChild(trainCount);
     trainCountRef.current = trainCount;
-    updateTrainCount();
+    updateTrainCount(trainPositionEngine.getLiveVehiclesFromMemory(Date.now()));
     mapRef.current = map;
 
     const updateZoomScale = () => {

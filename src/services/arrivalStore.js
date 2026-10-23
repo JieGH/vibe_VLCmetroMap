@@ -102,6 +102,7 @@ class ArrivalStore {
     this.listeners = new Set();
     this.activeRequests = 0;
     this.requestQueue = [];
+    this.notifyPending = false;
     this.rateLimitedUntil = 0;
     this.isSyncingNetwork = false;
     this.lastNetworkSyncAt = 0;
@@ -168,10 +169,20 @@ class ArrivalStore {
     return () => this.listeners.delete(listener);
   }
 
+  // Answers often land in bursts; listeners hear about a burst once, on the
+  // next frame (or a microtask where there are no frames, as in tests / SSR).
   notify() {
-    this.listeners.forEach((fn) => {
-      try { fn(); } catch { /* ignore */ }
-    });
+    if (this.notifyPending) return;
+    this.notifyPending = true;
+    const flush = () => {
+      this.notifyPending = false;
+      this.listeners.forEach((fn) => {
+        try { fn(); } catch { /* ignore */ }
+      });
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
+    else if (typeof queueMicrotask === 'function') queueMicrotask(flush);
+    else setTimeout(flush, 0);
   }
 
   /**
