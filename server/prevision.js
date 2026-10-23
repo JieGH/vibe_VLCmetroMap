@@ -3,16 +3,18 @@
 // fetch reuses keep-alive connections to FGV by itself, which is what the
 // Netlify-style per-request proxy lacked. On top of that call sit:
 //  - coalescing: concurrent requests for a Station share one upstream request
-//  - hedging: an attempt FGV has not answered by HEDGE_AFTER_MS (about its p90)
-//    gets one duplicate; the first answer wins and the loser is aborted
+//  - hedging: an attempt FGV has not answered by HEDGE_AFTER_MS gets one
+//    duplicate. 1200 ms sits just above FGV's p90 on a slow afternoon, so
+//    hedges target hung requests rather than merely slow ones. The first answer wins and the
+//    loser is aborted
 //  - a deadline, kept under the app's own 4 s attempt timeout
 //  - a short shared cache, so many clients cost FGV one request per Station
 //  - a cap on upstream requests in flight, across every client
 export const FGV_PREVISION_URL = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3';
 export const DEADLINE_MS = 3500;
-export const HEDGE_AFTER_MS = 1000;
+export const HEDGE_AFTER_MS = 1200;
 export const SERVER_CACHE_TTL_MS = 10_000;
-export const MAX_UPSTREAM_IN_FLIGHT = 4;
+export const MAX_UPSTREAM_IN_FLIGHT = 8;
 
 const failure = (status, error, now) => ({
   status,

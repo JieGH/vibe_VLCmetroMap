@@ -228,18 +228,36 @@ describe('the bounded parallel queue', () => {
     return gate;
   };
 
-  it('never has more than 4 requests in flight during a sync', async () => {
+  it('never has more than 8 requests in flight during a sync on the web', async () => {
     const gate = gatedFetch();
     vi.stubGlobal('fetch', gate.fetch);
 
     const sync = arrivalStore.syncNetwork();
     await vi.advanceTimersByTimeAsync(0);
-    expect(gate.inFlight).toBe(4);
+    expect(gate.inFlight).toBe(8);
     await gate.drain();
     const result = await sync;
 
-    expect(gate.peak).toBe(4);
+    expect(gate.peak).toBe(8);
     expect(result).toEqual({ fetched: MAJOR_STATIONS.length, skipped: 0 });
+  });
+
+  it('stays at 4 in flight on native, which calls FGV directly with no shared bound', async () => {
+    capacitor.native = true;
+    vi.resetModules();
+    const { arrivalStore: nativeStore, MAJOR_STATIONS: stations } = await import('./arrivalStore');
+    const gate = gatedFetch();
+    vi.stubGlobal('fetch', gate.fetch);
+
+    const sync = nativeStore.syncNetwork();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(gate.inFlight).toBe(4);
+    while (gate.total < stations.length || gate.pending.length) {
+      await vi.advanceTimersByTimeAsync(0);
+      gate.pending.splice(0).forEach(answer => answer());
+    }
+    await sync;
+    expect(gate.peak).toBe(4);
   });
 
   it('skips Stations inside their memory pause and survives a failing Station', async () => {
@@ -266,16 +284,16 @@ describe('the bounded parallel queue', () => {
     const gate = gatedFetch();
     vi.stubGlobal('fetch', gate.fetch);
 
-    const taps = MAJOR_STATIONS.slice(0, 6).map(s =>
+    const taps = MAJOR_STATIONS.slice(0, 10).map(s =>
       arrivalStore.getStationArrivals({ apiId: s.id, name: s.name }));
     await vi.advanceTimersByTimeAsync(0);
-    expect(gate.inFlight).toBe(4);
-    while (gate.pending.length || gate.total < 6) {
+    expect(gate.inFlight).toBe(8);
+    while (gate.pending.length || gate.total < 10) {
       await vi.advanceTimersByTimeAsync(0);
       gate.pending.splice(0).forEach(answer => answer());
     }
     await Promise.all(taps);
-    expect(gate.peak).toBe(4);
+    expect(gate.peak).toBe(8);
   });
 });
 
