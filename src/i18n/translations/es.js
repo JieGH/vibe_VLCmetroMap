@@ -87,6 +87,12 @@ export default {
     dataAttributions: 'Datos y atribuciones',
     done: 'Hecho',
   },
+  whatsNew: {
+    banner: 'Novedades',
+    sheetTitle: 'Novedades',
+    closeAria: 'Cerrar novedades',
+    done: 'Entendido',
+  },
   welcomeScreen: {
     subtitle: 'Mapa en directo y llegadas en tiempo real',
   },
