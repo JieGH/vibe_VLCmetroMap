@@ -25,23 +25,23 @@ const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.geojson
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const STATION_ROUTE = /^\/api\/metro\/horarios-prevision-3\/(\d+)$/;
 
-function walk(dir, base = '') {
+function listFiles(dir, base = '') {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const rel = base ? `${base}/${entry.name}` : entry.name;
     const full = path.join(dir, entry.name);
     // Follow symlinks: public/basemap is one in a development checkout.
     const isDir = entry.isDirectory() || (entry.isSymbolicLink() && fs.statSync(full).isDirectory());
-    return isDir ? walk(full, rel) : [{ rel, full }];
+    return isDir ? listFiles(full, rel) : [{ rel, full }];
   });
 }
 
-const tag = (parts) => `"${crypto.createHash('sha1').update(parts).digest('base64url').slice(0, 22)}"`;
+const etagOf = (parts) => `"${crypto.createHash('sha1').update(parts).digest('base64url').slice(0, 22)}"`;
 
 // Reads dist/ once. Text files are held in memory as identity, brotli and gzip;
 // everything else (the 36 MB PMTiles archive) is streamed from disk.
 function loadAssets(root) {
   const assets = new Map();
-  for (const { rel, full } of walk(root)) {
+  for (const { rel, full } of listFiles(root)) {
     const ext = path.extname(rel).toLowerCase();
     const stat = fs.statSync(full);
     const asset = {
@@ -53,21 +53,21 @@ function loadAssets(root) {
     };
     if (COMPRESSIBLE.has(ext)) {
       const raw = fs.readFileSync(full);
-      const variants = { identity: { body: raw, etag: tag(raw) } };
+      const variants = { identity: { body: raw, etag: etagOf(raw) } };
       const br = zlib.brotliCompressSync(raw, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length } });
       const gz = zlib.gzipSync(raw, { level: 9 });
-      if (br.length < raw.length) variants.br = { body: br, etag: tag(`br${variants.identity.etag}`) };
-      if (gz.length < raw.length) variants.gzip = { body: gz, etag: tag(`gzip${variants.identity.etag}`) };
+      if (br.length < raw.length) variants.br = { body: br, etag: etagOf(`br${variants.identity.etag}`) };
+      if (gz.length < raw.length) variants.gzip = { body: gz, etag: etagOf(`gzip${variants.identity.etag}`) };
       asset.variants = variants;
     } else {
-      asset.etag = tag(`${rel}:${stat.size}:${stat.mtimeMs}`);
+      asset.etag = etagOf(`${rel}:${stat.size}:${stat.mtimeMs}`);
     }
     assets.set(rel, asset);
   }
   return assets;
 }
 
-const matches = (header, etag) =>
+const etagMatches = (header, etag) =>
   header && header.split(',').some(t => t.trim().replace(/^W\//, '') === etag || t.trim() === '*');
 
 // Single "bytes=a-b" range. Returns {start,end}, 'unsatisfiable', or null to
@@ -105,7 +105,7 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
       'Content-Type': upstream.contentType,
       'Content-Length': Buffer.byteLength(upstream.body),
       'Cache-Control': 'no-store',
-      // How long ago FGV answered: the client anchors Arrival timestamps on it.
+      // How long ago FGV answered: the client anchors Target Arrival Timestamps on it.
       ...(upstream.status === 200 && { 'X-Prevision-Age-Ms': Math.max(0, Math.round(now() - upstream.fetchedAt)) }),
     });
     res.end(upstream.body);
@@ -122,7 +122,7 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
       const headers = { ...base, ETag: etag, Vary: 'Accept-Encoding' };
       delete headers['Accept-Ranges'];
       if (enc !== 'identity') headers['Content-Encoding'] = enc;
-      if (matches(req.headers['if-none-match'], etag)) {
+      if (etagMatches(req.headers['if-none-match'], etag)) {
         res.writeHead(304, headers);
         return res.end();
       }
@@ -131,7 +131,7 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     }
 
     const headers = { ...base, ETag: asset.etag };
-    if (matches(req.headers['if-none-match'], asset.etag)) {
+    if (etagMatches(req.headers['if-none-match'], asset.etag)) {
       res.writeHead(304, headers);
       return res.end();
     }
@@ -164,7 +164,10 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     if (pathname.startsWith('/api/')) {
       const id = STATION_ROUTE.exec(pathname)?.[1];
       if (!id) return sendText(res, 404, '{"error":"not found"}');
-      return void proxyPrevision(req, res, id);
+      return void proxyPrevision(req, res, id).catch(() => {
+        if (res.headersSent) res.destroy();
+        else sendText(res, 502, '{"error":"proxy failed"}');
+      });
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -180,5 +183,5 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     serveAsset(req, res, asset, req.headers['accept-encoding'] || '');
   }
 
-  return { handler, server: () => http.createServer(handler) };
+  return { server: () => http.createServer(handler) };
 }

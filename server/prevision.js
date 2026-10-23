@@ -26,11 +26,6 @@ const failure = (status, error, now) => ({
 export function createPrevisionClient({
   fetch = globalThis.fetch,
   now = () => Date.now(),
-  baseUrl = FGV_PREVISION_URL,
-  deadlineMs = DEADLINE_MS,
-  hedgeAfterMs = HEDGE_AFTER_MS,
-  cacheTtlMs = SERVER_CACHE_TTL_MS,
-  maxInFlight = MAX_UPSTREAM_IN_FLIGHT,
 } = {}) {
   const cache = new Map(); // stationId -> successful result
   const pending = new Map(); // stationId -> shared promise
@@ -40,7 +35,7 @@ export function createPrevisionClient({
   // Resolves once an upstream slot is free, or rejects if `signal` aborts first.
   function acquire(signal) {
     if (signal.aborted) return Promise.reject(signal.reason);
-    if (inFlight < maxInFlight) {
+    if (inFlight < MAX_UPSTREAM_IN_FLIGHT) {
       inFlight++;
       return Promise.resolve();
     }
@@ -60,7 +55,7 @@ export function createPrevisionClient({
   async function attempt(stationId, signal) {
     await acquire(signal);
     try {
-      const res = await fetch(`${baseUrl}/${stationId}`, { headers: { Accept: 'application/json' }, signal });
+      const res = await fetch(`${FGV_PREVISION_URL}/${stationId}`, { headers: { Accept: 'application/json' }, signal });
       return {
         status: res.status,
         body: await res.text(),
@@ -81,6 +76,7 @@ export function createPrevisionClient({
       let started = 0;
       let failed = 0;
       let hedgeTimer;
+      let deadlineTimer;
 
       const finish = (result) => {
         if (settled) return;
@@ -103,8 +99,8 @@ export function createPrevisionClient({
         });
       };
 
-      const deadlineTimer = setTimeout(() => finish(failure(504, 'FGV did not answer in time', now)), deadlineMs);
-      hedgeTimer = setTimeout(() => { if (started === 1) start(); }, hedgeAfterMs);
+      deadlineTimer = setTimeout(() => finish(failure(504, 'FGV did not answer in time', now)), DEADLINE_MS);
+      hedgeTimer = setTimeout(() => { if (started === 1) start(); }, HEDGE_AFTER_MS);
       start();
     });
   }
@@ -114,14 +110,18 @@ export function createPrevisionClient({
   return function getPrevision(stationId) {
     const cached = cache.get(stationId);
     if (cached) {
-      if (now() - cached.fetchedAt < cacheTtlMs) return Promise.resolve(cached);
+      if (now() - cached.fetchedAt < SERVER_CACHE_TTL_MS) return Promise.resolve(cached);
       cache.delete(stationId);
     }
     let shared = pending.get(stationId);
     if (!shared) {
       shared = lookup(stationId).then((result) => {
         // Only a good answer is worth sharing; an error status is passed on, not cached.
-        if (result.status === 200) cache.set(stationId, result);
+        if (result.status === 200) {
+          // Drop every expired entry so the map holds only Stations seen within one TTL.
+          for (const [id, entry] of cache) if (now() - entry.fetchedAt >= SERVER_CACHE_TTL_MS) cache.delete(id);
+          cache.set(stationId, result);
+        }
         return result;
       }).finally(() => pending.delete(stationId));
       pending.set(stationId, shared);
