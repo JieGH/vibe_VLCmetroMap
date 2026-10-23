@@ -15,20 +15,33 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest">
+    <img src="https://img.shields.io/badge/Android-Download%20the%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app">
+  </a>
+</p>
+
+<p align="center">
   <a href="https://app.netlify.com/sites/tangerine-panda-1aeea5/deploys">
     <img src="https://api.netlify.com/api/v1/badges/a4a69dad-f39d-40ca-9f1c-317147d39bea/deploy-status" alt="Netlify deploy status">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache 2.0">
   </a>
-  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Web-lightgrey.svg" alt="Platforms: iOS and Web">
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-lightgrey.svg" alt="Platforms: iOS, Android and Web">
 </p>
 
 ---
 
 Metrovalencia publishes when a train is <em>due</em> at a station. It does not publish where any train actually <em>is</em>. This app works that out: it takes the live arrival predictions, walks them backwards along the real rail geometry, and draws every train on the map at the position those predictions imply.
 
-It runs as a website and as a native iOS app, from the same code.
+It runs as a website, as a native iOS app and as a native Android app, from the same code.
+
+> **For the full experience, use the app.** The live demo above cannot reach FGV's live feed: FGV drops every connection from the web host (Netlify, on Amazon servers in the US), so the website has to read an older third-party relay instead, which rate-limits and shows fewer trains. The apps read FGV directly from your phone's own connection, which FGV does answer, and see about 80% of the trains due within 20 minutes, against about 37% on the website.
+>
+> - **Android:** [download the APK](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest) and open it on the phone. It is not on Google Play, so Android asks permission to install from your browser. See [Android (native app)](#android-native-app).
+> - **iPhone:** there is no download yet. Build it from source with a Mac, Xcode and a free Apple ID: see [iOS (native app)](#ios-native-app).
+>
+> The reason is in [`docs/fgv-api.md`](docs/fgv-api.md).
 
 ## See it working
 
@@ -100,7 +113,7 @@ The app still runs without `fetch:basemap`; it falls back to online raster tiles
 
 ## Running the app
 
-The same React app ships two ways: as a website, and as a native iOS app via [Capacitor](https://capacitorjs.com). Both build from the same `src/`; nothing in the app code branches on which one you're using except `arrivalStore.js`'s fetch, explained below.
+The same React app ships three ways: as a website, and as native iOS and Android apps via [Capacitor](https://capacitorjs.com). Both build from the same `src/`; nothing in the app code branches on which one you're using except `arrivalStore.js`'s fetch, explained below.
 
 ### Web
 
@@ -155,21 +168,33 @@ First launch, iOS blocks the app as an "Untrusted Developer": on the phone, go t
 
 ### Android (native app)
 
-The same Capacitor wrapper exists for Android in [`android/`](android/), so the app reads FGV directly from the phone there too, as on iOS. It has been scaffolded but **not yet built or run**: the machine it was added on had no Java or Android SDK.
+The same Capacitor wrapper, in [`android/`](android/), packaged as an `.apk`. Like the iOS app it calls FGV directly from the phone, with no server and no proxy.
 
-**Prerequisites:** [Android Studio](https://developer.android.com/studio) (it bundles the JDK and SDK), and an Android phone with USB debugging on, or an emulator.
+**Just want to install it?** Download `Xarxa-v*-android-debug.apk` from the [latest release](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest) and open it on an Android 7.0 or newer phone. It is a debug-signed build, not a Play Store release, so Android asks you to allow installs from your browser and may warn that the app is unverified. The release notes carry its SHA-256. It has been run on an Android emulator and on a physical phone; FGV has to answer your connection, which it does in Spain and may not elsewhere.
+
+**Build it yourself**
+
+- [Android Studio](https://developer.android.com/studio), which bundles the JDK and SDK, or a JDK 21 plus the Android SDK command-line tools with platform 36.
+- An Android phone with USB debugging on, or an emulator.
 
 ```bash
 npm install
 npm run android:sync   # npm run build, then copies dist/ into the Android project
-npm run android:open   # opens android/ in Android Studio
+npm run android:open   # opens android/ in Android Studio, then press Run (▶)
 ```
 
-Then press **Run** (▶) with your phone or an emulator selected. After any code change, re-run `npm run android:sync`. The location permissions for the locate button are declared in `android/app/src/main/AndroidManifest.xml`.
+Without Android Studio: `cd android && ./gradlew assembleDebug` writes `app/build/outputs/apk/debug/app-debug.apk`, and `adb install -r` puts it on a connected phone. After any code change, re-run `npm run android:sync`.
+
+Four things exist purely to make Android work, and are easy to break by "cleaning up" without knowing why:
+
+- **`src/utils/boundedRangeSource.js`.** Capacitor's Android local server answers a `Range` request for the 36 MB basemap archive with `206` and a correct `Content-Range`, then streams the rest of the whole file instead of stopping at the end of the range. PMTiles read that as the slice it asked for, got a corrupt header, and the map drew no basemap. On Android the archive is read through a source that takes exactly the bytes asked for and cancels the rest.
+- **`src/utils/uiScale.js`.** The interface is drawn at 88% on Android (CSS `zoom` on the root, with the full-screen containers stretched back out in `index.css`, because zoom does not scale viewport units). Not done through the viewport meta tag: in this WebView that widens the layout without shrinking the display and cuts off the right edge.
+- **The location permissions** in `android/app/src/main/AndroidManifest.xml`. The geolocation plugin does not add them, and the locate button needs them.
+- **The icon and splash** in `android/app/src/main/res/` are generated from the iOS artwork (`AppIcon-512@2x.png` and the 2732 px splash, on the brand dark `#1D1D29`): launcher icons at every density, adaptive-icon foregrounds with the glyph at 75% so a round mask does not clip its arms, splash backgrounds in every size, and the Android 12+ system splash icon (`drawable-nodpi/splash_icon.png`, glyph at 70%), which otherwise shows a default icon on white. Regenerate them with `sips` if the artwork changes.
 
 Two things exist purely to make this build path work, and are easy to break by "cleaning up" without knowing why:
 
-- **`capacitor.config.json`'s `plugins.CapacitorHttp.enabled`.** WKWebView's `fetch` is still browser `fetch` — it can't set `User-Agent` either. Enabling `CapacitorHttp` patches `fetch` to route through native networking instead, which isn't subject to that restriction. `arrivalStore.js` checks `Capacitor.isNativePlatform()` and only sends the header on that path; the web build keeps using the dev-server proxy above.
+- **`capacitor.config.json`'s `plugins.CapacitorHttp.enabled`.** WKWebView's `fetch` is still browser `fetch` — it can't set `User-Agent` either. Enabling `CapacitorHttp` patches `fetch` to route through native networking instead, which isn't subject to that restriction. `arrivalStore.js` checks `Capacitor.isNativePlatform()` and on that path calls FGV directly, which is why the app sees FGV when the website cannot; the web build uses the same-origin proxy above. The same applies to the Android app.
 - **`public/vendor/maplibre/`.** MapLibre resolves its own web-worker URL from `import.meta.url`, which Vite's bundler never emits as an actual file — the map's lines and tiles render in `npm run dev` (Vite serves the real file from `node_modules` directly) but silently fail in any production build, native app included. These two files are an unmodified copy of MapLibre's worker and its shared chunk, kept as static assets so the path always resolves. If `maplibre-gl` is upgraded, re-copy both files from `node_modules/maplibre-gl/dist/`.
 
 ## How a train gets on the map
@@ -232,8 +257,10 @@ npm test               # confirm the network still looks sane
 ## Known limits
 
 - **Branches.** A line is modelled as one polyline with a scalar distance along it, which cannot represent a fork. Lines 5 and 7 run north to Machado, line 1 to Torrent Avinguda, and line 8 through the line 6 corridor, but none of those branches are in `metro_lines.json`. Stations more than 250 m off their line's geometry are held out of its chain and listed in `trainPositionEngine.offTrackStations` — better an honest gap than a train drawn on the wrong track.
+- **The website cannot reach FGV.** FGV never answers connections from Netlify's servers: a diagnostic from the deployed function (AWS us-east-2) timed out on FGV's API, with plain and browser-like headers alike, and on the FGV homepage, while the old relay answered in 1.8 s. So the public website serves live arrivals from that relay ([`netlify/functions/metro-proxy.js`](netlify/functions/metro-proxy.js)), with its rate limits and thinner coverage, and only the iOS and Android apps and `npm run dev` (from a Spanish connection) use FGV. A proxy hosted somewhere FGV does answer would fix it; set `METRO_SOURCE` to switch the function over. Details in [`docs/fgv-api.md`](docs/fgv-api.md) and [ADR-0005](docs/adr/0005-live-arrivals-come-straight-from-fgv.md).
 - **Station ids.** The GTFS `stop_id` space and the live API's id space disagree for most stations; `/api/metro/horarios-prevision-3/<id>` uses the API's. Never hand-write one — derive it from `paradas_api.json`. A wrong id fails silently, and `npm test` guards the ones we hardcode.
 - **The eastern stations have no arrival endpoint.** Ayora, Amistat and Aragó carry trains and appear in search, but the API exposes no station id for them, so they have no arrivals card of their own.
+- **The Android app is a debug build, and lightly tested.** It is signed with a debug key, so Android warns it is unverified, and it is not on Google Play. It has run on one emulator and one phone. High-density screens log a missing `@2x` icon sheet (`basemap/sprites/dark@2x.json`, only 1x ships), so a few small map icons (park, university, marina) are absent; the map and trains are unaffected. On Android 7, "round" launcher icons show the square art rather than a circle crop. The 4 s timeout and single retry for hung FGV requests have not been checked on Android.
 - **Markers sometimes never appear in `npm run dev`.** A `StrictMode` double-mount races MapLibre's `style.load` over shared marker refs, so the map can load with no stations and no trains at all. It looks exactly like broken data and it is not — it does not happen in a production build. Reload, or see [#8](https://github.com/JieGH/vib_metroValencia/issues/8). Check `vite preview` before believing a rendering bug is real.
 
 ## Data, privacy, and trademarks
