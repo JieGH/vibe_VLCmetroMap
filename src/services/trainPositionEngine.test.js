@@ -448,3 +448,74 @@ describe('segment times', () => {
     expect(seconds).toBeLessThan(300);
   });
 });
+
+// docs/research/marker-drift.md: near a Station FGV re-times its countdown by
+// 25s (p90) between polls, and each re-time used to slide the marker 200 m one
+// way or the other.
+describe('a live marker never runs backwards', () => {
+  beforeEach(() => {
+    arrivalStore.memory.clear();
+    trainPositionEngine.renderState.clear();
+  });
+
+  const liveAt = (secondsFromNow, now) => {
+    sighting('a', 'Colón', '3', 'Aeroport', '3704', secondsFromNow, now);
+    return trainPositionEngine.getAllVehicles(now).find(v => v.isLive);
+  };
+  const progress = (vehicle) => vehicle.distanceAlongTrack * (vehicle.isForward ? 1 : -1);
+
+  it('waits where it is when a prediction is re-timed later', () => {
+    const now = Date.now();
+    const before = liveAt(40, now);
+    // The train is held: the next poll says 40s more, not 39.
+    const after = liveAt(80, now + 1000);
+
+    expect(progress(after)).toBe(progress(before));
+  });
+
+  it('catches up no faster than a train could when re-timed sooner', () => {
+    const now = Date.now();
+    const before = liveAt(90, now);
+    const after = liveAt(45, now + 1000);
+
+    const moved = progress(after) - progress(before);
+    expect(moved).toBeGreaterThan(0);
+    expect(moved).toBeLessThanOrEqual(25);
+  });
+
+  it('goes straight to a reading far down the line', () => {
+    const now = Date.now();
+    liveAt(30, now);
+    const colon = stationByName('3', 'Colón');
+    const after = liveAt(900, now + 1000);
+
+    expect(Math.abs(after.distanceAlongTrack - colon.trackDist)).toBeGreaterThan(1500);
+  });
+});
+
+describe('where a train that has called at a Station is drawn', () => {
+  beforeEach(() => {
+    arrivalStore.memory.clear();
+    trainPositionEngine.renderState.clear();
+  });
+
+  it('anchors on the Station ahead even when the passed one is nearer in time', () => {
+    const now = Date.now();
+    sighting('a', 'Xàtiva', '3', 'Rafelbunyol', '3704', -5, now);
+    sighting('b', 'Colón', '3', 'Rafelbunyol', '3704', 80, now);
+
+    const [vehicle] = trainPositionEngine.getLiveVehiclesFromMemory(now);
+    expect(vehicle.targetStation).not.toBe('Xàtiva');
+    expect(vehicle.secondsToTarget).toBe(80);
+  });
+
+  it('holds a train at the platform past its dwell instead of walking it out', () => {
+    const now = Date.now();
+    sighting('a', 'Xàtiva', '3', 'Rafelbunyol', '3704', -18, now);
+
+    const [vehicle] = trainPositionEngine.getLiveVehiclesFromMemory(now);
+    expect(vehicle.status).toBe('At Platform');
+    expect(vehicle.distanceAlongTrack).toBe(stationByName('3', 'Xàtiva').trackDist);
+    expect(vehicle.isDeadReckoned).toBe(true);
+  });
+});

@@ -71,6 +71,16 @@ const MAX_SECONDS_AHEAD = 1080;
 // side of the alignment, hence the tolerance rather than an exact test.
 const MAX_STATION_OFFSET_METRES = 250;
 
+// How fast a marker may close on an estimate that has run ahead of it: above
+// the 16.9 m/s fastest timetabled segment, so a moving train is never held
+// back, but slow enough that a re-timed prediction reads as the train
+// speeding up rather than jumping. Beyond the resync distance the estimate is
+// a different reading of the train altogether and the marker goes straight
+// there. Replayed against a live capture, 25 m/s keeps the marker within 24 m
+// of the estimate on average (docs/research/marker-drift.md).
+const CATCH_UP_METRES_PER_SECOND = 25;
+const RESYNC_METRES = 1500;
+
 // ─── How much to trust a placed train ────────────────────────────────────────
 //
 // A live marker should look as confident as its position actually is. Two
@@ -333,15 +343,15 @@ class TrainPositionEngine {
    * Walk the station chain to place a train that is `secondsToTarget` away from
    * `target`, spending each segment's timetabled interval on the way.
    *
-   * A negative countdown means the train has already called at the target and
-   * is walked forwards instead.
+   * A negative countdown means the train has already called at the target, and
+   * it is held there.
    *
    * Reports `segmentsWalked` alongside the position, counting a part-crossed
    * segment as the fraction of it spent. That is what the ±30s each Segment
    * Interval carries accumulates over, so it is what sizes the uncertainty the
    * marker is drawn with.
    *
-   * Also reports whether it ended up Dead Reckoning: walking on past a spent
+   * Also reports whether it ended up Dead Reckoning: placed past a spent
    * countdown with no prediction left. Sitting out a Station Dwell at the
    * target is not that — the train is where it was reported to be — so the
    * distinction is the walk's to make, not something a caller can read off the
@@ -361,42 +371,19 @@ class TrainPositionEngine {
     let segmentsWalked = 0;
 
     if (secondsToTarget <= 0) {
-      let remaining = -secondsToTarget;
       // Still inside the dwell it was predicted to arrive for: the train is at
       // the platform the API named, which is the best-known position there is.
-      if (remaining <= DWELL_SECONDS) {
-        return { trackDist: target.trackDist, status: 'At Platform', nextStation: target, segmentsWalked, isDeadReckoned: false };
-      }
-      remaining -= DWELL_SECONDS;
-
-      let fromIndex = targetIndex;
-      while (true) {
-        const toIndex = fromIndex - stepBack;
-        if (toIndex < 0 || toIndex >= stations.length) {
-          return { trackDist: stations[fromIndex].trackDist, status: 'At Terminus', nextStation: stations[fromIndex], segmentsWalked, isDeadReckoned: true };
-        }
-        const from = stations[fromIndex];
-        const to = stations[toIndex];
-        const running = Math.max(1, this.getSegmentSeconds(lineId, from, to) - DWELL_SECONDS);
-
-        if (remaining <= running) {
-          const progress = remaining / running;
-          return {
-            trackDist: from.trackDist + (to.trackDist - from.trackDist) * progress,
-            status: 'En Route',
-            nextStation: to,
-            segmentsWalked: segmentsWalked + progress,
-            isDeadReckoned: true,
-          };
-        }
-        remaining -= running;
-        segmentsWalked += 1;
-        if (remaining <= DWELL_SECONDS) {
-          return { trackDist: to.trackDist, status: 'At Platform', nextStation: to, segmentsWalked, isDeadReckoned: true };
-        }
-        remaining -= DWELL_SECONDS;
-        fromIndex = toIndex;
-      }
+      // Past it, the train is Dead Reckoned but still held at that platform:
+      // real dwells run 40s and more (166s at Alameda, timed 2026-10-24), so
+      // walking it out after 12.5s only sent it down the line for the next
+      // prediction to drag back.
+      return {
+        trackDist: target.trackDist,
+        status: 'At Platform',
+        nextStation: target,
+        segmentsWalked,
+        isDeadReckoned: -secondsToTarget > DWELL_SECONDS,
+      };
     }
 
     let remaining = secondsToTarget;
@@ -529,7 +516,14 @@ class TrainPositionEngine {
       const sightings = train.sightings.sort(
         (a, b) => Math.abs(a.secondsRemaining) - Math.abs(b.secondsRemaining)
       );
-      const anchor = sightings[0];
+      // Anchor on the Station the train is heading for, even when one it has
+      // just passed is nearer in time. Walking forwards from a passed Station
+      // and back from the one ahead disagree, so picking whichever is nearer
+      // flipped the anchor — and the marker — the moment the passed Sighting
+      // went stale. Only with nothing ahead does a passed Station anchor.
+      const anchor = sightings
+        .filter(s => s.secondsRemaining >= 0)
+        .sort((a, b) => a.secondsRemaining - b.secondsRemaining)[0] ?? sightings[0];
 
       // Two sightings settle the direction outright: the station the train
       // reaches later is the one it is heading towards. That beats matching the
@@ -660,34 +654,41 @@ class TrainPositionEngine {
   }
 
   /**
-   * Ease a marker towards its computed position so a fresh fetch does not make
-   * it jump. Live trains only: simulated ones are already continuous.
+   * Draw a live train moving forwards only. Live trains only: simulated ones
+   * are already continuous.
+   *
+   * Every fresh prediction re-walks the train, and near a Station FGV re-times
+   * its countdown by 25s (p90) between polls — up when the train is held, down
+   * when it leaves. Drawn as-is, each re-time was a 200 m slide one way or the
+   * other (docs/research/marker-drift.md). A real train never reverses, so a
+   * marker the estimate has fallen behind waits for it, and one the estimate
+   * has run ahead of catches up no faster than any train could.
    */
   smoothVehicle(vehicle, now) {
     if (!vehicle.isLive) return vehicle;
 
+    const isForward = vehicle.isForward !== false;
     const previous = this.renderState.get(vehicle.id);
-    this.renderState.set(vehicle.id, {
-      trackDist: vehicle.distanceAlongTrack,
-      at: now,
-    });
+    const resync = () => {
+      this.renderState.set(vehicle.id, { trackDist: vehicle.distanceAlongTrack, isForward, at: now });
+      return vehicle;
+    };
 
-    if (!previous) return vehicle;
+    if (!previous || previous.isForward !== isForward) return resync();
 
-    const jump = Math.abs(vehicle.distanceAlongTrack - previous.trackDist);
-    // Below this the marker is simply moving; far above it the anchor changed
-    // so much that easing would drag the train visibly along the track.
-    if (jump < 5 || jump > 2000) return vehicle;
+    const ahead = (vehicle.distanceAlongTrack - previous.trackDist) * (isForward ? 1 : -1);
+    // A gap this large is not a correction but a different reading of where
+    // the train is — a new anchor far down the line — so the marker goes there.
+    if (Math.abs(ahead) > RESYNC_METRES) return resync();
 
-    const elapsed = Math.max(0, now - previous.at);
-    const blend = Math.min(1, elapsed / 900);
-    const eased = previous.trackDist + (vehicle.distanceAlongTrack - previous.trackDist) * blend;
-    const { coordinates, bearing } = this.getCoordsAndBearingAtDistance(
-      vehicle.line, eased, vehicle.isForward !== false
-    );
+    const elapsedSeconds = Math.max(0, now - previous.at) / 1000;
+    const step = Math.max(0, Math.min(ahead, CATCH_UP_METRES_PER_SECOND * elapsedSeconds));
+    const drawn = previous.trackDist + step * (isForward ? 1 : -1);
+    this.renderState.set(vehicle.id, { trackDist: drawn, isForward, at: now });
+    if (drawn === vehicle.distanceAlongTrack) return vehicle;
 
-    this.renderState.set(vehicle.id, { trackDist: eased, at: now });
-    return { ...vehicle, coordinates, bearing, distanceAlongTrack: eased };
+    const { coordinates, bearing } = this.getCoordsAndBearingAtDistance(vehicle.line, drawn, isForward);
+    return { ...vehicle, coordinates, bearing, distanceAlongTrack: drawn };
   }
 
   /**

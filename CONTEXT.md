@@ -77,7 +77,7 @@ The scale a live Vehicle's marker is drawn at. A walked position runs from 1 dow
 _Avoid_: Opacity, alpha, staleness
 
 **Dead Reckoning**:
-Walking a Vehicle on past a spent countdown, once its Target Arrival Timestamp has passed and the Timetable Walk has no prediction left to spend. The sharpest loss of Position Confidence there is, and unrelated to age: a prediction fetched a second ago can already be in it. Sitting out a Station Dwell at the Station it was reported for is *not* this — that Vehicle is where the API said it would be.
+Placing a Vehicle past a spent countdown, once its Target Arrival Timestamp and Station Dwell have passed and the Timetable Walk has no prediction left to spend. The Vehicle is held at that platform rather than walked on: real dwells run far past the modelled one, so walking it out only drew it down the line for the next prediction to pull back. The sharpest loss of Position Confidence there is, and unrelated to age: a prediction fetched a second ago can already be in it. Sitting out a Station Dwell at the Station it was reported for is *not* this — that Vehicle is where the API said it would be.
 _Avoid_: Extrapolation, coasting, projection
 
 **Off-Track Station**:
