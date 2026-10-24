@@ -7,7 +7,7 @@
 // is the only place a thumb reaches at all.
 import React, { useEffect, useState } from 'react';
 import { X, Radio, Database, CheckCircle2, Clock } from 'lucide-react';
-import arrivalStore from '../services/arrivalStore';
+import arrivalStore, { CACHE_TTL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { lineColor } from '../utils/lineColor';
@@ -59,9 +59,13 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
   useEffect(() => {
     if (!station) return undefined;
     arrivalStore.getStationArrivals(station.properties);
+    // Just past the memory pause, not on it: the tap's fetch lands ~0.5s
+    // after the click, so a 60s poll found the entry 59.5s old, skipped the
+    // request, and an open panel only refreshed every 120s
+    // (docs/research/marker-drift.md).
     const id = setInterval(
       () => arrivalStore.getStationArrivals(station.properties),
-      60000
+      CACHE_TTL_MS + 1000
     );
     return () => clearInterval(id);
   }, [station]);

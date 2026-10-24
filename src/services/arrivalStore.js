@@ -70,7 +70,7 @@ export function isRelaySource() {
 // judged against: one interval unheard is healthy, more is not.
 export const NETWORK_SYNC_INTERVAL_MS = 120000;
 
-const CACHE_TTL_MS = 60000; // 60 seconds strict memory pause per station
+export const CACHE_TTL_MS = 60000; // 60 seconds strict memory pause per station
 const MIN_REFRESH_COOLDOWN_MS = 30000; // 30 seconds cooldown between manual refreshes
 // Prevision requests one client keeps in flight at once. The web build sits behind
 // the local server's global upstream cap and shared cache, so it can go wider;

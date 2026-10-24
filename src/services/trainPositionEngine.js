@@ -75,15 +75,35 @@ const MAX_SECONDS_AHEAD = 1080;
 // side of the alignment, hence the tolerance rather than an exact test.
 const MAX_STATION_OFFSET_METRES = 250;
 
-// How fast a marker may close on an estimate that has run ahead of it: above
-// the 16.9 m/s fastest timetabled segment, so a moving train is never held
-// back, but slow enough that a re-timed prediction reads as the train
-// speeding up rather than jumping. Beyond the resync distance the estimate is
-// a different reading of the train altogether and the marker goes straight
-// there. Replayed against a live capture, 25 m/s keeps the marker within 24 m
-// of the estimate on average (docs/research/marker-drift.md).
-const CATCH_UP_METRES_PER_SECOND = 25;
-const RESYNC_METRES = 1500;
+// How fast a marker may close on an estimate that has run ahead of it: a
+// multiple of the Vehicle's own running speed in the Segment it is placed in,
+// held between a floor, so a train dwelling at a platform still gets there,
+// and a ceiling just above MAX_RUNNING_METRES_PER_SECOND. A single fixed rate
+// of 25 m/s (90 km/h) was 3-6x what a city-centre tram runs at: after a
+// Network Sync re-timed a stale prediction, trains slid at that rate for up to
+// a minute (docs/research/marker-drift.md).
+//
+// Past the resync distance the estimate is a different reading of the train
+// altogether and the marker goes straight there. Forward and backward are
+// kept apart so they can be tuned separately: a marker that waits for the
+// estimate is better than one that reverses, and a long chase forward only
+// lags the train.
+const CATCH_UP_SPEED_FACTOR = 2;
+const CATCH_UP_MIN_METRES_PER_SECOND = 6;
+const CATCH_UP_MAX_METRES_PER_SECOND = 20;
+const FALLBACK_RUNNING_SPEED = 7.5; // network median, m/s
+const RESYNC_FORWARD_METRES = 1500;
+const RESYNC_BACKWARD_METRES = 1500;
+
+// The fastest a Vehicle averages between two platforms, braking and
+// accelerating included: 1.8x its Line's Commercial Speed, at least 10 m/s
+// and never above 17 m/s, the quickest segment in segment_times.json (16.9
+// m/s on the northern stretch). A single network figure let trams run short
+// segments at 17 m/s; FGV states tram intervals to the minute too, so 521 m
+// with 20s of running left walked Mas del Rosari > La Coma at 26 m/s.
+const MAX_RUNNING_METRES_PER_SECOND = 17;
+const MIN_RUNNING_CEILING_METRES_PER_SECOND = 10;
+const RUNNING_CEILING_SPEED_FACTOR = 1.8;
 
 // ─── How much to trust a placed train ────────────────────────────────────────
 //
@@ -165,6 +185,8 @@ class TrainPositionEngine {
     // Per-vehicle render position, so a fresh fetch eases the marker to its new
     // anchor instead of teleporting it.
     this.renderState = new Map();
+    this.resyncForwardMetres = RESYNC_FORWARD_METRES;
+    this.resyncBackwardMetres = RESYNC_BACKWARD_METRES;
     this.init();
   }
 
@@ -258,6 +280,31 @@ class TrainPositionEngine {
    * from the ~85s timed on the platform than FGV's 91s is in either direction.
    */
   getSegmentTiming(lineId, from, to) {
+    const stated = this.getStatedSegmentTiming(lineId, from, to);
+
+    // An interval is a time, not a speed, and neither source knows the
+    // distance. FGV's far-out countdowns are timetable projections stated to
+    // the minute, so a 3.3 km segment can read 120s, and the 40s dwell carved
+    // out of a 60s interval leaves 732 m to be run in 20s. Walked as stated,
+    // those Segments ran the marker at 25-40 m/s. So running time never drops
+    // below what the Line's running ceiling allows: the dwell gives way
+    // first, down to the GTFS one, and only then does the interval stretch.
+    const track = this.getLineTrack(lineId);
+    const ceiling = track
+      ? Math.min(MAX_RUNNING_METRES_PER_SECOND, Math.max(MIN_RUNNING_CEILING_METRES_PER_SECOND, RUNNING_CEILING_SPEED_FACTOR * track.fallbackSpeed))
+      : MAX_RUNNING_METRES_PER_SECOND;
+    const minRunning = Math.abs(to.trackDist - from.trackDist) / ceiling;
+    if (stated.seconds - stated.dwell >= minRunning) return stated;
+
+    const dwell = Math.min(stated.dwell, Math.max(DWELL_SECONDS, stated.seconds - minRunning));
+    return { seconds: Math.max(stated.seconds, dwell + minRunning), dwell };
+  }
+
+  /**
+   * The interval and dwell as the sources state them, before the running time
+   * is checked against the distance.
+   */
+  getStatedSegmentTiming(lineId, from, to) {
     const track = this.getLineTrack(lineId);
     if (!track) return { seconds: DWELL_SECONDS + 60, dwell: DWELL_SECONDS };
 
@@ -411,6 +458,7 @@ class TrainPositionEngine {
         nextStation: target,
         segmentsWalked,
         isDeadReckoned: -secondsToTarget > DWELL_SECONDS,
+        metresPerSecond: track.fallbackSpeed,
       };
     }
 
@@ -429,6 +477,7 @@ class TrainPositionEngine {
           nextStation: stations[targetIndex],
           segmentsWalked,
           isDeadReckoned: false,
+          metresPerSecond: track.fallbackSpeed,
         };
       }
 
@@ -436,6 +485,7 @@ class TrainPositionEngine {
       const arrival = stations[arrivalIndex];
       const timing = this.getSegmentTiming(lineId, departure, arrival);
       const running = Math.max(1, timing.seconds - timing.dwell);
+      const metresPerSecond = Math.abs(arrival.trackDist - departure.trackDist) / running;
 
       if (remaining <= running) {
         const progress = 1 - remaining / running;
@@ -445,13 +495,14 @@ class TrainPositionEngine {
           nextStation: arrival,
           segmentsWalked: segmentsWalked + (1 - progress),
           isDeadReckoned: false,
+          metresPerSecond,
         };
       }
 
       remaining -= running;
       segmentsWalked += 1;
       if (remaining <= timing.dwell) {
-        return { trackDist: departure.trackDist, status: 'At Platform', nextStation: arrival, segmentsWalked, isDeadReckoned: false };
+        return { trackDist: departure.trackDist, status: 'At Platform', nextStation: arrival, segmentsWalked, isDeadReckoned: false, metresPerSecond };
       }
       remaining -= timing.dwell;
       arrivalIndex = departureIndex;
@@ -610,6 +661,7 @@ class TrainPositionEngine {
           ? MIN_POSITION_CONFIDENCE
           : confidenceFromUncertainty(uncertaintyMetres),
         isDeadReckoned,
+        runningSpeed: walked.metresPerSecond,
         secondsUnheard: Math.round(secondsUnheard),
         targetStation: walked.nextStation ? walked.nextStation.name : anchor.station.name,
         secondsToTarget: Math.max(0, Math.round(anchor.secondsRemaining)),
@@ -690,6 +742,16 @@ class TrainPositionEngine {
   }
 
   /**
+   * Metres per second the marker may close a forward gap at: a multiple of
+   * how fast the Vehicle runs in the Segment it is placed in, so the marker
+   * reads as that train speeding up rather than sliding.
+   */
+  catchUpRate(vehicle) {
+    const running = vehicle.runningSpeed > 0 ? vehicle.runningSpeed : FALLBACK_RUNNING_SPEED;
+    return Math.max(CATCH_UP_MIN_METRES_PER_SECOND, Math.min(CATCH_UP_MAX_METRES_PER_SECOND, CATCH_UP_SPEED_FACTOR * running));
+  }
+
+  /**
    * Draw a live train moving forwards only. Live trains only: simulated ones
    * are already continuous.
    *
@@ -715,10 +777,10 @@ class TrainPositionEngine {
     const ahead = (vehicle.distanceAlongTrack - previous.trackDist) * (isForward ? 1 : -1);
     // A gap this large is not a correction but a different reading of where
     // the train is — a new anchor far down the line — so the marker goes there.
-    if (Math.abs(ahead) > RESYNC_METRES) return resync();
+    if (ahead > this.resyncForwardMetres || -ahead > this.resyncBackwardMetres) return resync();
 
     const elapsedSeconds = Math.max(0, now - previous.at) / 1000;
-    const step = Math.max(0, Math.min(ahead, CATCH_UP_METRES_PER_SECOND * elapsedSeconds));
+    const step = Math.max(0, Math.min(ahead, this.catchUpRate(vehicle) * elapsedSeconds));
     const drawn = previous.trackDist + step * (isForward ? 1 : -1);
     this.renderState.set(vehicle.id, { trackDist: drawn, isForward, at: now });
     if (drawn === vehicle.distanceAlongTrack) return vehicle;

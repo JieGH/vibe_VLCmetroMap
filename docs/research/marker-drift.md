@@ -113,3 +113,41 @@ MONO=25 npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1
 ```
 
 Run them from the repo root. The capture itself is not committed: it is about 1 MB and goes out of date as soon as FGV changes its model.
+
+## Phase 4: per-line backtest (2026-10-24)
+
+A 30-minute whole-network capture (59,622 rows, 29.4 min) was replayed through `marker-drift/app_replay.mjs`. The replay models what the app actually fetches:
+- a Network Sync of the 19 Strategic Hubs and Major Stations every 120 s, honouring the 60 s memory pause and 4 requests in flight;
+- Station taps, with the panel polling while it is open.
+
+Five agents each took two Lines (L1+L2, L3+L9, L4+L6, L5+L7, L8+L10), and the L8+L10 agent also took taps across every Line. Their reports agree:
+
+1. **The walk ran faster than any train.** A 40 s dwell carved out of a minute-quantised interval left 20 s for 500–3,300 m. Examples: Seminari-CEU > Moncada at 36.6 m/s, Col·legi El Vedat > Realón at 41 m/s, Mas del Rosari > La Coma at 26 m/s. FGV's far-out countdowns, and its tram intervals, are timetable figures stated to the minute.
+2. **Catch-up slides are FGV re-timing a whole train.** When a train is held or released, every one of its ETAs shifts by 15–115 s at once. That shift arrives with the next sync or tap and moves the estimate up to 1.4 km. The anchor handover at arrival is a minor cause. Usually it moves the estimate backwards, and the forward-only marker already holds there.
+3. **A tap adds no slides of its own.** It brings forward the correction the next sync would make. Refreshing a Sighting 60–120 s old moved the estimate more than 100 m on 32% of refreshes; one under 30 s old never did (0 of 490). The worst case was L1 1061: the anchor flipped to a 438 s-old Sighting and the marker chased for 175 s.
+4. **Holds mirror the re-timing**, when FGV pushes a train later. The worst is L4 4083: held about 285 s at Beteró, with every downstream ETA moved +285 s. No engine change fixed holds. Only fresher data does.
+5. **An open Station panel refreshed every 120 s, not 60 s.** Its 60 s poll landed 59.5 s after the tap's fetch, inside the memory pause.
+
+Fixes taken:
+- **Running ceiling per Line.** The ceiling is 1.8× the Line's Commercial Speed, at least 10 m/s and at most 17 m/s. The dwell gives way first, down to 12.5 s, and only then does the interval stretch.
+- **Catch-up at twice the Vehicle's own running speed**, clamped to 6–20 m/s, instead of a flat 25 m/s.
+- **Panel poll at `CACHE_TTL_MS + 1000`.**
+
+All lines, app sync, before → after:
+
+| | No taps | Tap every 60 s |
+|---|---|---|
+| Slides (> 20 m/s for ≥ 1 s) | 183 → 0 | 183 → 0 |
+| Seconds drawn > 15 m/s faster than the estimate | 964 → 463 | 1149 → 398 |
+| Seconds drawn > 8 m/s faster than the estimate | 2057 → 1852 | — |
+| Holds ≥ 20 s (max) | 144 (274 s) → 145 (274 s) | unchanged |
+| Mean offset from the estimate, sum over 10 Lines | 267 → 295 m | — |
+
+The slide count reaching 0 is partly by construction, because the 20 m/s ceiling equals the slide threshold. The cap-independent rows are the "faster than the estimate" seconds. Accuracy against the freshest data does not improve: data age dominates.
+
+Left open:
+- **Tram loop geometry.** La Cadena projects after Beteró; the coastal loop is walked as two-way, and its west leg is missing from the polyline (ADR-0002).
+- **L10 coverage.** Only Russafa is synced. Adding Alacant and Natzaret lifts the share of trains shown from 65% to 82%.
+- **Resyncing forward at 600 m.** This trades a 40 s chase for a ~900 m hop. It is a UX call, and not taken.
+
+Agent reports are not committed; they lived in the session scratchpad.

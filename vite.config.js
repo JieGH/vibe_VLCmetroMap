@@ -12,6 +12,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(buildDate),
   },
   plugins: [react()],
+  test: {
+    // Agent worktrees live under .claude/worktrees with their own copy of
+    // every test; without this `npm test` runs them all as well.
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
+  },
   optimizeDeps: {
     exclude: ['maplibre-gl']
   },

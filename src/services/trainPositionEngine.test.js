@@ -546,3 +546,37 @@ describe('where a train that has called at a Station is drawn', () => {
     expect(vehicle.isDeadReckoned).toBe(true);
   });
 });
+
+// docs/research/marker-drift.md, phase 4: a 40s dwell carved out of a
+// minute-quantised interval walked trains at 25-40 m/s.
+describe('how fast the walk may run a train', () => {
+  const fastestSegment = (lineId) => {
+    const stations = trainPositionEngine.getLineStations(lineId);
+    let fastest = 0;
+    for (let i = 0; i + 1 < stations.length; i++) {
+      const timing = trainPositionEngine.getSegmentTiming(lineId, stations[i], stations[i + 1]);
+      const metres = Math.abs(stations[i + 1].trackDist - stations[i].trackDist);
+      fastest = Math.max(fastest, metres / (timing.seconds - timing.dwell));
+    }
+    return fastest;
+  };
+
+  it('never runs a metro segment faster than 17 m/s', () => {
+    for (const line of ['1', '2', '3', '5', '7', '9']) {
+      expect(fastestSegment(line), `line ${line}`).toBeLessThanOrEqual(17 + 1e-9);
+    }
+  });
+
+  it('holds trams to a tram speed rather than the metro ceiling', () => {
+    for (const line of ['4', '6']) {
+      expect(fastestSegment(line), `line ${line}`).toBeLessThan(13);
+    }
+  });
+
+  it('catches up at the train’s own pace, within a floor and a ceiling', () => {
+    expect(trainPositionEngine.catchUpRate({ runningSpeed: 5 })).toBe(10);
+    expect(trainPositionEngine.catchUpRate({ runningSpeed: 1 })).toBe(6);
+    expect(trainPositionEngine.catchUpRate({ runningSpeed: 16 })).toBe(20);
+    expect(trainPositionEngine.catchUpRate({})).toBe(15);
+  });
+});
