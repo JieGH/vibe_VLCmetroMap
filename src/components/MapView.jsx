@@ -114,7 +114,8 @@ if (typeof window !== 'undefined') {
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
 import { renderStationHighlight } from '../utils/focusNode';
-import { getDistance, nearestFeature, nearestPointOnPath } from '../utils/geoUtils';
+import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
+import returnTrackData from '../data/return_tracks.json';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 
 // ─── Static data (computed once at module load) ────────────────────────────────
@@ -206,6 +207,24 @@ lineFeatures = lineFeatures.map((f) => {
   }
   return f;
 });
+// A Line with a one-way section draws its outbound alignment above, and the
+// return leg it lacks here: on lines 4 and 6, Dr. Lluch → Cabanyal runs on its
+// own street inland of the beach leg (ADR-0007). Only the stretch off the
+// drawn alignment is added, so the shared trunk is not painted twice. Kept out
+// of lineFeatures, which holds one feature per Line, and carrying the same
+// `line` property, so filtering and dimming treat it as part of its Line.
+const returnLegFeatures = lineFeatures.flatMap((f) => {
+  const id = String(f.properties.line);
+  const returnTrack = returnTrackData.lines && returnTrackData.lines[id];
+  if (!returnTrack || !f.geometry || f.geometry.type !== 'LineString') return [];
+  return pathsOffReference(returnTrack.coordinates, f.geometry.coordinates, lineRenderConfig.sharedToleranceMeters)
+    .map(coordinates => ({
+      type: 'Feature',
+      properties: { ...f.properties, offset: 0, returnLeg: true },
+      geometry: { type: 'LineString', coordinates },
+    }));
+});
+
 // gtfs_expanded.json carries every station on the network, so it is the single
 // source here; metro_lines.json only contributes points it alone knows about.
 const gtfsStations = (gtfsData && gtfsData.features)
@@ -286,10 +305,13 @@ const snapStationToItsLines = (station) => {
   let best = null;
 
   for (const lineId of lines) {
-    const geometry = lineCoordsById.get(String(lineId));
-    if (!geometry) continue;
-    const candidate = nearestPointOnPath(geometry, station.geometry.coordinates);
-    if (candidate && (!best || candidate.distance < best.distance)) best = candidate;
+    // A return leg counts as its Line's track: Cabanyal is 168 m from the
+    // beach leg, inside the snap limit, and would otherwise be dragged onto
+    // a street its trains never use.
+    for (const geometry of lineCoordsById.get(String(lineId)) || []) {
+      const candidate = nearestPointOnPath(geometry, station.geometry.coordinates);
+      if (candidate && (!best || candidate.distance < best.distance)) best = candidate;
+    }
   }
 
   if (!best || best.distance > SNAP_LIMIT_M) return station;
@@ -298,11 +320,12 @@ const snapStationToItsLines = (station) => {
   return station;
 };
 
-const lineCoordsById = new Map(
-  lineFeatures
-    .filter(f => f.geometry && f.geometry.type === 'LineString')
-    .map(f => [String(f.properties.line), f.geometry.coordinates])
-);
+const lineCoordsById = new Map();
+for (const f of [...lineFeatures, ...returnLegFeatures]) {
+  if (!f.geometry || f.geometry.type !== 'LineString') continue;
+  const id = String(f.properties.line);
+  lineCoordsById.set(id, [...(lineCoordsById.get(id) || []), f.geometry.coordinates]);
+}
 
 const stationFeatures = mergeDuplicateStations(rawStations).map(snapStationToItsLines);
 
@@ -314,7 +337,7 @@ const snappedCoordinates = (station) => {
   const snapped = station && snappedByName.get(station.properties.name);
   return snapped ? snapped.geometry.coordinates : station.geometry.coordinates;
 };
-const lineGeoJSON    = { type: 'FeatureCollection', features: lineFeatures };
+const lineGeoJSON    = { type: 'FeatureCollection', features: [...lineFeatures, ...returnLegFeatures] };
 
 // Build a color lookup from line id → color from actual GeoJSON data,
 // allowing overrides from the sampled image colors file.
@@ -946,7 +969,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         }
         // update source data so `line-offset` picks up new offsets
         const src = map.getSource('metro-lines');
-        if (src && typeof src.setData === 'function') src.setData({ type: 'FeatureCollection', features: lineFeatures });
+        if (src && typeof src.setData === 'function') src.setData({ type: 'FeatureCollection', features: [...lineFeatures, ...returnLegFeatures] });
       }
     };
     if (map.isStyleLoaded()) apply();

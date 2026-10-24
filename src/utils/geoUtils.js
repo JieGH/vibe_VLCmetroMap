@@ -130,6 +130,32 @@ export const nearestPointOnPath = (coords, point) => {
   return best;
 };
 
+// The stretches of `path` that leave `reference`: each run of vertices further
+// than `toleranceMetres` from it, extended by one vertex at either end so the
+// stretch joins the reference where it branches off and rejoins.
+//
+// A one-way section's return track shares its trunk with the outbound
+// alignment and differs only along the return leg, so this is that leg alone,
+// ready to draw beside a Line without painting the trunk twice.
+export const pathsOffReference = (path, reference, toleranceMetres) => {
+  if (!path || path.length < 2 || !reference || reference.length === 0) return [];
+
+  const off = path.map(c => nearestPointOnPath(reference, c).distance > toleranceMetres);
+  const runs = [];
+  let start = -1;
+
+  for (let i = 0; i <= path.length; i++) {
+    if (i < path.length && off[i]) {
+      if (start < 0) start = i;
+    } else if (start >= 0) {
+      runs.push(path.slice(Math.max(0, start - 1), Math.min(path.length, i + 1)));
+      start = -1;
+    }
+  }
+
+  return runs.filter(run => run.length >= 2);
+};
+
 // The feature nearest a coordinate, with how far away it was.
 //
 // Policy-free on purpose: it names the nearest whatever the distance, and the

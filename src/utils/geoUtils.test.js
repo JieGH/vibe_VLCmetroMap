@@ -1,5 +1,50 @@
 import { describe, it, expect } from 'vitest';
-import { getDistance, nearestFeature, nearestPointOnPath } from './geoUtils';
+import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from './geoUtils';
+import returnTracks from '../data/return_tracks.json';
+import metroData from '../data/metro_lines.json';
+import gtfsData from '../data/gtfs_expanded.json';
+
+describe('pathsOffReference', () => {
+  // A trunk running north, and a path that follows it, steps ~170 m east for
+  // a stretch, then comes back.
+  const TRUNK = [[-0.3800, 39.4600], [-0.3800, 39.4800]];
+  const DETOUR = [
+    [-0.3800, 39.4600], [-0.3800, 39.4650],
+    [-0.3780, 39.4670], [-0.3780, 39.4730],
+    [-0.3800, 39.4750], [-0.3800, 39.4800],
+  ];
+
+  it('returns only the stretch that leaves the reference, joined at both ends', () => {
+    const runs = pathsOffReference(DETOUR, TRUNK, 12);
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toEqual(DETOUR.slice(1, 5));
+  });
+
+  it('returns nothing for a path that never leaves the reference', () => {
+    expect(pathsOffReference(TRUNK, TRUNK, 12)).toEqual([]);
+  });
+
+  // The map draws each coastal Line's outbound alignment from metro_lines.json;
+  // the return leg past Dr. Lluch and Cabanyal is the stretch it lacks.
+  it.each(['4', '6'])('finds line %s\'s return leg past Dr. Lluch and Cabanyal', (lineId) => {
+    const outbound = metroData.features.find(
+      f => f.properties.line === lineId && f.geometry.type === 'LineString'
+    ).geometry.coordinates;
+    const stations = Object.fromEntries(
+      gtfsData.features
+        .filter(f => f.geometry.type === 'Point')
+        .map(f => [f.properties.name, f.geometry.coordinates])
+    );
+    const runs = pathsOffReference(returnTracks.lines[lineId].coordinates, outbound, 12);
+    const nearestRun = (name) => Math.min(...runs.map(run => nearestPointOnPath(run, stations[name]).distance));
+
+    expect(nearestRun('Cabanyal')).toBeLessThan(30);
+    expect(nearestRun('Dr. Lluch')).toBeLessThan(30);
+    // The beach leg is outbound only, so no return stretch runs along it.
+    expect(nearestRun('Platja les Arenes')).toBeGreaterThan(100);
+  });
+});
 
 // A straight north-south segment through Valencia, and a point beside it.
 const PATH = [[-0.3800, 39.4600], [-0.3800, 39.4800]];
