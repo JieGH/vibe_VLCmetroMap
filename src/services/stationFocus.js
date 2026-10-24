@@ -38,13 +38,14 @@ export const getStationFocus = (stationProps, now = Date.now()) => {
 
   for (const arrival of arrivals) {
     const lineId = String(arrival.line);
-    const onLine = trainPositionEngine.findStation(lineId, stationProps.name);
+    // On a Line with a one-way section the Station is the one on the Chain for
+    // the way this train travels: Cabanyal has a place on the return track only.
+    const located = trainPositionEngine.locateArrival(lineId, stationProps.name, arrival.destination);
     // A Station its Line's geometry cannot reach has no direction we can trust
     // — see Off-Track Station. It still belongs in the table below; it just
     // cannot be drawn on a side of the marker.
-    if (!onLine) continue;
-
-    const isForward = trainPositionEngine.resolveDirection(lineId, arrival.destination, onLine);
+    if (!located) continue;
+    const { station: onLine, isForward } = located;
     const key = isForward ? 'forward' : 'backward';
     if (!groups.has(key)) groups.set(key, { key, destinations: [], arrivals: [], bearings: [] });
 

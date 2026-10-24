@@ -15,6 +15,8 @@ import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import segmentTimes from '../data/segment_times.json';
 import fgvSegmentTimes from '../data/segment_times_fgv.json';
+import returnTrackData from '../data/return_tracks.json';
+import directionStationData from '../data/direction_stations.json';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from './arrivalStore';
 
 // Haversine distance in meters
@@ -173,12 +175,25 @@ export const confidenceFromUncertainty = (uncertaintyMetres) => {
   return Math.max(MIN_WALKED_CONFIDENCE, Math.min(1, 1 - lost));
 };
 
+// Sightings of one Vehicle must reach its Stations in the order it travels
+// them. FGV re-times a countdown by up to 25s (p90) between fetches, and the
+// Sightings of one Vehicle are rarely fetched together, so two Stations 40s
+// apart can read a few seconds backwards without either being wrong. Past this
+// the pair contradicts the Station Chain (docs/research/marker-drift.md).
+const ORDER_TOLERANCE_SECONDS = 10;
+
 const normalise = (value) => (value || '').toLowerCase().trim();
 
 class TrainPositionEngine {
   constructor() {
     this.lineTracks = new Map();
     this.lineStations = new Map();
+    // Lines whose coast section is one-way and whose return track differs from
+    // the outbound one (ADR-0007). Their tracks and Station Chains are kept per
+    // direction, under `${lineId}:return`; every other Line shares one of each.
+    this.returnLines = new Set();
+    // How often the Sighting order filter dropped a Sighting, per Line.
+    this.orderFilterStats = new Map();
     // Stations a line serves but its geometry cannot reach; trains bound for
     // these hold at the nearest terminus rather than being drawn off-track.
     this.offTrackStations = [];
@@ -256,18 +271,71 @@ class TrainPositionEngine {
         }
       }
 
-      this.lineStations.set(lineId, projectedStations
+      const onTrack = projectedStations.filter(st => st.offTrackMetres <= MAX_STATION_OFFSET_METRES);
+      const returnCoords = returnTrackData.lines?.[lineId]?.coordinates;
+      const served = directionStationData.lines?.[lineId];
+
+      if (!returnCoords || !served) {
+        this.lineStations.set(lineId, onTrack.sort((a, b) => a.trackDist - b.trackDist));
+        continue;
+      }
+
+      // One-way section: the outbound chain keeps the Stations the feed says
+      // trams call at going out, and the return chain those coming back, each
+      // projected onto its own track so Dr. Lluch has a distance on both.
+      const outbound = new Set(served.forward);
+      const inbound = new Set(served.reverse);
+      this.lineStations.set(lineId, onTrack
+        .filter(st => outbound.has(st.stopId))
+        .sort((a, b) => a.trackDist - b.trackDist));
+
+      const returnCum = [0];
+      for (let i = 1; i < returnCoords.length; i++) {
+        returnCum.push(returnCum[i - 1] + haversineDistance(returnCoords[i - 1], returnCoords[i]));
+      }
+      this.returnLines.add(lineId);
+      this.lineTracks.set(`${lineId}:return`, {
+        ...this.lineTracks.get(lineId),
+        coords: returnCoords,
+        cumDists: returnCum,
+        totalLength: returnCum[returnCum.length - 1] || 1,
+      });
+      this.lineStations.set(`${lineId}:return`, stationsForLine
+        .filter(st => inbound.has(st.properties.stop_id))
+        .map((st) => {
+          const proj = projectPointOntoPolyline(st.geometry.coordinates, returnCoords, returnCum);
+          return {
+            id: st.properties.id,
+            stopId: st.properties.stop_id || null,
+            apiId: st.properties.apiId || null,
+            name: st.properties.name,
+            coords: st.geometry.coordinates,
+            trackDist: proj.distAlongTrack,
+            offTrackMetres: proj.perpDistance,
+          };
+        })
         .filter(st => st.offTrackMetres <= MAX_STATION_OFFSET_METRES)
         .sort((a, b) => a.trackDist - b.trackDist));
     }
   }
 
-  getLineTrack(lineId) {
-    return this.lineTracks.get(String(lineId));
+  hasReturnTrack(lineId) {
+    return this.returnLines.has(String(lineId));
   }
 
-  getLineStations(lineId) {
-    return this.lineStations.get(String(lineId)) || [];
+  // The track and Station Chain a Vehicle travelling this way uses: the return
+  // ones on a Line with a one-way section, the Line's single ones otherwise.
+  chainKey(lineId, isForward) {
+    const id = String(lineId);
+    return !isForward && this.returnLines.has(id) ? `${id}:return` : id;
+  }
+
+  getLineTrack(lineId, isForward = true) {
+    return this.lineTracks.get(this.chainKey(lineId, isForward));
+  }
+
+  getLineStations(lineId, isForward = true) {
+    return this.lineStations.get(this.chainKey(lineId, isForward)) || [];
   }
 
   /**
@@ -339,7 +407,7 @@ class TrainPositionEngine {
    * [lng, lat] and bearing at a distance along the track.
    */
   getCoordsAndBearingAtDistance(lineId, distanceMeters, isForward = true) {
-    const track = this.getLineTrack(lineId);
+    const track = this.getLineTrack(lineId, isForward);
     if (!track) return { coordinates: [0, 0], bearing: 0 };
 
     const dist = Math.max(0, Math.min(track.totalLength, distanceMeters));
@@ -376,8 +444,8 @@ class TrainPositionEngine {
     return { coordinates: [lng, lat], bearing };
   }
 
-  findStation(lineId, stationName) {
-    const stations = this.getLineStations(lineId);
+  findStation(lineId, stationName, isForward = true) {
+    const stations = this.getLineStations(lineId, isForward);
     const target = normalise(stationName);
     if (!target) return null;
 
@@ -395,13 +463,37 @@ class TrainPositionEngine {
    * The headsign is a real station name, so locating it on the line gives the
    * answer directly; the terminus checks are only there for the handful of
    * headsigns that name a station on a branch this polyline does not cover.
+   *
+   * On a Line with a one-way section the target may sit on only one of the two
+   * Station Chains: pass its outbound Station as `target` and its return one as
+   * `returnTarget`, and a Station served one way (Cabanyal, Platja Malva-rosa)
+   * settles the direction on its own.
    */
-  resolveDirection(lineId, destination, target) {
+  resolveDirection(lineId, destination, target, returnTarget = null) {
     const stations = this.getLineStations(lineId);
+
+    if (this.hasReturnTrack(lineId)) {
+      if (target && !returnTarget) return true;
+      if (returnTarget && !target) return false;
+
+      // Station on both chains: the headsign's own position on each says which
+      // way it points. Dr. Lluch as both target and headsign is no evidence.
+      const evidence = [];
+      const outDest = this.findStation(lineId, destination, true);
+      if (outDest && target && outDest.trackDist !== target.trackDist) {
+        evidence.push(outDest.trackDist > target.trackDist);
+      }
+      const backDest = this.findStation(lineId, destination, false);
+      if (backDest && returnTarget && backDest.trackDist !== returnTarget.trackDist) {
+        evidence.push(backDest.trackDist > returnTarget.trackDist);
+      }
+      if (evidence.length && evidence.every(e => e === evidence[0])) return evidence[0];
+    }
+
     if (stations.length < 2 || !target) return true;
 
     const destination_ = this.findStation(lineId, destination);
-    if (destination_ && destination_.trackDist !== target.trackDist) {
+    if (destination_ && destination_.trackDist !== target.trackDist && !this.hasReturnTrack(lineId)) {
       return destination_.trackDist > target.trackDist;
     }
 
@@ -433,8 +525,8 @@ class TrainPositionEngine {
    * sign of the countdown.
    */
   walkFromStation(lineId, target, secondsToTarget, isForward) {
-    const track = this.getLineTrack(lineId);
-    const stations = this.getLineStations(lineId);
+    const track = this.getLineTrack(lineId, isForward);
+    const stations = this.getLineStations(lineId, isForward);
     if (!track || !target) return null;
 
     const targetIndex = stations.findIndex(s => s.id === target.id);
@@ -510,16 +602,32 @@ class TrainPositionEngine {
   }
 
   /**
+   * Which Station an Arrival is for, and which way it is travelling. On a Line
+   * with a one-way section the Station is the one on the Chain for that way.
+   */
+  locateArrival(lineId, stationName, destination) {
+    const outbound = this.findStation(lineId, stationName, true);
+    if (!this.hasReturnTrack(lineId)) {
+      if (!outbound) return null;
+      return { station: outbound, isForward: this.resolveDirection(lineId, destination, outbound) };
+    }
+
+    const inbound = this.findStation(lineId, stationName, false);
+    if (!outbound && !inbound) return null;
+    const isForward = this.resolveDirection(lineId, destination, outbound, inbound);
+    return { station: isForward ? outbound : inbound, isForward };
+  }
+
+  /**
    * Position a train from one arrival prediction.
    */
   estimatePositionFromArrival(lineId, destination, targetStationName, secondsToTarget) {
     const stations = this.getLineStations(lineId);
     if (!this.getLineTrack(lineId) || stations.length === 0) return null;
 
-    const target = this.findStation(lineId, targetStationName);
-    if (!target) return null;
-
-    const isForward = this.resolveDirection(lineId, destination, target);
+    const located = this.locateArrival(lineId, targetStationName, destination);
+    if (!located) return null;
+    const { station: target, isForward } = located;
     const walked = this.walkFromStation(lineId, target, secondsToTarget, isForward);
     if (!walked) return null;
 
@@ -561,8 +669,14 @@ class TrainPositionEngine {
         if (secondsRemaining < -MAX_SECONDS_PAST || secondsRemaining > MAX_SECONDS_AHEAD) continue;
 
         const lineId = String(arrival.line);
-        const station = this.findStation(lineId, entry.stationName);
-        if (!station) continue;
+        const station = this.findStation(lineId, entry.stationName, true);
+        // Which way the Vehicle goes is not known yet, and a Station served one
+        // way only (Cabanyal, Platja Malva-rosa) exists on one chain, so both
+        // are looked up. On a Line without a return track they are the same.
+        const returnStation = this.hasReturnTrack(lineId)
+          ? this.findStation(lineId, entry.stationName, false)
+          : station;
+        if (!station && !returnStation) continue;
 
         // Without a vehicle id from the API, a sighting cannot be tied to any
         // other, so it stands alone as its own train.
@@ -579,11 +693,183 @@ class TrainPositionEngine {
             sightings: [],
           });
         }
-        byVehicle.get(key).sightings.push({ station, secondsRemaining, fetchedAt });
+        byVehicle.get(key).sightings.push({ station, returnStation, secondsRemaining, fetchedAt });
       }
     }
 
     return byVehicle;
+  }
+
+  /**
+   * The Sightings of a Vehicle that lie on the Station Chain for one direction,
+   * each with the Station it names on that Chain.
+   */
+  sightingsOnChain(train, isForward) {
+    const out = [];
+    for (const sighting of train.sightings) {
+      const station = isForward ? sighting.station : sighting.returnStation;
+      if (station) out.push({ ...sighting, station });
+    }
+    return out;
+  }
+
+  /**
+   * Drop the Sightings whose countdowns contradict the Station Chain.
+   *
+   * A Vehicle reaches its Stations in chain order, so read along the way it
+   * travels the countdowns must not decrease. FGV sometimes states one that
+   * does: for a tram bound for the coast it can give La Cadena a countdown
+   * earlier than Beteró, though Beteró is the Station before it (the live feed
+   * of 2026-10-24 does, for far-out Vehicles; the polyline order is right, and
+   * GTFS agrees). Anchoring on such a Sighting puts the tram at a Station it
+   * has not reached, so it is dropped rather than believed.
+   *
+   * Keeps the largest consistent subset. Where two subsets are as large, the
+   * one whose gaps best match the Segment Intervals between its Stations wins,
+   * since a bogus Sighting is the one that does not fit the timetable. A
+   * Station is kept at most once: a Vehicle calls at it once on a journey.
+   */
+  consistentSightings(lineId, sightings, isForward) {
+    if (sightings.length < 2) return sightings;
+
+    const stations = this.getLineStations(lineId, isForward);
+    const step = isForward ? 1 : -1;
+    const indexOf = new Map(stations.map((st, i) => [st.id, i]));
+    const ordered = sightings
+      .filter(s => indexOf.has(s.station.id))
+      .sort((a, b) => step * (indexOf.get(a.station.id) - indexOf.get(b.station.id))
+        || a.secondsRemaining - b.secondsRemaining);
+
+    const expectedGap = (from, to) => {
+      let seconds = 0;
+      for (let i = indexOf.get(from.station.id); i !== indexOf.get(to.station.id); i += step) {
+        seconds += this.getSegmentTiming(lineId, stations[i], stations[i + step]).seconds;
+      }
+      return seconds;
+    };
+
+    // best[i]: the best chain of Sightings ending at ordered[i], by count and
+    // then by how far its gaps stray from the timetable.
+    const best = [];
+    for (let i = 0; i < ordered.length; i++) {
+      best[i] = { length: 1, misfit: 0, previous: -1 };
+      for (let j = 0; j < i; j++) {
+        if (ordered[j].station.id === ordered[i].station.id) continue;
+        const gap = ordered[i].secondsRemaining - ordered[j].secondsRemaining;
+        if (gap < -ORDER_TOLERANCE_SECONDS) continue;
+        const length = best[j].length + 1;
+        const misfit = best[j].misfit + Math.abs(gap - expectedGap(ordered[j], ordered[i]));
+        if (length > best[i].length || (length === best[i].length && misfit < best[i].misfit)) {
+          best[i] = { length, misfit, previous: j };
+        }
+      }
+    }
+
+    let end = 0;
+    for (let i = 1; i < best.length; i++) {
+      if (best[i].length > best[end].length
+        || (best[i].length === best[end].length && best[i].misfit < best[end].misfit)) end = i;
+    }
+    const kept = new Set();
+    for (let i = end; i >= 0; i = best[i].previous) kept.add(ordered[i]);
+    return sightings.filter(s => kept.has(s));
+  }
+
+  recordOrderFilter(lineId, train, before, after) {
+    if (!this.orderFilterStats.has(lineId)) {
+      this.orderFilterStats.set(lineId, { evaluations: 0, withDrop: 0, dropped: new Map() });
+    }
+    const stats = this.orderFilterStats.get(lineId);
+    stats.evaluations += 1;
+    if (after.length === before.length) return;
+    stats.withDrop += 1;
+    for (const s of before) {
+      if (after.includes(s)) continue;
+      const pair = `${train.key}|${s.station.name}`;
+      stats.dropped.set(pair, (stats.dropped.get(pair) || 0) + 1);
+    }
+  }
+
+  /**
+   * Anchor and direction from one Vehicle's Sightings, on a Line with a single
+   * Station Chain.
+   */
+  anchorAndDirection(train, sightings) {
+    sightings = [...sightings].sort(
+      (a, b) => Math.abs(a.secondsRemaining) - Math.abs(b.secondsRemaining)
+    );
+    // Anchor on the Station the train is heading for, even when one it has
+    // just passed is nearer in time. Walking forwards from a passed Station
+    // and back from the one ahead disagree, so picking whichever is nearer
+    // flipped the anchor — and the marker — the moment the passed Sighting
+    // went stale. Only with nothing ahead does a passed Station anchor.
+    const anchor = sightings
+      .filter(s => s.secondsRemaining >= 0)
+      .sort((a, b) => a.secondsRemaining - b.secondsRemaining)[0] ?? sightings[0];
+
+    // Two sightings settle the direction outright: the station the train
+    // reaches later is the one it is heading towards. That beats matching the
+    // headsign against station names.
+    // Every other sighting votes, not just the nearest: where FGV states a
+    // Station out of order the pair reads backwards, and letting that pair
+    // alone decide flipped the train whenever it became the nearest. A tie
+    // falls back to the headsign.
+    let votes = 0;
+    for (const other of sightings) {
+      if (other === anchor || other.station.trackDist === anchor.station.trackDist) continue;
+      if (other.secondsRemaining === anchor.secondsRemaining) continue;
+      const later = other.secondsRemaining > anchor.secondsRemaining ? other : anchor;
+      const earlier = later === other ? anchor : other;
+      votes += later.station.trackDist > earlier.station.trackDist ? 1 : -1;
+    }
+    const isForward = votes === 0
+      ? this.resolveDirection(train.lineId, train.destination, anchor.station)
+      : votes > 0;
+    return { anchor, isForward };
+  }
+
+  /**
+   * Which Sightings a Vehicle is placed from, which one anchors the walk, and
+   * which way it is going.
+   *
+   * On a Line with a one-way section the direction decides which Station Chain
+   * the Sightings belong to, so each way is tried: the chain that keeps more of
+   * them in order wins, and a tie falls back to the headsign. Stations on only
+   * the other chain are ignored. A Vehicle near the L4 terminus can carry both
+   * headsigns' Sightings at once, and this is what tells them apart.
+   */
+  placeVehicle(train) {
+    const lineId = train.lineId;
+
+    if (this.hasReturnTrack(lineId)) {
+      const tries = [true, false].map((isForward) => {
+        const onChain = this.sightingsOnChain(train, isForward);
+        return { isForward, onChain, kept: this.consistentSightings(lineId, onChain, isForward) };
+      });
+      let pick = tries[0].kept.length >= tries[1].kept.length ? tries[0] : tries[1];
+      if (tries[0].kept.length === tries[1].kept.length) {
+        const reference = [...train.sightings]
+          .sort((a, b) => Math.abs(a.secondsRemaining) - Math.abs(b.secondsRemaining))
+          .find(s => s.secondsRemaining >= 0) ?? train.sightings[0];
+        const heading = this.resolveDirection(lineId, train.destination, reference.station, reference.returnStation);
+        pick = heading ? tries[0] : tries[1];
+      }
+      if (pick.kept.length === 0) return null;
+      this.recordOrderFilter(lineId, train, pick.onChain, pick.kept);
+      const sorted = [...pick.kept].sort(
+        (a, b) => Math.abs(a.secondsRemaining) - Math.abs(b.secondsRemaining)
+      );
+      const anchor = sorted.filter(s => s.secondsRemaining >= 0)
+        .sort((a, b) => a.secondsRemaining - b.secondsRemaining)[0] ?? sorted[0];
+      return { anchor, isForward: pick.isForward, count: pick.onChain.length };
+    }
+
+    const all = this.sightingsOnChain(train, true);
+    let placed = this.anchorAndDirection(train, all);
+    const kept = this.consistentSightings(lineId, all, placed.isForward);
+    this.recordOrderFilter(lineId, train, all, kept);
+    if (kept.length < all.length) placed = this.anchorAndDirection(train, kept);
+    return { ...placed, count: all.length };
   }
 
   /**
@@ -593,37 +879,9 @@ class TrainPositionEngine {
     const vehicles = [];
 
     for (const train of this.collectVehicleSightings(now).values()) {
-      const sightings = train.sightings.sort(
-        (a, b) => Math.abs(a.secondsRemaining) - Math.abs(b.secondsRemaining)
-      );
-      // Anchor on the Station the train is heading for, even when one it has
-      // just passed is nearer in time. Walking forwards from a passed Station
-      // and back from the one ahead disagree, so picking whichever is nearer
-      // flipped the anchor — and the marker — the moment the passed Sighting
-      // went stale. Only with nothing ahead does a passed Station anchor.
-      const anchor = sightings
-        .filter(s => s.secondsRemaining >= 0)
-        .sort((a, b) => a.secondsRemaining - b.secondsRemaining)[0] ?? sightings[0];
-
-      // Two sightings settle the direction outright: the station the train
-      // reaches later is the one it is heading towards. That beats matching the
-      // headsign against station names.
-      // Every other sighting votes, not just the nearest: where the polyline
-      // projects a Station out of order — La Cadena lands after Beteró on line
-      // 6, though trains reach it first — one pair reads backwards, and
-      // letting that pair alone decide flipped the train whenever it became
-      // the nearest. A tie falls back to the headsign.
-      let votes = 0;
-      for (const other of sightings) {
-        if (other === anchor || other.station.trackDist === anchor.station.trackDist) continue;
-        if (other.secondsRemaining === anchor.secondsRemaining) continue;
-        const later = other.secondsRemaining > anchor.secondsRemaining ? other : anchor;
-        const earlier = later === other ? anchor : other;
-        votes += later.station.trackDist > earlier.station.trackDist ? 1 : -1;
-      }
-      const isForward = votes === 0
-        ? this.resolveDirection(train.lineId, train.destination, anchor.station)
-        : votes > 0;
+      const placed = this.placeVehicle(train);
+      if (!placed) continue;
+      const { anchor, isForward } = placed;
 
       const walked = this.walkFromStation(
         train.lineId, anchor.station, anchor.secondsRemaining, isForward
@@ -636,7 +894,7 @@ class TrainPositionEngine {
 
       const secondsUnheard = Math.max(0, (now - anchor.fetchedAt) / 1000);
       const uncertaintyMetres = estimatePositionUncertainty(
-        walked.segmentsWalked, secondsUnheard, this.getLineTrack(train.lineId).fallbackSpeed
+        walked.segmentsWalked, secondsUnheard, this.getLineTrack(train.lineId, isForward).fallbackSpeed
       );
       // Dead Reckoning is the sharpest loss of confidence there is, and it is
       // not about age at all — a prediction fetched a second ago can already be
@@ -655,7 +913,7 @@ class TrainPositionEngine {
         isForward,
         isLive: true,
         status: walked.status,
-        sightingCount: sightings.length,
+        sightingCount: placed.count,
         positionUncertaintyMetres: Math.round(uncertaintyMetres),
         positionConfidence: isDeadReckoned
           ? MIN_POSITION_CONFIDENCE
@@ -676,14 +934,14 @@ class TrainPositionEngine {
    * and callers must present them as such.
    */
   getHeadwayVehiclesForLine(lineId, now = Date.now()) {
-    const track = this.getLineTrack(lineId);
-    const stations = this.getLineStations(lineId);
-    if (!track || stations.length < 2) return [];
+    const outTrack = this.getLineTrack(lineId);
+    const outStations = this.getLineStations(lineId);
+    if (!outTrack || outStations.length < 2) return [];
 
-    const firstStop = stations[0];
-    const lastStop = stations[stations.length - 1];
-    const totalLength = track.totalLength;
-    const speed = track.fallbackSpeed;
+    const firstStop = outStations[0];
+    const lastStop = outStations[outStations.length - 1];
+    const speed = outTrack.fallbackSpeed;
+    const totalLength = outTrack.totalLength;
 
     // One round-trip cycle duration in milliseconds
     const oneWaySecs = totalLength / speed;
@@ -695,6 +953,10 @@ class TrainPositionEngine {
 
     for (let dir = 0; dir < 2; dir++) {
       const isForward = dir === 0;
+      // A one-way section has a track of its own for each way.
+      const track = this.getLineTrack(lineId, isForward);
+      const stations = this.getLineStations(lineId, isForward);
+      const legLength = track.totalLength;
       const destination = isForward ? lastStop.name : firstStop.name;
 
       for (let tIdx = 0; tIdx < numTrainsPerDir; tIdx++) {
@@ -703,7 +965,7 @@ class TrainPositionEngine {
 
         // Ping-pong smoothly along the line
         const posProgress = cycleProgress > 0.5 ? (1 - cycleProgress) * 2 : cycleProgress * 2;
-        const currentDist = posProgress * totalLength;
+        const currentDist = posProgress * legLength;
 
         // Determine nearest upcoming station
         let nearestTarget = isForward ? lastStop : firstStop;

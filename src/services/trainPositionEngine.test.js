@@ -129,8 +129,12 @@ describe('track geometry fidelity', () => {
   // every position computed through that stretch shifts. Chain sizes catch
   // that; a diff here means the network shape changed, not just the geometry.
   const EXPECTED_CHAIN_SIZES = {
-    1: 40, 2: 34, 3: 27, 4: 31, 5: 18, 6: 21, 7: 16, 8: 4, 9: 23, 10: 8,
+    1: 40, 2: 34, 3: 27, 4: 30, 5: 18, 6: 19, 7: 16, 8: 4, 9: 23, 10: 8,
   };
+
+  // Outbound chains only. Lines 4 and 6 are one-way along the coast (ADR-0007),
+  // so their outbound chain loses Cabanyal (and, on line 6, Dr. Lluch), which
+  // trams call at only on the way back.
 
   // Metres. Simplification must not change how long a line is.
   const EXPECTED_TRACK_LENGTHS = {
@@ -578,5 +582,199 @@ describe('how fast the walk may run a train', () => {
     expect(trainPositionEngine.catchUpRate({ runningSpeed: 1 })).toBe(6);
     expect(trainPositionEngine.catchUpRate({ runningSpeed: 16 })).toBe(20);
     expect(trainPositionEngine.catchUpRate({})).toBe(15);
+  });
+});
+
+describe('the one-way coastal section (issue #84)', () => {
+  const names = (lineId, isForward) =>
+    trainPositionEngine.getLineStations(lineId, isForward).map(s => s.name);
+  const at = (lineId, name, isForward) =>
+    trainPositionEngine.getLineStations(lineId, isForward).find(s => s.name === name);
+
+  beforeEach(() => {
+    arrivalStore.memory.clear();
+    trainPositionEngine.renderState.clear();
+  });
+
+  it('serves the beach going out and Cabanyal coming back, on both lines', () => {
+    for (const lineId of ['4', '6']) {
+      expect(names(lineId, true), `L${lineId} out`).toEqual(expect.arrayContaining(['La Cadena', 'Platja Malva-rosa', 'Platja les Arenes']));
+      expect(names(lineId, true), `L${lineId} out`).not.toContain('Cabanyal');
+      expect(names(lineId, false), `L${lineId} back`).toEqual(expect.arrayContaining(['Beteró', 'La Cadena', 'Cabanyal', 'Dr. Lluch']));
+      expect(names(lineId, false), `L${lineId} back`).not.toContain('Platja Malva-rosa');
+      expect(names(lineId, false), `L${lineId} back`).not.toContain('Platja les Arenes');
+    }
+  });
+
+  it('ends line 4 at Dr. Lluch both ways, and passes line 6 through it only on the way back', () => {
+    expect(names('4', true).at(-1)).toBe('Dr. Lluch');
+    expect(names('4', false).at(-1)).toBe('Dr. Lluch');
+    expect(names('6', true)).not.toContain('Dr. Lluch');
+    expect(names('6', false)).toContain('Dr. Lluch');
+    expect(names('6', true).at(-1)).toBe('Marítim');
+    expect(names('6', false).at(-1)).toBe('Marítim');
+  });
+
+  it('orders the way back as Dr. Lluch, Cabanyal, La Cadena, Beteró', () => {
+    for (const lineId of ['4', '6']) {
+      const d = ['Dr. Lluch', 'Cabanyal', 'La Cadena', 'Beteró'].map(n => at(lineId, n, false).trackDist);
+      expect(d[0]).toBeGreaterThan(d[1]);
+      expect(d[1]).toBeGreaterThan(d[2]);
+      expect(d[2]).toBeGreaterThan(d[3]);
+    }
+  });
+
+  it('keeps the outbound order, La Cadena after Beteró: the polyline is right and FGV is not', () => {
+    for (const lineId of ['4', '6']) {
+      expect(at(lineId, 'La Cadena', true).trackDist).toBeGreaterThan(at(lineId, 'Beteró', true).trackDist);
+    }
+  });
+
+  it('walks Dr. Lluch to Cabanyal as 400 m in about a minute, not 887 m', () => {
+    for (const lineId of ['4', '6']) {
+      const from = at(lineId, 'Dr. Lluch', false);
+      const to = at(lineId, 'Cabanyal', false);
+      const metres = Math.abs(from.trackDist - to.trackDist);
+      expect(metres, `L${lineId}`).toBeLessThan(500);
+      expect(metres).toBeGreaterThan(300);
+      const seconds = trainPositionEngine.getSegmentSeconds(lineId, from, to);
+      expect(seconds).toBeGreaterThan(45);
+      expect(seconds).toBeLessThan(90);
+    }
+  });
+
+  it('shares one track and one chain on a line with no return track', () => {
+    for (const lineId of ['1', '3', '5', '8', '10']) {
+      expect(trainPositionEngine.hasReturnTrack(lineId)).toBe(false);
+      expect(trainPositionEngine.getLineTrack(lineId, false)).toBe(trainPositionEngine.getLineTrack(lineId, true));
+      expect(trainPositionEngine.getLineStations(lineId, false)).toBe(trainPositionEngine.getLineStations(lineId, true));
+    }
+  });
+
+  it('draws eastbound trams down the beach leg heading south, and westbound ones up the inner leg heading north', () => {
+    for (const lineId of ['4', '6']) {
+      const malva = at(lineId, 'Platja Malva-rosa', true);
+      const arenes = at(lineId, 'Platja les Arenes', true);
+      for (let f = 0.1; f < 1; f += 0.2) {
+        const out = trainPositionEngine.getCoordsAndBearingAtDistance(
+          lineId, malva.trackDist + f * (arenes.trackDist - malva.trackDist), true
+        );
+        expect(Math.abs(out.bearing - 180), `L${lineId} beach ${f}`).toBeLessThan(10);
+        expect(out.coordinates[0]).toBeGreaterThan(-0.3262); // the beach leg, lon -0.3256
+      }
+
+      const drLluch = at(lineId, 'Dr. Lluch', false);
+      const cabanyal = at(lineId, 'Cabanyal', false);
+      for (let f = 0.1; f < 1; f += 0.2) {
+        const back = trainPositionEngine.getCoordsAndBearingAtDistance(
+          lineId, drLluch.trackDist + f * (cabanyal.trackDist - drLluch.trackDist), false
+        );
+        const offNorth = Math.min(back.bearing, 360 - back.bearing);
+        expect(offNorth, `L${lineId} inner ${f}`).toBeLessThan(20);
+        expect(back.coordinates[0]).toBeLessThan(-0.3270); // the inner leg, lon -0.328 to -0.3274
+      }
+    }
+  });
+
+  it('places an eastbound train on the beach leg and a westbound one on the inner leg', () => {
+    const now = Date.now();
+    sighting('a', 'Platja Malva-rosa', '6', 'Marítim', '6001', -10, now);
+    sighting('b', 'Platja les Arenes', '6', 'Marítim', '6001', 30, now);
+    sighting('c', 'Dr. Lluch', '6', 'Tossal del Rei', '6002', -10, now);
+    sighting('d', 'Cabanyal', '6', 'Tossal del Rei', '6002', 30, now);
+
+    const byId = Object.fromEntries(trainPositionEngine.getLiveVehiclesFromMemory(now).map(v => [v.vehicleId, v]));
+    expect(byId['6001'].isForward).toBe(true);
+    expect(Math.abs(byId['6001'].bearing - 180)).toBeLessThan(10);
+    expect(byId['6001'].coordinates[0]).toBeGreaterThan(-0.3262);
+    expect(byId['6002'].isForward).toBe(false);
+    expect(Math.min(byId['6002'].bearing, 360 - byId['6002'].bearing)).toBeLessThan(20);
+    expect(byId['6002'].coordinates[0]).toBeLessThan(-0.3270);
+  });
+
+  it('takes the direction from the chain a Station belongs to', () => {
+    expect(trainPositionEngine.locateArrival('4', 'Cabanyal', 'Mas del Rosari'))
+      .toMatchObject({ isForward: false, station: { name: 'Cabanyal' } });
+    expect(trainPositionEngine.locateArrival('6', 'Platja les Arenes', 'Marítim'))
+      .toMatchObject({ isForward: true, station: { name: 'Platja les Arenes' } });
+    expect(trainPositionEngine.locateArrival('4', 'Dr. Lluch', 'Dr. Lluch').isForward).toBe(true);
+    expect(trainPositionEngine.locateArrival('4', 'Dr. Lluch', 'Mas del Rosari').isForward).toBe(false);
+    expect(trainPositionEngine.locateArrival('6', 'Dr. Lluch', 'Tossal del Rei').isForward).toBe(false);
+    expect(trainPositionEngine.locateArrival('6', 'Cabanyal', 'Tossal del Rei').station.name).toBe('Cabanyal');
+  });
+
+  it('sets a tram leaving Dr. Lluch westbound while it carries both headsigns', () => {
+    const now = Date.now();
+    // Vehicle 4085 at T653: arriving at the terminus, then on to Benimaclet.
+    sighting('a', 'Dr. Lluch', '4', 'Mas del Rosari', '4085', 20, now);
+    sighting('b', 'Cabanyal', '4', 'Mas del Rosari', '4085', 80, now);
+    sighting('c', 'La Cadena', '4', 'Mas del Rosari', '4085', 200, now);
+    sighting('d', 'Beteró', '4', 'Mas del Rosari', '4085', 298, now);
+    sighting('e', 'Benimaclet', '4', 'Mas del Rosari', '4085', 784, now);
+
+    const [vehicle] = trainPositionEngine.getLiveVehiclesFromMemory(now);
+    expect(vehicle.isForward).toBe(false);
+    expect(vehicle.sightingCount).toBe(5);
+    expect(vehicle.targetStation).toBe('Dr. Lluch');
+  });
+
+  it('ignores Sightings at Stations that are not on the chain it travels', () => {
+    const now = Date.now();
+    sighting('a', 'Beteró', '4', 'Dr. Lluch', '4090', 100, now);
+    sighting('b', 'La Cadena', '4', 'Dr. Lluch', '4090', 140, now);
+    sighting('c', 'Platja Malva-rosa', '4', 'Dr. Lluch', '4090', 200, now);
+    // FGV never states Cabanyal for this heading; it is not on the way out.
+    sighting('d', 'Cabanyal', '4', 'Dr. Lluch', '4090', 30, now);
+
+    const [vehicle] = trainPositionEngine.getLiveVehiclesFromMemory(now);
+    expect(vehicle.isForward).toBe(true);
+    expect(vehicle.sightingCount).toBe(3);
+    expect(vehicle.targetStation).not.toBe('Cabanyal');
+  });
+});
+
+describe('dropping Sightings that contradict the Station Chain', () => {
+  beforeEach(() => {
+    arrivalStore.memory.clear();
+    trainPositionEngine.renderState.clear();
+  });
+
+  const eastbound4086 = (now) => {
+    // Vehicle 4086 as FGV stated it: La Cadena before Beteró, on a tram that
+    // reaches Beteró first.
+    sighting('a', 'La Cadena', '4', 'Dr. Lluch', '4086', 47, now);
+    sighting('b', 'Beteró', '4', 'Dr. Lluch', '4086', 229, now);
+    sighting('c', 'Platja Malva-rosa', '4', 'Dr. Lluch', '4086', 491, now);
+    sighting('d', 'Platja les Arenes', '4', 'Dr. Lluch', '4086', 550, now);
+  };
+
+  it('keeps Beteró and drops La Cadena when they tie on count', () => {
+    const now = Date.now();
+    eastbound4086(now);
+    const train = [...trainPositionEngine.collectVehicleSightings(now).values()][0];
+    const all = trainPositionEngine.sightingsOnChain(train, true);
+    const kept = trainPositionEngine.consistentSightings('4', all, true).map(s => s.station.name);
+    expect(kept.sort()).toEqual(['Beteró', 'Platja Malva-rosa', 'Platja les Arenes']);
+  });
+
+  it('anchors on the surviving Sighting, so the tram is not placed at La Cadena', () => {
+    const now = Date.now();
+    eastbound4086(now);
+    const [vehicle] = trainPositionEngine.getLiveVehiclesFromMemory(now);
+    const beteroDist = trainPositionEngine.getLineStations('4').find(s => s.name === 'Beteró').trackDist;
+    expect(vehicle.isForward).toBe(true);
+    // 229 s from Beteró: well short of it, not at La Cadena beyond it.
+    expect(vehicle.distanceAlongTrack).toBeLessThan(beteroDist);
+  });
+
+  it('keeps every Sighting that is in order', () => {
+    const now = Date.now();
+    sighting('a', 'Xàtiva', '3', 'Rafelbunyol', '3704', 60, now);
+    sighting('b', 'Alameda', '3', 'Rafelbunyol', '3704', 300, now);
+    sighting('c', 'Colón', '3', 'Rafelbunyol', '3704', 180, now);
+    const train = [...trainPositionEngine.collectVehicleSightings(now).values()][0];
+    const all = trainPositionEngine.sightingsOnChain(train, true);
+    const forward = all[0].station.trackDist < all[1].station.trackDist;
+    expect(trainPositionEngine.consistentSightings('3', all, forward).length).toBe(3);
   });
 });

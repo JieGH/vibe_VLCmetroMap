@@ -366,3 +366,15 @@ if (MOVES) {
 }
 if (POS) fs.writeFileSync(POS, posRows.join('\n') + '\n');
 if (OUT) fs.writeFileSync(OUT, episodes.map(e => JSON.stringify(e)).join('\n') + '\n');
+// Sighting order filter (issue #84): how often it dropped a Sighting, per Line.
+// An evaluation is one Vehicle placed in one second; a pair is one Vehicle x
+// Station that was ever dropped.
+if (engine.orderFilterStats && engine.orderFilterStats.size) {
+  console.log('\norder filter: line  evaluations  with a drop  Vehicle|Station pairs dropped');
+  for (const [line, st] of [...engine.orderFilterStats].sort((a, b) => Number(a[0]) - Number(b[0]))) {
+    if (LINES && !LINES.has(line)) continue;
+    const byStation = {};
+    for (const pair of st.dropped.keys()) { const n = pair.split('|')[1]; byStation[n] = (byStation[n] || 0) + 1; }
+    console.log(`L${line.padEnd(3)} ${String(st.evaluations).padStart(11)}  ${String(st.withDrop).padStart(11)}  ${JSON.stringify(byStation)}`);
+  }
+}
