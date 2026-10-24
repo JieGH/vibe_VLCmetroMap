@@ -57,6 +57,7 @@ Why the website is limited: [`docs/fgv-api.md`](docs/fgv-api.md).
 - **Live trains** on the real track, easing between positions as predictions update.
 - **Departures** for any station: tap it for the next train each way.
 - **Nearest station:** one press finds you and opens its departures. Your location never leaves the device.
+- **Auto-locate:** if you have already allowed location, the app opens on you and your nearest station. It never asks on the web, and the first-launch prompt on the phone comes once.
 - **Works offline:** the vector basemap ships with the app.
 - **Departure board:** `?mode=dashboard` for a tablet or spare screen.
 - **Honest markers:** a train fades as its position becomes a guess. Simulated trains are hollow and dashed. Trains on branches the map lacks are not drawn at all ([#2](https://github.com/JieGH/vib_metroValencia/issues/2)).

@@ -1,8 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
 import {
   locate,
   findNearestStation,
   resetPermissionCache,
+  autoLocatePolicy,
+  resolveAutoLocate,
+  AUTO_LOCATE_PROMPTED_KEY,
   NEAREST_STATION_RANGE_M,
   MAX_USABLE_ACCURACY_M,
 } from './userLocation';
@@ -402,5 +407,88 @@ describe('locate', () => {
       expect(result.accuracy).toBe(35);
       expect(result.nearestStation.properties.name).toBe('Benimaclet');
     });
+  });
+});
+
+describe('autoLocatePolicy', () => {
+  const cases = [
+    // [isNative, permission, askedBefore, verdict]
+    [true, 'granted', false, 'locate'],
+    [true, 'granted', true, 'locate'],
+    [true, 'prompt', false, 'prompt-then-locate'],
+    [true, 'prompt-with-rationale', false, 'prompt-then-locate'],
+    [true, 'prompt', true, 'skip'],
+    [true, 'prompt-with-rationale', true, 'skip'],
+    [true, 'denied', false, 'skip'],
+    [true, 'denied', true, 'skip'],
+    [true, 'unknown', false, 'skip'],
+    [false, 'granted', false, 'locate'],
+    [false, 'granted', true, 'locate'],
+    [false, 'prompt', false, 'skip'],
+    [false, 'prompt', true, 'skip'],
+    [false, 'denied', false, 'skip'],
+    [false, 'unknown', false, 'skip'],
+  ];
+
+  it.each(cases)('native=%s permission=%s asked=%s -> %s', (isNative, permission, askedBefore, verdict) => {
+    expect(autoLocatePolicy({ isNative, permission, askedBefore })).toBe(verdict);
+  });
+});
+
+describe('resolveAutoLocate', () => {
+  const memoryStorage = (initial = {}) => {
+    const data = { ...initial };
+    return {
+      getItem: (k) => (k in data ? data[k] : null),
+      setItem: (k, v) => { data[k] = String(v); },
+      data,
+    };
+  };
+
+  it('marks the prompt flag when a native first launch is allowed to ask', async () => {
+    const storage = memoryStorage();
+    const verdict = await resolveAutoLocate({
+      provider: fakeProvider({ permission: 'prompt' }),
+      isNative: true,
+      storage,
+    });
+    expect(verdict).toBe('locate');
+    expect(storage.data[AUTO_LOCATE_PROMPTED_KEY]).toBe('1');
+  });
+
+  it('skips a native prompt state once the flag is set', async () => {
+    const storage = memoryStorage({ [AUTO_LOCATE_PROMPTED_KEY]: '1' });
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ permission: 'prompt' }),
+      isNative: true,
+      storage,
+    })).toBe('skip');
+  });
+
+  it('never sets the flag on the web', async () => {
+    const storage = memoryStorage();
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ permission: 'prompt' }),
+      isNative: false,
+      storage,
+    })).toBe('skip');
+    expect(storage.data).toEqual({});
+  });
+
+  it('skips when the permission cannot be read', async () => {
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ checkThrows: geolocationError('UNIMPLEMENTED', 'no') }),
+      isNative: false,
+      storage: memoryStorage(),
+    })).toBe('skip');
+  });
+
+  it('treats unreadable storage as already asked', async () => {
+    const storage = { getItem: () => { throw new Error('blocked'); }, setItem: () => {} };
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ permission: 'prompt' }),
+      isNative: true,
+      storage,
+    })).toBe('skip');
   });
 });

@@ -10,6 +10,8 @@ import WelcomeScreen from './components/WelcomeScreen';
 import AppDownloadBanner from './components/AppDownloadBanner';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
 import { locate } from './services/userLocation';
+import { createAutoLocator } from './services/autoLocate';
+import { Capacitor } from '@capacitor/core';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
@@ -48,6 +50,10 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [locateState, setLocateState] = useState('idle');
   const [locateNotice, setLocateNotice] = useState(null);
+  const autoLocatorRef = useRef(null);
+  // The Station auto-locate itself selected, so its own refinement may replace
+  // it while a Station the viewer chose may not.
+  const autoSelectedRef = useRef(null);
 
   // Live train counts for the sidebar stats panel. Recomputed on every
   // arrivalStore notification so the numbers stay in sync with the map.
@@ -82,6 +88,7 @@ function App() {
 
   // Station click — just opens the detail card, does NOT move the map
   const handleSelectStation = (station) => {
+    autoLocatorRef.current?.interrupt();
     setSelectedStation(station);
   };
 
@@ -143,6 +150,9 @@ function App() {
     // A press while a fix is in flight is ignored rather than queued.
     if (locateState === 'locating') return;
 
+    // An explicit press outranks a launch-time locate still in flight.
+    autoLocatorRef.current?.interrupt();
+
     setLocateState('locating');
     let initialNearestStation = null;
 
@@ -191,6 +201,35 @@ function App() {
     setLocateState('idle');
     setLocateNotice({ text: t('app.locationHidden'), _ts: Date.now() });
   };
+
+  // Auto-locate: the fix is requested at mount, in parallel with the network
+  // sync, and held until the map is ready to frame it. Not in dashboard mode,
+  // which is an ambient display with nobody to locate.
+  const dashboardMode = mode === 'dashboard';
+  useEffect(() => {
+    if (dashboardMode) return undefined;
+    const locator = createAutoLocator({
+      isNative: Capacitor.isNativePlatform(),
+      onFix: (fix) => {
+        const current = selectedStationRef.current;
+        if (current && current !== autoSelectedRef.current) return;
+        autoSelectedRef.current = fix.nearestStation;
+        applyUserLocation(fix, true);
+      },
+    });
+    autoLocatorRef.current = locator;
+    if (mapReady) locator.setReady();
+    locator.start();
+    return () => {
+      locator.stop();
+      autoLocatorRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dashboardMode]);
+
+  useEffect(() => {
+    if (mapReady) autoLocatorRef.current?.setReady();
+  }, [mapReady]);
 
   useEffect(() => {
     if (!locateNotice) return undefined;
@@ -264,6 +303,7 @@ function App() {
         hoverLine={hoverLine}
         userLocation={userLocation}
         onReady={() => setMapReady(true)}
+        onUserInteract={() => autoLocatorRef.current?.interrupt()}
       />
 
       {/* Collapsible Sidebar */}

@@ -122,6 +122,10 @@ _Avoid_: Position uncertainty, GPS error, precision, margin
 The Station lying the smallest straight-line distance from a User Location. Straight-line rather than along the network, because a viewer walks to a Station rather than riding to it. Undefined beyond a threshold distance: away from the network there is no nearest Station worth naming, only a far one.
 _Avoid_: Closest stop, local station, nearest stop, my station
 
+**Auto-locate**:
+Taking a User Location at launch, and on a native resume after 5 minutes hidden, without being asked. It runs only where permission is already granted, with one system prompt for life on native and none on the web, and it yields to anything the viewer does first. Silent when it fails. See ADR-0008.
+_Avoid_: Autolocate, background location, geofencing
+
 ### Data Sources
 
 **GTFS Feed**:

@@ -9,6 +9,7 @@
 // denial, services switched off, a fix that never arrives — are testable
 // without a browser or a phone. See ADR-0004 for why the provider is the
 // Capacitor plugin on both targets and never `navigator.geolocation`.
+import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -146,6 +147,90 @@ export const FAST_FIX_TIMEOUT_MS = 2500;
 // Freshness window for the Stage 2 high-accuracy fix, ensuring the device queries
 // hardware satellites rather than returning Stage 1's low-accuracy cache.
 export const REFINED_FIX_MAX_AGE_MS = 5000;
+
+// Set the first time the system prompt is raised on the viewer's behalf at
+// launch, and never cleared. Android offers the prompt again after a single
+// deny, so asking the OS "may I ask?" cannot tell a first launch from the tenth.
+export const AUTO_LOCATE_PROMPTED_KEY = 'xarxa.autoLocatePrompted';
+
+/**
+ * Whether launch-time location may run, and whether it may ask first.
+ *
+ * Native gets one system prompt for life, because the app is installed to be
+ * used on the move and the prompt is the platform's own. The web never gets
+ * one: a browser treats a permission prompt on page load as spam, and the
+ * viewer who refuses it once is often refused for good. On the web the locate
+ * button stays the opt-in, and a grant made there is what later visits act on.
+ *
+ * `permission` is the plugin's word for it ('granted', 'denied', 'prompt',
+ * 'prompt-with-rationale') or anything else when it could not be read.
+ *
+ * @param {{isNative: boolean, permission: string, askedBefore: boolean}} state
+ * @returns {'locate' | 'prompt-then-locate' | 'skip'}
+ */
+export const autoLocatePolicy = ({ isNative, permission, askedBefore }) => {
+  if (permission === 'granted') return 'locate';
+  if (!isNative) return 'skip';
+  if ((permission === 'prompt' || permission === 'prompt-with-rationale') && !askedBefore) {
+    return 'prompt-then-locate';
+  }
+  return 'skip';
+};
+
+const defaultStorage = () => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
+
+// Unreadable storage counts as already asked: if the flag cannot be kept, the
+// prompt would come back on every launch, which is the nagging it exists to stop.
+const wasPrompted = (storage) => {
+  try {
+    return storage.getItem(AUTO_LOCATE_PROMPTED_KEY) === '1';
+  } catch {
+    return true;
+  }
+};
+
+const markPrompted = (storage) => {
+  try {
+    storage.setItem(AUTO_LOCATE_PROMPTED_KEY, '1');
+  } catch {
+    // Nothing to do: wasPrompted reads the same failure as "asked".
+  }
+};
+
+/**
+ * Decide, from the live permission and the stored flag, whether to locate at
+ * launch. Marks the flag before the prompt is raised, so an app killed with the
+ * prompt on screen still counts as asked.
+ *
+ * @param {object} [options]
+ * @param {object} [options.provider]
+ * @param {boolean} [options.isNative]
+ * @param {Storage|null} [options.storage]
+ * @returns {Promise<'locate' | 'skip'>}
+ */
+export const resolveAutoLocate = async ({
+  provider = defaultProvider,
+  isNative = Capacitor.isNativePlatform(),
+  storage = defaultStorage(),
+} = {}) => {
+  let permission = 'unknown';
+  try {
+    permission = (await provider.checkPermissions()).location;
+  } catch {
+    // Services off, or a browser with no Permissions API: neither is a grant.
+  }
+
+  const askedBefore = storage ? wasPrompted(storage) : true;
+  const verdict = autoLocatePolicy({ isNative, permission, askedBefore });
+  if (verdict === 'prompt-then-locate') markPrompted(storage);
+  return verdict === 'skip' ? 'skip' : 'locate';
+};
 
 let cachedPermission = null;
 

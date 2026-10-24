@@ -611,7 +611,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
-const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady }) => {
+const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady, onUserInteract }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -652,6 +652,8 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   useEffect(() => { languageRef.current = language; }, [language]);
   useEffect(() => { filterRef.current = activeLineFilter; }, [activeLineFilter]);
   useEffect(() => { selectStRef.current = onSelectStation; }, [onSelectStation]);
+  const interactRef = useRef(onUserInteract);
+  useEffect(() => { interactRef.current = onUserInteract; }, [onUserInteract]);
   useEffect(() => { selectedStationRef.current = selectedStation; }, [selectedStation]);
   useEffect(() => { hoverRef.current = hoverLine; }, [hoverLine]);
 
@@ -1005,6 +1007,13 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       // largest, easiest-to-tap size rather than the network's full extent.
       zoom: DEFAULT_MAP_ZOOM,
       attributionControl: { compact: true },
+    });
+
+    // `originalEvent` is set only when a hand moved the camera (drag, pinch,
+    // wheel, key); the app's own easeTo/fitBounds carry none. That difference is
+    // how auto-locate tells a viewer taking over from its own framing.
+    map.on('movestart', (event) => {
+      if (event.originalEvent && interactRef.current) interactRef.current();
     });
 
     // Ensure bottom-right attribution starts collapsed into the compact info icon
