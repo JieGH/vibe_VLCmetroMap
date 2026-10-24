@@ -74,6 +74,30 @@ Each phase is measured with `replay.mjs` against a recorded capture, and phase 1
 3. **Re-measure the Segment Intervals from FGV.** For the same Vehicle in the same poll, the gap between its countdowns at two Stations is FGV's own second-resolution interval. For example, Amistat → Aragó is 91 s in FGV's model, 120 s in GTFS, and about 85 s measured. Build `segment_times.json` from sweeps rather than GTFS medians. Fix the comment on `QUANTISATION_SECONDS` and its value.
 4. **Re-check the 25 s shift.** The 10 s countdown lead was tuned while the marker was still drifting. FGV re-times by 25 s (p90) within the last 2 minutes, so a single ride cannot separate the lead from the noise. Re-time it with several stopwatch rides once phases 1 and 2 are in.
 
+## Results after phases 1–3
+
+A second capture polled all 143 Stations every 30 s for 20 minutes (2026-10-24, 39,718 rows, 89 live Vehicles; `marker-drift/capture_network.cjs`). From it, `scripts/calibrate_segment_times_fgv.mjs` measured 364 Segment Intervals into `src/data/segment_times_fgv.json`. They cover 194 of the 212 adjacent Station pairs the engine walks. Against the stopwatch:
+
+| Segment, including the dwell at origin | Stopwatch | FGV-measured | GTFS |
+|---|---|---|---|
+| Aragó → Alameda | 116.5 s | 110 s | 120 s |
+| Amistat → Aragó | ? + 42.8 s run | 91 s | 120 s |
+| Alameda → Colón | 217 s (166 s hold) | 107 s | 60 s |
+
+FGV states arrivals only, so the dwell split is set by hand at 40 s for measured intervals. That figure comes from the 42.4 s timed at Aragó, and from 91 − 42.8 = 48 s left at Amistat **[derived]**. GTFS intervals keep 12.5 s, since their 60 s segments would otherwise leave almost no running time.
+
+Replaying the drawn marker (`DRAWN=1`) shows what the map draws. Before is commit `5c64364`; after is phases 1–3 plus voting on direction:
+
+| Capture | Refresh | Before: jumps/min | Before: backward travel | After: jumps/min | After: backward travel |
+|---|---|---|---|---|---|
+| 16 central Stations, 14 min | 120 s | 21.4 | 14.1 km | 0 | 0 m |
+| All 143 Stations, 19 min | 120 s | 79.8 | 113.8 km | 0.4 | 20.5 km |
+| All 143 Stations, 19 min | 10 s | 126.1 | 141.0 km | 0.9 | 29.6 km |
+
+Each of the 8 jumps left at 120 s is over 2 km: a Vehicle turning back at a terminus, or one Vehicle id matched to a different trip. They are resyncs, not drift.
+
+**Direction now goes by vote.** Before the vote, the network capture still showed 1.4 jumps/min, mostly on trams 4 and 6. The polyline projects La Cadena after Beteró, though trains bound for Marítim reach it first. Because only the sighting nearest in time decided direction, the train flipped whenever La Cadena was that sighting. Now every sighting votes.
+
 ## Reproduce
 
 ```
@@ -81,7 +105,10 @@ node docs/research/marker-drift/capture.cjs /tmp/raw.jsonl 900000     # 15 min, 
 node docs/research/marker-drift/analyze.cjs /tmp/raw.jsonl
 node docs/research/marker-drift/near.cjs /tmp/raw.jsonl
 node docs/research/marker-drift/pairs.cjs /tmp/raw.jsonl
-npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1         # current engine
+npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1         # raw walk
+DRAWN=1 npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1 # what the map draws
+node docs/research/marker-drift/capture_network.cjs /tmp/net.jsonl 1200000     # all Stations, 20 min
+npx vite-node scripts/calibrate_segment_times_fgv.mjs /tmp/net.jsonl            # rebuild segment_times_fgv.json
 MONO=25 npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1 # forward-only prototype
 ```
 

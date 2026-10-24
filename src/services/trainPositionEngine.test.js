@@ -275,6 +275,21 @@ describe('fusing repeat sightings of one train', () => {
     expect(vehicle.isForward).toBe(alameda.trackDist > xativa.trackDist);
   });
 
+  // The line 6 polyline projects La Cadena after Beteró, though trains bound
+  // for Marítim reach it first, so that one pair reads backwards.
+  it('settles direction by every sighting, not one misplaced Station', () => {
+    const now = Date.now();
+    sighting('a', 'La Cadena', '6', 'Marítim', '6038', 20, now);
+    sighting('b', 'Beteró', '6', 'Marítim', '6038', 100, now);
+    sighting('c', 'Platja Malva-rosa', '6', 'Marítim', '6038', 300, now);
+    sighting('d', 'Platja les Arenes', '6', 'Marítim', '6038', 360, now);
+
+    const [vehicle] = trainPositionEngine.getLiveVehiclesFromMemory(now);
+    const maritim = stationByName('6', 'Marítim');
+    const tossal = stationByName('6', 'Tossal del Rei');
+    expect(vehicle.isForward).toBe(maritim.trackDist > tossal.trackDist);
+  });
+
   it('keeps two different vehicles apart', () => {
     const now = Date.now();
     sighting('a', 'Xàtiva', '3', 'Rafelbunyol', '3704', 60, now);
@@ -437,6 +452,18 @@ describe('segment times', () => {
       const covered = line5[`${from.stopId}>${to.stopId}`] || line5[`${to.stopId}>${from.stopId}`];
       expect(covered, `${chain[i]} → ${chain[i + 1]}`).toBeDefined();
     }
+  });
+
+  // Timed on the platform 2026-10-24: 42.4s dwell at Aragó, 74.1s to Alameda.
+  // GTFS states 120s and leaves 107.5s of running; FGV's measured interval,
+  // with its 40s dwell, lands within a few seconds of the stopwatch.
+  it('prefers FGV-measured intervals and their dwell over the minute-quantised timetable', () => {
+    const arago = stationByName('5', 'Aragó');
+    const alameda = stationByName('5', 'Alameda');
+    const timing = trainPositionEngine.getSegmentTiming('5', arago, alameda);
+
+    expect(timing.dwell).toBe(40);
+    expect(Math.abs(timing.seconds - timing.dwell - 74.1)).toBeLessThan(10);
   });
 
   it('falls back to distance where the timetable has no entry', () => {

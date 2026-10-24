@@ -14,6 +14,7 @@
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import segmentTimes from '../data/segment_times.json';
+import fgvSegmentTimes from '../data/segment_times_fgv.json';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS } from './arrivalStore';
 
 // Haversine distance in meters
@@ -57,6 +58,9 @@ export const projectPointOntoPolyline = (point, coords, cumDists) => {
 };
 
 const DWELL_SECONDS = segmentTimes.dwellSeconds ?? 12.5;
+// The dwell carved out of an FGV-measured Segment Interval: timed platforms
+// hold 40s and more, where the GTFS split assumes 12.5s.
+const FGV_DWELL_SECONDS = fgvSegmentTimes.dwellSeconds ?? DWELL_SECONDS;
 
 // A prediction this far past its arrival time is stale enough to drop, and one
 // this far out has accumulated too much walk error to place with confidence.
@@ -89,10 +93,12 @@ const RESYNC_METRES = 1500;
 // memory keeps counting down correctly, and the walk gets *more* accurate as
 // the train approaches, because fewer Segment Intervals are left to spend.
 //
-// 1. Quantisation. The feed states every time to a whole minute, so each
-//    Segment Interval the walk spends carries ±30s. Those errors accumulate as
-//    a random walk, so n segments cost roughly √n × 30s. This half is measured:
-//    it comes straight out of the feed.
+// 1. Quantisation. The GTFS Feed states every time to a whole minute, so each
+//    Segment Interval taken from it carries ±30s. Intervals measured from FGV
+//    have second resolution, but FGV re-times its own countdown by 25s (p90)
+//    near a Station (docs/research/marker-drift.md), so ±30s still stands for
+//    both. Those errors accumulate as a random walk, so n segments cost
+//    roughly √n × 30s.
 // 2. Drift, for the train running late against what the API predicted. Nothing
 //    in this repo measures that yet — issue #4 is the live watch that would —
 //    so the rate below is calibrated, not derived: it is set so that two missed
@@ -190,6 +196,9 @@ class TrainPositionEngine {
         cumDists,
         totalLength,
         segments: timing.segments || {},
+        // Measured from FGV's own second-resolution predictions; preferred
+        // over the minute-quantised GTFS figure wherever it exists.
+        fgvSegments: fgvSegmentTimes.lines?.[lineId]?.segments || {},
         // Only used where the timetable has no entry for a segment.
         fallbackSpeed: (timing.fallback || segmentTimes.networkFallback).metresPerSecond,
         minSegmentSeconds: (timing.fallback || segmentTimes.networkFallback).minSeconds ?? DWELL_SECONDS + 15,
@@ -240,24 +249,43 @@ class TrainPositionEngine {
   }
 
   /**
-   * Seconds between arriving at one station and arriving at the next, taken
-   * from the timetable where it exists. Includes the dwell at the origin.
+   * One Segment between arriving at one station and arriving at the next:
+   * its interval, taken from FGV's measured figure, then the timetable, then
+   * distance, and the Station Dwell at the origin that interval includes.
+   *
+   * FGV comes first even against the GTFS entry for the same direction: GTFS
+   * states times to the minute, so its 120s for Amistat → Aragó is further
+   * from the ~85s timed on the platform than FGV's 91s is in either direction.
    */
-  getSegmentSeconds(lineId, from, to) {
+  getSegmentTiming(lineId, from, to) {
     const track = this.getLineTrack(lineId);
-    if (!track) return DWELL_SECONDS + 60;
+    if (!track) return { seconds: DWELL_SECONDS + 60, dwell: DWELL_SECONDS };
 
     if (from.stopId && to.stopId) {
-      const forward = track.segments[`${from.stopId}>${to.stopId}`];
-      if (forward) return forward;
+      const measured = track.fgvSegments[`${from.stopId}>${to.stopId}`]
+        ?? track.fgvSegments[`${to.stopId}>${from.stopId}`];
+      if (measured) return { seconds: measured.seconds, dwell: FGV_DWELL_SECONDS };
+
       // Timetables are directional but running times are near-symmetric, and
       // some segments are only ever served one way in the feed.
-      const reverse = track.segments[`${to.stopId}>${from.stopId}`];
-      if (reverse) return reverse;
+      const timetabled = track.segments[`${from.stopId}>${to.stopId}`]
+        ?? track.segments[`${to.stopId}>${from.stopId}`];
+      if (timetabled) return { seconds: timetabled, dwell: DWELL_SECONDS };
     }
 
     const metres = Math.abs(to.trackDist - from.trackDist);
-    return Math.max(track.minSegmentSeconds, Math.round(metres / track.fallbackSpeed));
+    return {
+      seconds: Math.max(track.minSegmentSeconds, Math.round(metres / track.fallbackSpeed)),
+      dwell: DWELL_SECONDS,
+    };
+  }
+
+  /**
+   * Seconds between arriving at one station and arriving at the next.
+   * Includes the dwell at the origin.
+   */
+  getSegmentSeconds(lineId, from, to) {
+    return this.getSegmentTiming(lineId, from, to).seconds;
   }
 
   /**
@@ -406,7 +434,8 @@ class TrainPositionEngine {
 
       const departure = stations[departureIndex];
       const arrival = stations[arrivalIndex];
-      const running = Math.max(1, this.getSegmentSeconds(lineId, departure, arrival) - DWELL_SECONDS);
+      const timing = this.getSegmentTiming(lineId, departure, arrival);
+      const running = Math.max(1, timing.seconds - timing.dwell);
 
       if (remaining <= running) {
         const progress = 1 - remaining / running;
@@ -421,10 +450,10 @@ class TrainPositionEngine {
 
       remaining -= running;
       segmentsWalked += 1;
-      if (remaining <= DWELL_SECONDS) {
+      if (remaining <= timing.dwell) {
         return { trackDist: departure.trackDist, status: 'At Platform', nextStation: arrival, segmentsWalked, isDeadReckoned: false };
       }
-      remaining -= DWELL_SECONDS;
+      remaining -= timing.dwell;
       arrivalIndex = departureIndex;
     }
   }
@@ -528,15 +557,22 @@ class TrainPositionEngine {
       // Two sightings settle the direction outright: the station the train
       // reaches later is the one it is heading towards. That beats matching the
       // headsign against station names.
-      let isForward;
-      const other = sightings.find(s => s.station.trackDist !== anchor.station.trackDist);
-      if (other) {
-        const laterStation = other.secondsRemaining > anchor.secondsRemaining ? other : anchor;
-        const earlierStation = laterStation === other ? anchor : other;
-        isForward = laterStation.station.trackDist > earlierStation.station.trackDist;
-      } else {
-        isForward = this.resolveDirection(train.lineId, train.destination, anchor.station);
+      // Every other sighting votes, not just the nearest: where the polyline
+      // projects a Station out of order — La Cadena lands after Beteró on line
+      // 6, though trains reach it first — one pair reads backwards, and
+      // letting that pair alone decide flipped the train whenever it became
+      // the nearest. A tie falls back to the headsign.
+      let votes = 0;
+      for (const other of sightings) {
+        if (other === anchor || other.station.trackDist === anchor.station.trackDist) continue;
+        if (other.secondsRemaining === anchor.secondsRemaining) continue;
+        const later = other.secondsRemaining > anchor.secondsRemaining ? other : anchor;
+        const earlier = later === other ? anchor : other;
+        votes += later.station.trackDist > earlier.station.trackDist ? 1 : -1;
       }
+      const isForward = votes === 0
+        ? this.resolveDirection(train.lineId, train.destination, anchor.station)
+        : votes > 0;
 
       const walked = this.walkFromStation(
         train.lineId, anchor.station, anchor.secondsRemaining, isForward
