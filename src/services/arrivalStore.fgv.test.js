@@ -6,7 +6,9 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => capacitor.native },
 }));
 
-import { arrivalStore, STRATEGIC_HUBS, MAJOR_STATIONS, RELAY_STRATEGIC_HUBS, RELAY_MAJOR_STATIONS } from './arrivalStore';
+import { arrivalStore, STRATEGIC_HUBS, MAJOR_STATIONS, RELAY_STRATEGIC_HUBS, RELAY_MAJOR_STATIONS, ARRIVAL_COUNTDOWN_LEAD_SECONDS } from './arrivalStore';
+
+const LEAD_MS = ARRIVAL_COUNTDOWN_LEAD_SECONDS * 1000;
 
 const NOW = Date.UTC(2026, 9, 20, 17, 30, 0);
 const FGV_PREVISION = 'https://www.fgv.es/fgv/app/es/api/v1/V/horarios-prevision-3/';
@@ -89,7 +91,8 @@ describe('live Arrivals fetched from FGV', () => {
     expect(arrivals.map(a => a.vehicleId)).toEqual(['3113']);
   });
 
-  // The feed lags the physical train: 10 s on every tram Line, 15 s on metro.
+  // The feed lags the physical train: 10 s on every tram Line, 15 s on metro,
+  // plus the Arrival Countdown Lead on top.
   it.each([
     ['4', 10], ['6', 10], ['8', 10], ['10', 10],
     ['1', 15], ['2', 15], ['3', 15], ['5', 15], ['7', 15], ['9', 15],
@@ -98,7 +101,16 @@ describe('live Arrivals fetched from FGV', () => {
 
     const [arrival] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
 
-    expect(arrival.targetTimestamp).toBe(NOW + (300 - lagSeconds) * 1000);
+    expect(arrival.targetTimestamp).toBe(NOW + (300 - lagSeconds - ARRIVAL_COUNTDOWN_LEAD_SECONDS) * 1000);
+  });
+
+  it('shows the countdown ARRIVAL_COUNTDOWN_LEAD_SECONDS short of the lagged feed time', async () => {
+    expect(ARRIVAL_COUNTDOWN_LEAD_SECONDS).toBe(10);
+    vi.stubGlobal('fetch', respondWith(fgvPayload([[3, [['Aeroport', 300, 3114]]]])));
+
+    const [arrival] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
+
+    expect(arrival.seconds).toBe(300 - 15 - ARRIVAL_COUNTDOWN_LEAD_SECONDS);
   });
 
   it('gives up on a request that hangs and asks once more', async () => {
@@ -309,14 +321,14 @@ describe('the server cache age contract', () => {
   it('places Arrivals exactly as much earlier as the answer is old', async () => {
     vi.stubGlobal('fetch', withAge('5000'));
     const [aged] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
-    expect(aged.targetTimestamp).toBe(NOW + 285_000 - 5000);
+    expect(aged.targetTimestamp).toBe(NOW + 285_000 - 5000 - LEAD_MS);
     expect(arrivalStore.memory.get('17').fetchedAt).toBe(NOW - 5000);
   });
 
   it.each([[undefined], ['abc'], ['-3'], [''], ['1.5'], ['1e3']])('treats a missing or invalid age (%s) as fresh', async (age) => {
     vi.stubGlobal('fetch', withAge(age));
     const [fresh] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
-    expect(fresh.targetTimestamp).toBe(NOW + 285_000);
+    expect(fresh.targetTimestamp).toBe(NOW + 285_000 - LEAD_MS);
     expect(arrivalStore.memory.get('17').fetchedAt).toBe(NOW);
   });
 });
@@ -361,7 +373,7 @@ describe('Netlify relay mode (old API data)', () => {
     }));
 
     const [arrival] = await arrivalStore.getStationArrivals(ANGEL_GUIMERA);
-    expect(arrival.targetTimestamp).toBe(serverEpochSec * 1000 - 15_000);
+    expect(arrival.targetTimestamp).toBe(serverEpochSec * 1000 - 15_000 - LEAD_MS);
   });
 });
 

@@ -93,6 +93,13 @@ const METRO_PROPAGATION_LAG_MS = 15_000;
 const TRAM_PROPAGATION_LAG_MS  = 10_000;
 const TRAM_LINE_IDS = new Set(['4', '6', '8', '10']);
 
+// Arrival Countdown Lead — real-world observation (2026-10-24): trains reach the
+// platform ~10 s before the countdown hits zero. Applied once, on the Target
+// Arrival Timestamp, so the countdown, the status badges and the map's Vehicle
+// positions all shift together on every surface (LAN, Netlify, iOS, Android).
+export const ARRIVAL_COUNTDOWN_LEAD_SECONDS = 10;
+const ARRIVAL_COUNTDOWN_LEAD_MS = ARRIVAL_COUNTDOWN_LEAD_SECONDS * 1000;
+
 // About 6% of FGV requests never answer at all — no status, no error — while
 // the median answer takes ~0.4 s and p90 ~0.9 s (sweep of 2026-10-20). So an
 // attempt is abandoned well past p90 and tried exactly once more.
@@ -123,9 +130,10 @@ async function fetchPrevision(url) {
   }
 }
 
-/** Returns the Propagation Lag in ms for a given line ID string. */
+/** Returns the Propagation Lag plus Arrival Countdown Lead in ms for a given line ID string. */
 function propagationLagMs(lineId) {
-  return TRAM_LINE_IDS.has(lineId) ? TRAM_PROPAGATION_LAG_MS : METRO_PROPAGATION_LAG_MS;
+  const lag = TRAM_LINE_IDS.has(lineId) ? TRAM_PROPAGATION_LAG_MS : METRO_PROPAGATION_LAG_MS;
+  return lag + ARRIVAL_COUNTDOWN_LEAD_MS;
 }
 
 
