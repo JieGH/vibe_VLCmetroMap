@@ -2,8 +2,8 @@
 // cannot: FGV refuses connections from its web host. The banner invites
 // visitors who can install the app to do so.
 export const APK_URL =
-  'https://github.com/JieGH/vibe_VLCmetroMap/releases/download/v1.2.0/Xarxa-v1.2.0-android-debug.apk';
-export const RELEASE_URL = 'https://github.com/JieGH/vibe_VLCmetroMap/releases/tag/v1.2.0';
+  'https://github.com/JieGH/vibe_VLCmetroMap/releases/download/v1.3.0/Xarxa-v1.3.0-android-debug.apk';
+export const RELEASE_URL = 'https://github.com/JieGH/vibe_VLCmetroMap/releases/tag/v1.3.0';
 
 export const APP_BANNER_DISMISSED_KEY = 'metro_valencia_app_banner_dismissed';
 
