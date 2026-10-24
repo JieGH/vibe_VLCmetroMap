@@ -45,7 +45,7 @@ The method of calculating a Vehicle's coordinate and heading: step back along th
 _Avoid_: Kinematic track projection, coordinate mapping, vector estimation
 
 **Station Chain**:
-The Stations of one Line in track order, the sequence a Timetable Walk steps through. Holds only Stations that actually lie on that Line's Track Geometry — see Off-Track Station.
+The Stations of one Line in track order, the sequence a Timetable Walk steps through. Holds only Stations that actually lie on that Line's Track Geometry — see Off-Track Station. A Line with a Return Track has one per direction, because the Stations it calls at differ.
 _Avoid_: Stop list, route order
 
 **Segment Interval**:
@@ -83,6 +83,14 @@ _Avoid_: Extrapolation, coasting, projection
 **Off-Track Station**:
 A Station a Line serves that its Track Geometry cannot reach, because the geometry omits a branch — Lines 5 and 7 both run north to Machado, 2 km off their polylines. Held out of the Station Chain, since projecting it onto the nearest point of the wrong track corrupts every position computed through it. See ADR-0002.
 _Avoid_: Missing station, unmatched stop
+
+**Return Track**:
+The Track Geometry a Line's Vehicles take back along a one-way section, where it differs from the way out. Lines 4 and 6 go out down the beach (Platja Malva-rosa, Platja les Arenes) and come back by Dr. Lluch and Cabanyal. Built from OSM, oriented like the outbound polyline so that going back is still decreasing track distance, and not drawn on the map. A Line without one has a single Track Geometry and a single Station Chain for both directions. See ADR-0007.
+_Avoid_: Reverse track, west leg, second line
+
+**Contradicting Sighting**:
+A Sighting whose countdown puts a Station out of the order the Vehicle travels the Station Chain, such as FGV stating La Cadena before Beteró for a tram that reaches Beteró first. Dropped before the Vehicle is anchored or its direction voted on, keeping the largest consistent set, with ties broken by fit to the Segment Intervals. It is FGV's figure that is wrong, not the Station Chain.
+_Avoid_: Bad sighting, outlier, misordered Station
 
 **Simulated Train**:
 A Vehicle generated from a headway guess for a Line with no live Arrivals. Never a reported train, and drawn hollow and dashed so it cannot be mistaken for one.

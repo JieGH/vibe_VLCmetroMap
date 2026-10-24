@@ -110,6 +110,9 @@ DRAWN=1 npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1
 node docs/research/marker-drift/capture_network.cjs /tmp/net.jsonl 1200000     # all Stations, 20 min
 npx vite-node scripts/calibrate_segment_times_fgv.mjs /tmp/net.jsonl            # rebuild segment_times_fgv.json
 MONO=25 npx vite-node docs/research/marker-drift/replay.mjs /tmp/raw.jsonl 120 1 # forward-only prototype
+node scripts/build_return_tracks.cjs                                           # coastal return track from OSM (ADR-0007)
+npx vite-node scripts/build_direction_stations.mjs                             # Stations per direction from GTFS
+TAP=60 SEED=1 npx vite-node docs/research/marker-drift/app_replay.mjs /tmp/net.jsonl  # app-faithful replay, with taps
 ```
 
 Run them from the repo root. The capture itself is not committed: it is about 1 MB and goes out of date as soon as FGV changes its model.
@@ -151,3 +154,57 @@ Left open:
 - **Resyncing forward at 600 m.** This trades a 40 s chase for a ~900 m hop. It is a UX call, and not taken.
 
 Agent reports are not committed; they lived in the session scratchpad.
+
+## Phase 5: the coastal one-way section (issue #84, 2026-10-24)
+
+Phase 4 left Lines 4 and 6 with long holds and an offset above the other trams. Three causes, all at the coast. Replayed with `app_replay.mjs` on the 29-minute capture (`net30`) and on a fresh 24-minute one (`net_fresh`, 49,940 rows) captured the same afternoon.
+
+**1. The La Cadena "misorder" is an FGV artefact, not geometry.** The polyline order Beteró → La Cadena (about 440 m, 40 s) → Platja Malva-rosa is right; GTFS shapes 5/25 (L4) and 8/10 (L6) and the live feed both say so. Near-term Vehicles read it correctly (vehicle 4116: UPV 14 s, Beteró 254 s, La Cadena 293 s). Far-out ones sometimes state an eastbound La Cadena countdown earlier than Beteró (4118: La Cadena 923 s, Beteró 1048 s), and 4086 even got two La Cadena rows (80 s and 107 s) with UPV at 48 s and Beteró at 288 s. So La Cadena stays where it is, and Sightings that contradict the Station Chain are dropped.
+
+**2. The coast is one-way, and the two lines differ** (ADR-0007). Out: Beteró → La Cadena → Platja Malva-rosa → Platja les Arenes, then Dr. Lluch (L4 terminates in a balloon) or Canyamelar → Grau → Marítim (L6). Back: Dr. Lluch → Cabanyal → La Cadena → Beteró, by another track. OSM carries no `oneway` tag on any of those ways, but the route relations use the beach ways only for "→ Dr. Lluch" (eastbound) and ways 875511137/875511139 only for "Dr. Lluch →" and L6 "Marítim → Tossal del Rei" (westbound). A return polyline from OSM, and a Station Chain per direction from GTFS trips, fix the walk: Dr. Lluch → Cabanyal is now 398 m (was 887 m on L4, 763 m on L6), at the 60 s GTFS states.
+
+**3. The terminus layover.** Vehicles 4085 (T653) and 4087 (T1253) held At Terminus at Dr. Lluch, then re-anchored on a Benimaclet Sighting 780 s out. The raw estimate jumped by −1197 m and the marker slid about 1.3 km. With the return chain the walk from Benimaclet ends at Cabanyal's platform: the raw estimate moves −398 m (the segment times add up to about 60 s more than the Vehicle took), and the drawn marker, which cannot reverse, does not slide. No change to the terminus hold was needed.
+
+### Sighting order filter
+
+Drops (Vehicle × Station pairs, and the share of per-second placements with a drop), in replays where the filter can see La Cadena and Beteró, i.e. with taps or every Station synced; with the app's own sync set neither Station is fetched and nothing is dropped:
+
+| Capture | Scenario | L4 | L6 | Other Lines |
+|---|---|---|---|---|
+| net30 | taps every 60 s | 6,739 of 92,831 (7%); Palau de Congressos, La Granja, Sagunt | 0 | 0 |
+| net30 | every Station synced | 16,704 of 161,143 (10%); 22 Stations, La Cadena 3, Beteró 4 | 4,116 of 53,099 (8%); La Cadena 2, Platja les Arenes 2, Grau 1 | L1 2,342; L2 2,278; L3 6,040; L9 764; none moved a metric |
+| net_fresh | every Station synced | 14,593 of 132,355 (11%); La Cadena 4, Platja les Arenes 2 and 12 others | 4,700 of 46,233 (10%); La Cadena 2, Dr. Lluch, Francesc Cubells and others | L1 756; L3 5,776 |
+
+La Cadena is the most-dropped Station on the coast, as expected, but it is not the only one: with every Station fresh, FGV's far-out timetable figures are out of order for a few Stations on every Line (L3 Av. del Cid, Colón; L9 Colón; L1 Realón). The filter is generic and none of those changed a Line 1, 2, 3, 5, 7, 8, 9 or 10 metric. With the app's sync set it fires on no Line.
+
+### Results, before → after
+
+Main (`de6df47`) against this branch, same replay, all Lines (others identical: L1, 2, 3, 5, 7, 8, 9 and 10 are unchanged in every scenario). Slides stay 0 on both. Columns: holds ≥ 20 s (count, max s); mean offset (m); seconds drawn > 8 and > 15 m/s faster than the estimate.
+
+| Capture / scenario | Line | Holds (max) | Mean offset | > 8 m/s | > 15 m/s |
+|---|---|---|---|---|---|
+| net30, app sync | L4 | 34 (274) → 33 (212.5) | 50 → 27 | 257 → 189 | 41 → 41 |
+| | L6 | 15 (81.8) → 15 (63.3) | 23 → 24 | 118 → 202 | 32 → 4 |
+| net30, taps 60 s | L4 | 26 (278) → 26 (212.5) | 67 → 39 | 306 → 217 | 42 → 56 |
+| | L6 | 17 (81.8) → 17 (65.3) | 31 → 29 | 136 → 230 | 16 → 4 |
+| net30, all synced | L4 | 50 (212) → 49 (212) | 39 → 33 | 429 → 441 | 56 → 56 |
+| | L6 | 16 (155.5) → 16 (75.5) | 49 → 27 | 232 → 197 | 13 → 13 |
+| fresh, app sync | L4 | 29 (114.5) → 29 (114.5) | 19 → 18 | 192 → 193 | 31 → 31 |
+| | L6 | 15 (78) → 16 (78) | 26 → 24 | 141 → 75 | 17 → 0 |
+| fresh, taps 60 s | L4 | 24 (114.5) → 24 (114.5) | 22 → 22 | 194 → 195 | 70 → 70 |
+| | L6 | 15 (119.8) → 16 (119.8) | 27 → 26 | 133 → 75 | 9 → 0 |
+| fresh, all synced | L4 | 39 (118) → 40 (118) | 32 → 28 | 334 → 339 | 60 → 60 |
+| | L6 | 18 (97.5) → 17 (120.3) | 33 → 27 | 104 → 67 | 13 → 3 |
+
+L6 in net30 with app sync or taps trades more seconds above 8 m/s for fewer above 15 m/s; the fresh capture shows no such trade. The 4083 hold at Beteró (274 s on net30) is FGV holding the tram and stays out of scope. The longest L4 hold on net30 fell from 274 s to 212 s (cause not isolated); the fresh capture has no such hold, so L4's maximum there does not move.
+
+Not measured by the replay: the geometry itself. Bearings along the legs (engine output): Platja Malva-rosa → Platja les Arenes 180° (south) at longitude −0.32563; Dr. Lluch → Cabanyal 8° (north) at −0.32775; Cabanyal → La Cadena 325°; L6 Canyamelar → Dr. Lluch 332°. Tests assert the first two.
+
+Tolerance of the order filter, 0 s / 10 s / 30 s, on net30: L4 and L6 holds, offsets and > 15 m/s seconds moved by a few units at most (taps and every-Station scenarios), so 10 s is a judgement call, not a tuned value.
+
+### Left open
+
+- `segment_times_fgv.json` was calibrated on the outbound chain only. FGV's measured La Cadena → Platja Malva-rosa is 286 s on L4 (57 samples; 113 s on L6, GTFS 120 s), which may carry some of the bogus La Cadena countdowns above (not checked). `calibrate_segment_times_fgv.mjs` should run the filter and both chains. Dr. Lluch → Cabanyal and Cabanyal → La Cadena still use the 60 s and 120 s GTFS figures.
+- The return track is not drawn on the map.
+- Line 8's coastal Stations stay excluded (issue #2).
+

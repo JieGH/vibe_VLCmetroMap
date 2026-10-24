@@ -4,7 +4,7 @@ Date: 2026-09-04
 
 ## Status
 
-Accepted, with a known cost. Revisit when a branch matters to a user.
+Accepted, with a known cost. Revisit when a branch matters to a user. [ADR-0007](0007-per-direction-tracks-for-one-way-sections.md) adds a second polyline for the one-way coastal section of Lines 4 and 6.
 
 ## Context
 
