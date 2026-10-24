@@ -38,8 +38,8 @@ Metrovalencia publishes when a train is <em>due</em> at a station. It does not p
 It runs as a website, an iOS app and an Android app, all from the same code.
 
 <p align="center">
-  <img src="docs/demo.gif" width="288" alt="Screen recording: the network with live trains, zooming in, then Alameda and Xàtiva stations opened for their departures">
-  <br><em>Recorded on an iPhone. <a href="docs/demo.mp4">Full-resolution video</a>.</em>
+  <img src="docs/demo.gif" width="640" alt="Screen recording: the network with live trains, zooming in, then Alameda and Xàtiva stations opened for their departures, then the one-way east coast at Dr. Lluch with the return leg drawn beside the beach leg">
+  <br><em>The web app on live FGV data: the network, two stations' departures, and the one-way east coast. <a href="docs/demo.mp4">Full-resolution video</a>.</em>
 </p>
 
 ## Get it
