@@ -477,7 +477,7 @@ button:active {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 2px 116px 6px 2px; /* 116px right padding gives clear way to multilingual floating feedback bubble */
+  padding: 2px 2px 6px 2px;
   scrollbar-width: none;
   pointer-events: auto;
   width: max-content;
@@ -851,100 +851,6 @@ button:active {
   color: #805600;
 }
 
-.feedback-thought-bubble {
-  position: absolute;
-  top: calc(100% + 25px);
-  right: 0;
-  z-index: 60; /* Top layer dropping down over hub-chips station list (39) */
-  padding: 3px 11px;
-  border-radius: 14px;
-  background: radial-gradient(ellipse at 50% 50%, rgba(0, 122, 255, 0.45) 0%, rgba(10, 32, 68, 0.96) 100%), #0A1E44;
-  border: 1px solid rgba(0, 140, 255, 0.7);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 122, 255, 0.6), 0 0 30px rgba(0, 122, 255, 0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #FFD100;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: feedbackBubbleFloat 4.2s ease-in-out infinite;
-  transform-origin: top right;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  pointer-events: auto;
-}
-
-.feedback-thought-bubble:hover {
-  background: radial-gradient(ellipse at 50% 50%, rgba(0, 150, 255, 0.65) 0%, rgba(14, 45, 95, 0.98) 100%), #0E2A5A;
-  border-color: rgba(64, 185, 255, 0.9);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 140, 255, 0.75), 0 0 40px rgba(0, 140, 255, 0.45);
-  transform: translateY(-1.5px) scale(1.03);
-}
-
-[data-theme='light'] .feedback-thought-bubble {
-  background: radial-gradient(ellipse at 50% 50%, rgba(0, 122, 255, 0.22) 0%, rgba(224, 242, 255, 0.96) 100%), #EBF5FF;
-  border: 1px solid rgba(0, 122, 255, 0.55);
-  box-shadow: 0 3px 14px rgba(0, 122, 255, 0.35), 0 0 18px rgba(0, 122, 255, 0.3);
-  color: #8C6200;
-  text-shadow: none;
-}
-
-[data-theme='light'] .feedback-thought-bubble:hover {
-  background: radial-gradient(ellipse at 50% 50%, rgba(0, 122, 255, 0.32) 0%, rgba(210, 235, 255, 0.98) 100%), #E0F0FF;
-  border-color: rgba(0, 122, 255, 0.8);
-  box-shadow: 0 4px 18px rgba(0, 122, 255, 0.45), 0 0 24px rgba(0, 122, 255, 0.35);
-}
-
-/* Small cloud thought-bubble circles pointing up to the ? button */
-.feedback-thought-bubble::before {
-  content: '';
-  position: absolute;
-  top: -9px;
-  right: 13.5px;
-  width: 6.5px;
-  height: 6.5px;
-  border-radius: 50%;
-  background: #0A1E44;
-  border: 1px solid rgba(0, 140, 255, 0.7);
-  box-shadow: 0 0 10px rgba(0, 122, 255, 0.6);
-  pointer-events: none;
-}
-
-.feedback-thought-bubble::after {
-  content: '';
-  position: absolute;
-  top: -18px;
-  right: 15px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #0A1E44;
-  border: 1px solid rgba(0, 140, 255, 0.7);
-  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
-  pointer-events: none;
-}
-
-[data-theme='light'] .feedback-thought-bubble::before,
-[data-theme='light'] .feedback-thought-bubble::after {
-  background: #EBF5FF;
-  border: 1px solid rgba(0, 122, 255, 0.55);
-  box-shadow: 0 0 8px rgba(0, 122, 255, 0.4);
-}
-
-@keyframes feedbackBubbleFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-1.2px);
-  }
-}
-
 /* Feedback Modal */
 .feedback-modal-backdrop {
   position: fixed;
@@ -975,9 +881,17 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 12px 20px 14px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.feedback-modal-header:active {
+  cursor: grabbing;
 }
 
 .feedback-modal-title {
@@ -1334,24 +1248,6 @@ button:active {
     min-width: 0;
   }
 
-  .feedback-thought-bubble {
-    top: calc(100% + 33px);
-  }
-  .feedback-thought-bubble::before {
-    top: -11px;
-  }
-  .feedback-thought-bubble::after {
-    top: -23px;
-  }
-
-  .feedback-mobile-drag-handle {
-    display: block;
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--border-color);
-    margin: 8px auto 0;
-  }
   .feedback-modal-backdrop {
     align-items: flex-end;
     padding: 0;
@@ -1362,6 +1258,7 @@ button:active {
     border-radius: 20px 20px 0 0;
     max-height: min(88dvh, var(--visual-viewport-height, 88dvh));
     border-bottom: none;
+    animation: stationPanelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 

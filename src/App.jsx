@@ -29,7 +29,7 @@ import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
-import { Sun, Moon, CircleHelp } from 'lucide-react';
+import { Sun, Moon, MessageSquare } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import './index.css';
 
@@ -532,29 +532,16 @@ function App() {
               ? <Sun size={18} color="#FFD100" />
               : <Moon size={18} color="#004D99" />}
           </button>
-          <div className="feedback-btn-anchor">
-            <button
-              type="button"
-              onClick={() => setIsFeedbackOpen(true)}
-              className="topbar-icon-btn feedback-trigger-btn"
-              title={t('feedback.buttonTitle')}
-              aria-label={t('feedback.buttonTitle')}
-              aria-haspopup="dialog"
-            >
-              <CircleHelp size={18} />
-            </button>
-            {!searchFocused && (
-              <button
-                type="button"
-                onClick={() => setIsFeedbackOpen(true)}
-                className="feedback-thought-bubble"
-                title={t('feedback.buttonTitle')}
-                aria-label={t('feedback.buttonTitle')}
-              >
-                <span>{t('feedback.bubbleText')}</span>
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsFeedbackOpen(true)}
+            className="topbar-icon-btn feedback-trigger-btn"
+            title={t('feedback.buttonTitle')}
+            aria-label={t('feedback.buttonTitle')}
+            aria-haspopup="dialog"
+          >
+            <MessageSquare size={18} />
+          </button>
         </div>
       </div>
 

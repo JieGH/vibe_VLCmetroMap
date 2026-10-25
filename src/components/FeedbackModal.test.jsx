@@ -37,4 +37,12 @@ describe('FeedbackModal component', () => {
 
     expect(html).toContain('Xarxa is an independent, ad-free, open-source project');
   });
+
+  it('renders sheet drag handle matching the station/train tab for swipe-to-dismiss', () => {
+    const html = renderToStaticMarkup(<FeedbackModal isOpen={true} onClose={() => {}} />);
+
+    expect(html).toContain('data-testid="feedback-drag-handle"');
+    expect(html).toContain('sheet-drag-handle-wrap');
+    expect(html).toContain('sheet-drag-handle');
+  });
 });

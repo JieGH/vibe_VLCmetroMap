@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, CheckCircle2, Copy, Check, ExternalLink, MessageSquareHeart, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Send, CheckCircle2, Copy, Check, ExternalLink, MessageSquare, AlertCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { CONTACT_EMAIL } from '../utils/contact';
 import { getClientDiagnostics } from '../utils/diagnostics';
+import { useDragToDismiss } from '../utils/useDragToDismiss';
 
 /**
  * In-app Feedback & Support Modal.
@@ -16,6 +17,12 @@ const FeedbackModal = ({ isOpen, onClose }) => {
   const [status, setStatus] = useState('idle'); // 'idle' | 'submitting' | 'success' | 'error'
   const [copied, setCopied] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(null);
+
+  const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
+    onDismiss: onClose,
+    enabled: Boolean(isOpen),
+    threshold: 70,
+  });
 
   // Track visual viewport so modal adapts when virtual keyboard opens on iOS/Android
   useEffect(() => {
@@ -132,12 +139,25 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         aria-modal="true"
         aria-labelledby="feedback-modal-title"
         className="glass-panel feedback-modal-content"
+        style={{
+          ...dragStyle,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="feedback-mobile-drag-handle" aria-hidden="true" />
+        {/* Top drag handle indicator for swipe-down to dismiss */}
+        <div
+          className="sheet-drag-handle-wrap"
+          data-testid="feedback-drag-handle"
+          {...handleProps}
+        >
+          <div className="sheet-drag-handle" />
+        </div>
 
         {/* Header */}
-        <div className="feedback-modal-header">
+        <div
+          className="feedback-modal-header"
+          {...handleProps}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
@@ -152,7 +172,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                 flexShrink: 0,
               }}
             >
-              <MessageSquareHeart size={20} />
+              <MessageSquare size={20} />
             </div>
             <div>
               <h2 id="feedback-modal-title" className="feedback-modal-title">
@@ -167,6 +187,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
             type="button"
             className="feedback-modal-close"
             onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
             aria-label={t('feedback.closeAria')}
           >
             <X size={18} />
