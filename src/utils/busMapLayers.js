@@ -265,11 +265,10 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
     z-index: 28;
   `;
 
-  el.title = `${stop.stopName} (${stop.walkMetres}m walk from Metro)`;
+  el.title = `${stop.stopName} • Click to view bus lines & countdowns in tab`;
   el.innerHTML = `
-    <span style="font-size:7px;font-weight:900;background:#D62828;color:#ffffff;padding:1px 3px;border-radius:2px;line-height:1">EMT</span>
-    <span>${stop.stopCode}</span>
-    <span style="font-size:9px;color:#ff8a80;font-weight:600">${stop.walkMetres}m</span>
+    <span style="font-size:7.5px;font-weight:900;background:#D62828;color:#ffffff;padding:1px 3.5px;border-radius:2px;letter-spacing:0.02em;line-height:1">EMT</span>
+    <span style="font-size:9.5px;font-weight:800;letter-spacing:0.02em">${stop.stopCode}</span>
   `;
 
   el.addEventListener('mouseenter', () => {

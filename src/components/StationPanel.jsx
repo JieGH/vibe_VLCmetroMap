@@ -194,56 +194,37 @@ const StationPanel = ({
         }}
         {...(!landscape ? handleProps : {})}
       >
-        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
-          <div
-            className="station-header-icon"
-            data-testid="station-header-icon"
-            aria-hidden="true"
-            style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 34, height: 34, minWidth: 34, borderRadius: '50%',
-              background: '#E2001A', color: '#FFFFFF',
-              boxShadow: '0 2px 6px rgba(226, 0, 26, 0.35)',
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                fontSize: '1.18rem',
-                fontWeight: 900,
-                fontStyle: 'italic',
-                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                lineHeight: 1,
-                transform: 'translate(-0.5px, -0.5px)',
-                userSelect: 'none',
-              }}
-            >
-              m
-            </span>
-          </div>
-
+        {variant === 'A' ? (
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
-              <h2 style={{
-                fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
-                letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                minWidth: 0, margin: 0,
-              }}>
-                {focus.name}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+              <h2
+                style={{
+                  fontSize: '1.08rem',
+                  fontWeight: 800,
+                  lineHeight: 1.2,
+                  letterSpacing: '-.01em',
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                Nearby Transit
               </h2>
-              {metroWalkMin !== undefined && metroWalkMeters !== undefined && (
-                <span
-                  style={{
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    color: 'var(--text-secondary)',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                  }}
-                >
-                  · {metroWalkMin} min ({metroWalkMeters}m)
-                </span>
-              )}
+              <span
+                style={{
+                  fontSize: '0.64rem',
+                  fontWeight: 700,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: 'var(--text-secondary)',
+                  padding: '2px 7px',
+                  borderRadius: 999,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                10 min walk
+              </span>
             </div>
 
             <div
@@ -251,79 +232,170 @@ const StationPanel = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 5,
+                gap: 6,
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
                 flexWrap: 'nowrap',
                 overflowX: 'auto',
                 scrollbarWidth: 'none',
               }}
             >
-              {stationLines.map((lineId) => (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <span
-                  key={lineId}
-                  className="station-header-line-badge"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
-                    background: lineColor(lineId), color: '#000',
-                    fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    background: '#E2001A',
+                    color: '#ffffff',
+                    fontSize: '0.54rem',
+                    fontWeight: 900,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
                   }}
                 >
-                  {lineId}
+                  m
                 </span>
-              ))}
-
-              {variant === 'A' && feeders.length > 0 && (
-                <span
-                  className="station-header-feeder-badge"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                    height: 20, padding: '0 6px', borderRadius: 5,
-                    background: 'rgba(214, 40, 40, 0.22)', color: '#ff6369',
-                    fontSize: '.68rem', fontWeight: 800, lineHeight: 1, border: '1px solid rgba(214, 40, 40, 0.35)',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={`${feeders.length} nearby EMT bus stops within 10 min walk`}
-                >
-                  <span style={{ fontSize: '0.54rem', fontWeight: 900, background: '#D62828', color: '#fff', padding: '1px 3px', borderRadius: 2 }}>EMT</span>
-                  <span>+{feeders.length} stops</span>
-                </span>
-              )}
-
-              {/* Live API vs memory status */}
-              <span
-                className="station-status-badge"
-                title={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
-                aria-label={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  width: 20, height: 20, borderRadius: '50%',
-                  color: focus.isFresh ? '#4CAF50' : '#00B4D8',
-                  background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
-                  marginLeft: stationLines.length > 0 ? 2 : 0,
-                }}
-              >
-                {focus.isFresh
-                  ? <Radio size={11} className="pulse" />
-                  : <Database size={11} />}
+                <span>{1 + nearbyMetro.length} {1 + nearbyMetro.length === 1 ? 'Metro station' : 'Metro stations'}</span>
               </span>
-              <span
-                className="station-confirmed-badge"
-                title={t('stationPanel.confirmedStatus', { time: unheardLabel })}
-                aria-label={t('stationPanel.confirmedStatus', { time: unheardLabel })}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 20, height: 20,
-                  color: focus.secondsUnheard !== null && focus.secondsUnheard < 60 ? '#4CAF50' : 'var(--text-secondary)',
-                  flexShrink: 0,
-                }}
-              >
-                {focus.secondsUnheard !== null && focus.secondsUnheard < 60
-                  ? <CheckCircle2 size={12} />
-                  : <Clock size={12} />}
+              <span style={{ opacity: 0.4 }}>·</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span
+                  style={{
+                    fontSize: '0.52rem',
+                    fontWeight: 900,
+                    background: '#D62828',
+                    color: '#ffffff',
+                    padding: '1px 3px',
+                    borderRadius: 2,
+                    letterSpacing: '0.04em',
+                    lineHeight: 1,
+                  }}
+                >
+                  EMT
+                </span>
+                <span>{feeders.length} {feeders.length === 1 ? 'bus stop' : 'bus stops'}</span>
               </span>
             </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
+            <div
+              className="station-header-icon"
+              data-testid="station-header-icon"
+              aria-hidden="true"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, minWidth: 34, borderRadius: '50%',
+                background: '#E2001A', color: '#FFFFFF',
+                boxShadow: '0 2px 6px rgba(226, 0, 26, 0.35)',
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '1.18rem',
+                  fontWeight: 900,
+                  fontStyle: 'italic',
+                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  lineHeight: 1,
+                  transform: 'translate(-0.5px, -0.5px)',
+                  userSelect: 'none',
+                }}
+              >
+                m
+              </span>
+            </div>
+
+            <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+                <h2 style={{
+                  fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
+                  letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  minWidth: 0, margin: 0,
+                }}>
+                  {focus.name}
+                </h2>
+                {metroWalkMin !== undefined && metroWalkMeters !== undefined && (
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
+                  >
+                    · {metroWalkMin} min ({metroWalkMeters}m)
+                  </span>
+                )}
+              </div>
+
+              <div
+                className="station-header-meta"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  flexWrap: 'nowrap',
+                  overflowX: 'auto',
+                  scrollbarWidth: 'none',
+                }}
+              >
+                {stationLines.map((lineId) => (
+                  <span
+                    key={lineId}
+                    className="station-header-line-badge"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
+                      background: lineColor(lineId), color: '#000',
+                      fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
+                    }}
+                  >
+                    {lineId}
+                  </span>
+                ))}
+
+                {/* Live API vs memory status */}
+                <span
+                  className="station-status-badge"
+                  title={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
+                  aria-label={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    width: 20, height: 20, borderRadius: '50%',
+                    color: focus.isFresh ? '#4CAF50' : '#00B4D8',
+                    background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
+                    marginLeft: stationLines.length > 0 ? 2 : 0,
+                  }}
+                >
+                  {focus.isFresh
+                    ? <Radio size={11} className="pulse" />
+                    : <Database size={11} />}
+                </span>
+                <span
+                  className="station-confirmed-badge"
+                  title={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+                  aria-label={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 20, height: 20,
+                    color: focus.secondsUnheard !== null && focus.secondsUnheard < 60 ? '#4CAF50' : 'var(--text-secondary)',
+                    flexShrink: 0,
+                  }}
+                >
+                  {focus.secondsUnheard !== null && focus.secondsUnheard < 60
+                    ? <CheckCircle2 size={12} />
+                    : <Clock size={12} />}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={onClose}

@@ -241,4 +241,23 @@ describe('StationPanel component', () => {
     expect(html).not.toContain('station-panel-recentre');
     expect(html).not.toContain('<footer');
   });
+
+  it('renders Variant A as a multimodal 10-minute walk transit hub with Nearby Transit header', () => {
+    const html = renderToStaticMarkup(
+      <StationPanel
+        station={sampleStation}
+        theme="dark"
+        variant="A"
+        onClose={() => {}}
+        userLocation={{ coordinates: [-0.377, 39.467] }}
+      />
+    );
+
+    // Title is "Nearby Transit" rather than single station name
+    expect(html).toContain('Nearby Transit');
+    expect(html).toContain('10 min walk');
+    expect(html).toContain('Metro station');
+    expect(html).toContain('bus stop');
+    expect(html).toContain('EMT');
+  });
 });
