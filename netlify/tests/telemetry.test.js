@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import telemetryHandler, {
   isBot,
+  isDevRequest,
   formatVisitTelegramMessage,
   formatIncidentTelegramMessage,
   formatStationAccessTelegramMessage,
@@ -101,6 +102,52 @@ describe('telemetry serverless function', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.type).toBe('station_access');
+  });
+
+  it('filters developer traffic by IP, isDev flag, and device fingerprint', async () => {
+    // Exclude by author IP
+    expect(isDevRequest({ ip: '79.117.186.128' }, {})).toBe(true);
+    expect(isDevRequest({ ip: '79.117.186.200' }, {})).toBe(true);
+
+    // Exclude by isDev flag
+    expect(isDevRequest({ ip: '192.0.2.1' }, { isDev: true })).toBe(true);
+
+    // Exclude by hardware/browser fingerprint (iPhone 440x956 + Europe/Madrid + en-GB)
+    expect(
+      isDevRequest(
+        { ip: '192.0.2.100' },
+        { screen: '440x956 (dpr: 3)', timezone: 'Europe/Madrid', language: 'en-GB' }
+      )
+    ).toBe(true);
+
+    // Normal user does not match
+    expect(
+      isDevRequest(
+        { ip: '85.50.12.34' },
+        { screen: '390x844 (dpr: 3)', timezone: 'Europe/Madrid', language: 'es-ES' }
+      )
+    ).toBe(false);
+
+    // Telemetry handler drops dev requests with { ok: true, filtered: 'dev' }
+    const devReq = new Request('https://xarxa.net/api/telemetry', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X)',
+        'x-forwarded-for': '79.117.186.128',
+      },
+      body: JSON.stringify({
+        type: 'user_visit',
+        screen: '440x956 (dpr: 3)',
+        timezone: 'Europe/Madrid',
+        language: 'en-GB',
+      }),
+    });
+
+    const res = await telemetryHandler(devReq, { NODE_ENV: 'test' });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.filtered).toBe('dev');
   });
 
   it('formats major incident report with error stack trace', () => {

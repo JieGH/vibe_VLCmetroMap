@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
-import { X, Train, Map, Navigation, SunMoon, MessageSquare, Check } from 'lucide-react';
+import { X, MessageSquare, Check } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import AppBadge, { VersionPill } from './AppBadge';
 
 /**
  * Native-feeling "What's New" modal dialog.
- * Highlights key updates and feature improvements in bullet-point format.
+ * Displays concise bullet points (two lines total per section).
  * Provides a direct gateway to contact the author for feedback or requests.
  */
 const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
@@ -28,31 +28,11 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
   if (!isOpen) return null;
 
   const features = [
-    {
-      icon: <Train size={18} color="#00A862" />,
-      title: t('whatsNew.item1Title'),
-      desc: t('whatsNew.item1Desc'),
-    },
-    {
-      icon: <Map size={18} color="#007AFF" />,
-      title: t('whatsNew.item2Title'),
-      desc: t('whatsNew.item2Desc'),
-    },
-    {
-      icon: <Navigation size={18} color="#EB2323" />,
-      title: t('whatsNew.item3Title'),
-      desc: t('whatsNew.item3Desc'),
-    },
-    {
-      icon: <SunMoon size={18} color="#FFD100" />,
-      title: t('whatsNew.item4Title'),
-      desc: t('whatsNew.item4Desc'),
-    },
-    {
-      icon: <MessageSquare size={18} color="#9C27B0" />,
-      title: t('whatsNew.item5Title'),
-      desc: t('whatsNew.item5Desc'),
-    },
+    { title: t('whatsNew.item1Title'), desc: t('whatsNew.item1Desc') },
+    { title: t('whatsNew.item2Title'), desc: t('whatsNew.item2Desc') },
+    { title: t('whatsNew.item3Title'), desc: t('whatsNew.item3Desc') },
+    { title: t('whatsNew.item4Title'), desc: t('whatsNew.item4Desc') },
+    { title: t('whatsNew.item5Title'), desc: t('whatsNew.item5Desc') },
   ];
 
   return (
@@ -148,14 +128,11 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
           </button>
         </div>
 
-        {/* Scrollable Bullet Points Body */}
+        {/* Compact Bullet Points Body */}
         <div
           style={{
-            padding: '20px',
+            padding: '16px 20px',
             overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
           }}
         >
           <ul
@@ -166,7 +143,7 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
               margin: 0,
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
+              gap: '12px',
             }}
           >
             {features.map((feature, idx) => (
@@ -175,34 +152,27 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
                 role="listitem"
                 style={{
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: 'var(--bg-hover)',
-                  border: '1px solid var(--border-color)',
+                  alignItems: 'baseline',
+                  gap: '10px',
+                  lineHeight: 1.35,
                 }}
               >
-                <div
+                <span
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'rgba(0, 0, 0, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--accent-blue, #007AFF)',
                     flexShrink: 0,
-                    marginTop: '2px',
+                    transform: 'translateY(-2px)',
                   }}
-                >
-                  {feature.icon}
-                </div>
+                  aria-hidden="true"
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {feature.title}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '1px' }}>
                     {feature.desc}
                   </div>
                 </div>

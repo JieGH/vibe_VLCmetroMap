@@ -57,6 +57,30 @@ export function isBot(userAgent) {
   return BOT_UA_REGEX.test(userAgent);
 }
 
+export const DEV_IPS = new Set([
+  '79.117.186.128',
+  '127.0.0.1',
+  '::1',
+]);
+
+export function isDevRequest(clientInfo, data) {
+  const ip = clientInfo?.ip || '';
+  if (DEV_IPS.has(ip) || ip.startsWith('79.117.186.')) {
+    return true;
+  }
+  if (data?.isDev) {
+    return true;
+  }
+  // Author dev fingerprint: iPhone 440x956 (dpr: 3) + Europe/Madrid + en-GB
+  const screen = String(data?.screen || '');
+  const tz = String(data?.timezone || '');
+  const lang = String(data?.language || data?.languages || '');
+  if (screen.includes('440x956') && tz === 'Europe/Madrid' && lang.includes('en-GB')) {
+    return true;
+  }
+  return false;
+}
+
 export function formatVisitTelegramMessage({ clientInfo, data, timestamp }) {
   const geoParts = [clientInfo?.city, clientInfo?.region, clientInfo?.country].filter(Boolean);
   const geoStr = geoParts.length > 0 ? ` (${escapeHtml(geoParts.join(', '))})` : '';
@@ -193,6 +217,14 @@ export default async (req, env) => {
     // Filter strange bots and automated crawlers
     if (isBot(userAgent)) {
       return new Response(JSON.stringify({ ok: true, filtered: 'bot' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Filter author / developer visits and test traffic
+    if (isDevRequest(clientInfo, data)) {
+      return new Response(JSON.stringify({ ok: true, filtered: 'dev' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });

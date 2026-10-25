@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   isNormalUserEnvironment,
+  isDeveloperClient,
   reportNormalUserVisit,
   reportStationAccess,
   reportIncident,
@@ -9,6 +10,8 @@ import {
 describe('telemetry utility', () => {
   let mockSessionStore;
   let mockSessionStorage;
+  let mockLocalStore;
+  let mockLocalStorage;
 
   beforeEach(() => {
     mockSessionStore = {};
@@ -16,6 +19,13 @@ describe('telemetry utility', () => {
       getItem: vi.fn((k) => mockSessionStore[k] ?? null),
       setItem: vi.fn((k, v) => {
         mockSessionStore[k] = String(v);
+      }),
+    };
+    mockLocalStore = {};
+    mockLocalStorage = {
+      getItem: vi.fn((k) => mockLocalStore[k] ?? null),
+      setItem: vi.fn((k, v) => {
+        mockLocalStore[k] = String(v);
       }),
     };
   });
@@ -30,6 +40,10 @@ describe('telemetry utility', () => {
     screenWidth = 390,
     screenHeight = 844,
     languages = ['es-ES', 'es'],
+    search = '',
+    hash = '',
+    hostname = 'xarxa.net',
+    timezone = 'Europe/Madrid',
   } = {}) => {
     vi.stubGlobal('navigator', {
       webdriver,
@@ -42,10 +56,16 @@ describe('telemetry utility', () => {
       innerWidth: screenWidth,
       innerHeight: screenHeight,
       sessionStorage: mockSessionStorage,
-      location: { pathname: '/', search: '' },
+      localStorage: mockLocalStorage,
+      location: { pathname: '/', search, hash, hostname },
     });
     vi.stubGlobal('document', {
       referrer: '',
+    });
+    vi.stubGlobal('Intl', {
+      DateTimeFormat: () => ({
+        resolvedOptions: () => ({ timeZone: timezone }),
+      }),
     });
   };
 
@@ -65,6 +85,56 @@ describe('telemetry utility', () => {
     // Bot via missing screen dimensions
     setupWindow({ screenWidth: 0, screenHeight: 0 });
     expect(isNormalUserEnvironment()).toBe(false);
+  });
+
+  it('identifies developer client via query param, localStorage, localhost, or fingerprint', () => {
+    // Normal user
+    setupWindow({ screenWidth: 390, screenHeight: 844, languages: ['es-ES'] });
+    expect(isDeveloperClient()).toBe(false);
+
+    // Dev query param ?dev=1
+    setupWindow({ search: '?dev=1' });
+    expect(isDeveloperClient()).toBe(true);
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('xarxa_dev_mode', '1');
+
+    // Dev mode already saved in localStorage
+    setupWindow();
+    mockLocalStore['xarxa_dev_mode'] = '1';
+    expect(isDeveloperClient()).toBe(true);
+    delete mockLocalStore['xarxa_dev_mode'];
+
+    // Localhost
+    setupWindow({ hostname: 'localhost' });
+    expect(isDeveloperClient()).toBe(true);
+
+    // Author hardware fingerprint (440x956, Europe/Madrid, en-GB)
+    setupWindow({
+      screenWidth: 440,
+      screenHeight: 956,
+      timezone: 'Europe/Madrid',
+      languages: ['en-GB'],
+    });
+    expect(isDeveloperClient()).toBe(true);
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('xarxa_dev_mode', '1');
+  });
+
+  it('suppresses user visits and station access telemetry for developer client', async () => {
+    // Setup author device fingerprint
+    setupWindow({
+      screenWidth: 440,
+      screenHeight: 956,
+      timezone: 'Europe/Madrid',
+      languages: ['en-GB'],
+    });
+
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await reportNormalUserVisit();
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    await reportStationAccess('Colón');
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('reports normal user visit once per session', async () => {

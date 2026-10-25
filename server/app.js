@@ -246,6 +246,19 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         }
 
         const clientIp = getClientIp(req);
+
+        // Developer / author filter (IP & fingerprint)
+        const screen = String(payload?.screen || '');
+        const tz = String(payload?.timezone || '');
+        const lang = String(payload?.language || payload?.languages || '');
+        const isDev = payload?.isDev ||
+          clientIp === '79.117.186.128' ||
+          clientIp.startsWith('79.117.186.') ||
+          (screen.includes('440x956') && tz === 'Europe/Madrid' && lang.includes('en-GB'));
+
+        if (isDev) {
+          return sendText(res, 200, '{"ok":true,"filtered":"dev"}');
+        }
         const now = Date.now();
         const esc = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '');
         const timestamp = new Date().toISOString();

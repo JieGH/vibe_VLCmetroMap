@@ -39,12 +39,60 @@ export function isNormalUserEnvironment() {
 }
 
 /**
+ * Checks if the current client is the app author / developer based on
+ * explicit flags or author hardware/browser fingerprint.
+ */
+export function isDeveloperClient() {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    // 1. Explicit dev param in URL (?dev=1, ?author=1, #dev)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('dev') === '1' || params.get('author') === '1' || window.location.hash === '#dev') {
+      window.localStorage?.setItem('xarxa_dev_mode', '1');
+      return true;
+    }
+
+    // 2. Persisted flag in localStorage
+    if (window.localStorage?.getItem('xarxa_dev_mode') === '1') {
+      return true;
+    }
+
+    // 3. Localhost development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return true;
+    }
+
+    // 4. Author's device fingerprint match:
+    // iPhone 440x956 (dpr: 3), Timezone: Europe/Madrid, Language: en-GB
+    const isScreenMatch = window.screen?.width === 440 && window.screen?.height === 956;
+    const isTzMatch = Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone === 'Europe/Madrid';
+    const isLangMatch = (navigator.language === 'en-GB') ||
+      (Array.isArray(navigator.languages) && navigator.languages.includes('en-GB'));
+
+    if (isScreenMatch && isTzMatch && isLangMatch) {
+      window.localStorage?.setItem('xarxa_dev_mode', '1');
+      return true;
+    }
+  } catch {
+    // Ignore storage issues in sandboxed frames
+  }
+
+  return false;
+}
+
+/**
  * Reports a verified normal user visit to Telegram via /api/telemetry once per session.
  */
 export async function reportNormalUserVisit(options = {}) {
   if (typeof window === 'undefined') return;
 
   try {
+    // Exclude developer / author from visitor alerts
+    if (isDeveloperClient()) {
+      return;
+    }
+
     // Only report once per browser session
     if (window.sessionStorage?.getItem('xarxa_user_visit_reported') === '1') {
       return;
@@ -102,6 +150,11 @@ export async function reportStationAccess(stationName, extra = {}) {
   if (!stationName || typeof window === 'undefined') return;
 
   try {
+    // Exclude developer / author from station access alerts
+    if (isDeveloperClient()) {
+      return;
+    }
+
     const key = `xarxa_st_reported_${stationName}`;
     if (window.sessionStorage?.getItem(key) === '1') {
       return;

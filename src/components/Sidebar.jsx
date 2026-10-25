@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Info, LayoutDashboard, MessageSquare, Minus, Plus, Sun, Moon, SunMoon, Sparkles } from 'lucide-react';
 import { FONT_SIZE_CONFIG, FONT_SIZES } from '../utils/fontSize';
@@ -51,6 +51,17 @@ const Sidebar = ({
 }) => {
   const isMobile = useIsMobile();
   const [internalDownloadOpen, setInternalDownloadOpen] = useState(false);
+  const devTapCountRef = useRef(0);
+
+  const handleDevTap = () => {
+    devTapCountRef.current += 1;
+    if (devTapCountRef.current >= 3) {
+      try {
+        window.localStorage?.setItem('xarxa_dev_mode', '1');
+      } catch {}
+      devTapCountRef.current = 0;
+    }
+  };
   const offerable = typeof navigator !== 'undefined' && !Capacitor.isNativePlatform() && !isAndroid();
   const ios = typeof navigator !== 'undefined' && isIosDevice(navigator.userAgent, navigator.maxTouchPoints);
 
@@ -389,8 +400,12 @@ const Sidebar = ({
               <span>{t('sidebar.contactAuthor')}</span>
             </button>
 
-            {/* The author's signature and location */}
-            <div className="sidebar-signature" style={{ marginTop: '12px' }}>
+            {/* The author's signature and location (tap 3x to toggle dev mode) */}
+            <div
+              className="sidebar-signature"
+              style={{ marginTop: '12px', cursor: 'pointer', userSelect: 'none' }}
+              onClick={handleDevTap}
+            >
               <span className="sidebar-signature-by">{t('sidebar.madeBy')}</span>
               <span className="sidebar-signature-name">{AUTHOR_NAME}</span>
             </div>
