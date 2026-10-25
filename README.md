@@ -3,15 +3,14 @@
     <td valign="middle" width="55%">
       <h1><img src="public/favicon.svg" width="72" height="72" align="absmiddle" alt=""> Xarxa</h1>
       <p>
+        <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
+        &nbsp;
+        <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
+      </p>
+      <p>
         <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you. Honest by design: trains are drawn from live predictions and fade when their position becomes a guess.<br>
         <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti. Honesto por diseño: los trenes se dibujan con predicciones en directo y se difuminan cuando su posición pasa a ser una suposición.<br>
         <i>VA</i> · On està cada tren del metro de València, ara mateix, i quan t'arriba el pròxim. Honest per disseny: els trens es dibuixen amb prediccions en directe i es difuminen quan la posició passa a ser una suposició.
-      </p>
-      <p>
-        <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
-      </p>
-      <p>
-        <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
       </p>
     </td>
     <td valign="middle" align="center" width="45%">
