@@ -144,6 +144,9 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
       }
     }
     if (!extracted) throw lastError || new Error('pmtiles extract failed');
+    if (process.env.WORKERS_CI && fs.statSync(archive).size >= 25 * 1048576) {
+      throw new Error(`basemap is ${mb(fs.statSync(archive).size)}; Workers assets allow 25 MiB per file. Lower BASEMAP_MAXZOOM.`);
+    }
     console.log(`  ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
   }
 
