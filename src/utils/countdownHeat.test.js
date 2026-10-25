@@ -58,9 +58,9 @@ describe('countdown heat', () => {
 
 describe('countdown label and unit', () => {
   it('reads Due at and inside the due threshold', () => {
-    expect(countdownLabel(DUE_THRESHOLD_SECONDS)).toBe('Due');
-    expect(countdownLabel(0)).toBe('Due');
-    expect(countdownLabel(-30)).toBe('Due');
+    expect(countdownLabel(DUE_THRESHOLD_SECONDS)).toBe('Arriving');
+    expect(countdownLabel(0)).toBe('Arriving');
+    expect(countdownLabel(-30)).toBe('Arriving');
     expect(countdownUnit(DUE_THRESHOLD_SECONDS)).toBeNull();
   });
 
@@ -77,6 +77,6 @@ describe('countdown label and unit', () => {
   });
 
   it('uses the supplied due label', () => {
-    expect(countdownLabel(5, 'Llega')).toBe('Llega');
+    expect(countdownLabel(5, 'Llegando')).toBe('Llegando');
   });
 });

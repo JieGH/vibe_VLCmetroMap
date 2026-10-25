@@ -1,7 +1,7 @@
 package com.jielei.xarxa.nativeapp.domain
 
 /** Port of src/utils/countdownHeat.js. Colours are 0xFFRRGGBB. */
-const val DUE_THRESHOLD_SECONDS = 10
+const val DUE_THRESHOLD_SECONDS = 30
 
 data class HeatBand(val key: String, val maxSeconds: Double, val dark: Long, val light: Long)
 
@@ -24,16 +24,16 @@ fun countdownColor(seconds: Double, darkTheme: Boolean = true): Long {
 
 fun countdownColor(seconds: Int, darkTheme: Boolean = true): Long = countdownColor(seconds.toDouble(), darkTheme)
 
-/** "Due" inside [DUE_THRESHOLD_SECONDS], whole seconds under a minute, else whole minutes. */
-fun countdownLabel(seconds: Double, dueLabel: String = "Due"): String {
+/** "Arriving" inside [DUE_THRESHOLD_SECONDS], whole seconds under a minute, else whole minutes. */
+fun countdownLabel(seconds: Double, dueLabel: String = "Arriving"): String {
     if (seconds <= DUE_THRESHOLD_SECONDS) return dueLabel
     if (seconds < 60) return Math.round(seconds).toString()
     return Math.round(seconds / 60).toString()
 }
 
-fun countdownLabel(seconds: Int, dueLabel: String = "Due"): String = countdownLabel(seconds.toDouble(), dueLabel)
+fun countdownLabel(seconds: Int, dueLabel: String = "Arriving"): String = countdownLabel(seconds.toDouble(), dueLabel)
 
-/** "sec", "min", or null once the train reads as Due. */
+/** "sec", "min", or null once the train reads as Arriving. */
 fun countdownUnit(seconds: Double): String? = when {
     seconds <= DUE_THRESHOLD_SECONDS -> null
     seconds < 60 -> "sec"

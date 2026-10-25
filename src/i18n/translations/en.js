@@ -8,7 +8,7 @@ export default {
   common: {
     min: 'min',
     sec: 's',
-    due: 'Due',
+    due: 'Arriving',
   },
   app: {
     openSidebar: 'Open Sidebar',
@@ -98,7 +98,6 @@ export default {
     live: 'LIVE',
     memory: 'MEMORY',
     closeAria: 'Close station panel',
-    vehicle: 'Vehicle #{{id}}',
     noLiveTrains: 'No live trains arriving soon.',
     nothingFurther: 'Nothing further due yet.',
     laterArrivalsCaption: 'Later arrivals at {{station}}',

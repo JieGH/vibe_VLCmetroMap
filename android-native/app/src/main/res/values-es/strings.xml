@@ -43,13 +43,12 @@
     <string name="station_just_now">justo ahora</string>
     <string name="station_min_ago">hace %1$d min</string>
     <string name="station_confirmed">confirmado %1$s</string>
-    <string name="station_vehicle">Vehículo n.º %1$s</string>
     <string name="station_no_trains">No hay trenes en directo llegando pronto.</string>
     <string name="station_towards">Dirección</string>
     <string name="station_line">Línea</string>
     <string name="station_due_header">Llega</string>
     <string name="arrival_desc">Línea %1$s dirección %2$s, %3$s</string>
-    <string name="due">Llega</string>
+    <string name="due">Llegando</string>
     <string name="unit_min">min</string>
     <string name="unit_sec">s</string>
     <string name="map_desc">Mapa de la red de Metrovalencia</string>

@@ -430,6 +430,21 @@ html.android .station-panel-header h2 {
   letter-spacing: 0 !important;
 }
 
+html.android .station-header-icon {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  border-radius: 50% !important;
+  background: #E2001A !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 6px rgba(226, 0, 26, 0.35) !important;
+}
+
+html.android .station-header-line-badge {
+  border-radius: 6px !important;
+}
+
 html.android .station-panel-close {
   width: 48px !important;
   height: 48px !important;
@@ -452,39 +467,34 @@ html.android .station-panel-body {
 }
 
 html.android .station-arrivals-table thead tr {
-  font-size: 12px !important;
+  font-size: 13px !important;
   letter-spacing: 0.5px !important;
   background: var(--md-surface-container-low) !important;
 }
 
 html.android .station-arrival-row {
-  height: 56px;
+  height: 48px;
 }
 
 html.android .station-arrival-row td {
-  padding: 0 12px !important;
+  padding: 0 8px !important;
 }
 
 html.android .station-line-badge {
   min-width: 32px !important;
   height: 32px !important;
   border-radius: 16px !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
 }
 
 html.android .station-arrival-row td > div:first-child {
-  font-size: 16px !important;
+  font-size: 19px !important;
   line-height: 24px;
   font-weight: 500 !important;
 }
 
-html.android .station-arrival-row td > div + div {
-  font-size: 12px !important;
-  line-height: 16px;
-}
-
 html.android .station-arrival-due {
-  font-size: 16px !important;
+  font-size: 19px !important;
 }
 
 html.android .station-panel footer {
@@ -583,89 +593,39 @@ html.android .sidebar-font-size-section > div:first-child h2 {
   padding: 0;
 }
 
-html.android .sidebar .sidebar-language-section {
-  padding-top: 0 !important;
+html.android .sidebar-settings-row {
+  margin: 0 4px;
 }
 
-html.android .sidebar .sidebar-language-section h2 {
-  margin-bottom: 4px !important;
+html.android .size-stepper,
+html.android .theme-icon-group,
+html.android .lang-icon-group {
+  background: var(--md-surface-container-high) !important;
+  border-color: var(--md-outline-variant) !important;
 }
 
-html.android .sidebar .sidebar-language-section h2 svg {
-  display: none;
+html.android .size-stepper-btn,
+html.android .theme-icon-btn,
+html.android .lang-icon-btn {
+  color: var(--md-on-surface-variant) !important;
 }
 
-/* Text size: a segmented button. */
-html.android .sidebar .font-size-control-group {
-  margin: 0 16px;
-  padding: 0;
-  gap: 0;
-  overflow: hidden;
-  background: transparent;
-  border: 1px solid var(--md-outline);
-  border-radius: var(--md-shape-pill);
+html.android .size-stepper-btn:hover:not(:disabled),
+html.android .theme-icon-btn:hover,
+html.android .lang-icon-btn:hover {
+  background: var(--md-state-hover) !important;
+  color: var(--md-on-surface) !important;
 }
 
-html.android .sidebar .font-size-option-btn {
-  min-height: 48px;
-  padding: 0 4px;
-  border-radius: 0;
-  color: var(--md-on-surface);
+html.android .theme-icon-btn.active,
+html.android .lang-icon-btn.active {
+  background: var(--md-secondary-container) !important;
+  color: var(--md-on-secondary-container) !important;
+  box-shadow: none !important;
 }
 
-html.android .sidebar .font-size-option-btn + .font-size-option-btn {
-  border-left: 1px solid var(--md-outline);
-}
-
-html.android .sidebar .font-size-option-btn.active {
-  background: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
-  box-shadow: none;
-}
-
-html.android .sidebar .font-size-option-label {
-  display: none;
-}
-
-/* Language: 56px drawer items with a pill indicator on the selected one. */
-html.android .sidebar .lang-option-group {
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-}
-
-html.android .sidebar .lang-option-btn {
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 12px;
-  min-height: 56px;
-  padding: 0 16px;
-  border-radius: 28px;
-  color: var(--md-on-surface-variant);
-}
-
-html.android .sidebar .lang-option-btn.active {
-  background: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
-  box-shadow: none;
-}
-
-html.android .sidebar .lang-option-preview {
-  min-width: 32px;
-  text-align: left;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-html.android .sidebar .lang-option-label {
-  margin-top: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
-  letter-spacing: 0.1px;
-  text-transform: none;
+html.android .size-stepper-value {
+  color: var(--md-on-surface) !important;
 }
 
 html.android .sidebar [style*='text-align: center'] {

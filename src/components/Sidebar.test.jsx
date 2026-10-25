@@ -116,12 +116,16 @@ describe('Sidebar appearance', () => {
 });
 
 describe('Sidebar settings row', () => {
-  it('puts text size and appearance in one row', async () => {
+  it('puts text size, appearance, and language in one row', async () => {
     const { renderToStaticMarkup } = await import('react-dom/server');
     const SidebarMod = (await import('./Sidebar')).default;
     const html = renderToStaticMarkup(<SidebarMod isOpen onToggleSidebar={() => {}} themeMode="dark" fontSize="default" />);
-    const row = html.match(/sidebar-settings-row[\s\S]*?(?=sidebar-language-section)/)?.[0] || '';
-    expect(row).toContain('size-stepper');
-    expect(row).toContain('theme-icon-group');
+    expect(html).toContain('sidebar-settings-row');
+    expect(html).toContain('size-stepper');
+    expect(html).toContain('theme-icon-group');
+    expect(html).toContain('lang-icon-group');
+    expect(html).toContain('>EN<');
+    expect(html).toContain('>ES<');
+    expect(html).toContain('>VAL<');
   });
 });

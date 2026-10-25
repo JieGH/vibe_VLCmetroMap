@@ -43,13 +43,12 @@
     <string name="station_just_now">ara mateix</string>
     <string name="station_min_ago">fa %1$d min</string>
     <string name="station_confirmed">confirmat %1$s</string>
-    <string name="station_vehicle">Vehicle núm. %1$s</string>
     <string name="station_no_trains">No hi ha trens en directe arribant prompte.</string>
     <string name="station_towards">Direcció</string>
     <string name="station_line">Línia</string>
     <string name="station_due_header">Arriba</string>
     <string name="arrival_desc">Línia %1$s direcció %2$s, %3$s</string>
-    <string name="due">Arriba</string>
+    <string name="due">Arribant</string>
     <string name="unit_min">min</string>
     <string name="unit_sec">s</string>
     <string name="map_desc">Mapa de la xarxa de Metrovalencia</string>

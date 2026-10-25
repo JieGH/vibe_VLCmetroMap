@@ -36,7 +36,7 @@ const useIsLandscape = () => {
 
 // Compact sheet, mirroring the native StationSheet: header plus four rows of
 // ROW_HEIGHT_PX, anything further scrolls inside the body.
-const ROW_HEIGHT_PX = 56;
+const ROW_HEIGHT_PX = 48;
 const VISIBLE_ROWS = 4;
 const TABLE_HEAD_PX = 30;
 
@@ -100,6 +100,8 @@ const StationPanel = ({ station, theme, onClose }) => {
       ? t('stationPanel.justNow')
       : t('stationPanel.minAgo', { min: Math.round(focus.secondsUnheard / 60) });
 
+  const stationLines = focus.servedLines || [];
+
   return (
     <>
       <aside
@@ -139,57 +141,111 @@ const StationPanel = ({ station, theme, onClose }) => {
         </div>
       )}
 
-      {/* Header: which station, and how trustworthy this is */}
+      {/* Header: station name, line icons underneath, station icon on the left, and live status */}
       <header
         className="station-panel-header"
         style={{
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-          gap: 12, padding: !landscape ? '6px 16px 12px' : '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: !landscape ? '8px 16px 12px' : '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
         }}
         {...(!landscape ? handleProps : {})}
       >
-        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-          <h2 style={{
-            fontSize: '1.05rem', fontWeight: 800, lineHeight: 1.15,
-            letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            minWidth: 0, flexShrink: 1,
-          }}>
-            {focus.name}
-          </h2>
-
-          {/* Live API vs memory. Two different claims, so they never share a
-              treatment: one was fetched now, the other is a countdown running
-              on from an older fetch. Rendered as compact symbols rather than
-              text so the station name has full breathing room. */}
-          <span
-            className="station-status-badge"
-            title={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
-            aria-label={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              width: 22, height: 22, borderRadius: '50%',
-              color: focus.isFresh ? '#4CAF50' : '#00B4D8',
-              background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
-            }}
-          >
-            {focus.isFresh
-              ? <Radio size={12} className="pulse" />
-              : <Database size={12} />}
-          </span>
-          <span
-            className="station-confirmed-badge"
-            title={t('stationPanel.confirmedStatus', { time: unheardLabel })}
-            aria-label={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
+          <div
+            className="station-header-icon"
+            data-testid="station-header-icon"
+            aria-hidden="true"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              color: focus.secondsUnheard !== null && focus.secondsUnheard < 60 ? '#4CAF50' : 'var(--text-secondary)',
+              width: 34, height: 34, minWidth: 34, borderRadius: '50%',
+              background: '#E2001A', color: '#FFFFFF',
+              boxShadow: '0 2px 6px rgba(226, 0, 26, 0.35)',
               flexShrink: 0,
             }}
           >
-            {focus.secondsUnheard !== null && focus.secondsUnheard < 60
-              ? <CheckCircle2 size={13} />
-              : <Clock size={13} />}
-          </span>
+            <span
+              style={{
+                fontSize: '1.18rem',
+                fontWeight: 900,
+                fontStyle: 'italic',
+                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                lineHeight: 1,
+                transform: 'translate(-0.5px, -0.5px)',
+                userSelect: 'none',
+              }}
+            >
+              m
+            </span>
+          </div>
+
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
+            <h2 style={{
+              fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
+              letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              minWidth: 0, margin: 0,
+            }}>
+              {focus.name}
+            </h2>
+
+            <div
+              className="station-header-meta"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+              }}
+            >
+              {stationLines.map((lineId) => (
+                <span
+                  key={lineId}
+                  className="station-header-line-badge"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
+                    background: lineColor(lineId), color: '#000',
+                    fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
+                  }}
+                >
+                  {lineId}
+                </span>
+              ))}
+
+              {/* Live API vs memory status */}
+              <span
+                className="station-status-badge"
+                title={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
+                aria-label={focus.isFresh ? t('stationPanel.live') : t('stationPanel.memory')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  width: 20, height: 20, borderRadius: '50%',
+                  color: focus.isFresh ? '#4CAF50' : '#00B4D8',
+                  background: focus.isFresh ? 'rgba(76,175,80,.15)' : 'rgba(0,180,216,.15)',
+                  marginLeft: stationLines.length > 0 ? 2 : 0,
+                }}
+              >
+                {focus.isFresh
+                  ? <Radio size={11} className="pulse" />
+                  : <Database size={11} />}
+              </span>
+              <span
+                className="station-confirmed-badge"
+                title={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+                aria-label={t('stationPanel.confirmedStatus', { time: unheardLabel })}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  color: focus.secondsUnheard !== null && focus.secondsUnheard < 60 ? '#4CAF50' : 'var(--text-secondary)',
+                  flexShrink: 0,
+                }}
+              >
+                {focus.secondsUnheard !== null && focus.secondsUnheard < 60
+                  ? <CheckCircle2 size={12} />
+                  : <Clock size={12} />}
+              </span>
+            </div>
+          </div>
         </div>
 
         <button
@@ -223,60 +279,71 @@ const StationPanel = ({ station, theme, onClose }) => {
             {t('stationPanel.noLiveTrains')}
           </p>
         ) : (
-          <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem' }}>
+          <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
             <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
             <thead>
               <tr style={{
-                fontSize: '.62rem', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                 position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
               }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '6px 8px 5px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '6px 8px 5px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
               </tr>
             </thead>
             <tbody>
               {focus.arrivals.map((a, i) => (
                 <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)', height: ROW_HEIGHT_PX }}>
-                  <td style={{ padding: '7px 8px', width: 1 }}>
+                  <td style={{ padding: '5px 6px', width: 1 }}>
                     <span
                       className="station-line-badge"
                       style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        minWidth: 24, height: 24, padding: '0 6px', borderRadius: 7,
+                        minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
                         background: lineColor(a.line), color: '#000',
-                        fontSize: '.72rem', fontWeight: 900,
+                        fontSize: '.86rem', fontWeight: 900,
                       }}
                     >
                       {a.line}
                     </span>
                   </td>
-                  <td style={{ padding: '7px 8px', maxWidth: 0 }}>
+                  <td style={{ padding: '5px 6px', maxWidth: 0 }}>
                     <div style={{
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontWeight: 600, fontSize: '.82rem', color: 'var(--text-primary)',
+                      fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
                     }}>
                       {a.destination}
                     </div>
-                    {a.vehicleId && (
-                      <div style={{ fontSize: '.62rem', color: 'var(--text-secondary)' }}>
-                        {t('stationPanel.vehicle', { id: a.vehicleId })}
-                      </div>
-                    )}
                   </td>
                   <td
                     className="station-arrival-due"
                     style={{
-                      padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap',
-                      fontWeight: 800, fontSize: '.88rem', fontVariantNumeric: 'tabular-nums',
+                      padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
+                      fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
                       color: countdownHeat(a.seconds, theme),
                     }}
                   >
-                    {countdownLabel(a.seconds, t('common.due'))}
-                    {countdownUnit(a.seconds) && (
-                      <span style={{ fontSize: '.62rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
-                        {t(`common.${countdownUnit(a.seconds)}`)}
+                    {a.seconds <= 30 ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                        <span
+                          className="station-arriving-dot pulse"
+                          data-testid="station-arriving-dot"
+                          style={{
+                            width: 7, height: 7, borderRadius: '50%',
+                            background: countdownHeat(a.seconds, theme), display: 'inline-block',
+                          }}
+                        />
+                        {countdownLabel(a.seconds, t('common.due'))}
                       </span>
+                    ) : (
+                      <>
+                        <span className="station-arrival-num">{countdownLabel(a.seconds, t('common.due'))}</span>
+                        {countdownUnit(a.seconds) && (
+                          <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
+                            {t(`common.${countdownUnit(a.seconds)}`)}
+                          </span>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>

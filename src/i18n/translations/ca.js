@@ -4,7 +4,7 @@ export default {
   common: {
     min: 'min',
     sec: 's',
-    due: 'Arriba',
+    due: 'Arribant',
   },
   app: {
     openSidebar: 'Obri el menú',
@@ -94,7 +94,6 @@ export default {
     live: 'EN DIRECTE',
     memory: 'MEMÒRIA',
     closeAria: 'Tanca el panell de l\'estació',
-    vehicle: 'Vehicle núm. {{id}}',
     noLiveTrains: 'No hi ha trens en directe arribant prompte.',
     nothingFurther: 'No hi ha més arribades previstes per ara.',
     laterArrivalsCaption: 'Pròximes arribades a {{station}}',

@@ -39,6 +39,17 @@ describe('StationPanel component', () => {
 
     // Station name rendered
     expect(html).toContain('Xàtiva');
+
+    // Station header icon rendered on the left as a red dot emblem with custom 'm'
+    expect(html).toContain('data-testid="station-header-icon"');
+    expect(html).toContain('>m<');
+    expect(html).toContain('#E2001A');
+
+    // Station line badges rendered underneath station name
+    expect(html).toContain('station-header-line-badge');
+    expect(html).toContain('>3<');
+    expect(html).toContain('>5<');
+    expect(html).toContain('>9<');
   });
 
   // A full-screen backdrop used to sit above the map canvas to catch an
@@ -105,13 +116,38 @@ describe('StationPanel component', () => {
     expect(html).toContain('station-line-badge');
     expect(html).toContain('station-arrival-due');
 
-    // Ranked strictly by closest arrival time: #301 (2 min) -> #302 (4 min) -> #903 (10 min)
-    const idx301 = html.indexOf('Vehicle #301');
-    const idx302 = html.indexOf('Vehicle #302');
-    const idx903 = html.indexOf('Vehicle #903');
-    expect(idx301).toBeGreaterThan(-1);
-    expect(idx302).toBeGreaterThan(idx301);
-    expect(idx903).toBeGreaterThan(idx302);
+    // Ranked strictly by closest arrival time: 2 min -> 4 min -> 10 min
+    const idx2min = html.indexOf('>2<');
+    const idx4min = html.indexOf('>4<');
+    const idx10min = html.indexOf('>10<');
+    expect(idx2min).toBeGreaterThan(-1);
+    expect(idx4min).toBeGreaterThan(idx2min);
+    expect(idx10min).toBeGreaterThan(idx4min);
+    expect(html).not.toContain('station-arrival-vehicle');
+  });
+
+  it('renders a pulsing visual dot when a train is arriving (<= 30s)', () => {
+    const now = Date.now();
+    arrivalStore.memory.set('10', {
+      stationId: 10,
+      timestamp: now,
+      isFresh: true,
+      arrivals: [
+        {
+          line: '3',
+          destination: 'Aeroport',
+          targetTimestamp: now + 20 * 1000, // 20s = arriving
+          isLive: true,
+        },
+      ],
+    });
+
+    const html = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
+    );
+
+    expect(html).toContain('data-testid="station-arriving-dot"');
+    expect(html).toContain('Arriving');
   });
 
   it('renders drag handle in portrait mode and hides it in landscape mode', () => {

@@ -1263,17 +1263,17 @@ button:active {
   letter-spacing: 0.5px;
   color: var(--text-secondary);
 }
-.size-stepper, .theme-icon-group {
+.segmented-control,
+.size-stepper, .theme-icon-group, .lang-icon-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   padding: 3px;
   background: var(--bg-hover);
   border: 1px solid var(--border-color);
   border-radius: 10px;
 }
-.size-stepper-btn, .theme-icon-btn {
-  width: 40px;
+.size-stepper-btn, .theme-icon-btn, .lang-icon-btn {
   height: 36px;
   display: flex;
   align-items: center;
@@ -1285,15 +1285,25 @@ button:active {
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.size-stepper-btn:hover:not(:disabled), .theme-icon-btn:hover { color: var(--text-primary); background: var(--bg-hover-active, var(--bg-hover)); }
+.size-stepper-btn:hover:not(:disabled), .theme-icon-btn:hover, .lang-icon-btn:hover { color: var(--text-primary); background: var(--bg-hover-active, var(--bg-hover)); }
 .size-stepper-btn:disabled { opacity: 0.35; cursor: default; }
-.theme-icon-btn.active { background: var(--bg-panel-solid); color: #FFD100; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
-.size-stepper-value { min-width: 38px; text-align: center; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+.theme-icon-btn.active, .lang-icon-btn.active { background: var(--bg-panel-solid); color: #FFD100; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.size-stepper-value { min-width: 24px; text-align: center; font-size: 0.88rem; font-weight: 800; color: var(--text-primary); }
+.lang-icon-btn {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  padding: 0 3px;
+}
+.lang-code-text {
+  line-height: 1;
+}
 
 /* Yellow on a light panel is too faint to read: the selected option takes a deeper amber there. */
 [data-theme='light'] .font-size-option-btn.active,
 [data-theme='light'] .lang-option-btn.active,
-[data-theme='light'] .theme-icon-btn.active {
+[data-theme='light'] .theme-icon-btn.active,
+[data-theme='light'] .lang-icon-btn.active {
   color: #A15C00;
 }
 
@@ -1311,6 +1321,38 @@ button:active {
 }
 .walk-dock > * { pointer-events: auto; }
 
-/* Text size and appearance sit on one row, each as a compact group. */
-.sidebar-settings-row { flex-wrap: nowrap; }
-.sidebar-settings-row .size-stepper-btn, .sidebar-settings-row .theme-icon-btn { width: 38px; }
+/* Text size, appearance, and language sit on one row, each as a compact group of three elements. */
+.sidebar-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.sidebar-settings-row .sidebar-font-size-section,
+.sidebar-settings-row .sidebar-appearance-section,
+.sidebar-settings-row .sidebar-language-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.sidebar-settings-row .size-stepper,
+.sidebar-settings-row .theme-icon-group,
+.sidebar-settings-row .lang-icon-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+}
+.sidebar-settings-row .size-stepper-btn,
+.sidebar-settings-row .theme-icon-btn,
+.sidebar-settings-row .lang-icon-btn {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  padding: 0;
+}
+.sidebar-settings-row .size-stepper-value {
+  flex: 1;
+  min-width: 0;
+}

@@ -73,29 +73,61 @@ fun XarxaDrawer(
             HorizontalDivider(Modifier.padding(horizontal = 28.dp))
 
             val lang = LocalConfiguration.current.locales[0].language
-            val langs = listOf("en" to "English", "es" to "Español", "ca" to "Valencià")
-            SettingToggle(
-                icon = Icons.Filled.Language,
-                label = stringResource(R.string.drawer_language),
-                options = langs.map { it.second },
-                selectedIndex = langs.indexOfFirst { it.first == lang }.coerceAtLeast(0),
-                onPick = {
-                    val tag = if (langs[it].first == "ca") "ca-ES-valencia" else langs[it].first
-                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
-                },
-            )
+            val langs = listOf("en" to "EN", "es" to "ES", "ca" to "VAL")
             val modes = listOf(
                 ThemeMode.System to stringResource(R.string.theme_system),
                 ThemeMode.Light to stringResource(R.string.theme_light),
                 ThemeMode.Dark to stringResource(R.string.theme_dark),
             )
-            SettingToggle(
-                icon = Icons.Filled.DarkMode,
-                label = stringResource(R.string.drawer_theme),
-                options = modes.map { it.second },
-                selectedIndex = modes.indexOfFirst { it.first == themeMode },
-                onPick = { onTheme(modes[it].first) },
-            )
+
+            // Unified settings row: Theme and Language side-by-side
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // Theme 3-way toggle (Auto, Light, Dark)
+                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+                    modes.forEachIndexed { i, (mode, _) ->
+                        SegmentedButton(
+                            selected = mode == themeMode,
+                            onClick = { onTheme(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(i, modes.size),
+                            modifier = Modifier.heightIn(min = 40.dp),
+                            label = {
+                                Text(
+                                    when (mode) {
+                                        ThemeMode.System -> "AUTO"
+                                        ThemeMode.Light -> "☀"
+                                        ThemeMode.Dark -> "☾"
+                                    },
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                        )
+                    }
+                }
+
+                // Language 3-way toggle (EN, ES, VAL)
+                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+                    langs.forEachIndexed { i, (code, label) ->
+                        val selected = code == lang || (code == "ca" && lang.startsWith("ca"))
+                        SegmentedButton(
+                            selected = selected,
+                            onClick = {
+                                val tag = if (code == "ca") "ca-ES-valencia" else code
+                                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(i, langs.size),
+                            modifier = Modifier.heightIn(min = 40.dp),
+                            label = { Text(label, maxLines = 1, fontWeight = FontWeight.Bold) },
+                        )
+                    }
+                }
+            }
 
             HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 12.dp))
             NavigationDrawerItem(

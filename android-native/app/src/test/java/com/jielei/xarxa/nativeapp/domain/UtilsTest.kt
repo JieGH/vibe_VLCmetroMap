@@ -100,9 +100,9 @@ class CountdownHeatTest {
     }
 
     @Test fun labelAndUnit() {
-        assertEquals("Due", countdownLabel(DUE_THRESHOLD_SECONDS)); assertEquals("Due", countdownLabel(0)); assertEquals("Due", countdownLabel(-30))
+        assertEquals("Arriving", countdownLabel(DUE_THRESHOLD_SECONDS)); assertEquals("Arriving", countdownLabel(0)); assertEquals("Arriving", countdownLabel(-30))
         assertNull(countdownUnit(DUE_THRESHOLD_SECONDS))
-        assertEquals("11", countdownLabel(DUE_THRESHOLD_SECONDS + 1)); assertEquals("45", countdownLabel(45)); assertEquals("sec", countdownUnit(45))
+        assertEquals("31", countdownLabel(DUE_THRESHOLD_SECONDS + 1)); assertEquals("45", countdownLabel(45)); assertEquals("sec", countdownUnit(45))
         assertEquals("1", countdownLabel(60)); assertEquals("3", countdownLabel(150)); assertEquals("min", countdownUnit(60))
         assertEquals("Llega", countdownLabel(5, "Llega"))
     }

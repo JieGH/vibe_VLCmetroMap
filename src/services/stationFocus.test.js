@@ -227,4 +227,13 @@ describe('laterArrivals', () => {
     expect(focus.directions).toEqual([]);
     expect(focus.laterArrivals).toHaveLength(1);
   });
+
+  it('resolves servedLines from station props or gtfs fallback', () => {
+    const focus1 = getStationFocus({ name: 'Xàtiva', lines: ['3', '5', '9'] });
+    expect(focus1.servedLines).toEqual(['3', '5', '9']);
+
+    // Fallback lookup from gtfs by station name when lines not supplied
+    const focus2 = getStationFocus({ name: 'Marítim' });
+    expect(focus2.servedLines).toEqual(['5', '7', '6', '8']);
+  });
 });

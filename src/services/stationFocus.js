@@ -12,6 +12,21 @@
 // directions if applicable".
 import arrivalStore from './arrivalStore';
 import trainPositionEngine from './trainPositionEngine';
+import gtfsData from '../data/gtfs_expanded.json';
+
+const resolveServedLines = (stationProps) => {
+  if (Array.isArray(stationProps?.lines) && stationProps.lines.length > 0) {
+    return stationProps.lines.map(String);
+  }
+  const name = stationProps?.name;
+  if (name && Array.isArray(gtfsData?.features)) {
+    const match = gtfsData.features.find(
+      (f) => f.geometry?.type === 'Point' && f.properties?.name === name
+    );
+    if (match?.properties?.lines) return match.properties.lines.map(String);
+  }
+  return [];
+};
 
 // Averaged as unit vectors, because bearings wrap: the mean of 350° and 10° is
 // 0°, not 180°.
@@ -94,9 +109,12 @@ export const getStationFocus = (stationProps, now = Date.now()) => {
   // verbatim repeat of the two rows above it. These are the ones left to say.
   const headlined = new Set(directions.map((d) => d.arrivals[0]));
 
+  const servedLines = resolveServedLines(stationProps);
+
   return {
     name: stationProps ? stationProps.name : '',
-    lines: (stationProps && stationProps.lines) || [],
+    lines: servedLines,
+    servedLines,
     arrivals: arrivals.slice().sort((a, b) => a.seconds - b.seconds),
     laterArrivals: arrivals
       .filter((arrival) => !headlined.has(arrival))

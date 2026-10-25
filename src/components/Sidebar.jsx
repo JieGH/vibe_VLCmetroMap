@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Info, Languages, LayoutDashboard, Mail, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
+import { ChevronLeft, Info, LayoutDashboard, Mail, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
 import { FONT_SIZE_CONFIG, FONT_SIZES } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -123,97 +123,93 @@ const Sidebar = ({
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Text size and appearance share one row */}
+          {/* Settings row: Text size, Appearance, and Language as three compact toggles */}
           <div className="sidebar-compact-row sidebar-settings-row">
-          {/* Text size: a stepper showing S / M / L / XL */}
-          <div className="sidebar-font-size-section">
-            {(() => {
-              const current = FONT_SIZE_CONFIG[fontSize] ? fontSize : 'default';
-              const index = FONT_SIZES.indexOf(current);
-              const step = (delta) => onSelectFontSize && onSelectFontSize(FONT_SIZES[index + delta]);
-              return (
-                <div className="size-stepper" role="group" aria-label={t('sidebar.textSizeSelectionAria')}>
-                  <button
-                    type="button"
-                    className="size-stepper-btn"
-                    onClick={() => step(-1)}
-                    disabled={index <= 0}
-                    aria-label={t('sidebar.textSmaller')}
-                    title={t('sidebar.textSmaller')}
-                  >
-                    <Minus size={16} aria-hidden="true" />
-                  </button>
-                  <span
-                    className="size-stepper-value"
-                    aria-live="polite"
-                    title={t(`sidebar.fontSize.${current}`)}
-                    aria-label={t(`sidebar.fontSize.${current}`)}
-                  >
-                    {FONT_SIZE_CONFIG[current].shortLabel}
-                  </span>
-                  <button
-                    type="button"
-                    className="size-stepper-btn"
-                    onClick={() => step(1)}
-                    disabled={index >= FONT_SIZES.length - 1}
-                    aria-label={t('sidebar.textLarger')}
-                    title={t('sidebar.textLarger')}
-                  >
-                    <Plus size={16} aria-hidden="true" />
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-          {/* Appearance: sun, moon, or follow the phone, as icons */}
-          <div className="sidebar-appearance-section">
-            <div className="theme-icon-group" role="group" aria-label={t('sidebar.appearanceAria')}>
-              {THEME_MODES.map(({ id, key, Icon }) => {
-                const isSelected = themeMode === id;
-                const label = t(`sidebar.${key}`);
+            {/* Text size: a stepper showing S / M / L / XL */}
+            <div className="sidebar-font-size-section">
+              {(() => {
+                const current = FONT_SIZE_CONFIG[fontSize] ? fontSize : 'default';
+                const index = FONT_SIZES.indexOf(current);
+                const step = (delta) => onSelectFontSize && onSelectFontSize(FONT_SIZES[index + delta]);
                 return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => onSelectTheme && onSelectTheme(id)}
-                    className={`theme-icon-btn ${isSelected ? 'active' : ''}`}
-                    aria-pressed={isSelected}
-                    aria-label={label}
-                    title={label}
-                  >
-                    <Icon size={18} aria-hidden="true" />
-                  </button>
+                  <div className="size-stepper segmented-control" role="group" aria-label={t('sidebar.textSizeSelectionAria')}>
+                    <button
+                      type="button"
+                      className="size-stepper-btn"
+                      onClick={() => step(-1)}
+                      disabled={index <= 0}
+                      aria-label={t('sidebar.textSmaller')}
+                      title={t('sidebar.textSmaller')}
+                    >
+                      <Minus size={15} aria-hidden="true" />
+                    </button>
+                    <span
+                      className="size-stepper-value"
+                      aria-live="polite"
+                      title={t(`sidebar.fontSize.${current}`)}
+                      aria-label={t(`sidebar.fontSize.${current}`)}
+                    >
+                      {FONT_SIZE_CONFIG[current].shortLabel}
+                    </span>
+                    <button
+                      type="button"
+                      className="size-stepper-btn"
+                      onClick={() => step(1)}
+                      disabled={index >= FONT_SIZES.length - 1}
+                      aria-label={t('sidebar.textLarger')}
+                      title={t('sidebar.textLarger')}
+                    >
+                      <Plus size={15} aria-hidden="true" />
+                    </button>
+                  </div>
                 );
-              })}
+              })()}
             </div>
-          </div>
-          </div>
 
-          {/* Language Selection Control */}
-          <div className="sidebar-language-section" style={{ paddingTop: '8px' }}>
-            <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              <Languages size={12} style={{ verticalAlign: '-1px', marginRight: '4px' }} />
-              {t('sidebar.language')}
-            </h2>
-            <div className="lang-option-group" role="group" aria-label={t('sidebar.language')}>
-              {SUPPORTED_LANGUAGES.map((lang) => {
-                const isSelected = language === lang;
-                const name = t(`sidebar.languageNames.${lang}`);
-                return (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => setLanguage(lang)}
-                    className={`lang-option-btn ${isSelected ? 'active' : ''}`}
-                    aria-pressed={isSelected}
-                    aria-label={t('sidebar.languageOptionAria', { language: name })}
-                    title={name}
-                  >
-                    <span className="lang-option-preview">{languageCode(lang)}</span>
-                    <span className="lang-option-label">{name}</span>
-                  </button>
-                );
-              })}
+            {/* Appearance: sun, moon, or follow the phone, as icons */}
+            <div className="sidebar-appearance-section">
+              <div className="theme-icon-group segmented-control" role="group" aria-label={t('sidebar.appearanceAria')}>
+                {THEME_MODES.map(({ id, key, Icon }) => {
+                  const isSelected = themeMode === id;
+                  const label = t(`sidebar.${key}`);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => onSelectTheme && onSelectTheme(id)}
+                      className={`theme-icon-btn ${isSelected ? 'active' : ''}`}
+                      aria-pressed={isSelected}
+                      aria-label={label}
+                      title={label}
+                    >
+                      <Icon size={16} aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Language: EN, ES, VAL as compact toggles */}
+            <div className="sidebar-language-section">
+              <div className="lang-icon-group segmented-control" role="group" aria-label={t('sidebar.language')}>
+                {SUPPORTED_LANGUAGES.map((lang) => {
+                  const isSelected = language === lang;
+                  const name = t(`sidebar.languageNames.${lang}`);
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setLanguage(lang)}
+                      className={`lang-icon-btn ${isSelected ? 'active' : ''}`}
+                      aria-pressed={isSelected}
+                      aria-label={t('sidebar.languageOptionAria', { language: name })}
+                      title={name}
+                    >
+                      <span className="lang-code-text">{languageCode(lang)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

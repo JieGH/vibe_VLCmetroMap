@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -46,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -114,6 +116,23 @@ fun StationSheet(
                 Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Red dot emblem with stylized custom 'm' typography (distinct from official logo)
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .background(Color(0xFFE2001A), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "m",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 19.sp,
+                        modifier = Modifier.offset(x = (-0.5).dp, y = (-0.5).dp),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         station.name,
@@ -178,7 +197,7 @@ fun StationSheet(
 }
 
 private const val VISIBLE_ROWS = 4
-private val ROW_HEIGHT = 56.dp
+private val ROW_HEIGHT = 48.dp
 
 @Composable
 private fun ArrivalRow(a: ProjectedArrival, lineColors: Map<String, Long>, dark: Boolean) {
@@ -197,26 +216,33 @@ private fun ArrivalRow(a: ProjectedArrival, lineColors: Map<String, Long>, dark:
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         LineBadge(a.line, lineColors[a.line] ?: 0xFF888888)
-        Column(Modifier.weight(1f)) {
-            Text(a.destination, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            a.arrival.vehicleId?.let {
-                Text(
-                    stringResource(R.string.station_vehicle, it),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Text(
+            a.destination,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.clearAndSetSemantics { },
+        ) {
+            val heatColor = countdownColor(a.seconds, dark).toComposeColor()
+            if (a.seconds <= 30) {
+                Box(
+                    Modifier.size(7.dp).background(heatColor, CircleShape),
                 )
             }
-        }
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.clearAndSetSemantics { }) {
             Text(
                 label,
-                color = countdownColor(a.seconds, dark).toComposeColor(),
+                color = heatColor,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 20.sp,
             )
             if (unit != null) {
                 Text(
-                    unit, modifier = Modifier.padding(start = 3.dp, bottom = 2.dp),
+                    unit, modifier = Modifier.padding(start = 1.dp),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

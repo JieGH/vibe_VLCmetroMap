@@ -4,7 +4,7 @@ export default {
   common: {
     min: 'min',
     sec: 's',
-    due: 'Llega',
+    due: 'Llegando',
   },
   app: {
     openSidebar: 'Abrir menú',
@@ -94,7 +94,6 @@ export default {
     live: 'EN DIRECTO',
     memory: 'MEMORIA',
     closeAria: 'Cerrar panel de la estación',
-    vehicle: 'Vehículo n.º {{id}}',
     noLiveTrains: 'No hay trenes en directo llegando pronto.',
     nothingFurther: 'No hay más llegadas previstas por ahora.',
     laterArrivalsCaption: 'Próximas llegadas en {{station}}',
