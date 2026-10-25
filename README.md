@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://tangerine-panda-1aeea5.netlify.app">
-    <img src="https://img.shields.io/badge/Live%20Demo-Open%20the%20map-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Open the live map">
+  <a href="https://xarxa.net">
+    <img src="https://img.shields.io/badge/Live%20Demo-Open%20the%20map-00C7B7?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Open the live map">
   </a>
 </p>
 
@@ -18,16 +18,6 @@
   <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest">
     <img src="https://img.shields.io/badge/Android-Download%20the%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app">
   </a>
-</p>
-
-<p align="center">
-  <a href="https://app.netlify.com/sites/tangerine-panda-1aeea5/deploys">
-    <img src="https://api.netlify.com/api/v1/badges/a4a69dad-f39d-40ca-9f1c-317147d39bea/deploy-status" alt="Netlify deploy status">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache 2.0">
-  </a>
-  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-lightgrey.svg" alt="Platforms: iOS, Android and Web">
 </p>
 
 ---
@@ -81,7 +71,7 @@ npm test -- --run && npm run lint
 |---|---|
 | Web, dev | `npm run dev` (`npm run dev:phone` to open it from a phone on the same Wi-Fi) |
 | Self-hosted | `npm run build && npm run serve` (port 8080, LAN, no auth: trusted networks only) |
-| Public site | Netlify rebuilds on every push to `main` |
+| Public site | https://xarxa.net, on Cloudflare Workers (`wrangler.jsonc`; see [docs/hosting-cloudflare.md](docs/hosting-cloudflare.md)). The old Netlify address only shows a "we have moved" notice |
 | <a id="ios"></a>iOS | `npm run build` (also syncs iOS), then `npm run ios:open` and press Run in Xcode with your Apple ID as the team |
 | Android | `npm run android:sync`, then `npm run android:open` and press Run |
 

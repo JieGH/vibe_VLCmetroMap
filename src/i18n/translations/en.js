@@ -141,6 +141,13 @@ export default {
     releaseNotes: 'What is new in the app',
     done: 'Not now',
   },
+  movedNotice: {
+    title: "We have moved",
+    body: "Xarxa now lives at xarxa.net, with the live map, faster trains and the new look. This old address will stop working soon.",
+    bookmark: "Please update your bookmark or the link you shared.",
+    go: "Go to xarxa.net",
+    later: "Not now",
+  },
   welcomeScreen: {
     subtitle: 'Live Map & Real-time Arrivals',
   },

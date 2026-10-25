@@ -137,6 +137,13 @@ export default {
     releaseNotes: 'Novedades de la app',
     done: 'Ahora no',
   },
+  movedNotice: {
+    title: "Nos hemos mudado",
+    body: "Xarxa ahora está en xarxa.net, con el mapa en directo, trenes más rápidos y el nuevo diseño. Esta dirección antigua dejará de funcionar pronto.",
+    bookmark: "Actualiza tu marcador o el enlace que compartiste.",
+    go: "Ir a xarxa.net",
+    later: "Ahora no",
+  },
   welcomeScreen: {
     subtitle: 'Mapa en directo y llegadas en tiempo real',
   },

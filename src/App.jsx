@@ -12,6 +12,7 @@ import { COMMON_STOPS } from './utils/commonStops';
 import WelcomeScreen from './components/WelcomeScreen';
 import AppDownloadButton from './components/AppDownloadBanner';
 import LanguageToggle from './components/LanguageToggle';
+import MovedNotice from './components/MovedNotice';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
 import { locate } from './services/userLocation';
 import { createAutoLocator } from './services/autoLocate';
@@ -508,6 +509,9 @@ function App() {
         </div>
       </div>
 
+
+      {/* On a retired address (Netlify, workers.dev): ask the visitor to move to xarxa.net */}
+      {!showWelcome && <MovedNotice />}
 
       {/* Popular stops, and one chip per active Line filter */}
       {!searchFocused && (
