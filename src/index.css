@@ -7,9 +7,9 @@
   
   /* Theme Variables - Default Dark */
   --bg-base: #121212;
-  /* The panels float above the map, so they are a step lighter than it: a soft slate grey, not the map's near-black. */
-  --bg-panel: rgba(58, 63, 74, 0.94);
-  --bg-panel-solid: #3a3f4a;
+  /* The panels float above the map, so they are a step lighter than it: a deep blue-slate rather than grey. */
+  --bg-panel: rgba(43, 51, 71, 0.95);
+  --bg-panel-solid: #2b3347;
   --bg-hover: rgba(255, 255, 255, 0.10);
   --bg-hover-active: rgba(255, 255, 255, 0.18);
   --text-primary: #ffffff;
@@ -57,9 +57,9 @@ html {
 
 [data-theme='light'] {
   --bg-base: #f0f2f5;
-  /* A pale cool grey, a touch off white, so panels stand out against the pale map without going dark. */
-  --bg-panel: rgba(237, 240, 245, 0.96);
-  --bg-panel-solid: #edf0f5;
+  /* A pale blue-tinted white, a shade darker than white and less grey, so panels stand out against the pale map. */
+  --bg-panel: rgba(228, 236, 248, 0.96);
+  --bg-panel-solid: #e4ecf8;
   --bg-hover: rgba(15, 23, 42, 0.07);
   --bg-hover-active: rgba(15, 23, 42, 0.14);
   --text-primary: #121212;
