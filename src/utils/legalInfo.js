@@ -4,7 +4,7 @@
 // raw internal developer repository URLs.
 
 export const APP_LEGAL_INFO = {
-  name: 'Metro Valencia',
+  name: 'Xarxa',
   subtitle: 'Real-Time Transit Tracker',
   author: 'Jie Lei',
   year: '2026',
@@ -49,7 +49,7 @@ export const APP_LEGAL_INFO = {
 // Spanish (Spain) translation of the same legal metadata, mirroring
 // APP_LEGAL_INFO's shape exactly so AboutModal can pick either by language.
 export const APP_LEGAL_INFO_ES = {
-  name: 'Metro Valencia',
+  name: 'Xarxa',
   subtitle: 'Seguimiento en tiempo real',
   author: 'Jie Lei',
   year: '2026',
@@ -93,7 +93,7 @@ export const APP_LEGAL_INFO_ES = {
 
 // Valencian translation of the same legal metadata, same shape as APP_LEGAL_INFO.
 export const APP_LEGAL_INFO_CA = {
-  name: 'Metro Valencia',
+  name: 'Xarxa',
   subtitle: 'Seguiment en temps real',
   author: 'Jie Lei',
   year: '2026',

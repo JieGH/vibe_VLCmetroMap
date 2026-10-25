@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
 import { isAndroid } from '../utils/platform';
+import AppBadge from './AppBadge';
 import {
   WELCOME_MIN_HOLD_MS,
   WELCOME_MAX_HOLD_MS,
@@ -67,23 +68,7 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
     >
       <div className="welcome-screen-content">
         <div className="welcome-screen-logo-wrap">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 64 64"
-            width="88"
-            height="88"
-            className="welcome-screen-logo"
-            aria-hidden="true"
-          >
-            <rect width="64" height="64" rx="16" fill="#1e1e2a" />
-            <g fill="none" strokeLinecap="round" strokeWidth="7.5">
-              <path stroke="#E2001A" d="M11 53 L 53 11" />
-              <path stroke="#FFD100" d="M9 32 H 55" />
-              <path stroke="#00994D" d="M11 11 L 53 53" />
-            </g>
-            <circle cx="32" cy="32" r="10" fill="#1e1e2a" />
-            <circle cx="32" cy="32" r="6.5" fill="#fff" />
-          </svg>
+          <AppBadge size={88} className="welcome-screen-logo" />
         </div>
         <h1 className="welcome-screen-title">Xarxa</h1>
         <p className="welcome-screen-subtitle">{t('welcomeScreen.subtitle')}</p>

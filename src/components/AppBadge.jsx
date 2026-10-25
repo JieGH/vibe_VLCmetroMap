@@ -4,14 +4,15 @@ import React from 'react';
 // sidebar and About headers.
 // `bare` drops the dark tile and draws the mark directly on whatever is behind it (the centre dot then follows the
 // text colour so it shows on both themes).
-const AppBadge = ({ size = 40, bare = false }) => (
+const AppBadge = ({ size = 40, bare = false, className = '', style = {} }) => (
   <svg
     width={size}
     height={size}
     viewBox="22 22 64 64"
     role="img"
     aria-hidden="true"
-    style={{ borderRadius: size * 0.28, background: bare ? 'transparent' : '#1D1D29', flexShrink: 0, display: 'block' }}
+    className={className}
+    style={{ borderRadius: size * 0.28, background: bare ? 'transparent' : '#1D1D29', flexShrink: 0, display: 'block', ...style }}
   >
     <g strokeWidth="6.9" strokeLinecap="round" fill="none">
       <path stroke="#00A862" d="M45.06 45.06L34.65 34.65" />

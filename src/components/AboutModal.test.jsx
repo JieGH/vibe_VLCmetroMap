@@ -15,7 +15,7 @@ describe('AboutModal component', () => {
     expect(html).toBeTruthy();
 
     // App identity and branding
-    expect(html).toContain('Metro Valencia');
+    expect(html).toContain('Xarxa');
     expect(html).toContain('Real-Time Transit Tracker');
 
     // Copyright and all-rights-reserved license terms

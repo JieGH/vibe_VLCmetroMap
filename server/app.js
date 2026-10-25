@@ -111,6 +111,29 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     res.end(upstream.body);
   }
 
+  function handleFeedback(req, res) {
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return sendText(res, 405, '{"error":"method not allowed"}');
+    }
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 64 * 1024) req.destroy();
+    });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        if (!payload.message || typeof payload.message !== 'string' || !payload.message.trim()) {
+          return sendText(res, 400, '{"error":"message is required"}');
+        }
+        return sendText(res, 200, JSON.stringify({ success: true, message: 'Feedback received' }));
+      } catch {
+        return sendText(res, 400, '{"error":"invalid json"}');
+      }
+    });
+  }
+
   function serveAsset(req, res, asset, acceptEncoding) {
     const head = req.method === 'HEAD';
     const base = { 'Content-Type': asset.type, 'Cache-Control': asset.cacheControl, 'Accept-Ranges': 'bytes' };
@@ -162,6 +185,9 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     }
 
     if (pathname.startsWith('/api/')) {
+      if (pathname === '/api/feedback') {
+        return void handleFeedback(req, res);
+      }
       const id = STATION_ROUTE.exec(pathname)?.[1];
       if (!id) return sendText(res, 404, '{"error":"not found"}');
       return void proxyPrevision(req, res, id).catch(() => {

@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Info, LayoutDashboard, Mail, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronLeft, ChevronRight, Info, LayoutDashboard, Mail, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
 import { FONT_SIZE_CONFIG, FONT_SIZES } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation, SUPPORTED_LANGUAGES, languageCode } from '../i18n';
 import { isAndroid } from '../utils/platform';
+import { Capacitor } from '@capacitor/core';
 import AppBadge, { VersionPill } from './AppBadge';
 import { AUTHOR_NAME, CONTACT_EMAIL } from '../utils/contact';
+import { AndroidIcon, AppDownloadSheet } from './AppDownloadBanner';
+import { isIosDevice } from '../utils/appDownload';
 
 // Icon-only buttons: sun, moon, and a half-sun-half-moon for "follow the phone".
 const THEME_MODES = [
@@ -37,12 +41,24 @@ const Sidebar = ({
   trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
   onOpenDashboard,
+  onOpenAppDownload,
   fontSize = 'default',
   onSelectFontSize,
   themeMode = 'system',
   onSelectTheme,
 }) => {
   const isMobile = useIsMobile();
+  const [internalDownloadOpen, setInternalDownloadOpen] = useState(false);
+  const offerable = typeof navigator !== 'undefined' && !Capacitor.isNativePlatform() && !isAndroid();
+  const ios = typeof navigator !== 'undefined' && isIosDevice(navigator.userAgent, navigator.maxTouchPoints);
+
+  const handleOpenDownload = () => {
+    if (onOpenAppDownload) {
+      onOpenAppDownload();
+    } else {
+      setInternalDownloadOpen(true);
+    }
+  };
   // On Android the sidebar is a modal navigation drawer; say so to TalkBack.
   const drawerAria = isAndroid()
     ? { role: 'dialog', 'aria-modal': isOpen ? 'true' : undefined, 'aria-label': 'Xarxa', 'aria-hidden': isOpen ? undefined : 'true' }
@@ -228,6 +244,58 @@ const Sidebar = ({
               <LayoutDashboard size={16} aria-hidden="true" />
               {t('sidebar.dashboard')}
             </button>
+          )}
+
+          {offerable && (
+            <button
+              type="button"
+              onClick={handleOpenDownload}
+              className="sidebar-android-btn"
+              aria-label={t('sidebar.androidAppAria')}
+              title={t('sidebar.androidApp')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-hover)',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'rgba(61, 220, 132, 0.12)',
+                  flexShrink: 0,
+                }}
+              >
+                <AndroidIcon size={20} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>
+                  {t('sidebar.androidApp')}
+                </div>
+                <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: '2px' }}>
+                  {t('sidebar.androidAppDesc')}
+                </div>
+              </div>
+              <ChevronRight size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} aria-hidden="true" />
+            </button>
+          )}
+
+          {internalDownloadOpen && createPortal(
+            <AppDownloadSheet ios={ios} onClose={() => setInternalDownloadOpen(false)} />,
+            document.body
           )}
 
           {/* Live Stats & Footer */}

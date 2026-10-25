@@ -4,11 +4,13 @@
 // FGV answers Cloudflare's edge (tested from the Madrid colo), so METRO_SOURCE
 // is `fgv` in wrangler.jsonc: FGV only, hedged against its hung requests.
 import proxy from '../netlify/functions/metro-proxy.js';
+import feedback from '../netlify/functions/feedback.js';
 
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     if (pathname.startsWith('/api/metro/')) return proxy(request);
+    if (pathname === '/api/feedback') return feedback(request);
     return env.ASSETS.fetch(request);
   },
 };

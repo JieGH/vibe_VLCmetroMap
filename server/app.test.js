@@ -344,3 +344,32 @@ describe('FGV prevision proxy', () => {
     expect(res.status).toBe(405);
   });
 });
+
+describe('feedback API', () => {
+  it('accepts POST /api/feedback with a valid message and returns 200', async () => {
+    const res = await fetch(`${base}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Great app!', email: 'user@example.com' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it('rejects POST /api/feedback when message is missing or empty', async () => {
+    const res = await fetch(`${base}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '   ' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('message is required');
+  });
+
+  it('rejects non-POST methods with 405', async () => {
+    const res = await fetch(`${base}/api/feedback`, { method: 'GET' });
+    expect(res.status).toBe(405);
+  });
+});

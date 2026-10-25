@@ -99,7 +99,6 @@ describe('Sidebar component', () => {
 describe('Sidebar appearance', () => {
   it('renders Auto/Light/Dark with the selected mode pressed and no lines list', async () => {
     const { renderToStaticMarkup } = await import('react-dom/server');
-    const React = (await import('react')).default;
     const SidebarMod = (await import('./Sidebar')).default;
     const html = renderToStaticMarkup(
       <SidebarMod isOpen onToggleSidebar={() => {}} themeMode="dark" />
@@ -127,5 +126,19 @@ describe('Sidebar settings row', () => {
     expect(html).toContain('>EN<');
     expect(html).toContain('>ES<');
     expect(html).toContain('>VAL<');
+  });
+});
+
+describe('Sidebar Android app option', () => {
+  it('renders Android option with icon, title, and brief description', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const SidebarMod = (await import('./Sidebar')).default;
+    const html = renderToStaticMarkup(
+      <SidebarMod isOpen onToggleSidebar={() => {}} />
+    );
+    expect(html).toContain('sidebar-android-btn');
+    expect(html).toContain('Android App');
+    expect(html).toContain('Offline vector map &amp; live departures');
+    expect(html).toContain('<svg');
   });
 });

@@ -25,7 +25,40 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(buildDate),
     __GIT_SHA__: JSON.stringify(gitSha),
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'feedback-mock-api',
+      configureServer(server) {
+        server.middlewares.use('/api/feedback', (req, res) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({ error: 'method not allowed' }));
+          }
+          let body = '';
+          req.on('data', (chunk) => { body += chunk; });
+          req.on('end', () => {
+            try {
+              const data = JSON.parse(body || '{}');
+              if (!data.message || !data.message.trim()) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify({ error: 'message is required' }));
+              }
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, message: 'Feedback received' }));
+            } catch {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'invalid json' }));
+            }
+          });
+        });
+      },
+    },
+  ],
   test: {
     // Agent worktrees live under .claude/worktrees with their own copy of
     // every test; without this `npm test` runs them all as well.

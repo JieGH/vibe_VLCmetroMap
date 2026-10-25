@@ -10,7 +10,9 @@ import HubChips from './components/HubChips';
 import WalkBanner from './components/WalkBanner';
 import { COMMON_STOPS } from './utils/commonStops';
 import WelcomeScreen from './components/WelcomeScreen';
-import AppDownloadButton from './components/AppDownloadBanner';
+import { AppDownloadSheet } from './components/AppDownloadBanner';
+import { isIosDevice } from './utils/appDownload';
+import FeedbackModal from './components/FeedbackModal';
 import LanguageToggle from './components/LanguageToggle';
 import MovedNotice from './components/MovedNotice';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
@@ -27,7 +29,7 @@ import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, CircleHelp } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import './index.css';
 
@@ -55,6 +57,8 @@ function App() {
   const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isAppDownloadOpen, setIsAppDownloadOpen] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
   const selectedStationRef = useRef(selectedStation);
   useEffect(() => {
@@ -372,6 +376,8 @@ function App() {
   const backStateRef = useRef({});
   backStateRef.current = {
     rationale,
+    feedbackOpen: isFeedbackOpen,
+    downloadOpen: isAppDownloadOpen,
     aboutOpen: isAboutOpen,
     welcomeVisible: showWelcome,
     dashboardMode: mode === 'dashboard',
@@ -391,6 +397,8 @@ function App() {
       );
       switch (resolveBackAction({ ...st, rationaleOpen: Boolean(st.rationale), searchFocused })) {
         case 'decline-rationale': st.rationale.resolve(false); setRationale(null); break;
+        case 'close-feedback': setIsFeedbackOpen(false); break;
+        case 'close-download': setIsAppDownloadOpen(false); break;
         case 'close-about': setIsAboutOpen(false); break;
         case 'dismiss-welcome': setShowWelcome(false); break;
         case 'exit-dashboard': selectModeRef.current('map'); break;
@@ -485,6 +493,7 @@ function App() {
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenDashboard={() => selectMode('dashboard')}
+        onOpenAppDownload={() => setIsAppDownloadOpen(true)}
         fontSize={fontSize}
         onSelectFontSize={handleSelectFontSize}
         themeMode={themeMode}
@@ -523,7 +532,29 @@ function App() {
               ? <Sun size={18} color="#FFD100" />
               : <Moon size={18} color="#004D99" />}
           </button>
-          <AppDownloadButton className="topbar-icon-btn" />
+          <div className="feedback-btn-anchor">
+            <button
+              type="button"
+              onClick={() => setIsFeedbackOpen(true)}
+              className="topbar-icon-btn feedback-trigger-btn"
+              title={t('feedback.buttonTitle')}
+              aria-label={t('feedback.buttonTitle')}
+              aria-haspopup="dialog"
+            >
+              <CircleHelp size={18} />
+            </button>
+            {!searchFocused && (
+              <button
+                type="button"
+                onClick={() => setIsFeedbackOpen(true)}
+                className="feedback-thought-bubble"
+                title={t('feedback.buttonTitle')}
+                aria-label={t('feedback.buttonTitle')}
+              >
+                <span>{t('feedback.bubbleText')}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -621,6 +652,20 @@ function App() {
         <LocationRationale
           onAllow={() => answerRationale(true)}
           onDecline={() => answerRationale(false)}
+        />
+      )}
+
+      {/* Feedback & Support Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
+
+      {/* App Download Sheet */}
+      {isAppDownloadOpen && (
+        <AppDownloadSheet
+          ios={typeof navigator !== 'undefined' && isIosDevice(navigator.userAgent, navigator.maxTouchPoints)}
+          onClose={() => setIsAppDownloadOpen(false)}
         />
       )}
 

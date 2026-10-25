@@ -34,17 +34,14 @@ describe('WelcomeScreen component', () => {
     expect(html).toContain('Xarxa');
     expect(html).toContain('Live Map &amp; Real-time Arrivals');
 
-    // Brand mark SVG colors (Line 3 red, Line 1 yellow, Line 5 green)
-    expect(html).toContain('#E2001A');
-    expect(html).toContain('#FFD100');
-    expect(html).toContain('#00994D');
+    // Brand mark SVG colors (Xarxa launcher badge mark)
+    expect(html).toContain('#00A862');
+    expect(html).toContain('#EB2323');
+    expect(html).toContain('#FFD800');
 
-    // Rounded icon box bounding rectangle
-    expect(html).toContain('<rect');
-
-    // Central station ring and core
-    expect(html).toContain('r="10"');
-    expect(html).toContain('r="6.5"');
+    // Central node
+    expect(html).toContain('r="6"');
+    expect(html).toContain('cx="54"');
   });
 });
 

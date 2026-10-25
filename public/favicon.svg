@@ -1,17 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Metrovalencia live map">
-  <!-- An interchange: three Lines crossing, one Station drawn on top of them.
-       The palette is this network's own (src/data/line_colors_from_image.json) —
-       line 3 red, line 1 yellow, line 5 green — rather than Metrovalencia's
-       official mark, which is a trademark and not ours to ship.
-       The Station is drawn the way the map itself draws one: a white centre in a
-       dark ring. The ring is kept small deliberately, so the Lines read as
-       passing through the Station rather than stopping at it. -->
-  <rect width="64" height="64" rx="14" fill="#16161f"/>
-  <g fill="none" stroke-linecap="round" stroke-width="7.5">
-    <path stroke="#E2001A" d="M11 53 L 53 11"/>
-    <path stroke="#FFD100" d="M9 32 H 55"/>
-    <path stroke="#00994D" d="M11 11 L 53 53"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="22 22 64 64" width="64" height="64" role="img" aria-label="Xarxa">
+  <rect x="22" y="22" width="64" height="64" rx="18" fill="#1D1D29"/>
+  <g stroke-width="6.9" stroke-linecap="round" fill="none">
+    <path stroke="#00A862" d="M45.06 45.06L34.65 34.65" />
+    <path stroke="#EB2323" d="M62.94 45.06L73.35 34.65" />
+    <path stroke="#EB2323" d="M45.06 62.94L34.65 73.35" />
+    <path stroke="#00A862" d="M62.94 62.94L73.35 73.35" />
+    <path stroke="#FFD800" d="M32.7 54L41.4 54" />
+    <path stroke="#FFD800" d="M66.6 54L75.3 54" />
   </g>
-  <circle cx="32" cy="32" r="10" fill="#16161f"/>
-  <circle cx="32" cy="32" r="6.5" fill="#fff"/>
+  <circle cx="54" cy="54" r="6" fill="#fff" />
 </svg>

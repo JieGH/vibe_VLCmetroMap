@@ -8,6 +8,8 @@ describe('resolveBackAction', () => {
   });
   it('closes each layer on its own', () => {
     expect(resolveBackAction({ rationaleOpen: true })).toBe('decline-rationale');
+    expect(resolveBackAction({ feedbackOpen: true })).toBe('close-feedback');
+    expect(resolveBackAction({ downloadOpen: true })).toBe('close-download');
     expect(resolveBackAction({ dashboardMode: true })).toBe('exit-dashboard');
     expect(resolveBackAction({ aboutOpen: true })).toBe('close-about');
     expect(resolveBackAction({ welcomeVisible: true })).toBe('dismiss-welcome');
@@ -18,18 +20,18 @@ describe('resolveBackAction', () => {
   });
   it('picks the top-most layer when several are open', () => {
     const all = {
-      rationaleOpen: true, dashboardMode: true, aboutOpen: true, welcomeVisible: true, searchFocused: true,
+      rationaleOpen: true, feedbackOpen: true, downloadOpen: true, dashboardMode: true, aboutOpen: true, welcomeVisible: true, searchFocused: true,
       sidebarOpen: true, stationOpen: true, lineFilterActive: true,
     };
     const order = [];
     const state = { ...all };
-    const flags = ['rationaleOpen', 'aboutOpen', 'welcomeVisible', 'dashboardMode', 'searchFocused', 'sidebarOpen', 'stationOpen', 'lineFilterActive'];
+    const flags = ['rationaleOpen', 'feedbackOpen', 'downloadOpen', 'aboutOpen', 'welcomeVisible', 'dashboardMode', 'searchFocused', 'sidebarOpen', 'stationOpen', 'lineFilterActive'];
     for (const f of flags) {
       order.push(resolveBackAction(state));
       state[f] = false;
     }
     expect(order).toEqual([
-      'decline-rationale', 'close-about', 'dismiss-welcome', 'exit-dashboard', 'close-search', 'close-sidebar', 'close-station', 'clear-filter',
+      'decline-rationale', 'close-feedback', 'close-download', 'close-about', 'dismiss-welcome', 'exit-dashboard', 'close-search', 'close-sidebar', 'close-station', 'clear-filter',
     ]);
     expect(resolveBackAction(state)).toBe('exit');
   });

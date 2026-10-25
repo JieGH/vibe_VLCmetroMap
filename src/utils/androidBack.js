@@ -3,6 +3,8 @@
 // time and only leaves the app when nothing is left to close.
 export const BACK_PRIORITY = [
   ['rationaleOpen', 'decline-rationale'],
+  ['feedbackOpen', 'close-feedback'],
+  ['downloadOpen', 'close-download'],
   ['aboutOpen', 'close-about'],
   ['welcomeVisible', 'dismiss-welcome'],
   ['dashboardMode', 'exit-dashboard'],

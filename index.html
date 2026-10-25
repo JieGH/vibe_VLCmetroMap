@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Metrovalencia Live Map</title>
+    <title>Xarxa · Live Map &amp; Real-time Arrivals</title>
     <link rel="modulepreload" href="/vendor/maplibre/maplibre-gl-worker.mjs" />
     <link rel="modulepreload" href="/vendor/maplibre/maplibre-gl-shared.mjs" />
   </head>
@@ -12,15 +12,17 @@
     <div id="root">
       <div id="initial-splash" style="position:fixed;inset:0;background:#16161f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#ffffff;z-index:9999;">
         <div style="width:88px;height:88px;margin-bottom:20px;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.4));">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="88" height="88" aria-hidden="true">
-            <rect width="64" height="64" rx="16" fill="#1e1e2a" />
-            <g fill="none" stroke-linecap="round" stroke-width="7.5">
-              <path stroke="#E2001A" d="M11 53 L 53 11" />
-              <path stroke="#FFD100" d="M9 32 H 55" />
-              <path stroke="#00994D" d="M11 11 L 53 53" />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="22 22 64 64" width="88" height="88" aria-hidden="true">
+            <rect x="22" y="22" width="64" height="64" rx="18" fill="#1e1e2a" />
+            <g stroke-width="6.9" stroke-linecap="round" fill="none">
+              <path stroke="#00A862" d="M45.06 45.06L34.65 34.65" />
+              <path stroke="#EB2323" d="M62.94 45.06L73.35 34.65" />
+              <path stroke="#EB2323" d="M45.06 62.94L34.65 73.35" />
+              <path stroke="#00A862" d="M62.94 62.94L73.35 73.35" />
+              <path stroke="#FFD800" d="M32.7 54L41.4 54" />
+              <path stroke="#FFD800" d="M66.6 54L75.3 54" />
             </g>
-            <circle cx="32" cy="32" r="10" fill="#1e1e2a" />
-            <circle cx="32" cy="32" r="6.5" fill="#fff" />
+            <circle cx="54" cy="54" r="6" fill="#fff" />
           </svg>
         </div>
         <h1 style="font-size:26px;font-weight:700;letter-spacing:-0.02em;color:#ffffff;margin:0 0 6px 0;">Xarxa</h1>
