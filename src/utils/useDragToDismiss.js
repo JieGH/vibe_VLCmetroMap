@@ -1,4 +1,41 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+
+/**
+ * Coalesces high-frequency updates (e.g. 120Hz/240Hz touch events)
+ * to fire at most once per animation frame.
+ *
+ * @param {(val: any) => void} callback
+ * @returns {{ schedule: (val: any) => void, cancel: () => void }}
+ */
+export const createRafCoalescer = (callback) => {
+  let frameId = null;
+  let lastValue = null;
+
+  const schedule = (val) => {
+    lastValue = val;
+    if (frameId === null) {
+      if (typeof requestAnimationFrame !== 'undefined') {
+        frameId = requestAnimationFrame(() => {
+          frameId = null;
+          callback(lastValue);
+        });
+      } else {
+        callback(lastValue);
+      }
+    }
+  };
+
+  const cancel = () => {
+    if (frameId !== null) {
+      if (typeof cancelAnimationFrame !== 'undefined') {
+        cancelAnimationFrame(frameId);
+      }
+      frameId = null;
+    }
+  };
+
+  return { schedule, cancel };
+};
 
 /**
  * Calculates the downward drag offset in pixels.
@@ -59,6 +96,17 @@ export const useDragToDismiss = ({
   const [isDragging, setIsDragging] = useState(false);
   const startYRef = useRef(0);
   const pointerIdRef = useRef(null);
+  const coalescerRef = useRef(null);
+
+  if (!coalescerRef.current) {
+    coalescerRef.current = createRafCoalescer(setDragOffset);
+  }
+
+  useEffect(() => {
+    return () => {
+      coalescerRef.current?.cancel();
+    };
+  }, []);
 
   const handlePointerDown = useCallback((e) => {
     if (!enabled) return;
@@ -79,11 +127,12 @@ export const useDragToDismiss = ({
   const handlePointerMove = useCallback((e) => {
     if (!isDragging) return;
     const offset = calculateDragOffset(startYRef.current, e.clientY);
-    setDragOffset(offset);
+    coalescerRef.current.schedule(offset);
   }, [isDragging]);
 
   const handlePointerUp = useCallback((e) => {
     if (!isDragging) return;
+    coalescerRef.current.cancel();
     const offset = calculateDragOffset(startYRef.current, e.clientY);
 
     try {
@@ -106,6 +155,7 @@ export const useDragToDismiss = ({
   }, [isDragging, threshold, onDismiss]);
 
   const handlePointerCancel = useCallback(() => {
+    coalescerRef.current.cancel();
     setIsDragging(false);
     setDragOffset(0);
     pointerIdRef.current = null;

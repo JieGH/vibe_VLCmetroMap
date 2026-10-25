@@ -64,4 +64,56 @@ describe('useDragToDismiss helpers', () => {
       expect(style.transition).toContain('0.25s');
     });
   });
+
+  describe('createRafCoalescer', () => {
+    it('coalesces multiple rapid updates into a single animation frame tick', async () => {
+      let rAfCallback = null;
+      globalThis.requestAnimationFrame = (cb) => {
+        rAfCallback = cb;
+        return 123;
+      };
+      globalThis.cancelAnimationFrame = () => {
+        rAfCallback = null;
+      };
+
+      const { createRafCoalescer } = await import('./useDragToDismiss');
+      const calls = [];
+      const coalescer = createRafCoalescer((val) => calls.push(val));
+
+      coalescer.schedule(10);
+      coalescer.schedule(20);
+      coalescer.schedule(30);
+
+      expect(calls).toEqual([]);
+      rAfCallback?.();
+      expect(calls).toEqual([30]);
+
+      delete globalThis.requestAnimationFrame;
+      delete globalThis.cancelAnimationFrame;
+    });
+
+    it('cancels pending frame cleanly', async () => {
+      let rAfCallback = null;
+      globalThis.requestAnimationFrame = (cb) => {
+        rAfCallback = cb;
+        return 123;
+      };
+      globalThis.cancelAnimationFrame = () => {
+        rAfCallback = null;
+      };
+
+      const { createRafCoalescer } = await import('./useDragToDismiss');
+      const calls = [];
+      const coalescer = createRafCoalescer((val) => calls.push(val));
+
+      coalescer.schedule(50);
+      coalescer.cancel();
+
+      rAfCallback?.();
+      expect(calls).toEqual([]);
+
+      delete globalThis.requestAnimationFrame;
+      delete globalThis.cancelAnimationFrame;
+    });
+  });
 });

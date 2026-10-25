@@ -537,13 +537,6 @@ const styleFor = (theme) => (OFFLINE_BASEMAP_AVAILABLE
 const vehicleOpacity = (v, selectedStation) =>
   dimmedVehicleOpacity(v.isLive ? (v.positionConfidence ?? 1) : 0.55, v.line, selectedStation).toFixed(2);
 
-// The CSS `animation` a vehicle marker is drawn with. No Station selected
-// means no pulse anywhere; once one is, only a Vehicle on a Line in that
-// Station's Station Chain gets it — everything else, and every Simulated
-// Train regardless of selection, stays static.
-const vehicleAnimation = (v, selectedStation) =>
-  (vehicleShouldPulse(v, selectedStation) ? 'vehiclePulse 2s ease-in-out infinite' : 'none');
-
 // Says in the reader's words — not the model's — why a marker is drawn faint,
 // covering both causes: how far the walk had to reach, and how long since the
 // API last confirmed the train. Takes `lang` rather than reading it from a
@@ -584,8 +577,6 @@ const stationBorderColor = (st) => {
 // which one you meant. Resolving the tap to the *nearest* Station within the
 // radius settles it by distance instead, which is the thing the finger was
 // actually aiming at.
-// Vehicle loop cadence (ms between redraws).
-const FRAME_INTERVAL_MS = 33;
 const TAP_RADIUS_PX = 22;
 
 // How close framing the viewer against their Nearest Station is allowed to get.
@@ -742,6 +733,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       } else {
         el.style.visibility = '';
         el.style.pointerEvents = '';
+        el.style.transition = 'none';
         el.style.transform = `scale(${(ranks ? Math.max(dotScale(zoom), 0.7) : dotScale(zoom)).toFixed(3)})`;
       }
     });
@@ -754,6 +746,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       } else {
         el.style.visibility = '';
         el.style.pointerEvents = '';
+        el.style.transition = 'none';
         el.style.transform = `scale(${trainScale(zoom).toFixed(3)})`;
       }
     });
@@ -831,7 +824,6 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         background:${isDark ? '#1a1a2e' : '#ffffff'};
         border:${isHovered ? '3px' : '2px'} solid ${stationBorderColor(st)};
         box-shadow:0 2px 6px rgba(0,0,0,.5);
-        transition:transform .1s ease;
         transform: scale(${drawnScale.toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
         pointer-events: ${isHidden ? 'none' : ''};
@@ -842,8 +834,14 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       wrapper.title = st.properties.name;
       stInnerElemsRef.current.push(inner);
 
-      wrapper.onmouseenter = () => { inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.5).toFixed(3)})`; };
-      wrapper.onmouseleave = () => { inner.style.transform = `scale(${dotScale(zoomValueRef.current).toFixed(3)})`; };
+      wrapper.onmouseenter = () => {
+        inner.style.transition = 'transform .1s ease';
+        inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.5).toFixed(3)})`;
+      };
+      wrapper.onmouseleave = () => {
+        inner.style.transition = 'transform .1s ease';
+        inner.style.transform = `scale(${dotScale(zoomValueRef.current).toFixed(3)})`;
+      };
       wrapper.onclick = (e) => {
         e.stopPropagation();
         selectStRef.current(st);
@@ -866,6 +864,8 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
   };
 
   // ── Initialize vehicle animation loop ──────────────────────────────────────
+  // Runs on display V-Sync (native requestAnimationFrame), matching 60Hz and 120Hz
+  // ProMotion screens with delta-time vehicle interpolation and zero cadence judder.
   const initVehicleLoop = (map) => {
     stopAnimation();
     clearVehicleMarkers();
@@ -888,22 +888,21 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       const currentScale = zoomScaleRef.current;
       const isHidden = currentScale < 0.3;
       
+      const isPulsing = vehicleShouldPulse(v, selectedStationRef.current);
+      inner.className = `ml-vehicle-marker-inner${isPulsing ? ' pulsing' : ''}`;
       inner.innerHTML = `<span style="pointer-events:none">L${v.line}</span>`;
       inner.style.cssText = `
         width:28px; height:28px; border-radius:50%;
         background:${color};
         border:2px solid rgba(255,255,255,0.9);
-        box-shadow:0 0 0 0 ${color};
         display:flex; align-items:center; justify-content:center;
         color:#fff; font-size:10px; font-weight:800;
         opacity:${vehicleOpacity(v, selectedStationRef.current)};
-        animation: ${vehicleAnimation(v, selectedStationRef.current)};
         box-sizing:border-box; position:relative;
         transform: scale(${trainScale(zoomValueRef.current).toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
         pointer-events: ${isHidden ? 'none' : ''};
         transform-origin: center center;
-        transition: transform .1s ease;
       `;
       wrapper.appendChild(inner);
       vehInnerElemsRef.current.push(inner);
@@ -921,21 +920,14 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         lng: v.coordinates[0],
         lat: v.coordinates[1],
         opacity: vehicleOpacity(v, selectedStationRef.current),
-        animation: vehicleAnimation(v, selectedStationRef.current),
+        isPulsing,
       });
     };
 
     visible.forEach(createVehicleMarker);
 
-    let lastFrameAt = 0;
     const animate = () => {
       const now = Date.now();
-      // ~30 fps is plenty for a train crawling along a track.
-      if (now - lastFrameAt < FRAME_INTERVAL_MS) {
-        animFrameRef.current = requestAnimationFrame(animate);
-        return;
-      }
-      lastFrameAt = now;
       const currentVehicles = liveNow(now);
       // Forget render state for trains that are gone (getAllVehicles used to).
       const alive = new Set(currentVehicles.map(v => v.id));
@@ -978,10 +970,10 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
             existing.opacity = opacity;
             existing.inner.style.opacity = opacity;
           }
-          const animation = vehicleAnimation(v, selectedStationRef.current);
-          if (existing.animation !== animation) {
-            existing.animation = animation;
-            existing.inner.style.animation = animation;
+          const isPulsing = vehicleShouldPulse(v, selectedStationRef.current);
+          if (existing.isPulsing !== isPulsing) {
+            existing.isPulsing = isPulsing;
+            existing.inner.classList.toggle('pulsing', isPulsing);
           }
         } else {
           // The API can return a different set of vehicle IDs after a poll.
