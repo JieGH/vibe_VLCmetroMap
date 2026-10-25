@@ -167,7 +167,9 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
   console.log(`  fonts — ${mb(glyphBytes)} across ${FONTSTACKS.length * RANGES.length} files`);
 
   let spriteBytes = 0;
-  for (const sprite of SPRITES) {
+  // MapLibre asks for `<name>@2x` on dense screens and does not fall back to the 1x sheet; a host that answers
+  // the missing file with its HTML fallback then breaks icon loading ("train_station could not be loaded").
+  for (const sprite of SPRITES.flatMap((name) => [name, `${name}@2x`])) {
     for (const extension of ['json', 'png']) {
       const dest = path.join(outDir, 'sprites', `${sprite}.${extension}`);
       if (fs.existsSync(dest) && fs.statSync(dest).size > 0) {
