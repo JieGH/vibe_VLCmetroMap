@@ -220,7 +220,7 @@ fun SearchSuggestions(
         Row(Modifier.padding(horizontal = 6.dp, vertical = 8.dp)) {
             Column(Modifier.weight(1f)) {
                 SectionHeader(stringResource(R.string.search_popular))
-                hubs.forEach { st ->
+                hubs.take(6).forEach { st ->
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(RoundedCornerShape(12.dp))
                             .clickable { onStation(st) }.padding(horizontal = 10.dp, vertical = 2.dp),
