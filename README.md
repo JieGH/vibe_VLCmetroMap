@@ -1,15 +1,21 @@
-<p>
-  <img src="public/favicon.svg" width="64" height="64" align="left" alt="">
-  <strong>Xarxa</strong> — Where every Valencia metro train is, right now, and when the next one reaches you.<br>
-  <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
-  &nbsp;
-  <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
-  <br clear="left">
-</p>
-
-<p align="center">
-  <img src="docs/demo-light.gif" width="760" alt="Fast light-mode screen recording of Xarxa: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network, jumps to Àngel Guimerà, searches Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user location">
-</p>
+<table>
+  <tr>
+    <td valign="middle" width="55%">
+      <img src="public/favicon.svg" width="72" height="72" alt="">
+      <h1>Xarxa</h1>
+      <p>Where every Valencia metro train is, right now, and when the next one reaches you.</p>
+      <p>
+        <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
+      </p>
+      <p>
+        <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
+      </p>
+    </td>
+    <td valign="middle" align="center" width="45%">
+      <img src="docs/demo-phone.gif" width="300" alt="Phone screen recording of Xarxa: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network, jumps to Àngel Guimerà, searches Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user location">
+    </td>
+  </tr>
+</table>
 
 ---
 
