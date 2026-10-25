@@ -249,6 +249,10 @@ fun XarxaMap(
                 val json = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                     trainsJson(trainsNow(), colorsNow, filterNow, selectedNow)
                 }
+                // A theme change swaps the style under this loop; `s` is stale until styleVersion bumps and the effect
+                // restarts. Checked after the off-thread work, which is where the swap can land.
+                val live = map?.style
+                if (live !== s || !live.isFullyLoaded) { delay(100L); continue }
                 src.setGeoJson(json)
                 if (json.length > 70) Perf.once("first_trains")
                 // vehiclePulse: a 2 s ring that grows and fades, only while a Station is selected.

@@ -3,7 +3,6 @@ package com.jielei.xarxa.nativeapp.ui
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,21 +18,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,24 +73,25 @@ fun XarxaDrawer(
             HorizontalDivider(Modifier.padding(horizontal = 28.dp))
 
             val lang = LocalConfiguration.current.locales[0].language
-            val langs = listOf("en" to "English", "es" to "Español")
-            SettingRow(
+            val langs = listOf("en" to "English", "es" to "Español", "ca" to "Valencià")
+            SettingToggle(
                 icon = Icons.Filled.Language,
                 label = stringResource(R.string.drawer_language),
-                value = langs.firstOrNull { it.first == lang }?.second ?: langs[0].second,
                 options = langs.map { it.second },
-                selectedIndex = langs.indexOfFirst { it.first == lang },
-                onPick = { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(langs[it].first)) },
+                selectedIndex = langs.indexOfFirst { it.first == lang }.coerceAtLeast(0),
+                onPick = {
+                    val tag = if (langs[it].first == "ca") "ca-ES-valencia" else langs[it].first
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+                },
             )
             val modes = listOf(
                 ThemeMode.System to stringResource(R.string.theme_system),
                 ThemeMode.Light to stringResource(R.string.theme_light),
                 ThemeMode.Dark to stringResource(R.string.theme_dark),
             )
-            SettingRow(
+            SettingToggle(
                 icon = Icons.Filled.DarkMode,
                 label = stringResource(R.string.drawer_theme),
-                value = modes.first { it.first == themeMode }.second,
                 options = modes.map { it.second },
                 selectedIndex = modes.indexOfFirst { it.first == themeMode },
                 onPick = { onTheme(modes[it].first) },
@@ -113,34 +110,28 @@ fun XarxaDrawer(
     }
 }
 
-/** One settings line: icon, label, current value; tapping opens a menu of the options. */
+/** One setting: icon and label, then a segmented toggle with every option visible. */
 @Composable
-private fun SettingRow(
+private fun SettingToggle(
     icon: ImageVector,
     label: String,
-    value: String,
     options: List<String>,
     selectedIndex: Int,
     onPick: (Int) -> Unit,
 ) {
-    var open by remember { mutableStateOf(false) }
-    Box(Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(28.dp))
-                .clickable { open = true }.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    Column(Modifier.padding(horizontal = 28.dp).padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
-            Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+            Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             options.forEachIndexed { i, name ->
-                DropdownMenuItem(
-                    text = { Text(name, fontWeight = if (i == selectedIndex) FontWeight.Bold else FontWeight.Normal) },
-                    onClick = { open = false; onPick(i) },
+                SegmentedButton(
+                    selected = i == selectedIndex,
+                    onClick = { onPick(i) },
+                    shape = SegmentedButtonDefaults.itemShape(i, options.size),
                     modifier = Modifier.heightIn(min = 48.dp),
+                    label = { Text(name, maxLines = 1) },
                 )
             }
         }
