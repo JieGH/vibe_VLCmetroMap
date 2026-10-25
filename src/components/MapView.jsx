@@ -30,6 +30,15 @@ import { renderStationHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import returnTrackData from '../data/return_tracks.json';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
+import {
+  ensureBusLayers,
+  setBusRoutesData,
+  setFeederWalkLinks,
+  createLiveBusMarker,
+  createFeederStopMarker,
+  createBusStopNodeMarker,
+} from '../utils/busMapLayers';
+import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders } from '../data/emtData';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -624,11 +633,28 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
-const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady, onUserInteract, onZoomedOut }) => {
+const MapView = ({
+  theme,
+  selectedStation,
+  onSelectStation,
+  activeLineFilter,
+  hoverLine,
+  userLocation,
+  onReady,
+  onUserInteract,
+  onZoomedOut,
+  variant = 'A',
+  activeBusLine = null,
+  onSelectBusLine = null,
+  activeMode = 'metro',
+  selectedBusStop = null,
+  onSelectBusStop = null,
+}) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
+  const busMarkersRef   = useRef([]);
   const animFrameRef    = useRef(null);
   // native JS Map of vehicle id → { marker, inner }. The inner element is kept
   // alongside its marker because the animation loop restyles it every frame,
@@ -1159,6 +1185,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         markersReadyRef.current = true;
         applyLineFilter(map, filterRef.current);
         applyLineDim(map, selectedStationRef.current);
+        ensureBusLayers(map, themeRef.current);
       });
 
       // Predictions age out after about 18 minutes, so without a repeat sweep the
@@ -1180,6 +1207,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         stopAnimation();
         clearVehicleMarkers();
         clearStationMarkers();
+        clearBusMarkers();
         trainCount.remove();
         trainCountRef.current = null;
         map.remove();
@@ -1444,6 +1472,143 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       essential: true,
     });
   }, [userLocation]);
+
+  const clearBusMarkers = () => {
+    busMarkersRef.current.forEach((m) => {
+      try {
+        m.remove();
+      } catch (err) {
+        // ignore if already removed
+      }
+    });
+    busMarkersRef.current = [];
+  };
+
+  // ── EMT Bus Integration Prototype Effect ──────────────────────────────────────
+  // Handles bus ribbons, satellite feeder nodes, live bus vehicles, and mode layers
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    const syncBus = () => {
+      ensureBusLayers(map, theme);
+      clearBusMarkers();
+
+      // VARIANT A: Multimodal Hub Feeder
+      if (variant === 'A') {
+        setBusRoutesData(map, []);
+
+        if (selectedStation) {
+          const coords = snappedCoordinates(selectedStation);
+          const feeders = getStationBusFeeders(selectedStation.properties.name, coords);
+
+          // 1. Draw dashed feeder walk links
+          setFeederWalkLinks(map, coords, feeders);
+
+          // 2. Add satellite feeder bus stop markers
+          feeders.forEach((feeder) => {
+            const marker = createFeederStopMarker(map, feeder, (stop) => {
+              if (onSelectBusStop) onSelectBusStop(stop);
+            });
+            busMarkersRef.current.push(marker);
+          });
+        } else {
+          setFeederWalkLinks(map, null, []);
+        }
+      }
+
+      // VARIANT B: Line-on-Demand Canvas
+      else if (variant === 'B') {
+        setFeederWalkLinks(map, null, []);
+
+        if (activeBusLine) {
+          setBusRoutesData(map, [activeBusLine]);
+
+          // Zoom to route
+          if (activeBusLine.coordinates && activeBusLine.coordinates.length > 0) {
+            const bounds = activeBusLine.coordinates.reduce(
+              (b, c) => b.extend(c),
+              new LngLatBounds(activeBusLine.coordinates[0], activeBusLine.coordinates[0])
+            );
+            map.fitBounds(bounds, {
+              padding: { top: 120, bottom: 220, left: 60, right: 60 },
+              duration: 900,
+              maxZoom: 15,
+            });
+          }
+
+          // Route stops
+          (activeBusLine.stops || []).forEach((st) => {
+            const marker = createBusStopNodeMarker(map, st, (stop) => {
+              if (onSelectBusStop) onSelectBusStop(stop);
+            });
+            busMarkersRef.current.push(marker);
+          });
+
+          // Active live AVL buses on this line
+          const lineBuses = LIVE_BUS_TELEMETRY.filter(
+            (b) => String(b.line).toLowerCase() === String(activeBusLine.id).toLowerCase()
+          );
+          lineBuses.forEach((bus) => {
+            const marker = createLiveBusMarker(map, bus, (b) => {
+              if (onSelectBusLine) onSelectBusLine(activeBusLine);
+            });
+            busMarkersRef.current.push(marker);
+          });
+        } else {
+          setBusRoutesData(map, []);
+        }
+      }
+
+      // VARIANT C: Dual-Lens Mode Switcher
+      else if (variant === 'C') {
+        setFeederWalkLinks(map, null, []);
+
+        if (activeMode === 'bus') {
+          const primaryTrunks = EMT_LINES.slice(0, 5);
+          setBusRoutesData(map, primaryTrunks);
+
+          if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.15);
+          if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.10);
+
+          primaryTrunks.forEach((line) => {
+            (line.stops || []).forEach((st) => {
+              const marker = createBusStopNodeMarker(map, st, (stop) => {
+                if (onSelectBusStop) onSelectBusStop(stop);
+              });
+              busMarkersRef.current.push(marker);
+            });
+          });
+
+          LIVE_BUS_TELEMETRY.forEach((bus) => {
+            const marker = createLiveBusMarker(map, bus, (b) => {
+              const foundLine = EMT_LINES.find((l) => l.id === b.line);
+              if (foundLine && onSelectBusLine) onSelectBusLine(foundLine);
+            });
+            busMarkersRef.current.push(marker);
+          });
+        } else if (activeMode === 'all') {
+          setBusRoutesData(map, EMT_LINES.slice(0, 3));
+          if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.85);
+          if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
+        } else {
+          setBusRoutesData(map, []);
+          if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.95);
+          if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
+        }
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      syncBus();
+    } else {
+      map.once('style.load', syncBus);
+    }
+
+    return () => {
+      clearBusMarkers();
+    };
+  }, [variant, selectedStation, activeBusLine, activeMode, theme, onSelectBusStop, onSelectBusLine]);
 
   return (
     <div

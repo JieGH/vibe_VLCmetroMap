@@ -6,6 +6,8 @@ import { searchFuzzy } from '../utils/fuzzySearch';
 import { useTranslation } from '../i18n';
 import { COMMON_STOPS } from '../utils/commonStops';
 import { lineColor } from '../utils/lineColor';
+import { EMT_LINES } from '../data/emtData';
+import BusBadge from './BusBadge';
 
 // Black or white text, whichever reads better on a line's colour.
 const onColor = (hex) => {
@@ -19,7 +21,7 @@ const onColor = (hex) => {
 const stations = gtfsData.features.filter(f => f.geometry.type === 'Point');
 const lines    = metroData.features.filter(f => f.geometry.type === 'LineString');
 
-const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedStation }) => {
+const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedStation, onSelectBusLine, variant = 'A' }) => {
   const { t } = useTranslation();
   const [query,       setQuery]       = useState('');
   const [isOpen,      setIsOpen]      = useState(false);
@@ -33,6 +35,10 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     ? searchFuzzy(lines, query, l => `${l.properties.name} Line ${l.properties.line} Linia ${l.properties.line}`)
     : [];
 
+  const filteredBusLines = query.trim()
+    ? searchFuzzy(EMT_LINES, query, b => `${b.id} ${b.name} Bus ${b.id} EMT ${b.id} Linia ${b.id} ${b.description}`)
+    : [];
+
   const filteredStations = query.trim()
     ? searchFuzzy(stations, query, st => st.properties.name)
     : [];
@@ -40,6 +46,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   // Flat ordered list of all results for keyboard nav
   const allItems = [
     ...filteredLines.map(l  => ({ type: 'line',    data: l  })),
+    ...filteredBusLines.map(b => ({ type: 'busLine', data: b })),
     ...filteredStations.map(st => ({ type: 'station', data: st })),
   ];
 
@@ -112,6 +119,18 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     }
   }, [onSelectLine, t]);
 
+  const handleSelectBusLine = useCallback((busLine) => {
+    if (onSelectBusLine) onSelectBusLine(busLine);
+    setQuery(`Bus ${busLine.id} · ${busLine.name}`);
+    setIsOpen(false);
+    setHighlighted(-1);
+    inputRef.current?.blur();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }
+  }, [onSelectBusLine]);
+
   const handleClear = () => {
     setQuery('');
     setIsOpen(false);
@@ -119,6 +138,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     selectedStationNameRef.current = '';
     if (activeLineFilter && activeLineFilter.length > 0) onSelectLine(null);
     if (onSelectStation) onSelectStation(null);
+    if (onSelectBusLine) onSelectBusLine(null);
     inputRef.current?.blur();
     if (typeof window !== 'undefined') {
       window.scrollTo(0, 0);
@@ -157,6 +177,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
       if (highlighted >= 0 && highlighted < allItems.length) {
         const item = allItems[highlighted];
         if (item.type === 'station') handleSelectStation(item.data);
+        else if (item.type === 'busLine') handleSelectBusLine(item.data);
         else handleSelectLine(item.data);
       }
     }
@@ -322,6 +343,52 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
                       {line.properties.line}
                     </div>
                     <span style={{ fontSize: '0.88rem', fontWeight: 500 }}>{line.properties.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* EMT Bus Lines section */}
+          {filteredBusLines.length > 0 && (
+            <div style={{ padding: '4px 0' }}>
+              {(filteredLines.length > 0) && (
+                <div style={{ height: '1px', background: 'var(--border-color)', margin: '2px 14px 6px' }} />
+              )}
+              <div style={{ padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#ff6369', fontWeight: 800 }}>
+                🚌 EMT València Bus Lines
+              </div>
+              {filteredBusLines.map((bus) => {
+                const idx = itemIdx++;
+                const isHl = highlighted === idx;
+                return (
+                  <div
+                    key={`bus-${bus.id}`}
+                    id={`search-bar-option-${idx}`}
+                    className="search-bar-option"
+                    role="option"
+                    aria-selected={isHl}
+                    onClick={() => handleSelectBusLine(bus)}
+                    onMouseEnter={() => setHighlighted(idx)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 14px',
+                      cursor: 'pointer',
+                      background: isHl ? 'var(--bg-hover)' : 'transparent',
+                      transition: 'background 0.1s',
+                    }}
+                  >
+                    <BusBadge line={bus.id} color={bus.color} type={bus.type} size="sm" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {bus.name}
+                      </div>
+                      <div style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>
+                        Headway: {bus.headway} · {bus.activeVehicles} active buses
+                      </div>
+                    </div>
                   </div>
                 );
               })}

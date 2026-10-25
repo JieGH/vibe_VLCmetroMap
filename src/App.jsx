@@ -34,6 +34,11 @@ import { Sun, Moon, MessageSquare } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
+import PrototypeSwitcher from './components/PrototypeSwitcher';
+import BusLineInspector from './components/BusLineInspector';
+import BusStopBoard from './components/BusStopBoard';
+import BusBadge from './components/BusBadge';
+import { EMT_LINES, LIVE_BUS_TELEMETRY } from './data/emtData';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -47,6 +52,15 @@ const LOCATE_NOTICE_MS = 6000;
 const readMode = () =>
   new URLSearchParams(window.location.search).get('mode') === 'dashboard' ? 'dashboard' : 'map';
 
+const readVariant = () => {
+  if (typeof window === 'undefined') return 'A';
+  const param = new URLSearchParams(window.location.search).get('variant');
+  if (param && ['a', 'b', 'c'].includes(param.toLowerCase())) {
+    return param.toUpperCase();
+  }
+  return 'A';
+};
+
 function App() {
   const { t } = useTranslation();
   const android = isAndroid();
@@ -59,6 +73,10 @@ function App() {
   const [themeMode, setThemeMode] = useState(android ? 'system' : 'dark');
   const [rationale, setRationale] = useState(null);
   const [mode, setMode] = useState(readMode);
+  const [variant, setVariant] = useState(readVariant);
+  const [activeBusLine, setActiveBusLine] = useState(null);
+  const [selectedBusStop, setSelectedBusStop] = useState(null);
+  const [activeMode, setActiveMode] = useState('bus'); // In Variant C, bus mode is default so differences are tactile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -128,6 +146,23 @@ function App() {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      setVariant(readVariant());
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const handleSelectBusLine = (busLine) => {
+    setActiveBusLine(busLine);
+    setSelectedStation(null);
+  };
+
+  const handleSelectBusStop = (busStop) => {
+    setSelectedBusStop(busStop);
+  };
 
   const [fontSize, setFontSize] = useState(getStoredFontSize);
   useEffect(() => {
@@ -531,6 +566,12 @@ function App() {
           onReady={() => setMapReady(true)}
           onUserInteract={() => autoLocatorRef.current?.interrupt()}
           onZoomedOut={() => setWalkTarget(null)}
+          variant={variant}
+          activeBusLine={activeBusLine}
+          onSelectBusLine={handleSelectBusLine}
+          activeMode={activeMode}
+          selectedBusStop={selectedBusStop}
+          onSelectBusStop={handleSelectBusStop}
         />
       </Suspense>
 
@@ -564,11 +605,97 @@ function App() {
           className="search-bar-container glass-panel"
           style={{ padding: '8px 14px', display: 'flex', gap: '10px', alignItems: 'center' }}
         >
+          {variant === 'C' && (
+            <div
+              className="dual-lens-mode-control"
+              role="tablist"
+              aria-label="Transit Mode Selector"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 2,
+                padding: '2px 4px',
+                background: 'rgba(0,0,0,0.18)',
+                borderRadius: 999,
+                border: '1px solid var(--border-color)',
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMode === 'metro'}
+                onClick={() => setActiveMode('metro')}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: activeMode === 'metro' ? '#E2001A' : 'transparent',
+                  color: activeMode === 'metro' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <span>🚇</span>
+                <span>Metro</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMode === 'bus'}
+                onClick={() => setActiveMode('bus')}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: activeMode === 'bus' ? '#D62828' : 'transparent',
+                  color: activeMode === 'bus' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <span>🚌</span>
+                <span>Bus</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMode === 'all'}
+                onClick={() => setActiveMode('all')}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: activeMode === 'all' ? '#1565C0' : 'transparent',
+                  color: activeMode === 'all' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <span>✨</span>
+                <span>All</span>
+              </button>
+            </div>
+          )}
           <SearchBar
             onSelectStation={handleSelectStation}
             onSelectLine={handleSelectLine}
             activeLineFilter={activeLineFilter}
             selectedStation={selectedStation}
+            onSelectBusLine={handleSelectBusLine}
+            variant={variant}
           />
           <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
           <LanguageToggle className="topbar-icon-btn" />
@@ -602,13 +729,121 @@ function App() {
       {/* Popular stops, and one chip per active Line filter */}
       {!searchFocused && (
         <div className={`hub-chips-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
-          <HubChips
-            hubs={COMMON_STOPS}
-            activeLines={activeLineFilter}
-            selectedName={selectedStation?.properties?.name ?? null}
-            onHub={handleSelectStation}
-            onClearLine={handleSelectLine}
-          />
+          {variant === 'B' ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                padding: '2px 4px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.70rem',
+                  fontWeight: 800,
+                  color: '#ff6369',
+                  background: 'rgba(214, 40, 40, 0.2)',
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                EMT Trunks
+              </span>
+              {EMT_LINES.map((line) => {
+                const isSelected = activeBusLine?.id === line.id;
+                return (
+                  <button
+                    key={line.id}
+                    type="button"
+                    onClick={() => handleSelectBusLine(isSelected ? null : line)}
+                    className="glass-panel"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      border: isSelected ? `2px solid ${line.color}` : '1px solid var(--border-color)',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-panel)',
+                      color: 'var(--text-primary)',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <BusBadge line={line.id} color={line.color} type={line.type} size="sm" />
+                    <span>{line.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : variant === 'C' && activeMode === 'bus' ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                padding: '2px 4px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.70rem',
+                  fontWeight: 800,
+                  color: '#ff6369',
+                  background: 'rgba(214, 40, 40, 0.2)',
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Bus Network Trunks
+              </span>
+              {EMT_LINES.slice(0, 5).map((line) => {
+                const isSelected = activeBusLine?.id === line.id;
+                return (
+                  <button
+                    key={line.id}
+                    type="button"
+                    onClick={() => handleSelectBusLine(isSelected ? null : line)}
+                    className="glass-panel"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      border: isSelected ? `2px solid ${line.color}` : '1px solid var(--border-color)',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-panel)',
+                      color: 'var(--text-primary)',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <BusBadge line={line.id} color={line.color} type={line.type} size="sm" />
+                    <span>{line.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <HubChips
+              hubs={COMMON_STOPS}
+              activeLines={activeLineFilter}
+              selectedName={selectedStation?.properties?.name ?? null}
+              onHub={handleSelectStation}
+              onClearLine={handleSelectLine}
+            />
+          )}
         </div>
       )}
 
@@ -681,8 +916,43 @@ function App() {
           station={selectedStation}
           theme={theme}
           onClose={() => setSelectedStation(null)}
+          variant={variant}
+          onSelectFeederStop={handleSelectBusStop}
         />
       )}
+
+      {/* Bus Line Inspector Card (Variant B & C) */}
+      {activeBusLine && (
+        <BusLineInspector
+          line={activeBusLine}
+          liveBuses={LIVE_BUS_TELEMETRY}
+          onClose={() => setActiveBusLine(null)}
+          onSelectStop={handleSelectBusStop}
+        />
+      )}
+
+      {/* Bus Stop Board (Variant B & C) */}
+      {selectedBusStop && (
+        <BusStopBoard
+          stop={selectedBusStop}
+          theme={theme}
+          onClose={() => setSelectedBusStop(null)}
+          onSelectLine={(lineId) => {
+            const found = EMT_LINES.find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
+            if (found) handleSelectBusLine(found);
+          }}
+        />
+      )}
+
+      {/* Floating Prototype Switcher Docked Bottom-Center */}
+      <PrototypeSwitcher
+        currentVariant={variant}
+        onSelectVariant={(v) => {
+          setVariant(v);
+          setActiveBusLine(null);
+          setSelectedBusStop(null);
+        }}
+      />
 
 
       {rationale && (

@@ -14,6 +14,8 @@ import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
+import { getStationBusFeeders } from '../data/emtData';
+import ConnectingBusSection from './ConnectingBusSection';
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
@@ -40,9 +42,10 @@ const ROW_HEIGHT_PX = 48;
 const VISIBLE_ROWS = 4;
 const TABLE_HEAD_PX = 30;
 
-const StationPanel = ({ station, theme, onClose }) => {
+const StationPanel = ({ station, theme, onClose, variant = 'A', onSelectFeederStop }) => {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'metro' | 'bus'
   const landscape = useIsLandscape();
 
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
@@ -101,6 +104,8 @@ const StationPanel = ({ station, theme, onClose }) => {
       : t('stationPanel.minAgo', { min: Math.round(focus.secondsUnheard / 60) });
 
   const stationLines = focus.servedLines || [];
+  const feeders = getStationBusFeeders(focus.name, station.geometry?.coordinates);
+  const totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
 
   return (
     <>
@@ -214,6 +219,22 @@ const StationPanel = ({ station, theme, onClose }) => {
                 </span>
               ))}
 
+              {variant === 'A' && feeders.length > 0 && (
+                <span
+                  className="station-header-feeder-badge"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                    height: 20, padding: '0 6px', borderRadius: 5,
+                    background: 'rgba(214, 40, 40, 0.22)', color: '#ff6369',
+                    fontSize: '.72rem', fontWeight: 800, lineHeight: 1, border: '1px solid rgba(214, 40, 40, 0.35)',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={`${feeders.length} connecting EMT bus stops within 200m`}
+                >
+                  🚌 +{feeders.length} Feeders
+                </span>
+              )}
+
               {/* Live API vs memory status */}
               <span
                 className="station-status-badge"
@@ -265,8 +286,90 @@ const StationPanel = ({ station, theme, onClose }) => {
         </button>
       </header>
 
+      {/* Multimodal Hub Tabs in Variant A */}
+      {variant === 'A' && (
+        <nav
+          className="station-multimodal-tabs"
+          aria-label="Multimodal arrivals filter"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderBottom: '1px solid var(--border-color)',
+            background: 'rgba(0,0,0,0.1)',
+            overflowX: 'auto',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: 'none',
+              background: activeTab === 'all' ? '#D62828' : 'var(--bg-hover)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '.74rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ✨ All ({focus.arrivals.length + totalBusLines})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('metro')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: 'none',
+              background: activeTab === 'metro' ? '#E2001A' : 'var(--bg-hover)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '.74rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            🚇 Metro ({focus.arrivals.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('bus')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: 'none',
+              background: activeTab === 'bus' ? '#1565C0' : 'var(--bg-hover)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '.74rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            🚌 EMT Feeders ({feeders.length} stops)
+          </button>
+        </nav>
+      )}
+
       {/* Unified arrivals table ranked by closest arrival time. */}
-      <div className="station-panel-body" style={{ maxHeight: TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8, overflowY: 'auto', padding: '0 10px 4px' }}>
+      <div
+        className="station-panel-body"
+        style={{
+          maxHeight: variant === 'A' ? 'min(48vh, 420px)' : (TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8),
+          overflowY: 'auto',
+          padding: '0 10px 8px'
+        }}
+      >
         {focus.fetchError && (
           <div role="status" style={{
             margin: '8px 0', padding: '8px 10px', borderRadius: 8,
@@ -276,82 +379,118 @@ const StationPanel = ({ station, theme, onClose }) => {
           </div>
         )}
 
-        {focus.arrivals.length === 0 ? (
-          <p style={{ padding: 20, textAlign: 'center', fontSize: '.8rem', color: 'var(--text-secondary)' }}>
-            {t('stationPanel.noLiveTrains')}
-          </p>
-        ) : (
-          <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
-            <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
-            <thead>
-              <tr style={{
-                fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
-                position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
-              }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {focus.arrivals.map((a, i) => (
-                <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)', height: ROW_HEIGHT_PX }}>
-                  <td style={{ padding: '5px 6px', width: 1 }}>
-                    <span
-                      className="station-line-badge"
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
-                        background: lineColor(a.line), color: '#000',
-                        fontSize: '.86rem', fontWeight: 900,
-                      }}
-                    >
-                      {a.line}
-                    </span>
-                  </td>
-                  <td style={{ padding: '5px 6px', maxWidth: 0 }}>
-                    <div style={{
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
-                    }}>
-                      {a.destination}
-                    </div>
-                  </td>
-                  <td
-                    className="station-arrival-due"
-                    style={{
-                      padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
-                      fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
-                      color: countdownHeat(a.seconds, theme),
-                    }}
-                  >
-                    {a.seconds <= 30 ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+        {(activeTab === 'all' || activeTab === 'metro') && (
+          <>
+            {variant === 'A' && activeTab === 'all' && (
+              <div
+                style={{
+                  fontSize: '.70rem',
+                  fontWeight: 800,
+                  letterSpacing: '.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-secondary)',
+                  padding: '8px 6px 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5
+                }}
+              >
+                <span>🚇</span>
+                <span>Metro Platforms</span>
+              </div>
+            )}
+
+            {focus.arrivals.length === 0 ? (
+              <p style={{ padding: 16, textAlign: 'center', fontSize: '.8rem', color: 'var(--text-secondary)' }}>
+                {t('stationPanel.noLiveTrains')}
+              </p>
+            ) : (
+              <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
+                <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
+                <thead>
+                  <tr style={{
+                    fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                    position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
+                  }}>
+                    <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                    <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                    <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {focus.arrivals.map((a, i) => (
+                    <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)', height: ROW_HEIGHT_PX }}>
+                      <td style={{ padding: '5px 6px', width: 1 }}>
                         <span
-                          className="station-arriving-dot pulse"
-                          data-testid="station-arriving-dot"
+                          className="station-line-badge"
                           style={{
-                            width: 7, height: 7, borderRadius: '50%',
-                            background: countdownHeat(a.seconds, theme), display: 'inline-block',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
+                            background: lineColor(a.line), color: '#000',
+                            fontSize: '.86rem', fontWeight: 900,
                           }}
-                        />
-                        {countdownLabel(a.seconds, t('common.due'))}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="station-arrival-num">{countdownLabel(a.seconds, t('common.due'))}</span>
-                        {countdownUnit(a.seconds) && (
-                          <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
-                            {t(`common.${countdownUnit(a.seconds)}`)}
+                        >
+                          {a.line}
+                        </span>
+                      </td>
+                      <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                        <div style={{
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
+                        }}>
+                          {a.destination}
+                        </div>
+                      </td>
+                      <td
+                        className="station-arrival-due"
+                        style={{
+                          padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
+                          fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
+                          color: countdownHeat(a.seconds, theme),
+                        }}
+                      >
+                        {a.seconds <= 30 ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                            <span
+                              className="station-arriving-dot pulse"
+                              data-testid="station-arriving-dot"
+                              style={{
+                                width: 7, height: 7, borderRadius: '50%',
+                                background: countdownHeat(a.seconds, theme), display: 'inline-block',
+                              }}
+                            />
+                            {countdownLabel(a.seconds, t('common.due'))}
                           </span>
+                        ) : (
+                          <>
+                            <span className="station-arrival-num">{countdownLabel(a.seconds, t('common.due'))}</span>
+                            {countdownUnit(a.seconds) && (
+                              <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
+                                {t(`common.${countdownUnit(a.seconds)}`)}
+                              </span>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+
+        {/* Connecting EMT Bus Feeders Section */}
+        {variant === 'A' && (activeTab === 'all' || activeTab === 'bus') && (
+          <div style={{ marginTop: activeTab === 'all' ? 14 : 4 }}>
+            <ConnectingBusSection
+              stationName={focus.name}
+              stationCoords={station.geometry?.coordinates}
+              feeders={feeders}
+              theme={theme}
+              onSelectFeederStop={onSelectFeederStop}
+            />
+          </div>
         )}
       </div>
 
