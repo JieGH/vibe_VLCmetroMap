@@ -259,5 +259,18 @@ describe('StationPanel component', () => {
     expect(html).toContain('Metro station');
     expect(html).toContain('bus stop');
     expect(html).toContain('EMT');
+
+    // Multimodal tabs: All on far left, then Metro, then Bus
+    expect(html).toContain('>All<');
+    expect(html).toContain('>Metro<');
+    expect(html).toContain('>Bus<');
+    expect(html).not.toContain('Dual Split');
+
+    const idxAll = html.indexOf('>All<');
+    const idxMetro = html.indexOf('>Metro<');
+    const idxBus = html.indexOf('>Bus<');
+    expect(idxAll).toBeGreaterThan(-1);
+    expect(idxMetro).toBeGreaterThan(idxAll);
+    expect(idxBus).toBeGreaterThan(idxMetro);
   });
 });

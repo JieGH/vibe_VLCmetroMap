@@ -18,7 +18,7 @@ export const BusBadge = ({
   type,
   color,
   size = 'md',
-  showIcon = true,
+  showIcon = false,
   className = '',
   style = {}
 }) => {
