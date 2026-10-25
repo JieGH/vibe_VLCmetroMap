@@ -12,13 +12,11 @@ import {
 export { WELCOME_MIN_HOLD_MS, WELCOME_MAX_HOLD_MS, WELCOME_FADE_DURATION_MS };
 
 /**
- * Brief Welcome / Splash Screen with Line-Draw & Central Station Spotlight
+ * Brief Welcome / Splash Screen with static Xarxa brand mark
  *
- * Displays an animated brand mark showing metro lines drawing into the central station,
- * which then blooms open like a spotlight. It holds at least 0.5 s, then fades into the
- * live map as soon as the map reports `ready` (or at 1.0 s at the latest). The fade is
- * requested as soon as `ready` arrives, with a CSS transition-delay covering the rest of
- * the minimum hold, so it runs on the compositor even while the main thread is busy.
+ * Displays the clean, native-feeling Xarxa app icon and name upon initial app launch.
+ * It holds at least 0.5 s, then fades into the live map as soon as the map reports `ready`
+ * (or at 1.0 s at the latest).
  */
 const WelcomeScreen = ({ ready = false, onComplete }) => {
   const { t } = useTranslation();
@@ -72,47 +70,19 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 64 64"
+            width="88"
+            height="88"
             className="welcome-screen-logo"
             aria-hidden="true"
-            style={{ overflow: 'visible' }}
           >
-            <defs>
-              {/* Radial spotlight glow radiating outward from the central station */}
-              <radialGradient id="welcomeSpotlightGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-                <stop offset="35%" stopColor="#FFD100" stopOpacity="0.75" />
-                <stop offset="70%" stopColor="#E2001A" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#16161f" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-
-            {/* Expanding spotlight halo centered at the central station (32, 32) */}
-            <circle
-              cx="32"
-              cy="32"
-              r="28"
-              fill="url(#welcomeSpotlightGlow)"
-              className="welcome-station-spotlight"
-            />
-
-            {/* Inward transit line paths: drawn from outer edges to central station (32, 32) */}
-            <g fill="none" strokeLinecap="round" strokeWidth="7.5" className="welcome-metro-lines">
-              {/* Line 3 (Red) diagonal */}
-              <path stroke="#E2001A" d="M8 56 L 32 32" className="welcome-line welcome-line--red" />
-              <path stroke="#E2001A" d="M56 8 L 32 32" className="welcome-line welcome-line--red" />
-
-              {/* Line 1 (Yellow) horizontal */}
-              <path stroke="#FFD100" d="M6 32 L 32 32" className="welcome-line welcome-line--yellow" />
-              <path stroke="#FFD100" d="M58 32 L 32 32" className="welcome-line welcome-line--yellow" />
-
-              {/* Line 5 (Green) diagonal */}
-              <path stroke="#00994D" d="M8 8 L 32 32" className="welcome-line welcome-line--green" />
-              <path stroke="#00994D" d="M56 56 L 32 32" className="welcome-line welcome-line--green" />
+            <rect width="64" height="64" rx="16" fill="#1e1e2a" />
+            <g fill="none" strokeLinecap="round" strokeWidth="7.5">
+              <path stroke="#E2001A" d="M11 53 L 53 11" />
+              <path stroke="#FFD100" d="M9 32 H 55" />
+              <path stroke="#00994D" d="M11 11 L 53 53" />
             </g>
-
-            {/* Central station outer ring & glowing core */}
-            <circle cx="32" cy="32" r="10" fill="#16161f" className="welcome-station-ring" />
-            <circle cx="32" cy="32" r="6.5" fill="#ffffff" className="welcome-station-core" />
+            <circle cx="32" cy="32" r="10" fill="#1e1e2a" />
+            <circle cx="32" cy="32" r="6.5" fill="#fff" />
           </svg>
         </div>
         <h1 className="welcome-screen-title">Xarxa</h1>

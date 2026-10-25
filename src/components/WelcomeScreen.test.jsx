@@ -21,7 +21,7 @@ describe('WelcomeScreen component', () => {
     expect(WELCOME_FADE_DURATION_MS).toBe(200);
   });
 
-  it('renders initial welcome screen with line-draw paths and central station spotlight', () => {
+  it('renders initial welcome screen with static Xarxa brand mark', () => {
     const html = renderToStaticMarkup(<WelcomeScreen onComplete={() => {}} />);
 
     // Container with accessibility role and test id
@@ -39,22 +39,12 @@ describe('WelcomeScreen component', () => {
     expect(html).toContain('#FFD100');
     expect(html).toContain('#00994D');
 
-    // Animated transit lines converging towards center (32, 32)
-    expect(html).toContain('welcome-metro-lines');
-    expect(html).toContain('welcome-line');
-    expect(html).toContain('welcome-line--red');
-    expect(html).toContain('welcome-line--yellow');
-    expect(html).toContain('welcome-line--green');
+    // Rounded icon box bounding rectangle
+    expect(html).toContain('<rect');
 
-    // No icon box bounding rectangle (floating directly on welcome screen background)
-    expect(html).not.toContain('<rect');
-
-    // Central station core, unclipped SVG overflow, and spotlight glow elements
-    expect(html).toContain('overflow:visible');
-    expect(html).toContain('welcome-station-spotlight');
-    expect(html).toContain('welcomeSpotlightGlow');
-    expect(html).toContain('welcome-station-ring');
-    expect(html).toContain('welcome-station-core');
+    // Central station ring and core
+    expect(html).toContain('r="10"');
+    expect(html).toContain('r="6.5"');
   });
 });
 

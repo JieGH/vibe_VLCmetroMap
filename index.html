@@ -10,11 +10,21 @@
   </head>
   <body>
     <div id="root">
-      <div id="initial-splash" style="position:fixed;inset:0;background:#121316;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f0f0f2;z-index:9999;">
-        <div style="width:48px;height:48px;border-radius:50%;background:#e52421;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(229,36,33,0.35);">
-          <span style="font-family:'Trebuchet MS','Arial Black',Impact,sans-serif;font-weight:900;font-style:italic;font-size:26px;color:#ffffff;line-height:1;margin-left:-2px;margin-top:-2px;user-select:none;">m</span>
+      <div id="initial-splash" style="position:fixed;inset:0;background:#16161f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#ffffff;z-index:9999;">
+        <div style="width:88px;height:88px;margin-bottom:20px;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.4));">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="88" height="88" aria-hidden="true">
+            <rect width="64" height="64" rx="16" fill="#1e1e2a" />
+            <g fill="none" stroke-linecap="round" stroke-width="7.5">
+              <path stroke="#E2001A" d="M11 53 L 53 11" />
+              <path stroke="#FFD100" d="M9 32 H 55" />
+              <path stroke="#00994D" d="M11 11 L 53 53" />
+            </g>
+            <circle cx="32" cy="32" r="10" fill="#1e1e2a" />
+            <circle cx="32" cy="32" r="6.5" fill="#fff" />
+          </svg>
         </div>
-        <div style="margin-top:16px;font-size:15px;font-weight:600;letter-spacing:0.3px;opacity:0.9;">Metrovalencia</div>
+        <h1 style="font-size:26px;font-weight:700;letter-spacing:-0.02em;color:#ffffff;margin:0 0 6px 0;">Xarxa</h1>
+        <p style="font-size:14px;font-weight:500;color:#a0a0b0;margin:0;letter-spacing:0.01em;">Live Map &amp; Real-time Arrivals</p>
       </div>
     </div>
     <script type="module" src="/src/main.jsx"></script>

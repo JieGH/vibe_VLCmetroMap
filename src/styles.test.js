@@ -129,10 +129,10 @@ describe('Welcome screen splash styles and animation timings', () => {
     expect(fadeMatch).toContain('pointer-events: none');
   });
 
-  it('paces transit line draw and spotlight bloom gracefully within the 0.5s minimum hold', () => {
-    expect(css).toMatch(/animation:\s*welcomeLineDrawIn\s+0\.22s/);
-    expect(css).toMatch(/animation:\s*welcomeStationSpotlight\s+0\.3s[^;]*0\.2s/);
-    expect(css).toMatch(/animation:\s*welcomeStationCoreBloom\s+0\.28s[^;]*0\.2s/);
+  it('styles the static Xarxa splash logo and content without line-draw animations', () => {
+    expect(css).toContain('.welcome-screen-logo-wrap');
+    expect(css).toContain('.welcome-screen-logo');
+    expect(css).not.toMatch(/animation:\s*welcomeLineDrawIn/);
   });
 });
 
