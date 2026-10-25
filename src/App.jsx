@@ -14,10 +14,9 @@ import { AppDownloadSheet } from './components/AppDownloadBanner';
 import { isIosDevice } from './utils/appDownload';
 import FeedbackModal from './components/FeedbackModal';
 import WhatsNewModal from './components/WhatsNewModal';
-import { hasSeenWhatsNew, markWhatsNewSeen } from './utils/whatsNew';
+import { markWhatsNewSeen } from './utils/whatsNew';
 import LanguageToggle from './components/LanguageToggle';
 import MovedNotice from './components/MovedNotice';
-import { hasSeenWelcome } from './utils/welcomeSchedule';
 import { locate, watchLocation } from './services/userLocation';
 import { createAutoLocator } from './services/autoLocate';
 import { Capacitor } from '@capacitor/core';
@@ -51,9 +50,10 @@ const readMode = () =>
 function App() {
   const { t } = useTranslation();
   const android = isAndroid();
-  // The animated splash is skipped on Android: the system splash already covers
-  // the load, and the language is chosen from the sidebar, not from this screen.
-  const [showWelcome, setShowWelcome] = useState(() => !android && !hasSeenWelcome());
+  // The animated splash covers initial loading on web and iOS while MapView and train arrivals
+  // initialize in the background, smoothly fading out once the map is ready. Skipped on Android
+  // because the OS system window splash already covers it.
+  const [showWelcome, setShowWelcome] = useState(() => !android);
   const [mapReady, setMapReady] = useState(false);
   const [theme, setTheme] = useState(() => initialTheme(android));
   const [themeMode, setThemeMode] = useState(android ? 'system' : 'dark');
@@ -64,13 +64,6 @@ function App() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [isAppDownloadOpen, setIsAppDownloadOpen] = useState(false);
-
-  // Show What's New modal when the user first accesses the app (after splash completes or immediately if no splash)
-  useEffect(() => {
-    if (!showWelcome && !hasSeenWhatsNew()) {
-      setIsWhatsNewOpen(true);
-    }
-  }, [showWelcome]);
 
   const handleCloseWhatsNew = () => {
     markWhatsNewSeen();

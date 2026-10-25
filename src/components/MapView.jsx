@@ -1131,14 +1131,14 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         }
       });
 
-      // Prioritize initial map assets (tiles, glyphs, sprites) before beginning the heavy arrival sweep.
+      // Boot arrivals early in the background while the splash screen covers initial load.
       let bootedArrivals = false;
       const startArrivalSync = () => {
         if (bootedArrivals) return;
         bootedArrivals = true;
         arrivalStore.bootNetwork();
       };
-      const bootTimer = setTimeout(startArrivalSync, 500);
+      const bootTimer = setTimeout(startArrivalSync, 100);
 
       map.on('style.load', () => {
         // In dev, StrictMode double-mounts this effect, so a stale map from the
