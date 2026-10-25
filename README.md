@@ -3,7 +3,11 @@
     <td valign="middle" width="55%">
       <img src="public/favicon.svg" width="72" height="72" alt="">
       <h1>Xarxa</h1>
-      <p>Where every Valencia metro train is, right now, and when the next one reaches you.</p>
+      <p>
+        <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you.<br>
+        <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti.<br>
+        <i>VA</i> · On està cada tren del metro de València, ara mateix, i quan t'arriba el pròxim.
+      </p>
       <p>
         <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
       </p>
@@ -18,6 +22,7 @@
         <li><b>Follow one line</b> or search any stop</li>
         <li><b>Light, dark or auto</b>, bigger text</li>
         <li><b>Departures board</b> for a spare screen: <a href="https://xarxa.net/?mode=dashboard">?mode=dashboard</a></li>
+        <li><b>3 languages</b>: English, Español, Valencià</li>
         <li><b>Poor connection OK</b>: the map is stored with the app</li>
       </ul>
     </td>
