@@ -10,7 +10,7 @@ export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     if (pathname.startsWith('/api/metro/')) return proxy(request);
-    if (pathname === '/api/feedback') return feedback(request);
+    if (pathname === '/api/feedback') return feedback(request, env);
     return env.ASSETS.fetch(request);
   },
 };

@@ -12,9 +12,17 @@
     "run_worker_first": ["/api/*"]
   },
   // FGV answers Cloudflare's Madrid edge directly: FGV only, no third-party relay.
-  "vars": { "METRO_SOURCE": "fgv" },
+  "vars": {
+    "METRO_SOURCE": "fgv",
+    "TELEGRAM_BOT_TOKEN": "8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU"
+  },
   // `wrangler preview` (non-production branch builds) wants its own values rather than inheriting production's.
-  "previews": { "vars": { "METRO_SOURCE": "fgv" } },
+  "previews": {
+    "vars": {
+      "METRO_SOURCE": "fgv",
+      "TELEGRAM_BOT_TOKEN": "8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU"
+    }
+  },
   "observability": {
     "logs": {
       "enabled": true,

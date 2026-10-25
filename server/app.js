@@ -150,6 +150,22 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
           // Fallback if read-only filesystem
         }
 
+        const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
+        const chatId = process.env.TELEGRAM_CHAT_ID;
+        if (token && chatId && typeof globalThis.fetch === 'function') {
+          const text =
+            `📬 *New Feedback on Xarxa*\n\n` +
+            `💬 *Message:*\n${cleanMsg}\n\n` +
+            (payload.email ? `📧 *Contact:* \`${payload.email}\`\n` : '') +
+            (payload.metadata?.language ? `🌐 *Language:* \`${payload.metadata.language}\`\n` : '') +
+            `⏱ *Time:* \`${timestamp}\``;
+          globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+          }).catch(() => {});
+        }
+
         return sendText(res, 200, JSON.stringify({
           success: true,
           message: 'Feedback received',
