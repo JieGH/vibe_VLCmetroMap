@@ -14,6 +14,25 @@ const FeedbackModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // 'idle' | 'submitting' | 'success' | 'error'
   const [copied, setCopied] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(null);
+
+  // Track visual viewport so modal adapts when virtual keyboard opens on iOS/Android
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined' || !window.visualViewport) return;
+
+    const handleResize = () => {
+      setViewportHeight(window.visualViewport.height);
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+    handleResize();
+
+    return () => {
+      window.visualViewport.removeEventListener('resize', handleResize);
+      window.visualViewport.removeEventListener('scroll', handleResize);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -21,6 +40,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
       setStatus('idle');
       setMessage('');
       setEmail('');
+      setViewportHeight(null);
       return;
     }
 
@@ -38,9 +58,16 @@ const FeedbackModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     const cleanMessage = message.trim();
-    if (!cleanMessage) return;
+    if (!cleanMessage || status === 'submitting') return;
+
+    // Dismiss virtual keyboard smoothly on mobile so confirmation is immediately visible
+    if (typeof document !== 'undefined' && document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
 
     setStatus('submitting');
 
@@ -101,6 +128,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
       className="feedback-modal-backdrop"
       onClick={onClose}
       data-testid="feedback-modal-backdrop"
+      style={viewportHeight ? { '--visual-viewport-height': `${viewportHeight}px` } : undefined}
     >
       <div
         role="dialog"
@@ -109,6 +137,8 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         className="glass-panel feedback-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="feedback-mobile-drag-handle" aria-hidden="true" />
+
         {/* Header */}
         <div className="feedback-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -186,11 +216,17 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                   </label>
                   <textarea
                     id="feedback-textarea"
-                    rows={4}
+                    rows={3}
                     className="feedback-textarea"
                     placeholder={t('feedback.placeholder')}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
                     required
                     disabled={status === 'submitting'}
                   />
@@ -222,6 +258,11 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                   type="submit"
                   disabled={status === 'submitting' || !message.trim()}
                   className="feedback-submit-btn"
+                  onPointerDown={(e) => {
+                    // Critical iOS Safari fix: prevents virtual keyboard blur from swallowing the click event
+                    e.preventDefault();
+                  }}
+                  onClick={handleSubmit}
                 >
                   {status === 'submitting' ? (
                     <>
