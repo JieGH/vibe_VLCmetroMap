@@ -63,6 +63,38 @@ describe('metro-proxy by default', () => {
   });
 });
 
+describe('metro-proxy only forwards the arrivals route', () => {
+  it.each(['fgv', 'auto', 'relay'])('answers 404 for any other path without calling upstream (%s)', async (mode) => {
+    vi.stubEnv('METRO_SOURCE', mode);
+    const fetch = vi.fn(async () => json(fgvBody));
+    vi.stubGlobal('fetch', fetch);
+
+    const res = await handler(new Request('https://site.test/api/metro/lineas'));
+    expect(res.status).toBe(404);
+    expect((await handler(new Request('https://site.test/api/metro/horarios-prevision-3/17/../x'))).status).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses anything but a read', async () => {
+    vi.stubEnv('METRO_SOURCE', 'fgv');
+    const fetch = vi.fn(async () => json(fgvBody));
+    vi.stubGlobal('fetch', fetch);
+
+    const res = await handler(new Request('https://site.test/api/metro/horarios-prevision-3/17', { method: 'POST' }));
+    expect(res.status).toBe(405);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not pass the caller\'s query string to FGV', async () => {
+    vi.stubEnv('METRO_SOURCE', 'fgv');
+    const fetch = vi.fn(async () => json(fgvBody));
+    vi.stubGlobal('fetch', fetch);
+
+    await handler(new Request('https://site.test/api/metro/horarios-prevision-3/17?x=1'));
+    expect(fetch.mock.calls[0][0]).toMatch(FGV_URL);
+  });
+});
+
 describe('metro-proxy with METRO_SOURCE=fgv', () => {
   it('returns 502 when FGV is unreachable, without asking the relay', async () => {
     vi.stubEnv('METRO_SOURCE', 'fgv');

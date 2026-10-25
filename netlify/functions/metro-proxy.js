@@ -84,11 +84,16 @@ export default async (req) => {
   const match = path.match(STATION_PATH);
   const stationId = match?.[1] || match?.[2];
 
+  // Only the per-station arrivals route is forwarded, and only as a read. Anything else would make this an open
+  // relay to the rest of FGV's API (ADR-0006: "it cannot be turned into an open relay").
+  if (req.method !== 'GET' && req.method !== 'HEAD') return reply(JSON.stringify({ error: 'Method not allowed' }), 405);
+  if (!stationId) return reply(JSON.stringify({ error: 'Not found' }), 404);
+
   const mode = sourceMode();
 
   if (mode !== 'relay' && Date.now() >= fgvBlockedUntil) {
     try {
-      const callFgv = (deadlineMs) => fetch(`${FGV_BASE}${path}${url.search}`, {
+      const callFgv = (deadlineMs) => fetch(`${FGV_BASE}/horarios-prevision-3/${stationId}`, {
         method: req.method,
         headers: { 'Accept': req.headers.get('accept') || 'application/json' },
         signal: AbortSignal.timeout(deadlineMs),
@@ -103,7 +108,6 @@ export default async (req) => {
     }
   }
 
-  if (!stationId) return reply(JSON.stringify({ error: 'FGV unreachable' }), 502);
   try {
     return await viaRelay(stationId);
   } catch {

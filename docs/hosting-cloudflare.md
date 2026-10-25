@@ -22,19 +22,13 @@ The deploy picks up `wrangler.jsonc` from the repository root. Change `METRO_SOU
 
 To try it locally: build with the capped archive, then `npx wrangler dev --local`.
 
-## Branch `cloudflare`: can FGV be reached from Cloudflare's edge?
+## Live arrivals: FGV directly
 
-The `cloudflare` branch sets `METRO_SOURCE` to `fgv` (FGV only, 502 if unreachable) and stops treating `workers.dev` as a relay host, so the page behaves as it does where FGV answers. Deploy the branch, then:
+FGV answers Cloudflare's edge (checked from the Madrid colo: 100 of 100 requests after the hedge was added), so `METRO_SOURCE` is `fgv` in `wrangler.jsonc` and the third-party relay is not used on this host. About 1 in 20 requests to FGV never answers; the proxy sends a second attempt after 1200 ms and allows 3.5 s in all (ADR-0006). If FGV ever refuses Cloudflare, set `METRO_SOURCE` to `auto` to fall back to the relay. The proxy forwards only `/api/metro/horarios-prevision-3/{id}`, as a read.
 
-```
-curl https://<site>/api/probe
-```
+### Which branch builds
 
-`fgv.ok: true` with a `status` of 200 and `colo` of `MAD` means Cloudflare's Madrid edge can use FGV directly. `fgv.error` or a 403 means FGV refuses Cloudflare's addresses, and `main` (relay) is the right setting. If it works, move `METRO_SOURCE` to `auto` so the relay stays as a fallback.
-
-### Building only this branch
-
-In Workers & Pages, Settings, Build, Branch control: set the production branch to `cloudflare` and turn off "Builds for non-production branches", or `main` keeps building too. If `main` still builds, look for a second project connected to the same repository.
+In Workers & Pages, Settings, Build, Branch control: the production branch is `main`; turn off "Builds for non-production branches", or `main` keeps building too. If `main` still builds, look for a second project connected to the same repository.
 
 ### Why the basemap is shipped in parts
 
