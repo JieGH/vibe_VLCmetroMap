@@ -34,6 +34,7 @@ import { useTranslation } from './i18n';
 import { Sun, Moon, MessageSquare } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
+import { setupIncidentReporting, reportNormalUserVisit } from './utils/telemetry';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -123,6 +124,15 @@ function App() {
     };
     computeStats();
     return arrivalStore.subscribe(computeStats);
+  }, []);
+
+  // Set up incident reporting and report normal human user access to Telegram
+  useEffect(() => {
+    setupIncidentReporting();
+    const timer = setTimeout(() => {
+      reportNormalUserVisit();
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   const [fontSize, setFontSize] = useState(getStoredFontSize);

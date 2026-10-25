@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Live map of every train on the Valencia metro, positioned from real-time arrival predictions walked back along the actual rail geometry. Offline vector basemap, web + native iOS.",
-  "author": "Jie Lei",
+  "author": "Jie",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
@@ -13,10 +13,13 @@
   "scripts": {
     "dev": "vite",
     "dev:phone": "vite --host",
-    "prebuild": "node -e \"if (process.env.WORKERS_CI) require('child_process').execFileSync('node', ['scripts/fetch_basemap.cjs'], { stdio: 'inherit' })\"",
+    "prebuild": "node scripts/sync_maplibre_worker.cjs && node -e \"if (process.env.WORKERS_CI) require('child_process').execFileSync('node', ['scripts/fetch_basemap.cjs'], { stdio: 'inherit' })\"",
     "build": "vite build",
     "postbuild": "[ \"$CI\" = true ] || npx cap sync ios",
     "test": "vitest run",
+    "test:integrity": "node scripts/sync_maplibre_worker.cjs && vitest run src/utils/mapIntegrity.test.js",
+    "notify:deploy": "node scripts/notify_telegram.cjs deploy",
+    "notify:incident": "node scripts/notify_telegram.cjs incident",
     "fetch:gtfs": "node scripts/fetch_gtfs.cjs",
     "build:data": "npm run build:stations && npm run build:segments",
     "build:geometry": "node scripts/simplify_line_geometry.cjs",

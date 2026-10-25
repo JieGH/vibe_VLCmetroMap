@@ -217,6 +217,92 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     });
   }
 
+  const recentVisits = new Map();
+  const DEDUPE_WINDOW_MS = 60 * 60 * 1000;
+  const BOT_UA_REGEX = /(bot|spider|crawl|slurp|mediapartners|googlebot|bingbot|yandex|duckduckbot|baiduspider|sogou|exabot|facebot|ia_archiver|semrush|ahrefs|mj12bot|dotbot|petalbot|headlesschrome|phantomjs|selenium|puppeteer|playwright|cypress|python|curl|wget|httpclient|postman|go-http|java|zgrab|censys|shodan|nmap)/i;
+
+  function handleTelemetry(req, res) {
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return sendText(res, 405, '{"error":"method not allowed"}');
+    }
+
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk;
+      if (raw.length > 50000) req.destroy();
+    });
+
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(raw);
+        const userAgent = payload?.userAgent || req.headers['user-agent'] || '';
+
+        // Bot filter
+        if (BOT_UA_REGEX.test(userAgent)) {
+          return sendText(res, 200, '{"ok":true,"filtered":"bot"}');
+        }
+
+        const clientIp = getClientIp(req);
+        const now = Date.now();
+        const lastSeen = recentVisits.get(clientIp);
+
+        if (payload?.type !== 'incident' && lastSeen && now - lastSeen < DEDUPE_WINDOW_MS) {
+          return sendText(res, 200, '{"ok":true,"throttled":true}');
+        }
+        if (payload?.type !== 'incident') {
+          recentVisits.set(clientIp, now);
+        }
+
+        const timestamp = new Date().toISOString();
+        const esc = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '');
+
+        if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+          const token = process.env.TELEGRAM_BOT_TOKEN;
+          const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
+
+          if (token && chatId) {
+            let text = '';
+            if (payload?.type === 'incident') {
+              text = [
+                `🚨 <b>MAJOR INCIDENT REPORT - Xarxa Web</b>\n`,
+                `⚠️ <b>Error:</b> <code>${esc(payload.error)}</code>`,
+                `📍 <b>Source:</b> <code>${esc(payload.source)}</code>`,
+                `🔗 <b>URL:</b> <code>${esc(payload.url)}</code>`,
+                `👤 <b>Client IP:</b> <code>${esc(clientIp)}</code>`,
+                `📱 <b>User-Agent:</b> <code>${esc((payload.userAgent || '').slice(0, 150))}</code>`,
+                payload.stack ? `\n📄 <b>Stack Trace:</b>\n<pre>${esc(payload.stack.slice(0, 800))}</pre>` : '',
+                `⏱ <b>Time:</b> <code>${esc(timestamp)}</code>`,
+              ].filter(Boolean).join('\n');
+            } else {
+              text = [
+                `👤 <b>Normal User Visit Detected</b>\n`,
+                `📍 <b>Location & IP:</b> <code>${esc(clientIp)}</code>`,
+                payload.platform ? `📱 <b>Platform:</b> ${esc(payload.platform)}` : '',
+                payload.screen ? `🖥 <b>Screen:</b> <code>${esc(payload.screen)}</code>` : '',
+                payload.languages || payload.language ? `🗣 <b>Language:</b> <code>${esc(payload.languages || payload.language)}</code>` : '',
+                payload.timezone ? `🕒 <b>Timezone:</b> <code>${esc(payload.timezone)}</code>` : '',
+                payload.referrer && payload.referrer !== 'Direct' ? `🔗 <b>Referrer:</b> ${esc(payload.referrer)}` : '',
+                payload.path ? `🧭 <b>Path / Mode:</b> <code>${esc(payload.path)}</code>` : '',
+                `⏱ <b>Time:</b> <code>${esc(timestamp)}</code>`,
+              ].filter(Boolean).join('\n');
+            }
+
+            globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+            }).catch(() => {});
+          }
+        }
+
+        return sendText(res, 200, '{"ok":true}');
+      } catch {
+        return sendText(res, 400, '{"error":"invalid json"}');
+      }
+    });
+  }
+
   function serveAsset(req, res, asset, acceptEncoding) {
     const head = req.method === 'HEAD';
     const base = { 'Content-Type': asset.type, 'Cache-Control': asset.cacheControl, 'Accept-Ranges': 'bytes' };
@@ -270,6 +356,9 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     if (pathname.startsWith('/api/')) {
       if (pathname === '/api/feedback') {
         return void handleFeedback(req, res);
+      }
+      if (pathname === '/api/telemetry') {
+        return void handleTelemetry(req, res);
       }
       const id = STATION_ROUTE.exec(pathname)?.[1];
       if (!id) return sendText(res, 404, '{"error":"not found"}');

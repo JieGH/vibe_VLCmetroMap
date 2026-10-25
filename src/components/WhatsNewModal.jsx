@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Sparkles, Train, Map, Navigation, SunMoon, MessageSquare, Check } from 'lucide-react';
+import { X, Train, Map, Navigation, SunMoon, MessageSquare, Check } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import AppBadge, { VersionPill } from './AppBadge';
 

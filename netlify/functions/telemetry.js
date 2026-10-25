@@ -1,0 +1,180 @@
+// Netlify & Cloudflare Workers serverless function for receiving normal user access telemetry
+// and reporting major runtime incidents to Telegram, while filtering out automated bots and crawlers.
+import { escapeHtml, extractClientInfo } from './feedback.js';
+
+export const BOT_UA_REGEX = /(bot|spider|crawl|slurp|mediapartners|googlebot|bingbot|yandex|duckduckbot|baiduspider|sogou|exabot|facebot|ia_archiver|semrush|ahrefs|mj12bot|dotbot|petalbot|headlesschrome|phantomjs|selenium|puppeteer|playwright|cypress|python|curl|wget|httpclient|postman|go-http|java|zgrab|censys|shodan|nmap)/i;
+
+// In-memory rate limiting / IP deduplication so user's Telegram isn't spammed
+// by rapid reloads from the same human IP (1 notification per IP per hour)
+const recentVisits = new Map();
+const DEDUPE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isRateLimited(ip) {
+  if (!ip || ip === 'Unknown') return false;
+  const now = Date.now();
+
+  // Clean old entries if map grows
+  if (recentVisits.size > 500) {
+    for (const [key, timestamp] of recentVisits.entries()) {
+      if (now - timestamp > DEDUPE_WINDOW_MS) {
+        recentVisits.delete(key);
+      }
+    }
+  }
+
+  const lastSeen = recentVisits.get(ip);
+  if (lastSeen && now - lastSeen < DEDUPE_WINDOW_MS) {
+    return true;
+  }
+  recentVisits.set(ip, now);
+  return false;
+}
+
+export function isBot(userAgent) {
+  if (!userAgent || typeof userAgent !== 'string') return true;
+  return BOT_UA_REGEX.test(userAgent);
+}
+
+export function formatVisitTelegramMessage({ clientInfo, data, timestamp }) {
+  const geoParts = [clientInfo?.city, clientInfo?.region, clientInfo?.country].filter(Boolean);
+  const geoStr = geoParts.length > 0 ? ` (${escapeHtml(geoParts.join(', '))})` : '';
+  const ipStr = clientInfo?.ip ? `<code>${escapeHtml(clientInfo.ip)}</code>${geoStr}` : '<code>Unknown</code>';
+
+  const lines = [
+    `👤 <b>Normal User Visit Detected</b>\n`,
+    `📍 <b>Location & IP:</b> ${ipStr}`,
+  ];
+
+  if (data?.platform) {
+    lines.push(`📱 <b>Platform:</b> ${escapeHtml(data.platform)}`);
+  }
+  if (data?.screen) {
+    lines.push(`🖥 <b>Screen:</b> <code>${escapeHtml(data.screen)}</code>`);
+  }
+  if (data?.language || data?.languages) {
+    lines.push(`🗣 <b>Language:</b> <code>${escapeHtml(data.languages || data.language)}</code>`);
+  }
+  if (data?.timezone) {
+    lines.push(`🕒 <b>Timezone:</b> <code>${escapeHtml(data.timezone)}</code>`);
+  }
+  if (data?.referrer && data.referrer !== 'Direct') {
+    lines.push(`🔗 <b>Referrer:</b> ${escapeHtml(data.referrer)}`);
+  }
+  if (data?.path) {
+    lines.push(`🧭 <b>Path / Mode:</b> <code>${escapeHtml(data.path)}</code>`);
+  }
+  lines.push(`⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`);
+
+  return lines.join('\n');
+}
+
+export function formatIncidentTelegramMessage({ clientInfo, data, timestamp }) {
+  const geoParts = [clientInfo?.city, clientInfo?.region, clientInfo?.country].filter(Boolean);
+  const geoStr = geoParts.length > 0 ? ` (${escapeHtml(geoParts.join(', '))})` : '';
+  const ipStr = clientInfo?.ip ? `<code>${escapeHtml(clientInfo.ip)}</code>${geoStr}` : '<code>Unknown</code>';
+
+  const lines = [
+    `🚨 <b>MAJOR INCIDENT REPORT - Xarxa Web</b>\n`,
+    `⚠️ <b>Error:</b> <code>${escapeHtml(data?.error || 'Unknown runtime error')}</code>`,
+  ];
+
+  if (data?.source) {
+    lines.push(`📍 <b>Source:</b> <code>${escapeHtml(data.source)}</code>`);
+  }
+  if (data?.url) {
+    lines.push(`🔗 <b>URL:</b> <code>${escapeHtml(data.url)}</code>`);
+  }
+  lines.push(`👤 <b>Client:</b> ${ipStr}`);
+  if (data?.userAgent) {
+    lines.push(`📱 <b>User-Agent:</b> <code>${escapeHtml(data.userAgent.slice(0, 150))}</code>`);
+  }
+  if (data?.stack) {
+    lines.push(`\n📄 <b>Stack Trace:</b>\n<pre>${escapeHtml(data.stack.slice(0, 800))}</pre>`);
+  }
+  lines.push(`⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`);
+
+  return lines.join('\n');
+}
+
+async function forwardTelegram(env, messageHtml) {
+  if (
+    (typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST)) ||
+    env?.NODE_ENV === 'test'
+  ) {
+    return;
+  }
+
+  const token = env?.TELEGRAM_BOT_TOKEN || (typeof process !== 'undefined' && process.env?.TELEGRAM_BOT_TOKEN);
+  const chatId = env?.TELEGRAM_CHAT_ID || (typeof process !== 'undefined' && process.env?.TELEGRAM_CHAT_ID) || '5007040501';
+
+  if (!token || !chatId) return;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: messageHtml,
+        parse_mode: 'HTML',
+      }),
+    });
+  } catch (err) {
+    console.error('[Telegram notification failed]', err?.message || err);
+  }
+}
+
+export default async (req, env) => {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', 'Allow': 'POST' },
+    });
+  }
+
+  try {
+    const data = await req.json();
+    const clientInfo = extractClientInfo(req);
+    const userAgent = data?.userAgent || req.headers?.get?.('user-agent') || req.headers?.['user-agent'] || '';
+
+    // Filter strange bots and automated crawlers
+    if (isBot(userAgent)) {
+      return new Response(JSON.stringify({ ok: true, filtered: 'bot' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const timestamp = new Date().toISOString();
+
+    if (data?.type === 'incident') {
+      const incidentHtml = formatIncidentTelegramMessage({ clientInfo, data, timestamp });
+      await forwardTelegram(env, incidentHtml);
+      return new Response(JSON.stringify({ ok: true, type: 'incident' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Normal user visit
+    if (isRateLimited(clientInfo.ip)) {
+      return new Response(JSON.stringify({ ok: true, throttled: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const visitHtml = formatVisitTelegramMessage({ clientInfo, data, timestamp });
+    await forwardTelegram(env, visitHtml);
+
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'bad request', details: err?.message }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
