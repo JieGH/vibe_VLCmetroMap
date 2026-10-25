@@ -144,18 +144,20 @@ describe('Station dismiss backdrop', () => {
   });
 });
 
-describe('Map bottom-right info and attribution collapse', () => {
-  it('positions bottom-right map controls with safe-area insets', () => {
-    const ctrlMatch = css.match(/\.maplibregl-ctrl-bottom-right\s*\{([^}]*)\}/)?.[1] || '';
-    expect(ctrlMatch).toContain('bottom: calc(8px + env(safe-area-inset-bottom, 0px))');
-    expect(ctrlMatch).toContain('right: calc(8px + env(safe-area-inset-right, 0px))');
+describe('Map attribution control', () => {
+  const mapView = readFileSync(resolve(__dirname, 'components/MapView.jsx'), 'utf8');
+
+  it('is switched off: the credits live in About & Legal, not in an (i) button on the map', () => {
+    expect(mapView).toContain('attributionControl: false');
+    expect(css).not.toContain('maplibregl-ctrl-attrib');
   });
 
-  it('keeps bottom-right map info collapsed into compact button by default', () => {
-    expect(css).toContain('.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner');
-    expect(css).toContain('display: none !important');
-    expect(css).toContain('.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-button');
-    expect(css).toContain('display: block !important');
+  it('still credits OpenStreetMap, Protomaps and MapLibre in the legal info', async () => {
+    const { APP_LEGAL_INFO } = await import('./utils/legalInfo');
+    const text = JSON.stringify(APP_LEGAL_INFO.attributions);
+    expect(text).toContain('OpenStreetMap');
+    expect(text).toContain('Protomaps');
+    expect(text).toContain('MapLibre');
   });
 });
 

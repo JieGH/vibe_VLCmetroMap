@@ -1056,7 +1056,8 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       // 1.2x maximum, so the default view opens with stations already at their
       // largest, easiest-to-tap size rather than the network's full extent.
       zoom: DEFAULT_MAP_ZOOM,
-      attributionControl: { compact: true },
+      // No (i) button on the map: OpenStreetMap, Protomaps and MapLibre are credited in About & Legal.
+      attributionControl: false,
     });
 
     // `originalEvent` is set only when a hand moved the camera (drag, pinch,
@@ -1065,18 +1066,6 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
     map.on('movestart', (event) => {
       if (event.originalEvent && interactRef.current) interactRef.current();
     });
-
-    // Ensure bottom-right attribution starts collapsed into the compact info icon
-    const collapseAttribution = () => {
-      const attributionEl = containerRef.current?.querySelector('.maplibregl-ctrl-attrib');
-      if (attributionEl) {
-        attributionEl.classList.add('maplibregl-compact');
-        attributionEl.classList.remove('maplibregl-compact-show');
-        attributionEl.removeAttribute('open');
-      }
-    };
-    collapseAttribution();
-    map.once('load', collapseAttribution);
 
     const trainCount = document.createElement('div');
     trainCount.className = 'line3-train-count glass-panel';
@@ -1141,7 +1130,6 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       // across instances, so letting a stale callback through would clear the
       // live map's markers and re-attach them to the removed one.
       if (mapRef.current !== map) return;
-      collapseAttribution();
       if (onReadyRef.current) {
         const notifyReady = onReadyRef.current;
         onReadyRef.current = null; // first style.load only; theme swaps reload the style
