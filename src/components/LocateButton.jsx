@@ -106,7 +106,7 @@ const LocateButton = ({ state = 'idle', showingLocation = false, onLocate, onHid
       title={label}
       aria-label={label}
     >
-      <Icon size={24} className={state === 'locating' ? 'spin' : undefined} />
+      <Icon size={26} className={state === 'locating' ? 'spin' : undefined} />
     </button>
   );
 };
