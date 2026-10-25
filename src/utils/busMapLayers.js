@@ -163,9 +163,9 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
     return;
   }
 
-  // Draw 10-minute walk boundary circle (~800m)
+  // Draw 5-minute walk boundary circle (~400m)
   if (radiusSource) {
-    radiusSource.setData(createCircleGeoJSON(stationCoords, 800));
+    radiusSource.setData(createCircleGeoJSON(stationCoords, 400));
   }
 
   if (source) {

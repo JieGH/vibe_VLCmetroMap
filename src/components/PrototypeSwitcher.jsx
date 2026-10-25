@@ -10,19 +10,19 @@ export const VARIANTS = [
     label: 'A: Location Multimodal Hub',
     shortLabel: 'Location Hub',
     concept: 'Concept 3: Location-First Multimodal Transit Hub',
-    subtitle: 'Locate user & find nearest Metro + EMT stops within ~10 min walk',
+    subtitle: 'Locate user & find nearest Metro + EMT stops within ~5 min walk',
     rationale:
-      'Location-first architecture. Rather than dominating as a single-mode rail app, pressing Locate finds all available transportation—both Metro stations and EMT bus stops—within a 10-minute walking radius (~800m). Independent scrolling Metro and EMT lists provide fast, compact access to live departures.',
+      'Location-first architecture. Rather than dominating as a single-mode rail app, pressing Locate finds all available transportation—both Metro stations and EMT bus stops—within a 5-minute walking radius (~400m). Independent scrolling Metro and EMT lists provide fast, compact access to live departures.',
     pros: [
       'Zero map clutter: preserves the clean, high-contrast rail spine',
-      'Location-first multimodal transit: shows nearby Metro and EMT departures within 10 min walk',
-      'Dual Split view: two independent scrolling columns for Metro and EMT Bus',
+      'Location-first multimodal transit: shows nearby Metro and EMT departures within 5 min walk',
+      'All / Split view: two independent scrolling columns for Metro and Bus side-by-side',
       'Authentic badges: crisp "m" and "EMT" emblem badges, no emojis'
     ],
     cons: [
       'Focuses on immediate walking proximity rather than network-wide line tracing'
     ],
-    question: 'Does the 10-minute walking radius with independent split scrolling feel faster than switching screens?'
+    question: 'Does the 5-minute walking radius with independent split scrolling feel faster than switching screens?'
   },
   {
     key: 'B',

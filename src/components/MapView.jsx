@@ -1154,13 +1154,13 @@ const MapView = ({
           return;
         }
 
-        // Multimodal 10-Minute Walk Radius click on the map:
+        // Multimodal 5-Minute Walk Radius click on the map:
         // When zoomed in (zoom >= 13), clicking any point explores all transit
-        // (Metro stations and EMT bus stops) within a 10-minute walk (~800m).
+        // (Metro stations and EMT bus stops) within a 5-minute walk (~400m).
         if (currentZoom >= 13 && drawnStationsRef.current && drawnStationsRef.current.length > 0) {
-          const nearestWithin10Min = nearestFeature(drawnStationsRef.current, [lng, lat]);
-          if (nearestWithin10Min && nearestWithin10Min.distance <= 800) {
-            selectStRef.current(nearestWithin10Min.feature, {
+          const nearestWithin5Min = nearestFeature(drawnStationsRef.current, [lng, lat]);
+          if (nearestWithin5Min && nearestWithin5Min.distance <= 400) {
+            selectStRef.current(nearestWithin5Min.feature, {
               userLocation: {
                 coordinates: [lng, lat],
                 accuracy: 15,
@@ -1389,42 +1389,73 @@ const MapView = ({
     const map = mapRef.current;
     if (!map || !userLocation || userLocation.status !== 'located') return undefined;
 
+    const isPing = Boolean(userLocation.isMapClick);
     const wrapper = document.createElement('div');
-    wrapper.className = 'user-location-marker';
-    const accuracyRing = document.createElement('div');
-    accuracyRing.className = 'user-location-accuracy';
-    const dot = document.createElement('div');
-    dot.className = 'user-location-dot';
-    wrapper.appendChild(accuracyRing);
-    wrapper.appendChild(dot);
+    wrapper.className = isPing ? 'user-ping-marker' : 'user-location-marker';
+
+    if (isPing) {
+      wrapper.style.cssText = `
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 35;
+      `;
+      wrapper.innerHTML = `
+        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; font: 800 10px system-ui; background: rgba(15, 23, 42, 0.95); color: #38BDF8; border: 1.5px solid #0EA5E9; padding: 2px 7px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none;">
+          <span>📍</span>
+          <span>Ping</span>
+        </div>
+        <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(14, 165, 233, 0.25); border: 1.5px solid #0EA5E9; box-sizing: border-box;"></div>
+        <div style="width: 14px; height: 14px; border-radius: 50%; background: #0EA5E9; border: 2.5px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.5); box-sizing: border-box; z-index: 2;"></div>
+      `;
+    } else {
+      wrapper.style.cssText = `
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 35;
+      `;
+      wrapper.innerHTML = `
+        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; font: 800 10px system-ui; background: rgba(15, 23, 42, 0.95); color: #60A5FA; border: 1.5px solid #3B82F6; padding: 2px 7px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none;">
+          <span>🛰️</span>
+          <span>GPS</span>
+        </div>
+        <div class="user-location-accuracy" style="display:none;"></div>
+        <div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>
+      `;
+    }
 
     const marker = new Marker({ element: wrapper, anchor: 'center' })
       .setLngLat(userLocation.coordinates)
       .addTo(map);
 
     const sizeAccuracyRing = () => {
+      if (isPing) return;
+      const accuracyRing = wrapper.querySelector('.user-location-accuracy');
+      if (!accuracyRing) return;
       if (!Number.isFinite(userLocation.accuracy)) {
         accuracyRing.style.display = 'none';
         return;
       }
       const scale = metresPerPixel(userLocation.coordinates[1], map.getZoom());
       const diameter = (2 * userLocation.accuracy) / scale;
-      // Below the dot's own size the ring says nothing the dot does not already
-      // say, and drawing it would only make a precise fix look fuzzy.
       accuracyRing.style.display = diameter < 26 ? 'none' : '';
       accuracyRing.style.width = `${diameter}px`;
       accuracyRing.style.height = `${diameter}px`;
     };
 
     const fade = () => {
-      wrapper.style.opacity = userFixOpacity(Date.now() - (userLocation.updatedAt ?? userLocation.fetchedAt));
+      if (!isPing) {
+        wrapper.style.opacity = userFixOpacity(Date.now() - (userLocation.updatedAt ?? userLocation.fetchedAt));
+      }
     };
 
     sizeAccuracyRing();
     fade();
     map.on('zoom', sizeAccuracyRing);
-    // Five seconds is one hundredth of the fade's span, so the decay reads as
-    // gradual without a second animation loop running against the vehicles'.
     const fadeTimer = setInterval(fade, 5000);
 
     return () => {

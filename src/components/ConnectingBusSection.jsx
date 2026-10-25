@@ -10,6 +10,7 @@ export const ConnectingBusSection = ({
   stationCoords,
   feeders,
   theme = 'dark',
+  showDistance = true,
   onSelectFeederStop
 }) => {
   if (!feeders || feeders.length === 0) {
@@ -66,7 +67,7 @@ export const ConnectingBusSection = ({
             color: 'var(--text-secondary)',
           }}
         >
-          {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'} within 10 min walk
+          {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'} within 5 min walk
         </span>
       </div>
 
@@ -124,21 +125,23 @@ export const ConnectingBusSection = ({
                 {stop.stopName}
               </span>
             </div>
-            <span
-              style={{
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                color: 'var(--text-secondary)',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-              }}
-            >
-              <Footprints size={11} />
-              {stop.walkMin} min walk
-            </span>
+            {showDistance && (
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <Footprints size={11} />
+                {stop.walkMin} min walk
+              </span>
+            )}
           </div>
 
           {/* Feeder lines departure rows */}

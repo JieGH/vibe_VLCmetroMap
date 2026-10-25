@@ -125,8 +125,8 @@ const StationPanel = ({
   const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
   const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
 
-  // Other Metro stations within 10-minute walk radius (~800m) of this station/anchor:
-  const nearbyMetro = anchorCoords ? nearbyFeatures(allMetroStations, anchorCoords, 800)
+  // Other Metro stations within 5-minute walk radius (~400m) of this station/anchor:
+  const nearbyMetro = anchorCoords ? nearbyFeatures(allMetroStations, anchorCoords, 400)
     .filter((m) => m.feature.properties.name !== focus.name)
     .slice(0, 4) : [];
 
@@ -136,7 +136,7 @@ const StationPanel = ({
     const dist = Math.round(getDistance(anchorCoords, f.coordinates));
     const mins = walkingMinutes(dist);
     return { ...f, walkMetres: dist, walkMin: mins };
-  }).filter((f) => !anchorCoords || f.walkMin <= 10); // 10 minutes walk radius
+  }).filter((f) => !anchorCoords || f.walkMin <= 5); // 5 minutes walk radius
 
   const totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
 
@@ -203,6 +203,9 @@ const StationPanel = ({
         {variant === 'A' ? (
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+              <span style={{ fontSize: '1rem', lineHeight: 1 }}>
+                {userLocation?.isMapClick ? '📍' : userLocation ? '🛰️' : 'm'}
+              </span>
               <h2
                 onClick={() => setIsExpanded((v) => !v)}
                 title={isExpanded ? 'Collapse view' : 'Expand full view'}
@@ -219,7 +222,7 @@ const StationPanel = ({
                   cursor: 'pointer',
                 }}
               >
-                Nearby Transit
+                {userLocation?.isMapClick ? 'Map Ping' : userLocation ? 'GPS Location' : 'Nearby Transit'}
               </h2>
               <span
                 style={{
@@ -232,7 +235,7 @@ const StationPanel = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                10 min walk
+                5 min walk
               </span>
             </div>
 
@@ -638,6 +641,7 @@ const StationPanel = ({
                   walkMetres={metroWalkMeters}
                   walkMin={metroWalkMin}
                   nearbyMetro={nearbyMetro}
+                  showDistance={false}
                   onSelectStation={onSelectStation}
                 />
               </div>
@@ -657,6 +661,7 @@ const StationPanel = ({
                   stationCoords={station.geometry?.coordinates}
                   feeders={feeders}
                   theme={theme}
+                  showDistance={false}
                   onSelectFeederStop={onSelectFeederStop}
                 />
               </div>
@@ -683,6 +688,7 @@ const StationPanel = ({
                   walkMetres={metroWalkMeters}
                   walkMin={metroWalkMin}
                   nearbyMetro={nearbyMetro}
+                  showDistance={true}
                   onSelectStation={onSelectStation}
                 />
               </div>
@@ -702,6 +708,7 @@ const StationPanel = ({
                   stationCoords={station.geometry?.coordinates}
                   feeders={feeders}
                   theme={theme}
+                  showDistance={true}
                   onSelectFeederStop={onSelectFeederStop}
                 />
               </div>

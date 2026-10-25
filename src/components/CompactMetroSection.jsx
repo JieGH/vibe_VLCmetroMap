@@ -15,6 +15,7 @@ export const CompactMetroSection = ({
   walkMetres,
   walkMin,
   nearbyMetro = [],
+  showDistance = true,
   onSelectStation,
 }) => {
   const { t } = useTranslation();
@@ -72,7 +73,7 @@ export const CompactMetroSection = ({
             m
           </span>
           <span>{stationName || 'Metro'}</span>
-          {walkMin !== undefined && (
+          {showDistance && walkMin !== undefined && (
             <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'none', marginLeft: 4 }}>
               · {walkMin} min walk
             </span>
@@ -277,9 +278,11 @@ export const CompactMetroSection = ({
                       ))}
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', fontWeight: 600, flexShrink: 0 }}>
-                    {m.walkMin} min walk
-                  </span>
+                  {showDistance && (
+                    <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', fontWeight: 600, flexShrink: 0 }}>
+                      {m.walkMin} min walk
+                    </span>
+                  )}
                 </div>
               );
             })}

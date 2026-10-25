@@ -242,8 +242,9 @@ describe('StationPanel component', () => {
     expect(html).not.toContain('<footer');
   });
 
-  it('renders Variant A as a multimodal 10-minute walk transit hub with Nearby Transit header', () => {
-    const html = renderToStaticMarkup(
+  it('renders Variant A as a multimodal 5-minute walk transit hub with GPS/Ping header', () => {
+    // 1. With GPS user location
+    const gpsHtml = renderToStaticMarkup(
       <StationPanel
         station={sampleStation}
         theme="dark"
@@ -253,32 +254,44 @@ describe('StationPanel component', () => {
       />
     );
 
-    // Title is "Nearby Transit" rather than single station name
-    expect(html).toContain('Nearby Transit');
-    expect(html).toContain('10 min walk');
-    expect(html).toContain('Metro station');
-    expect(html).toContain('bus stop');
-    expect(html).toContain('EMT');
+    // Title reflects GPS origin and 5 min walk radius
+    expect(gpsHtml).toContain('GPS Location');
+    expect(gpsHtml).toContain('5 min walk');
+    expect(gpsHtml).toContain('Metro station');
+    expect(gpsHtml).toContain('bus stop');
+    expect(gpsHtml).toContain('EMT');
 
     // Multimodal tabs: All on far left, then Metro, then Bus
-    expect(html).toContain('>All<');
-    expect(html).toContain('>Metro<');
-    expect(html).toContain('>Bus<');
-    expect(html).not.toContain('Dual Split');
+    expect(gpsHtml).toContain('>All<');
+    expect(gpsHtml).toContain('>Metro<');
+    expect(gpsHtml).toContain('>Bus<');
+    expect(gpsHtml).not.toContain('Dual Split');
 
-    const idxAll = html.indexOf('>All<');
-    const idxMetro = html.indexOf('>Metro<');
-    const idxBus = html.indexOf('>Bus<');
+    const idxAll = gpsHtml.indexOf('>All<');
+    const idxMetro = gpsHtml.indexOf('>Metro<');
+    const idxBus = gpsHtml.indexOf('>Bus<');
     expect(idxAll).toBeGreaterThan(-1);
     expect(idxMetro).toBeGreaterThan(idxAll);
     expect(idxBus).toBeGreaterThan(idxMetro);
 
     // Maximize / Minimize icon button in header
-    expect(html).toContain('station-panel-expand');
-    expect(html).toContain('Maximize / Expand full departures');
+    expect(gpsHtml).toContain('station-panel-expand');
+    expect(gpsHtml).toContain('Maximize / Expand full departures');
 
-    // Distance unit is time (min walk), not meters
-    expect(html).toContain('min walk');
-    expect(html).not.toMatch(/\(\d+m\)/);
+    // In split view, stop walk distances and foot icons are hidden to preserve UI space
+    expect(gpsHtml).not.toContain('lucide-footprints');
+
+    // 2. With Map Ping
+    const pingHtml = renderToStaticMarkup(
+      <StationPanel
+        station={sampleStation}
+        theme="dark"
+        variant="A"
+        onClose={() => {}}
+        userLocation={{ coordinates: [-0.377, 39.467], isMapClick: true }}
+      />
+    );
+    expect(pingHtml).toContain('Map Ping');
+    expect(pingHtml).toContain('5 min walk');
   });
 });
