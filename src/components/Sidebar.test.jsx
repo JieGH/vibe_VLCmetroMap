@@ -61,8 +61,8 @@ describe('Sidebar component', () => {
       />
     );
 
-    expect(html).toContain('Text Size');
     expect(html).toContain('size-stepper');
+    expect(html).toContain('aria-label="Text Size Selection"');
     expect(html).toContain('>L<');
     expect(html).toContain('aria-label="Smaller text"');
     expect(html).toContain('aria-label="Larger text"');
@@ -104,7 +104,7 @@ describe('Sidebar appearance', () => {
     const html = renderToStaticMarkup(
       <SidebarMod isOpen onToggleSidebar={() => {}} themeMode="dark" />
     );
-    expect(html).toContain('Appearance');
+    expect(html).toContain('aria-label="Appearance selection"');
     // Icons, with the words kept as labels for screen readers and tooltips.
     expect(html).toContain('aria-label="Light"');
     expect(html).toContain('aria-label="Auto"');
@@ -112,5 +112,16 @@ describe('Sidebar appearance', () => {
     expect(html).not.toContain('theme-option-btn');
     expect(html).not.toContain('sidebar-line-btn');
     expect(html).not.toContain('Show only line');
+  });
+});
+
+describe('Sidebar settings row', () => {
+  it('puts text size and appearance in one row', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const SidebarMod = (await import('./Sidebar')).default;
+    const html = renderToStaticMarkup(<SidebarMod isOpen onToggleSidebar={() => {}} themeMode="dark" fontSize="default" />);
+    const row = html.match(/sidebar-settings-row[\s\S]*?(?=sidebar-language-section)/)?.[0] || '';
+    expect(row).toContain('size-stepper');
+    expect(row).toContain('theme-icon-group');
   });
 });

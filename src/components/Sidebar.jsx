@@ -123,9 +123,10 @@ const Sidebar = ({
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Text size: one line, a stepper showing S / M / L / XL */}
-          <div className="sidebar-font-size-section sidebar-compact-row">
-            <h2 className="sidebar-row-title">{t('sidebar.textSize')}</h2>
+          {/* Text size and appearance share one row */}
+          <div className="sidebar-compact-row sidebar-settings-row">
+          {/* Text size: a stepper showing S / M / L / XL */}
+          <div className="sidebar-font-size-section">
             {(() => {
               const current = FONT_SIZE_CONFIG[fontSize] ? fontSize : 'default';
               const index = FONT_SIZES.indexOf(current);
@@ -164,6 +165,29 @@ const Sidebar = ({
               );
             })()}
           </div>
+          {/* Appearance: sun, moon, or follow the phone, as icons */}
+          <div className="sidebar-appearance-section">
+            <div className="theme-icon-group" role="group" aria-label={t('sidebar.appearanceAria')}>
+              {THEME_MODES.map(({ id, key, Icon }) => {
+                const isSelected = themeMode === id;
+                const label = t(`sidebar.${key}`);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onSelectTheme && onSelectTheme(id)}
+                    className={`theme-icon-btn ${isSelected ? 'active' : ''}`}
+                    aria-pressed={isSelected}
+                    aria-label={label}
+                    title={label}
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          </div>
 
           {/* Language Selection Control */}
           <div className="sidebar-language-section" style={{ paddingTop: '8px' }}>
@@ -187,30 +211,6 @@ const Sidebar = ({
                   >
                     <span className="lang-option-preview">{languageCode(lang)}</span>
                     <span className="lang-option-label">{name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Appearance: sun, moon, or follow the phone, as icons on the heading's line */}
-          <div className="sidebar-appearance-section sidebar-compact-row">
-            <h2 className="sidebar-row-title">{t('sidebar.appearance')}</h2>
-            <div className="theme-icon-group" role="group" aria-label={t('sidebar.appearanceAria')}>
-              {THEME_MODES.map(({ id, key, Icon }) => {
-                const isSelected = themeMode === id;
-                const label = t(`sidebar.${key}`);
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => onSelectTheme && onSelectTheme(id)}
-                    className={`theme-icon-btn ${isSelected ? 'active' : ''}`}
-                    aria-pressed={isSelected}
-                    aria-label={label}
-                    title={label}
-                  >
-                    <Icon size={18} aria-hidden="true" />
                   </button>
                 );
               })}

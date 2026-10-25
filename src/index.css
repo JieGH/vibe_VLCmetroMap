@@ -1305,3 +1305,7 @@ button:active {
   transition: bottom 0.2s ease;
 }
 .walk-dock > * { pointer-events: auto; }
+
+/* Text size and appearance sit on one row, each as a compact group. */
+.sidebar-settings-row { flex-wrap: nowrap; }
+.sidebar-settings-row .size-stepper-btn, .sidebar-settings-row .theme-icon-btn { width: 38px; }
