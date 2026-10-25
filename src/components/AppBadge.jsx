@@ -39,6 +39,11 @@ export const VersionPill = ({ style }) => (
     }}
   >
     v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}
+    {typeof __GIT_SHA__ !== 'undefined' && __GIT_SHA__ && (
+      <span style={{ opacity: 0.6, fontWeight: 600, marginLeft: '6px' }} title="Git commit">
+        {__GIT_SHA__}
+      </span>
+    )}
   </span>
 );
 
