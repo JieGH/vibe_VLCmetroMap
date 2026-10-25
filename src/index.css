@@ -853,9 +853,9 @@ button:active {
 
 .feedback-thought-bubble {
   position: absolute;
-  top: calc(100% + 11px);
+  top: calc(100% + 25px);
   right: 0;
-  z-index: 60; /* Top layer above top-bar (40) and hub-chips station list (39) */
+  z-index: 60; /* Top layer dropping down over hub-chips station list (39) */
   padding: 3px 10px;
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(255, 209, 0, 0.16) 0%, rgba(29, 29, 41, 0.94) 100%), #1D1D29;
@@ -902,26 +902,28 @@ button:active {
 .feedback-thought-bubble::before {
   content: '';
   position: absolute;
-  top: -5px;
+  top: -9px;
   right: 13.5px;
   width: 6.5px;
   height: 6.5px;
   border-radius: 50%;
   background: #232018;
   border: 1px solid rgba(255, 209, 0, 0.45);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
 
 .feedback-thought-bubble::after {
   content: '';
   position: absolute;
-  top: -10px;
+  top: -18px;
   right: 15px;
   width: 4px;
   height: 4px;
   border-radius: 50%;
   background: #232018;
   border: 1px solid rgba(255, 209, 0, 0.45);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
 
@@ -929,6 +931,7 @@ button:active {
 [data-theme='light'] .feedback-thought-bubble::after {
   background: #FFFDF0;
   border: 1px solid rgba(212, 160, 0, 0.55);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 @keyframes feedbackBubbleFloat {
@@ -1308,6 +1311,16 @@ button:active {
     max-width: none;
     flex: 1;
     min-width: 0;
+  }
+
+  .feedback-thought-bubble {
+    top: calc(100% + 33px);
+  }
+  .feedback-thought-bubble::before {
+    top: -11px;
+  }
+  .feedback-thought-bubble::after {
+    top: -23px;
   }
 }
 
