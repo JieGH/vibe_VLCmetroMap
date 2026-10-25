@@ -3,9 +3,9 @@
     <td valign="middle" width="55%">
       <h1><img src="public/favicon.svg" width="72" height="72" align="absmiddle" alt=""> Xarxa</h1>
       <p>
-        <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you.<br>
-        <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti.<br>
-        <i>VA</i> · On està cada tren del metro de València, ara mateix, i quan t'arriba el pròxim.
+        <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you. Honest by design: trains are drawn from live predictions and fade when their position becomes a guess.<br>
+        <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti. Honesto por diseño: los trenes se dibujan con predicciones en directo y se difuminan cuando su posición pasa a ser una suposición.<br>
+        <i>VA</i> · On està cada tren del metro de València, ara mateix, i quan t'arriba el pròxim. Honest per disseny: els trens es dibuixen amb prediccions en directe i es difuminen quan la posició passa a ser una suposició.
       </p>
       <p>
         <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
@@ -13,23 +13,23 @@
       <p>
         <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
       </p>
-      <h3>What you can do</h3>
-      <ul>
-        <li><b>Watch trains move</b> live on the real track</li>
-        <li><b>Nearest station in one tap</b>, with walk time (location never leaves your phone)</li>
-        <li><b>Live countdowns</b> for any station</li>
-        <li><b>Follow one line</b> or search any stop</li>
-        <li><b>Light, dark or auto</b>, bigger text</li>
-        <li><b>Departures board</b> for a spare screen: <a href="https://xarxa.net/?mode=dashboard">?mode=dashboard</a></li>
-        <li><b>3 languages</b>: English, Español, Valencià</li>
-        <li><b>Poor connection OK</b>: the map is stored with the app</li>
-      </ul>
     </td>
     <td valign="middle" align="center" width="45%">
       <img src="docs/demo-phone.gif" width="300" alt="Phone screen recording of Xarxa: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network, jumps to Àngel Guimerà, searches Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user location">
     </td>
   </tr>
 </table>
+
+## What you can do
+
+- **Watch trains move** live on the real track
+- **Nearest station in one tap**, with walk time (location never leaves your phone)
+- **Live countdowns** for any station
+- **Follow one line** or search any stop
+- **Light, dark or auto**, bigger text
+- **Departures board** for a spare screen: [?mode=dashboard](https://xarxa.net/?mode=dashboard)
+- **3 languages**: English, Español, Valencià
+- **Poor connection OK**: the map is stored with the app
 
 ---
 
