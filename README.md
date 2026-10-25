@@ -5,102 +5,71 @@
 <h1 align="center">Xarxa</h1>
 
 <p align="center">
-  Where every train on the Valencia metro is, right now — and when the next one reaches you.
+  <strong>Where every Valencia metro train is, right now, and when the next one reaches you.</strong>
 </p>
 
 <p align="center">
   <a href="https://xarxa.net">
-    <img src="https://img.shields.io/badge/Live%20Demo-Open%20the%20map-00C7B7?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Open the live map">
+    <img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net">
+  </a>
+  &nbsp;
+  <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk">
+    <img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest">
-    <img src="https://img.shields.io/badge/Android-Download%20the%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app">
-  </a>
+  <img src="docs/demo.gif" width="640" alt="Screen recording of the Android app: it opens on Xàtiva station with its live departures, then the whole network with moving trains, then Dr. Lluch on the one-way east coast, then back to the user's location">
 </p>
 
 ---
 
-Metrovalencia publishes when a train is <em>due</em> at a station. It does not publish where any train actually <em>is</em>. This app works that out: it takes the live arrival predictions, walks them backwards along the real rail geometry, and draws every train on the map at the position those predictions imply.
+## Two ways to use it
 
-
-It runs as a website, an iOS app and an Android app, all from the same code.
-
-<p align="center">
-  <img src="docs/demo.gif" width="640" alt="Screen recording of the Android app: it opens on Xàtiva station with its live departures, then the whole network with moving trains, then Dr. Lluch on the one-way east coast with the return leg drawn, then back to the user's location">
-  <br><em>The Android app on an emulator with its location set beside Xàtiva: it opens on the nearest station, then shows the network and the one-way east coast. <a href="docs/demo.mp4">Full-resolution video</a>.</em>
-</p>
-
-## Get it
-
-The public website cannot reach FGV's live feed, so it reads an older relay that shows fewer trains (about 37% against over 80%). For the full picture:
-
-- **Android:** [download the APK](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest). It is not on Google Play, so Android asks permission to install it. The Android app follows your phone's dark/light theme, supports the system back button, and explains what location is for before asking. Release and Play Store notes are in [`docs/android/`](docs/android/release-checklist.md).
-- **iPhone:** build it from source with a Mac and Xcode. See [iOS](#ios).
-- **Your own Wi-Fi:** `npm run build && npm run serve` on a machine in Spain, then open the printed address on your phone.
-
-Why the website is limited: [`docs/fgv-api.md`](docs/fgv-api.md).
-
-## What it does
-
-- **Live trains** on the real track, easing between positions as predictions update.
-- **Departures** for any station: tap it for the next train each way.
-- **Nearest station:** one press finds you and opens its departures. Your location never leaves the device.
-- **Auto-locate:** if you have already allowed location, the app opens on you and your nearest station. It never asks on the web, and the first-launch prompt on the phone comes once.
-- **Works offline:** the vector basemap ships with the app.
-- **Departure board:** `?mode=dashboard` for a tablet or spare screen.
-- **Honest markers:** a train fades as its position becomes a guess. Simulated trains are hollow and dashed. Trains on branches the map lacks are not drawn at all ([#2](https://github.com/JieGH/vib_metroValencia/issues/2)).
-
-## How it works
-
-FGV answers each station with its next trains and their countdowns, but not their positions. For each train, the engine (`src/services/trainPositionEngine.js`) starts at the station it is due at and steps backwards along the line. It spends each segment's measured running time and the dwell at each platform until the countdown runs out, and draws the train at that point. When a train is seen at several stations, those sightings settle its direction. The stations most trains pass are refreshed every two minutes.
-
-Against live data this cut mean position error from 534 m (one constant speed) to 130 m. The reasoning: [ADR-0001](docs/adr/0001-walk-the-timetable-to-place-trains.md).
-
-## Run it
-
-```bash
-npm install
-npm run fetch:basemap   # offline map tiles (optional; without them the map blurs past zoom 16)
-npm run dev             # http://localhost:5173
-npm test -- --run && npm run lint
-```
-
-| Target | Command |
+| | |
 |---|---|
-| Web, dev | `npm run dev` (`npm run dev:phone` to open it from a phone on the same Wi-Fi) |
-| Self-hosted | `npm run build && npm run serve` (port 8080, LAN, no auth: trusted networks only) |
-| Public site | https://xarxa.net, on Cloudflare Workers (`wrangler.jsonc`; see [docs/hosting-cloudflare.md](docs/hosting-cloudflare.md)). The old Netlify address only shows a "we have moved" notice |
-| <a id="ios"></a>iOS | `npm run build` (also syncs iOS), then `npm run ios:open` and press Run in Xcode with your Apple ID as the team |
-| Android | `npm run android:sync`, then `npm run android:open` and press Run |
+| **On the web** | Go to **[xarxa.net](https://xarxa.net)**. Nothing to install: it works in any phone or computer browser, in English, Spanish and Valencian. |
+| **On Android** | **[Download the app](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk)** (a free APK file). The app is not on Google Play yet, so Android will ask you to allow the install. Steps below. |
+| **On iPhone** | There is no iPhone app yet. Open [xarxa.net](https://xarxa.net) in Safari, tap Share, then **Add to Home Screen**: it then opens like an app. |
 
-Platform setup, server internals, and the things that exist only to keep a platform working are in [`docs/development.md`](docs/development.md).
+## What you can do
 
-## Data
+- **See the trains move.** Every train is drawn on the real track and glides to its next position as new predictions arrive.
+- **Find your nearest station in one tap.** The blue location button centres the map on you, shows how far the walk is, and opens that station's departures. Your location stays on your phone and is never sent anywhere.
+- **Check any station.** Tap it for the next trains in each direction, with live countdowns.
+- **Follow one line.** Pick a line and the map frames the whole line, showing the main stations first and the rest as you zoom in.
+- **Search** for a station or line, or use the shortcuts to the busiest stops.
+- **Light, dark or automatic**, and bigger text if you need it.
+- **A departures board** for a tablet or spare screen: open [xarxa.net/?mode=dashboard](https://xarxa.net/?mode=dashboard).
+- **Works with a poor connection.** The map is stored with the app.
 
-| Source | Used for |
-|---|---|
-| FGV's live arrivals endpoint (keyless, max 8 trains per station) | Predictions |
-| [Metrovalencia GTFS](https://www.metrovalencia.es/google_transit_feed/google_transit.zip) | Stations and segment times (`npm run fetch:gtfs && npm run build:data`) |
-| [OpenStreetMap](https://www.openstreetmap.org/copyright) | Track geometry |
-| [Protomaps](https://protomaps.com) | Offline basemap |
+Trains are honest about doubt: a train fades as its exact position becomes a guess, and nothing is drawn where the data cannot place it.
 
-**Refetch the GTFS feed when positions look wrong:** an expired feed has no trips for today.
+## Installing the Android app
 
-## Known limits
+1. On your phone, open the **[download link](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk)**.
+2. When it has finished downloading, open the file.
+3. If Android asks, allow installing from your browser. You only do this once.
 
-- **Branches:** a line is one polyline, so the branches to Machado, Torrent Avinguda and the L8 through-services are not drawn ([#2](https://github.com/JieGH/vib_metroValencia/issues/2)).
-- **Public website** uses the relay, not FGV (see above).
-- **Station ids:** the GTFS and live-API id spaces disagree. Derive ids from `src/data/paradas_api.json`, never by hand.
-- **`npm run dev` can load with no markers** (a StrictMode race, [#8](https://github.com/JieGH/vib_metroValencia/issues/8)). Check a production build before believing it.
+It needs Android 8 or newer. It follows your phone's light or dark theme, and asks before using your location. Prefer automatic updates? [Obtainium](https://obtainium.imranr.dev) can install and update it straight from this page: add `https://github.com/JieGH/vibe_VLCmetroMap` and set the APK filter to `.*android\.apk`.
 
-## For contributors
+What changed in each version: **[Releases](https://github.com/JieGH/vibe_VLCmetroMap/releases)**.
 
-Read `CONTEXT.md` (the glossary) before naming anything. Design decisions are in [`docs/adr/`](docs/adr/), and research and measurements in [`docs/research/`](docs/research/).
+## How the trains are placed
 
-## Privacy, trademarks, license
+Metrovalencia publishes when a train is due at a station, but not where it is. Xarxa works that out: it takes the live predictions and walks each train backwards along the real rail geometry, to the point those predictions imply. Against live data this is about 130 m off on average. The details are in [DEVELOPERS.md](DEVELOPERS.md).
 
-An independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data. No analytics, no accounts, no tracking. The only thing stored is a short-lived cache of predictions in `sessionStorage`.
+## Questions
 
-Code: [Apache 2.0](LICENSE). FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms. Thanks to FGV, OpenStreetMap's contributors and Protomaps.
+- **Is it official?** No. It is an independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data.
+- **What about my privacy?** No accounts, no analytics, no tracking. Your location is only used on your device to find the nearest station. See the [privacy policy](docs/android/privacy-policy.md).
+- **Something is wrong or missing?** [Open an issue](https://github.com/JieGH/vibe_VLCmetroMap/issues), or write to the author from the menu inside the app.
+- **Where is the old address?** The previous site (`tangerine-panda-1aeea5.netlify.app`) now just points visitors to xarxa.net.
+
+## For developers
+
+Building, running, hosting, data sources, architecture and releasing: **[DEVELOPERS.md](DEVELOPERS.md)**.
+
+## Credits and license
+
+Made in Valencia by Jie Lei. Code: [Apache 2.0](LICENSE). Thanks to FGV for the live data, to OpenStreetMap's contributors for the track geometry, and to Protomaps for the offline map. FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms.

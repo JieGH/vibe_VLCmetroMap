@@ -140,7 +140,7 @@ export default {
     step2: 'Open the file when your phone says it has finished downloading.',
     step3: 'If Android asks, allow installing from this browser. You only do this once.',
     download: 'Download the Android app',
-    installNote: 'Needs Android 7 or newer. The app is not on Google Play yet, so Android may show a warning before installing.',
+    installNote: 'Needs Android 8 or newer. The app is not on Google Play yet, so Android may show a warning before installing.',
     iphoneNote: 'On iPhone there is no app yet. This website works well in Safari: tap Share, then Add to Home Screen.',
     releaseNotes: 'What is new in the app',
     done: 'Not now',

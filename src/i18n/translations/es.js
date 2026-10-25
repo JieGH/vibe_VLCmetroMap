@@ -136,7 +136,7 @@ export default {
     step2: 'Abre el archivo cuando el móvil diga que ha terminado de descargarse.',
     step3: 'Si Android te lo pide, permite instalar desde este navegador. Solo lo haces una vez.',
     download: 'Descargar la app Android',
-    installNote: 'Necesita Android 7 o superior. La app aún no está en Google Play, así que Android puede mostrar un aviso antes de instalar.',
+    installNote: 'Necesita Android 8 o superior. La app aún no está en Google Play, así que Android puede mostrar un aviso antes de instalar.',
     iphoneNote: 'En iPhone aún no hay app. Esta web funciona bien en Safari: toca Compartir y después Añadir a pantalla de inicio.',
     releaseNotes: 'Novedades de la app',
     done: 'Ahora no',

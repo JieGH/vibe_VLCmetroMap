@@ -1,9 +1,11 @@
 // The Android app calls FGV's live feed directly from the phone. This website
 // cannot: FGV refuses connections from its web host. The banner invites
 // visitors who can install the app to do so.
+// Stable links: every release attaches `Xarxa-android.apk`, and `latest` always resolves to the newest one,
+// so neither the website nor the README needs editing when a new version ships.
 export const APK_URL =
-  'https://github.com/JieGH/vibe_VLCmetroMap/releases/download/v1.3.1/Xarxa-v1.3.1-android-debug.apk';
-export const RELEASE_URL = 'https://github.com/JieGH/vibe_VLCmetroMap/releases/tag/v1.3.1';
+  'https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk';
+export const RELEASE_URL = 'https://github.com/JieGH/vibe_VLCmetroMap/releases/latest';
 
 export const APP_BANNER_DISMISSED_KEY = 'metro_valencia_app_banner_dismissed';
 

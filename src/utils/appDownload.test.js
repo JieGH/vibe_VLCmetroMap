@@ -43,7 +43,7 @@ describe('banner dismissal', () => {
 });
 
 describe('download link', () => {
-  it('points at the APK attached to a GitHub release', () => {
-    expect(APK_URL).toMatch(/^https:\/\/github\.com\/JieGH\/vibe_VLCmetroMap\/releases\/download\/.+\.apk$/);
+  it('points at the newest release\'s APK by its stable name', () => {
+    expect(APK_URL).toBe('https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk');
   });
 });

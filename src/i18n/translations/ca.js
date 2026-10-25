@@ -136,7 +136,7 @@ export default {
     step2: 'Obri el fitxer quan el mòbil diga que ha acabat de descarregar-se.',
     step3: 'Si Android t\'ho demana, permet instal·lar des d\'este navegador. Només ho fas una vegada.',
     download: 'Descarrega l\'app d\'Android',
-    installNote: 'Necessita Android 7 o superior. L\'app encara no està en Google Play, així que Android pot mostrar un avís abans d\'instal·lar.',
+    installNote: 'Necessita Android 8 o superior. L\'app encara no està en Google Play, així que Android pot mostrar un avís abans d\'instal·lar.',
     iphoneNote: 'En iPhone encara no hi ha app. Esta web funciona bé en Safari: toca Compartir i després Afegir a la pantalla d\'inici.',
     releaseNotes: 'Novetats de l\'app',
     done: 'Ara no',

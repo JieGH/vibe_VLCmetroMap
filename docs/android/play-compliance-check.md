@@ -62,4 +62,4 @@ Re-checked NAT against the repo; rules from round 1 were not re-fetched.
 - New About "Source code" button opens the canonical repo (`JieGH/vibe_VLCmetroMap`) in the browser; it sends nothing, so Data safety answers are unchanged.
 - **Done:** About now has a "Read the full privacy policy" button (`PRIVACY_URL` points at the GitHub copy of `privacy-policy.md` on `main`; it resolves once `dev` is merged and pushed; swap in your own hosted URL if you prefer).
 - **Done:** `privacy-policy.md` library wording now matches what About shows.
-- The sideload APK on the v1.3.1 release (`Xarxa-Native-v0.1.0.apk`) predates both fixes; rebuild it with `tools/release-apk.sh` before sharing it with older phones. It uses a separate key, so it cannot be mixed with the Play build.
+- The sideload APK once attached to v1.3.1 predated both fixes; v1.4.0 replaces it (`tools/release-apk.sh`). It uses a separate key, so it cannot be mixed with the Play build.

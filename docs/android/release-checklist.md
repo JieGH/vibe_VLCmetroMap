@@ -31,7 +31,7 @@ The GitHub release APK (`Xarxa-v*-android-debug.apk`) is a separate, debug-signe
 
 ## Native APK on GitHub releases (Obtainium)
 
-Every release also carries the native app: `android-native/tools/release-apk.sh [tag]` builds `assembleRelease`, signs it with the sideload key in `~/.android/xarxa-sideload.jks` (password in `xarxa-sideload.pass`, created on first run, back both up, never change it) and uploads `Xarxa-Native-v<versionName>.apk` to the tag (default: latest release). The Obtainium APK filter for it is `Xarxa-Native.*\.apk`. Bump `android-native/version.properties` first. This key differs from the Play upload key, so a sideloaded copy and a Play copy cannot update each other.
+Every release also carries the native app: `android-native/tools/release-apk.sh [tag]` builds `assembleRelease`, signs it with the sideload key in `~/.android/xarxa-sideload.jks` (password in `xarxa-sideload.pass`, created on first run, back both up, never change it) and uploads `Xarxa-v<versionName>-android.apk` and a copy named `Xarxa-android.apk` to the tag (default: latest release). The README and the website link to the copy through `releases/latest/download/Xarxa-android.apk`; the Obtainium APK filter is `.*android\.apk`. Bump `android-native/version.properties` first. This key differs from the Play upload key, so a sideloaded copy and a Play copy cannot update each other.
 
 ## Before each store submission
 
