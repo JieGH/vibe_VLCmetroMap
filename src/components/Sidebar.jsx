@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Info, Languages, LayoutDashboard } from 'lucide-react';
+import { ChevronLeft, Info, Languages, LayoutDashboard, Mail } from 'lucide-react';
 import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation, SUPPORTED_LANGUAGES, languageCode } from '../i18n';
 import { isAndroid } from '../utils/platform';
 import AppBadge, { VersionPill } from './AppBadge';
+import { AUTHOR_NAME, CONTACT_EMAIL } from '../utils/contact';
 
 const THEME_MODES = [
   { id: 'system', key: 'themeAuto' },
@@ -285,6 +286,20 @@ const Sidebar = ({
               <Info size={14} />
               <span>{t('sidebar.aboutLegalButton')}</span>
             </button>
+
+            {/* The author's signature and where to write */}
+            <div className="sidebar-signature">
+              <span className="sidebar-signature-by">{t('sidebar.madeBy')}</span>
+              <span className="sidebar-signature-name">{AUTHOR_NAME}</span>
+              <a
+                className="sidebar-signature-mail"
+                href={`mailto:${CONTACT_EMAIL}`}
+                aria-label={t('sidebar.contactAria', { email: CONTACT_EMAIL })}
+              >
+                <Mail size={13} aria-hidden="true" />
+                {CONTACT_EMAIL}
+              </a>
+            </div>
           </div>
 
         </div>

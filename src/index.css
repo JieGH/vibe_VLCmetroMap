@@ -808,7 +808,9 @@ button:active {
     right: 12px;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     width: auto;
-    height: 45vh;
+    /* Seven tenths of the screen: room for every setting, the live counts and the author's signature. */
+    height: 70vh;
+    height: 70dvh;
     border-radius: 16px;
     transform: translateY(0);
   }
@@ -1209,3 +1211,33 @@ button:active {
 .app-banner-benefits svg { flex-shrink: 0; margin-top: 2px; color: #3DDC84; }
 .app-banner-steps-title { margin: 4px 0 0; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); }
 .app-banner-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-primary); }
+
+/* ── Sidebar signature ─────────────────────────────────────────────────── */
+.sidebar-signature {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.sidebar-signature-by { font-size: 0.68rem; color: var(--text-secondary); letter-spacing: 0.3px; }
+.sidebar-signature-name {
+  font-family: "Snell Roundhand", "Segoe Script", "Brush Script MT", "Apple Chancery", cursive;
+  font-size: 1.45rem;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+.sidebar-signature-mail {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.sidebar-signature-mail:hover { color: var(--text-primary); text-decoration: underline; }
