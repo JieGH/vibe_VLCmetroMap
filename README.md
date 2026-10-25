@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" width="760" alt="Screen recording of Xarxa in landscape: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network with moving trains, checks Alameda and Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user's location">
+  <img src="docs/demo-light.gif" width="760" alt="Fast light-mode screen recording of Xarxa: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network, jumps to Àngel Guimerà, searches Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user location">
 </p>
 
 ---
