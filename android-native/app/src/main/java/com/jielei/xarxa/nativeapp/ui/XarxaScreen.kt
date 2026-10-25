@@ -149,11 +149,8 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             XarxaDrawer(
-                lines = g.lines,
-                filter = filter,
                 themeMode = vm.themeMode,
                 onTheme = vm::chooseTheme,
-                onLine = { id -> vm.toggleLine(id); scope.launch { drawerState.close() } },
                 onAbout = { scope.launch { drawerState.close() }; aboutOpen = true },
             )
         },

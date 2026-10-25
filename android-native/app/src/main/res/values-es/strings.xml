@@ -63,4 +63,9 @@
     <string name="about_arrivals">Las predicciones de llegada en directo proceden del feed en tiempo real de FGV. Las cuentas atrás y las posiciones de los trenes las estima esta app a partir de esas predicciones.</string>
     <string name="about_osm">Mapa base y geometría ferroviaria © colaboradores de OpenStreetMap (ODbL). Mapa base vectorial sin conexión con Protomaps PMTiles. Renderizado con MapLibre Native (BSD 3-Clause).</string>
     <string name="about_privacy">Privacidad: tu ubicación se usa solo en este dispositivo para encontrar la estación más cercana y nunca se guarda ni se envía. Sin analítica, sin seguimiento, sin cuentas.</string>
+    <string name="about_build">compilación %1$d</string>
+    <string name="about_tagline">Trenes de Metrovalencia en directo sobre un mapa sin conexión</string>
+    <string name="about_what_title">Sobre la app</string>
+    <string name="about_what_body">Xarxa muestra dónde están ahora los trenes de Metrovalencia, con cuentas atrás en cada estación de la red. Usa el feed de llegadas en directo de FGV y mantiene el mapa sin conexión. Gratuita, de código abierto e independiente.</string>
+    <string name="about_source">Código fuente</string>
 </resources>

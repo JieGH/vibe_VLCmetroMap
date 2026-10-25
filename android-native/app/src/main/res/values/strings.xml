@@ -63,4 +63,9 @@
     <string name="about_arrivals">Live arrival predictions come from the real-time feed of FGV. Countdowns and train positions are estimated by this app from those predictions.</string>
     <string name="about_osm">Street basemap and railway geometry © OpenStreetMap contributors (ODbL). Offline vector basemap powered by Protomaps PMTiles. Map rendering by MapLibre Native (BSD 3-Clause).</string>
     <string name="about_privacy">Privacy: your location is used on this device only to find the nearest station and is never stored or sent. No analytics, no tracking, no accounts.</string>
+    <string name="about_build">build %1$d</string>
+    <string name="about_tagline">Live Metrovalencia trains on an offline map</string>
+    <string name="about_what_title">About the app</string>
+    <string name="about_what_body">Xarxa shows where Metrovalencia trains are right now, with countdowns for every station on the network. It works from FGV\'s live arrival feed and keeps the map offline. Free, open source and independent.</string>
+    <string name="about_source">Source code</string>
 </resources>

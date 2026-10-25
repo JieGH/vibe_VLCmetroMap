@@ -29,6 +29,10 @@ Applies to both apps. Everything below is run from `android/` (Capacitor wrapper
 
 The GitHub release APK (`Xarxa-v*-android-debug.apk`) is a separate, debug-signed artefact that the in-app download banner points at. `./gradlew assembleDebug` builds it. A release APK for sideloading, if ever wanted: `./gradlew assembleRelease` (needs the keystore). Keep sideload and Play builds signed with different keys in mind: users cannot update one with the other without uninstalling.
 
+## Native APK on GitHub releases (Obtainium)
+
+Every release also carries the native app: `android-native/tools/release-apk.sh [tag]` builds `assembleRelease`, signs it with the sideload key in `~/.android/xarxa-sideload.jks` (password in `xarxa-sideload.pass`, created on first run, back both up, never change it) and uploads `Xarxa-Native-v<versionName>.apk` to the tag (default: latest release). The Obtainium APK filter for it is `Xarxa-Native.*\.apk`. Bump `android-native/version.properties` first. This key differs from the Play upload key, so a sideloaded copy and a Play copy cannot update each other.
+
 ## Before each store submission
 
 - Screenshots and listing text still match the UI.
