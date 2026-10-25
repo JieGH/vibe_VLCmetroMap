@@ -68,6 +68,24 @@ export default defineConfig({
                 fs.appendFileSync(path.resolve('feedback.log.jsonl'), entry, 'utf-8');
               } catch {}
 
+              const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
+              const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
+              if (token && chatId && typeof globalThis.fetch === 'function') {
+                const safeMsg = cleanMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const safeEmail = (data.email || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const text =
+                  `📬 <b>New Feedback on Xarxa</b>\n\n` +
+                  `💬 <b>Message:</b>\n${safeMsg}\n\n` +
+                  (data.email ? `📧 <b>Contact:</b> <code>${safeEmail}</code>\n` : '') +
+                  (data.metadata?.language ? `🌐 <b>Language:</b> <code>${data.metadata.language}</code>\n` : '') +
+                  `⏱ <b>Time:</b> <code>${timestamp}</code>`;
+                globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+                }).catch(() => {});
+              }
+
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({

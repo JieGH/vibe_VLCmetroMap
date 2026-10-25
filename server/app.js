@@ -151,18 +151,20 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         }
 
         const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
-        const chatId = process.env.TELEGRAM_CHAT_ID;
+        const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
         if (token && chatId && typeof globalThis.fetch === 'function') {
+          const safeMsg = cleanMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const safeEmail = (payload.email || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           const text =
-            `📬 *New Feedback on Xarxa*\n\n` +
-            `💬 *Message:*\n${cleanMsg}\n\n` +
-            (payload.email ? `📧 *Contact:* \`${payload.email}\`\n` : '') +
-            (payload.metadata?.language ? `🌐 *Language:* \`${payload.metadata.language}\`\n` : '') +
-            `⏱ *Time:* \`${timestamp}\``;
+            `📬 <b>New Feedback on Xarxa</b>\n\n` +
+            `💬 <b>Message:</b>\n${safeMsg}\n\n` +
+            (payload.email ? `📧 <b>Contact:</b> <code>${safeEmail}</code>\n` : '') +
+            (payload.metadata?.language ? `🌐 <b>Language:</b> <code>${payload.metadata.language}</code>\n` : '') +
+            `⏱ <b>Time:</b> <code>${timestamp}</code>`;
           globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+            body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
           }).catch(() => {});
         }
 

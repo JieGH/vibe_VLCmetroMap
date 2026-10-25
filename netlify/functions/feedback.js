@@ -1,18 +1,26 @@
 // Netlify & Cloudflare Workers serverless function for receiving direct in-app user feedback.
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 async function forwardToTelegram(env, { cleanMsg, email, metadata, timestamp }) {
   const token = env?.TELEGRAM_BOT_TOKEN || (typeof process !== 'undefined' && process.env?.TELEGRAM_BOT_TOKEN) || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
-  const chatId = env?.TELEGRAM_CHAT_ID || (typeof process !== 'undefined' && process.env?.TELEGRAM_CHAT_ID);
+  const chatId = env?.TELEGRAM_CHAT_ID || (typeof process !== 'undefined' && process.env?.TELEGRAM_CHAT_ID) || '5007040501';
 
   if (!token || !chatId) return;
 
   try {
     const text =
-      `📬 *New Feedback on Xarxa*\n\n` +
-      `💬 *Message:*\n${cleanMsg}\n\n` +
-      (email ? `📧 *Contact:* \`${email}\`\n` : '') +
-      (metadata?.language ? `🌐 *Language:* \`${metadata.language}\`\n` : '') +
-      (metadata?.screen ? `📱 *Screen:* \`${metadata.screen}\`\n` : '') +
-      `⏱ *Time:* \`${timestamp}\``;
+      `📬 <b>New Feedback on Xarxa</b>\n\n` +
+      `💬 <b>Message:</b>\n${escapeHtml(cleanMsg)}\n\n` +
+      (email ? `📧 <b>Contact:</b> <code>${escapeHtml(email)}</code>\n` : '') +
+      (metadata?.language ? `🌐 <b>Language:</b> <code>${escapeHtml(metadata.language)}</code>\n` : '') +
+      (metadata?.screen ? `📱 <b>Screen:</b> <code>${escapeHtml(metadata.screen)}</code>\n` : '') +
+      `⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`;
 
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
@@ -20,7 +28,7 @@ async function forwardToTelegram(env, { cleanMsg, email, metadata, timestamp }) 
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
       }),
     });
   } catch (err) {
