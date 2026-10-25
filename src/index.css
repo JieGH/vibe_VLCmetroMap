@@ -1225,9 +1225,10 @@ button:active {
 }
 .sidebar-signature-by { font-size: 0.68rem; color: var(--text-secondary); letter-spacing: 0.3px; }
 .sidebar-signature-name {
-  font-family: "Snell Roundhand", "Segoe Script", "Brush Script MT", "Apple Chancery", cursive;
-  font-size: 1.45rem;
-  line-height: 1.15;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 .sidebar-signature-mail {
