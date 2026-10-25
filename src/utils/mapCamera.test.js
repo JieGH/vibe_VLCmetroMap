@@ -6,6 +6,8 @@ import {
   ZERO_PADDING,
   calculateFocusZoom,
   calculateUnfocusCamera,
+  zoomOutTarget,
+  CAMERA_EASE_MS,
   panelAwarePadding,
   PORTRAIT_FOCUS_CLEARANCE_PX,
 } from './mapCamera';
@@ -145,5 +147,22 @@ describe('mapCamera', () => {
       expect(portraitPadding.left).toBe(24);
       expect(portraitPadding.bottom).toBe(Math.round(800 * 0.45 + PORTRAIT_FOCUS_CLEARANCE_PX));
     });
+  });
+
+  describe('zoomOutTarget', () => {
+    it('zooms out two levels', () => {
+      expect(zoomOutTarget(15)).toBeCloseTo(13);
+    });
+    it('stops at the overview zoom', () => {
+      expect(zoomOutTarget(13.5)).toBe(DEFAULT_MAP_ZOOM);
+    });
+    it('never zooms in', () => {
+      expect(zoomOutTarget(11)).toBe(11);
+      expect(zoomOutTarget(DEFAULT_MAP_ZOOM)).toBe(DEFAULT_MAP_ZOOM);
+    });
+  });
+
+  it('eases for 400 ms', () => {
+    expect(CAMERA_EASE_MS).toBe(400);
   });
 });

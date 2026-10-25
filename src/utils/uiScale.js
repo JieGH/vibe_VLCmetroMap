@@ -1,12 +1,9 @@
-// How large the Android app draws its interface. Everything shrinks together
-// (rem and px alike) with CSS `zoom` on the root; index.css stretches the
-// full-screen containers back out, because zoom scales lengths but not
-// viewport units. window.innerWidth is unchanged, so the layout breakpoints
-// fall where they always did.
-//
-// Not done through the viewport meta tag: in this app's Android WebView that
-// widens the layout without shrinking the display, so the right edge is cut off.
-export const ANDROID_UI_ZOOM = 0.88;
+// How large the app draws its interface. Android used to shrink everything
+// with CSS `zoom` (0.88); its Material 3 design (android.css) sizes things in
+// real density-independent pixels instead, so the zoom is retired and every
+// platform draws at full size. The index.css `.ui-zoomed` rules stay for any
+// platform that ever needs a factor again.
+export const ANDROID_UI_ZOOM = 1;
 
 export const uiZoomFor = (platform) => (platform === 'android' ? ANDROID_UI_ZOOM : 1);
 

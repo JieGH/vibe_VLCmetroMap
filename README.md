@@ -46,7 +46,7 @@ It runs as a website, an iOS app and an Android app, all from the same code.
 
 The public website cannot reach FGV's live feed, so it reads an older relay that shows fewer trains (about 37% against over 80%). For the full picture:
 
-- **Android:** [download the APK](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest). It is not on Google Play, so Android asks permission to install it.
+- **Android:** [download the APK](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest). It is not on Google Play, so Android asks permission to install it. The Android app follows your phone's dark/light theme, supports the system back button, and explains what location is for before asking. Release and Play Store notes are in [`docs/android/`](docs/android/release-checklist.md).
 - **iPhone:** build it from source with a Mac and Xcode. See [iOS](#ios).
 - **Your own Wi-Fi:** `npm run build && npm run serve` on a machine in Spain, then open the printed address on your phone.
 

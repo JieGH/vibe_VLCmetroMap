@@ -83,6 +83,7 @@ const defaultProvider = {
 };
 
 const MESSAGES = {
+  declined: 'Location was not turned on. Tap the locate button when you want to find your nearest station.',
   denied: 'Location is off for this app. Turn it on in Settings to find your nearest station.',
   unavailable: 'Location services are unavailable on this device right now.',
   timeout: 'Could not get a location fix. Try again somewhere with a clearer view of the sky.',
@@ -302,6 +303,7 @@ const buildLocatedResult = (reading, now) => {
  * @param {number} [options.timeoutMs]
  * @param {number} [options.now]
  * @param {Function} [options.onProgressiveFix] Optional callback invoked with the fast Stage 1 fix
+ * @param {() => Promise<boolean>} [options.beforePrompt] Awaited just before the system permission prompt is raised (Android's rationale dialog). Resolving false ends the call as 'declined' without prompting.
  * @returns {Promise<object>}
  */
 export const locate = async ({
@@ -309,6 +311,7 @@ export const locate = async ({
   timeoutMs = FIX_TIMEOUT_MS,
   now = Date.now(),
   onProgressiveFix = null,
+  beforePrompt = null,
 } = {}) => {
   const startTime = Date.now();
 
@@ -331,6 +334,15 @@ export const locate = async ({
     }
 
     if (permission && permission.location !== 'granted') {
+      if (typeof beforePrompt === 'function') {
+        let proceed = false;
+        try {
+          proceed = Boolean(await beforePrompt());
+        } catch {
+          proceed = false;
+        }
+        if (!proceed) return failure('declined');
+      }
       try {
         const requested = await provider.requestPermissions();
         if (!requested || requested.location !== 'granted') {

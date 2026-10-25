@@ -13,26 +13,18 @@ const fakeRoot = () => {
 };
 
 describe('uiZoomFor', () => {
-  it('draws Android a little smaller, not tiny, and every other platform at full size', () => {
-    expect(uiZoomFor('android')).toBe(ANDROID_UI_ZOOM);
-    expect(ANDROID_UI_ZOOM).toBeLessThan(1);
-    expect(ANDROID_UI_ZOOM).toBeGreaterThan(0.7);
+  it('draws every platform, Android included, at full size', () => {
+    expect(ANDROID_UI_ZOOM).toBe(1);
+    expect(uiZoomFor('android')).toBe(1);
     expect(uiZoomFor('ios')).toBe(1);
     expect(uiZoomFor('web')).toBe(1);
   });
 });
 
 describe('applyUiZoom', () => {
-  it('marks the root and records the factor on Android', () => {
+  it.each(['android', 'ios', 'web'])('leaves the root untouched on %s', (platform) => {
     const root = fakeRoot();
-    expect(applyUiZoom('android', root)).toBe(ANDROID_UI_ZOOM);
-    expect(root.classes.has('ui-zoomed')).toBe(true);
-    expect(root.props['--ui-zoom']).toBe(String(ANDROID_UI_ZOOM));
-  });
-
-  it('leaves the root untouched elsewhere', () => {
-    const root = fakeRoot();
-    expect(applyUiZoom('ios', root)).toBe(1);
+    expect(applyUiZoom(platform, root)).toBe(1);
     expect(root.classes.size).toBe(0);
     expect(root.props).toEqual({});
   });

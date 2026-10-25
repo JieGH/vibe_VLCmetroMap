@@ -372,6 +372,17 @@ class ArrivalStore {
   /**
    * Main fetch method with 60s memory pause, rate budgeting, and in-flight deduplication.
    */
+  /** FGV api id for a Station name, or null when it has no live endpoint. */
+  apiIdForName(name) {
+    return this.getStationApiId({ name });
+  }
+
+  /** Milliseconds since this Station (by FGV id) was last heard from; null when never. */
+  ageMs(apiId, now = Date.now()) {
+    const entry = this.memory.get(String(apiId));
+    return entry ? now - entry.fetchedAt : null;
+  }
+
   async getStationArrivals(stationProps, { forceRefresh = false } = {}) {
     if (!stationProps) return [];
     const key = this.getStationKey(stationProps);

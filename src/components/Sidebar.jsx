@@ -4,6 +4,13 @@ import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation, SUPPORTED_LANGUAGES } from '../i18n';
+import { isAndroid } from '../utils/platform';
+
+const THEME_MODES = [
+  { id: 'system', key: 'themeAuto' },
+  { id: 'light', key: 'themeLight' },
+  { id: 'dark', key: 'themeDark' },
+];
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(
@@ -28,8 +35,14 @@ const Sidebar = ({
   onOpenAbout,
   fontSize = 'default',
   onSelectFontSize,
+  themeMode = 'system',
+  onSelectTheme,
 }) => {
   const isMobile = useIsMobile();
+  // On Android the sidebar is a modal navigation drawer; say so to TalkBack.
+  const drawerAria = isAndroid()
+    ? { role: 'dialog', 'aria-modal': isOpen ? 'true' : undefined, 'aria-label': 'Xarxa', 'aria-hidden': isOpen ? undefined : 'true' }
+    : {};
   const { t, language, setLanguage } = useTranslation();
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
     onDismiss: onToggleSidebar,
@@ -65,6 +78,7 @@ const Sidebar = ({
       <div 
         className={`sidebar glass-panel ${!isOpen ? 'collapsed' : ''}`} 
         style={{ padding: '20px', ...dragStyle }}
+        {...drawerAria}
       >
         {/* Mobile drag handle for swipe-down dismiss */}
         <div
@@ -97,6 +111,8 @@ const Sidebar = ({
           <button 
             onClick={onToggleSidebar}
             onPointerDown={(e) => e.stopPropagation()}
+            className="sidebar-close-btn"
+            aria-label={isOpen ? t('sidebar.collapseSidebar') : t('sidebar.expandSidebar')}
             style={{ 
               padding: '6px', 
               borderRadius: '8px', 
@@ -172,6 +188,31 @@ const Sidebar = ({
             </div>
           </div>
 
+          {/* Appearance: Auto follows the system, mirroring the native drawer */}
+          <div className="sidebar-appearance-section" style={{ paddingTop: '8px' }}>
+            <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              {t('sidebar.appearance')}
+            </h2>
+            <div className="lang-option-group" role="group" aria-label={t('sidebar.appearanceAria')}>
+              {THEME_MODES.map((m) => {
+                const isSelected = themeMode === m.id;
+                const label = t(`sidebar.${m.key}`);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => onSelectTheme && onSelectTheme(m.id)}
+                    className={`lang-option-btn theme-option-btn ${isSelected ? 'active' : ''}`}
+                    aria-pressed={isSelected}
+                    title={label}
+                  >
+                    <span className="lang-option-label">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Live Stats & Footer */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
             <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
@@ -227,7 +268,7 @@ const Sidebar = ({
                 gap: '6px',
                 transition: 'all 0.2s ease',
               }}
-              className="about-legal-btn"
+              className="about-legal-btn sidebar-about-btn"
             >
               <Info size={14} />
               <span>{t('sidebar.aboutLegalButton')}</span>

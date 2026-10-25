@@ -93,3 +93,19 @@ describe('Sidebar component', () => {
   });
 });
 
+
+describe('Sidebar appearance', () => {
+  it('renders Auto/Light/Dark with the selected mode pressed and no lines list', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const React = (await import('react')).default;
+    const SidebarMod = (await import('./Sidebar')).default;
+    const html = renderToStaticMarkup(
+      <SidebarMod isOpen onToggleSidebar={() => {}} themeMode="dark" />
+    );
+    expect(html).toContain('Appearance');
+    expect(html).toContain('Auto');
+    expect(html).toMatch(/theme-option-btn active"[^>]*aria-pressed="true"[^>]*title="Dark"/);
+    expect(html).not.toContain('sidebar-line-btn');
+    expect(html).not.toContain('Show only line');
+  });
+});

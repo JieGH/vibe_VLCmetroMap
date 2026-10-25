@@ -15,6 +15,7 @@ export const RESUME_AFTER_HIDDEN_MS = 5 * 60 * 1000;
 /**
  * @param {object} options
  * @param {(fix: object) => void} options.onFix Called with a usable fix: located, with a Nearest Station. Never for a refusal, a timeout or a rough or distant fix, which at launch do nothing.
+ * @param {() => Promise<boolean>} [options.beforePrompt] Android's rationale dialog, awaited before the system prompt.
  * @param {boolean} options.isNative Resume handling is native only; a browser tab is never "returned to".
  * @param {object} [options.provider]
  * @param {Storage|null} [options.storage]
@@ -28,6 +29,7 @@ export const createAutoLocator = ({
   isNative,
   provider,
   storage,
+  beforePrompt,
   now = Date.now,
   doc = typeof document !== 'undefined' ? document : null,
   locateFn = locate,
@@ -65,6 +67,7 @@ export const createAutoLocator = ({
       const result = await locateFn({
         provider,
         onProgressiveFix: (interim) => accept(interim, gen),
+        beforePrompt,
       });
       accept(result, gen);
     } catch {

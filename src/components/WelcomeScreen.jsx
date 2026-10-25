@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
+import { isAndroid } from '../utils/platform';
 import {
   WELCOME_MIN_HOLD_MS,
   WELCOME_MAX_HOLD_MS,
@@ -46,6 +47,15 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
 
   useEffect(() => { scheduleRef.current?.setReady(ready); }, [ready]);
 
+  // Android: a tap anywhere skips the splash straight to the map.
+  const skip = () => {
+    scheduleRef.current?.cancel();
+    setHidden(true);
+    markWelcomeSeen();
+    if (onCompleteRef.current) onCompleteRef.current();
+  };
+  const skippable = isAndroid();
+
   if (hidden) return null;
 
   return (
@@ -54,6 +64,7 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
       role="status"
       aria-label="Xarxa"
       data-testid="welcome-screen"
+      onClick={skippable ? skip : undefined}
       style={fading ? { transitionDelay: `${fadeDelay}ms` } : undefined}
     >
       <div className="welcome-screen-content">

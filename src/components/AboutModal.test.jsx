@@ -39,4 +39,9 @@ describe('AboutModal component', () => {
     const html = renderToStaticMarkup(<AboutModal isOpen={true} onClose={() => {}} />);
     expect(containsRepoUrls(html)).toBe(false);
   });
+
+  it('states plainly that the app is unofficial', () => {
+    const html = renderToStaticMarkup(<AboutModal isOpen={true} onClose={() => {}} />);
+    expect(html).toContain('not affiliated with or endorsed by FGV/Metrovalencia');
+  });
 });

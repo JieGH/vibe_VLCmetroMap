@@ -68,6 +68,7 @@ const AboutModal = ({ isOpen, onClose }) => {
       >
         {/* Header */}
         <div
+          className="about-modal-header"
           style={{
             padding: '20px 20px 16px',
             display: 'flex',
@@ -110,6 +111,7 @@ const AboutModal = ({ isOpen, onClose }) => {
 
           <button
             type="button"
+            className="about-modal-close"
             onClick={onClose}
             aria-label={t('aboutModal.closeAria')}
             style={{
@@ -131,6 +133,7 @@ const AboutModal = ({ isOpen, onClose }) => {
 
         {/* Scrollable Body */}
         <div
+          className="about-modal-body"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -170,6 +173,9 @@ const AboutModal = ({ isOpen, onClose }) => {
             </p>
             <p style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
               {legalInfo.licenseSummary}
+            </p>
+            <p style={{ margin: '0 0 8px 0', fontWeight: 600, fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+              {t('aboutModal.unofficial')}
             </p>
             <div
               style={{
@@ -257,6 +263,7 @@ const AboutModal = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div
+          className="about-modal-footer"
           style={{
             padding: '12px 20px',
             borderTop: '1px solid var(--border-color)',

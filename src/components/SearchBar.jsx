@@ -146,13 +146,20 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   let itemIdx = 0; // Running counter for keyboard highlight mapping
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={dropdownRef} className="search-bar" style={{ position: 'relative', width: '100%' }}>
       {/* Input row */}
       <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px' }}>
-        <Search size={18} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+        <Search size={18} color="var(--text-secondary)" className="search-bar-icon" aria-hidden="true" style={{ flexShrink: 0 }} />
         <input
           ref={inputRef}
           type="text"
+          className="search-bar-input"
+          role="combobox"
+          aria-expanded={isOpen && allItems.length > 0}
+          aria-controls="search-bar-listbox"
+          aria-autocomplete="list"
+          aria-activedescendant={isOpen && highlighted >= 0 ? `search-bar-option-${highlighted}` : undefined}
+          autoComplete="off"
           value={query}
           onChange={e => {
             const val = e.target.value;
@@ -184,7 +191,10 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
         />
         {query && (
           <button
+            type="button"
+            className="search-bar-clear"
             onClick={handleClear}
+            aria-label={t('searchBar.clearTitle')}
             style={{ padding: '4px', borderRadius: '50%', background: 'var(--bg-hover)', display: 'flex', flexShrink: 0 }}
             title={t('searchBar.clearTitle')}
           >
@@ -196,7 +206,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
       {/* Dropdown */}
       {isOpen && allItems.length > 0 && (
         <div
-          className="glass-panel"
+          className="glass-panel search-bar-results"
+          id="search-bar-listbox"
           style={{
             position: 'absolute',
             top: 'calc(100% + 10px)',
@@ -223,6 +234,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
                 return (
                   <div
                     key={`line-${line.properties.line}`}
+                    id={`search-bar-option-${idx}`}
+                    className="search-bar-option"
                     role="option"
                     aria-selected={isHl}
                     onClick={() => handleSelectLine(line)}
@@ -268,6 +281,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
                 return (
                   <div
                     key={`st-${st.properties.name}`}
+                    id={`search-bar-option-${idx}`}
+                    className="search-bar-option"
                     role="option"
                     aria-selected={isHl}
                     onClick={() => handleSelectStation(st)}

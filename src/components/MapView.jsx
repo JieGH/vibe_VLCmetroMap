@@ -14,9 +14,12 @@ import {
   DEFAULT_MAP_CENTER,
   ZERO_PADDING,
   calculateFocusZoom,
-  calculateUnfocusCamera,
+  zoomOutTarget,
+  CAMERA_EASE_MS,
   panelAwarePadding as computePanelPadding,
 } from '../utils/mapCamera';
+import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
+import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
@@ -555,6 +558,8 @@ const stationBorderColor = (st) => {
 // which one you meant. Resolving the tap to the *nearest* Station within the
 // radius settles it by distance instead, which is the thing the finger was
 // actually aiming at.
+// Vehicle loop cadence (ms between redraws).
+const FRAME_INTERVAL_MS = 33;
 const TAP_RADIUS_PX = 22;
 
 // How close framing the viewer against their Nearest Station is allowed to get.
@@ -611,7 +616,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
-const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady, onUserInteract }) => {
+const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady, onUserInteract }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -632,10 +637,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   const lastFramedFetchedAtRef = useRef(null); // prevents camera jumps on accuracy refinements
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
-  const preFocusZoomRef = useRef(null); // zoom level before station was focused
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
-  const zoomScaleRef    = useRef(1); // mutable scale factor updated on every zoom event
+  const zoomScaleRef    = useRef(1); // raw zoomCurve value, updated on every zoom event
+  const zoomValueRef    = useRef(DEFAULT_MAP_ZOOM); // current map zoom
+  const closingZoomRef  = useRef(false); // a sheet-close zoom-out ease is running
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
   // MapLibre still emits a trailing 'click' after some real drag gestures
   // (notably a touch pan that ends without much velocity), which would
@@ -676,31 +682,33 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     stInnerElemsRef.current = [];
   };
 
-  // Apply zoom-based scale directly to all known marker DOM elements
-  const applyMarkerScale = (scale) => {
-    zoomScaleRef.current = scale;
+  // Apply zoom-based scale directly to all known marker DOM elements. `curve` is
+  // the raw zoomCurve value (also used for the hide thresholds); the drawn
+  // sizes come from dotScale/trainScale so dot and train share one curve.
+  const applyMarkerScale = (curve, zoom) => {
+    zoomScaleRef.current = curve;
 
-    // Station markers: hide below scale 0.55 (~zoom 9.7), scale above that
+    // Station markers: hide below curve 0.55 (~zoom 9.7)
     stInnerElemsRef.current.forEach(el => {
-      if (scale < 0.55) {
+      if (curve < 0.55) {
         el.style.visibility = 'hidden';
         el.style.pointerEvents = 'none';
       } else {
         el.style.visibility = '';
         el.style.pointerEvents = '';
-        el.style.transform = `scale(${Math.min(1.2, scale).toFixed(3)})`;
+        el.style.transform = `scale(${dotScale(zoom).toFixed(3)})`;
       }
     });
 
-    // Vehicle markers: hide below scale 0.3 (~zoom 8.7), scale above
+    // Vehicle markers: hide below curve 0.3 (~zoom 8.7)
     vehInnerElemsRef.current.forEach(el => {
-      if (scale < 0.3) {
+      if (curve < 0.3) {
         el.style.visibility = 'hidden';
         el.style.pointerEvents = 'none';
       } else {
         el.style.visibility = '';
         el.style.pointerEvents = '';
-        el.style.transform = `scale(${Math.min(1.1, scale).toFixed(3)})`;
+        el.style.transform = `scale(${trainScale(zoom).toFixed(3)})`;
       }
     });
   };
@@ -709,9 +717,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
   // how many independent sightings pin it down.
   const describeVehicle = (v) => {
     const lang = languageRef.current;
-    if (!v.isLive) {
-      return translate(lang, 'mapView.vehicleSimulated', { line: v.line, direction: v.direction });
-    }
     const eta = v.secondsToTarget <= 0
       ? translate(lang, 'mapView.atPlatform')
       : translate(lang, 'mapView.etaMinTo', { min: Math.round(v.secondsToTarget / 60) });
@@ -743,6 +748,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     const hovered = hoverRef.current;
     const seenStops = new Set();
     const scale = zoomScaleRef.current;
+    const drawnScale = dotScale(zoomValueRef.current);
 
     const filteredStations = stationFeatures.filter((st) => {
       if (hovered) {
@@ -780,7 +786,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         border:${isHovered ? '3px' : '2px'} solid ${stationBorderColor(st)};
         box-shadow:0 2px 6px rgba(0,0,0,.5);
         transition:transform .1s ease;
-        transform: scale(${Math.min(1.2, scale).toFixed(3)});
+        transform: scale(${drawnScale.toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
         pointer-events: ${isHidden ? 'none' : ''};
         box-sizing:border-box;
@@ -790,8 +796,8 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       wrapper.title = st.properties.name;
       stInnerElemsRef.current.push(inner);
 
-      wrapper.onmouseenter = () => { inner.style.transform = `scale(${(zoomScaleRef.current * 1.5).toFixed(3)})`; };
-      wrapper.onmouseleave = () => { inner.style.transform = `scale(${zoomScaleRef.current.toFixed(3)})`; };
+      wrapper.onmouseenter = () => { inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.5).toFixed(3)})`; };
+      wrapper.onmouseleave = () => { inner.style.transform = `scale(${dotScale(zoomValueRef.current).toFixed(3)})`; };
       wrapper.onclick = (e) => {
         e.stopPropagation();
         selectStRef.current(st);
@@ -811,9 +817,10 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     clearVehicleMarkers();
 
     const activeFilter = filterRef.current;
-    const initialVehicles = trainPositionEngine.getAllVehicles(Date.now());
-    // Show only live vehicles (hide timetable/simulated vehicles)
-    let visible = initialVehicles;
+    // Live vehicles only: no timetable/headway guesses are ever drawn.
+    const liveNow = (now) => trainPositionEngine.getLiveVehiclesFromMemory(now)
+      .map((v) => trainPositionEngine.smoothVehicle(v, now));
+    let visible = liveNow(Date.now());
     if (Array.isArray(activeFilter) && activeFilter.length > 0) {
       visible = visible.filter(v => activeFilter.includes(String(v.line)));
     }
@@ -828,19 +835,17 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       const isHidden = currentScale < 0.3;
       
       inner.innerHTML = `<span style="pointer-events:none">L${v.line}</span>`;
-      // A simulated train is a guess at a headway, not a train anyone reported.
-      // It reads as hollow and unlit so it can never be mistaken for live data.
       inner.style.cssText = `
         width:28px; height:28px; border-radius:50%;
-        background:${v.isLive ? color : 'transparent'};
-        border:2px ${v.isLive ? 'solid rgba(255,255,255,0.9)' : `dashed ${color}`};
+        background:${color};
+        border:2px solid rgba(255,255,255,0.9);
         box-shadow:0 0 0 0 ${color};
         display:flex; align-items:center; justify-content:center;
-        color:${v.isLive ? '#fff' : color}; font-size:10px; font-weight:800;
+        color:#fff; font-size:10px; font-weight:800;
         opacity:${vehicleOpacity(v, selectedStationRef.current)};
         animation: ${vehicleAnimation(v, selectedStationRef.current)};
         box-sizing:border-box; position:relative;
-        transform: scale(${Math.min(1.1, currentScale).toFixed(3)});
+        transform: scale(${trainScale(zoomValueRef.current).toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
         pointer-events: ${isHidden ? 'none' : ''};
         transform-origin: center center;
@@ -859,6 +864,8 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         marker,
         inner,
         title: wrapper.title,
+        lng: v.coordinates[0],
+        lat: v.coordinates[1],
         opacity: vehicleOpacity(v, selectedStationRef.current),
         animation: vehicleAnimation(v, selectedStationRef.current),
       });
@@ -866,10 +873,22 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
     visible.forEach(createVehicleMarker);
 
+    let lastFrameAt = 0;
     const animate = () => {
       const now = Date.now();
-      const currentVehicles = trainPositionEngine.getAllVehicles(now);
-      updateTrainCount(currentVehicles.filter(v => v.isLive));
+      // ~30 fps is plenty for a train crawling along a track.
+      if (now - lastFrameAt < FRAME_INTERVAL_MS) {
+        animFrameRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      lastFrameAt = now;
+      const currentVehicles = liveNow(now);
+      // Forget render state for trains that are gone (getAllVehicles used to).
+      const alive = new Set(currentVehicles.map(v => v.id));
+      for (const id of trainPositionEngine.renderState.keys()) {
+        if (!alive.has(id)) trainPositionEngine.renderState.delete(id);
+      }
+      updateTrainCount(currentVehicles);
       let currentVisible = currentVehicles;
       if (Array.isArray(filterRef.current) && filterRef.current.length > 0) {
         currentVisible = currentVisible.filter(v => filterRef.current.includes(String(v.line)));
@@ -886,7 +905,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       currentVisible.forEach((v) => {
         const existing = markerMapRef.current.get(v.id);
         if (existing) {
-          existing.marker.setLngLat(v.coordinates);
+          if (existing.lng !== v.coordinates[0] || existing.lat !== v.coordinates[1]) {
+            existing.lng = v.coordinates[0];
+            existing.lat = v.coordinates[1];
+            existing.marker.setLngLat(v.coordinates);
+          }
           // Confidence moves while the train does — the countdown runs down,
           // syncs land or fail to — so the marker has to follow it rather than
           // keep the opacity it was created with. Each value is written only
@@ -1038,12 +1061,18 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
 
     const updateZoomScale = () => {
       const zoom = map.getZoom();
-      // At zoom 11.5 scale = 1.0, at zoom 9 scale ~0.5, at zoom 7.5 scale = 0 (fully hidden)
-      const scale = Math.max(0.0, Math.min(1.2, (zoom - 7.5) / 4.0));
-      applyMarkerScale(scale);
+      zoomValueRef.current = zoom;
+      applyMarkerScale(zoomCurve(zoom), zoom);
     };
     map.on('zoom', updateZoomScale);
     updateZoomScale();
+
+    // A touch or click on the map cancels a running sheet-close zoom-out.
+    const cancelClosingEase = () => {
+      if (closingZoomRef.current) { closingZoomRef.current = false; map.stop(); }
+    };
+    map.on('mousedown', cancelClosingEase);
+    map.on('touchstart', cancelClosingEase);
 
     map.on('dragstart', () => { wasDraggedRef.current = true; });
     map.on('dragend', () => {
@@ -1106,9 +1135,11 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     };
     const syncTimer = setInterval(syncIfVisible, NETWORK_SYNC_INTERVAL_MS);
     document.addEventListener('visibilitychange', syncIfVisible);
+    const stopTracker = startTrainTracker();
 
     return () => {
       clearInterval(syncTimer);
+      stopTracker();
       document.removeEventListener('visibilitychange', syncIfVisible);
       stopAnimation();
       clearVehicleMarkers();
@@ -1140,19 +1171,6 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     // only way to be sure the whole basemap changed.
     map.setStyle(styleFor(theme), { diff: false });
   }, [theme]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !flyTarget) return;
-    const [lng, lat] = snappedCoordinates(flyTarget);
-    map.flyTo({
-      center: [lng, lat],
-      zoom: 14.5,
-      padding: panelAwarePadding(map, { hasPanel: true }),
-      essential: true,
-      duration: 1200,
-    });
-  }, [flyTarget]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1202,25 +1220,20 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     if (!selectedStation) {
       if (prevStationRef.current) {
         prevStationRef.current = null;
-        const { zoom: targetZoom, padding: targetPadding } = calculateUnfocusCamera({
-          preFocusZoom: preFocusZoomRef.current,
-        });
-        preFocusZoomRef.current = null;
-
+        closingZoomRef.current = true;
+        map.once('moveend', () => { closingZoomRef.current = false; });
         map.easeTo({
           center: map.getCenter(),
-          padding: targetPadding,
-          zoom: targetZoom,
-          duration: 600,
+          padding: ZERO_PADDING,
+          zoom: zoomOutTarget(map.getZoom()),
+          duration: CAMERA_EASE_MS,
           essential: true,
         });
       }
       return undefined;
     }
 
-    if (!prevStationRef.current) {
-      preFocusZoomRef.current = map.getZoom();
-    }
+    closingZoomRef.current = false;
     prevStationRef.current = selectedStation;
 
     const coordinates = snappedCoordinates(selectedStation);
@@ -1244,7 +1257,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
       center: coordinates,
       zoom: targetZoom,
       padding: basePadding,
-      duration: 900,
+      duration: CAMERA_EASE_MS,
       essential: true,
     });
 
@@ -1322,7 +1335,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         map.easeTo({
           center: map.getCenter(),
           padding: ZERO_PADDING,
-          duration: 600,
+          duration: CAMERA_EASE_MS,
           essential: true,
         });
       }
@@ -1350,7 +1363,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
         center: userLocation.coordinates,
         zoom: Math.max(map.getZoom(), 14.5),
         padding,
-        duration: 900,
+        duration: CAMERA_EASE_MS,
         essential: true,
       });
       return;
@@ -1361,7 +1374,7 @@ const MapView = ({ theme, selectedStation, flyTarget, onSelectStation, activeLin
     map.fitBounds(bounds, {
       padding,
       maxZoom: USER_FRAME_MAX_ZOOM,
-      duration: 900,
+      duration: CAMERA_EASE_MS,
       essential: true,
     });
   }, [userLocation]);

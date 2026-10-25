@@ -34,7 +34,13 @@ const useIsLandscape = () => {
   return landscape;
 };
 
-const StationPanel = ({ station, theme, onClose, onCenter }) => {
+// Compact sheet, mirroring the native StationSheet: header plus four rows of
+// ROW_HEIGHT_PX, anything further scrolls inside the body.
+const ROW_HEIGHT_PX = 56;
+const VISIBLE_ROWS = 4;
+const TABLE_HEAD_PX = 30;
+
+const StationPanel = ({ station, theme, onClose }) => {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
@@ -98,6 +104,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
     <>
       <aside
         className="glass-panel station-panel"
+        aria-label={focus.name}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
@@ -134,6 +141,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
 
       {/* Header: which station, and how trustworthy this is */}
       <header
+        className="station-panel-header"
         style={{
           display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
           gap: 12, padding: !landscape ? '6px 16px 12px' : '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
@@ -187,6 +195,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         <button
           onClick={onClose}
           onPointerDown={(e) => e.stopPropagation()}
+          className="station-panel-close"
           aria-label={t('stationPanel.closeAria')}
           style={{
             width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none',
@@ -199,7 +208,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
       </header>
 
       {/* Unified arrivals table ranked by closest arrival time. */}
-      <div style={{ maxHeight: 240, overflowY: 'auto', padding: '4px 10px 8px' }}>
+      <div className="station-panel-body" style={{ maxHeight: TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8, overflowY: 'auto', padding: '0 10px 4px' }}>
         {focus.fetchError && (
           <div role="status" style={{
             margin: '8px 0', padding: '8px 10px', borderRadius: 8,
@@ -228,7 +237,7 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
             </thead>
             <tbody>
               {focus.arrivals.map((a, i) => (
-                <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)' }}>
+                <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)', height: ROW_HEIGHT_PX }}>
                   <td style={{ padding: '7px 8px', width: 1 }}>
                     <span
                       className="station-line-badge"
@@ -277,19 +286,6 @@ const StationPanel = ({ station, theme, onClose, onCenter }) => {
         )}
       </div>
 
-      <footer style={{ padding: 10, borderTop: '1px solid var(--border-color)' }}>
-        <button
-          onClick={onCenter}
-          style={{
-            width: '100%', minHeight: 44, borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: 'var(--bg-hover)', color: 'var(--text-primary)',
-            fontWeight: 700, fontSize: '.82rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
-          {t('stationPanel.recentreButton')}
-        </button>
-      </footer>
     </aside>
   </>
 );

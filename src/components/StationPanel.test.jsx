@@ -15,14 +15,14 @@ describe('StationPanel component', () => {
 
   it('renders nothing when station is null', () => {
     const html = renderToStaticMarkup(
-      <StationPanel station={null} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={null} theme="dark" onClose={() => {}} />
     );
     expect(html).toBe('');
   });
 
   it('renders as a floating card with margins and uniform rounded corners in portrait', () => {
     const html = renderToStaticMarkup(
-      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
     );
     expect(html).toBeTruthy();
 
@@ -48,7 +48,7 @@ describe('StationPanel component', () => {
   // background tap without that side effect, so the backdrop is gone.
   it('does not render a backdrop over the map that would block drag or zoom', () => {
     const html = renderToStaticMarkup(
-      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
     );
 
     expect(html).not.toContain('station-backdrop');
@@ -92,7 +92,7 @@ describe('StationPanel component', () => {
     });
 
     const html = renderToStaticMarkup(
-      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
     );
 
     // No split into primary big rows vs compact rest rows
@@ -117,7 +117,7 @@ describe('StationPanel component', () => {
   it('renders drag handle in portrait mode and hides it in landscape mode', () => {
     // In default Node test environment, window is undefined, which defaults to portrait
     const portraitHtml = renderToStaticMarkup(
-      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
     );
     expect(portraitHtml).toContain('data-testid="station-drag-handle"');
     expect(portraitHtml).toContain('sheet-drag-handle-wrap');
@@ -132,7 +132,7 @@ describe('StationPanel component', () => {
         removeEventListener: () => {},
       };
       const landscapeHtml = renderToStaticMarkup(
-        <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+        <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
       );
       expect(landscapeHtml).not.toContain('data-testid="station-drag-handle"');
     } finally {
@@ -164,7 +164,7 @@ describe('StationPanel component', () => {
     });
 
     const liveHtml = renderToStaticMarkup(
-      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
     );
     expect(liveHtml).toContain('station-status-badge');
     expect(liveHtml).toContain('station-confirmed-badge');
@@ -190,11 +190,19 @@ describe('StationPanel component', () => {
     });
 
     const memoryHtml = renderToStaticMarkup(
-      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} onCenter={() => {}} />
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
     );
     expect(memoryHtml).toContain('station-status-badge');
     expect(memoryHtml).toContain('station-confirmed-badge');
     expect(memoryHtml).not.toContain('>MEMORY<');
     expect(memoryHtml).not.toContain('>confirmed 2 min ago<');
+  });
+
+  it('has no footer or recentre button', () => {
+    const html = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" onClose={() => {}} />
+    );
+    expect(html).not.toContain('station-panel-recentre');
+    expect(html).not.toContain('<footer');
   });
 });

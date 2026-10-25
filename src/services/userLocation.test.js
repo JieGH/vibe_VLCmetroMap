@@ -410,6 +410,44 @@ describe('locate', () => {
   });
 });
 
+const spied = (p) => ({
+  checkPermissions: vi.fn(p.checkPermissions),
+  requestPermissions: vi.fn(p.requestPermissions),
+  getCurrentPosition: vi.fn(p.getCurrentPosition),
+});
+
+describe('locate rationale hook (beforePrompt)', () => {
+  beforeEach(() => {
+    resetPermissionCache();
+  });
+
+  it('asks before the system prompt and proceeds on yes', async () => {
+    const provider = spied(fakeProvider({ permission: 'prompt', requested: 'granted' }));
+    const beforePrompt = vi.fn(async () => true);
+    const result = await locate({ provider, beforePrompt });
+    expect(beforePrompt).toHaveBeenCalledTimes(1);
+    expect(provider.requestPermissions).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe('located');
+  });
+
+  it('does not raise the system prompt when the viewer declines', async () => {
+    const provider = spied(fakeProvider({ permission: 'prompt' }));
+    const result = await locate({ provider, beforePrompt: async () => false });
+    expect(result.status).toBe('declined');
+    expect(provider.requestPermissions).not.toHaveBeenCalled();
+    expect(provider.getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it('is not consulted when permission is already granted or hard-denied', async () => {
+    const beforePrompt = vi.fn(async () => true);
+    await locate({ provider: fakeProvider({ permission: 'granted' }), beforePrompt });
+    resetPermissionCache();
+    const denied = await locate({ provider: fakeProvider({ permission: 'denied' }), beforePrompt });
+    expect(beforePrompt).not.toHaveBeenCalled();
+    expect(denied.status).toBe('denied');
+  });
+});
+
 describe('autoLocatePolicy', () => {
   const cases = [
     // [isNative, permission, askedBefore, verdict]

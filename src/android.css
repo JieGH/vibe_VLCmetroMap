@@ -1,0 +1,821 @@
+/* Material 3 design for the Android app.
+ *
+ * Loaded only when Capacitor reports the android platform (main.jsx adds
+ * `html.android` and dynamically imports this file), so the web and iOS builds
+ * never ship or apply any of it. Every rule is scoped `html.android ...`, and
+ * existing rules are never edited: this sheet re-maps the shared colour
+ * variables and overrides components on top.
+ *
+ * Brand identity is kept: line colours, the yellow accent, content and
+ * language are untouched. Layout follows an 8dp grid with 16dp margins.
+ */
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+
+html.android {
+  /* Insets: the webview's own env() values, or the vars the native SystemBars
+     plugin supplies (--safe-area-inset-*), whichever is larger. */
+  --md-inset-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --md-inset-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+  --md-inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --md-inset-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+
+  /* Colour roles, dark (the app's default theme). */
+  --md-primary: #ffd54a;
+  --md-on-primary: #3b2f00;
+  --md-primary-container: #564500;
+  --md-on-primary-container: #ffe08a;
+  --md-secondary-container: #4d4732;
+  --md-on-secondary-container: #eee2bc;
+  --md-surface: #14130e;
+  --md-surface-container-low: #1c1b16;
+  --md-surface-container: #20201a;
+  --md-surface-container-high: #2b2a24;
+  --md-surface-container-highest: #36352e;
+  --md-on-surface: #e6e2d9;
+  --md-on-surface-variant: #cac6b5;
+  --md-outline: #948f80;
+  --md-outline-variant: #494739;
+  --md-scrim: rgba(0, 0, 0, 0.32);
+  --md-state-hover: rgba(230, 226, 217, 0.08);
+  --md-state-pressed: rgba(230, 226, 217, 0.12);
+
+  /* Shape. */
+  --md-shape-sheet: 28px;
+  --md-shape-card: 16px;
+  --md-shape-fab: 16px;
+  --md-shape-pill: 999px;
+
+  /* Elevation: tonal surfaces carry the hierarchy; shadows stay slight. */
+  --md-elev-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-elev-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-elev-3: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+
+  /* Motion: emphasized easing, 300ms. */
+  --md-ease: cubic-bezier(0.2, 0, 0, 1);
+  --md-ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-dur: 300ms;
+  --md-dur-short: 150ms;
+
+  /* Type scale. */
+  --md-font: Roboto, 'Google Sans', system-ui, sans-serif;
+
+  font-family: var(--md-font);
+
+  /* The shared variables every existing component already reads. */
+  --bg-base: var(--md-surface);
+  --bg-panel: var(--md-surface-container-low);
+  --bg-panel-solid: var(--md-surface-container-low);
+  --bg-hover: var(--md-state-hover);
+  --bg-hover-active: var(--md-state-pressed);
+  --text-primary: var(--md-on-surface);
+  --text-secondary: var(--md-on-surface-variant);
+  --border-color: var(--md-outline-variant);
+  --shadow-panel: var(--md-elev-2);
+  --radius: var(--md-shape-card);
+}
+
+html.android[data-theme='light'] {
+  --md-primary: #6d5e00;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #ffe264;
+  --md-on-primary-container: #211b00;
+  --md-secondary-container: #ede2b8;
+  --md-on-secondary-container: #211b00;
+  --md-surface: #fef9ef;
+  --md-surface-container-low: #f8f3e7;
+  --md-surface-container: #f2ede1;
+  --md-surface-container-high: #ece7db;
+  --md-surface-container-highest: #e6e2d5;
+  --md-on-surface: #1d1c14;
+  --md-on-surface-variant: #4a4739;
+  --md-outline: #7b7768;
+  --md-outline-variant: #ccc6b5;
+  --md-state-hover: rgba(29, 28, 20, 0.08);
+  --md-state-pressed: rgba(29, 28, 20, 0.12);
+  --md-elev-1: 0 1px 2px rgba(0, 0, 0, 0.18), 0 1px 3px 1px rgba(0, 0, 0, 0.1);
+  --md-elev-2: 0 1px 2px rgba(0, 0, 0, 0.18), 0 2px 6px 2px rgba(0, 0, 0, 0.1);
+  --md-elev-3: 0 1px 3px rgba(0, 0, 0, 0.18), 0 4px 8px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Until the app sets an explicit theme, follow the system one. */
+@media (prefers-color-scheme: light) {
+  html.android:not([data-theme]) {
+    --md-primary: #6d5e00;
+    --md-on-primary: #ffffff;
+    --md-primary-container: #ffe264;
+    --md-on-primary-container: #211b00;
+    --md-secondary-container: #ede2b8;
+    --md-on-secondary-container: #211b00;
+    --md-surface: #fef9ef;
+    --md-surface-container-low: #f8f3e7;
+    --md-surface-container: #f2ede1;
+    --md-surface-container-high: #ece7db;
+    --md-surface-container-highest: #e6e2d5;
+    --md-on-surface: #1d1c14;
+    --md-on-surface-variant: #4a4739;
+    --md-outline: #7b7768;
+    --md-outline-variant: #ccc6b5;
+    --md-state-hover: rgba(29, 28, 20, 0.08);
+    --md-state-pressed: rgba(29, 28, 20, 0.12);
+  }
+}
+
+/* Tonal elevation instead of glass. */
+html.android .glass-panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--md-surface-container-low);
+  border: none;
+  box-shadow: var(--md-elev-1);
+}
+
+html.android :focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+html.android .maplibregl-ctrl-bottom-right {
+  bottom: calc(8px + var(--md-inset-bottom));
+  right: calc(8px + var(--md-inset-right));
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────── */
+
+/* One 56px pill: the menu button, the field and the actions live in it. */
+html.android .top-bar-container {
+  top: calc(var(--md-inset-top) + 8px);
+  left: calc(16px + var(--md-inset-left)) !important;
+  right: calc(16px + var(--md-inset-right));
+  width: auto;
+  max-width: min(720px, calc(100vw - 32px)) !important;
+  height: 56px;
+  align-items: center;
+  gap: 0;
+  padding: 0 4px;
+  background: var(--md-surface-container-high);
+  border-radius: 28px;
+  box-shadow: var(--md-elev-2);
+  transition: none !important;
+}
+
+html.android .top-bar-container .sidebar-toggle-btn {
+  display: flex !important;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  aspect-ratio: auto;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: var(--md-on-surface);
+}
+
+html.android .top-bar-container .sidebar-toggle-btn svg,
+html.android .search-bar-container > button svg,
+html.android .search-bar-clear svg {
+  width: 24px;
+  height: 24px;
+}
+
+html.android .search-bar-container {
+  width: auto;
+  height: 56px;
+  padding: 0 !important;
+  gap: 0 !important;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+html.android .search-bar-container > div[style*='width: 1px'] {
+  display: none !important;
+}
+
+html.android .search-bar-container > button,
+html.android .search-bar-clear {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant);
+}
+
+html.android .search-bar-container > button:hover,
+html.android .search-bar-clear:hover {
+  background: var(--md-state-hover) !important;
+}
+
+html.android .search-bar-container > button:active,
+html.android .search-bar-clear:active {
+  background: var(--md-state-pressed) !important;
+}
+
+html.android .search-bar-icon {
+  display: none;
+}
+
+html.android .search-bar-input {
+  padding: 0 4px;
+  font-family: var(--md-font);
+  font-size: 16px !important;
+  line-height: 24px;
+  color: var(--md-on-surface) !important;
+}
+
+html.android .search-bar-input::placeholder {
+  color: var(--md-on-surface-variant);
+  opacity: 1;
+}
+
+html.android .search-bar-results {
+  position: fixed !important;
+  top: calc(var(--md-inset-top) + 8px + 56px + 8px) !important;
+  left: calc(16px + var(--md-inset-left)) !important;
+  right: calc(16px + var(--md-inset-right)) !important;
+  max-height: min(60dvh, 480px) !important;
+  padding: 8px 0 !important;
+  border-radius: var(--md-shape-sheet) !important;
+  background: var(--md-surface-container-high) !important;
+  box-shadow: var(--md-elev-2) !important;
+}
+
+html.android .search-bar-results > div > div[style*='uppercase'] {
+  padding: 8px 16px !important;
+  font-size: 12px !important;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.5px !important;
+}
+
+html.android .search-bar-option {
+  min-height: 56px;
+  padding: 0 16px !important;
+  gap: 16px !important;
+  transition: background var(--md-dur-short) linear !important;
+}
+
+html.android .search-bar-option[aria-selected='true'] {
+  background: var(--md-state-pressed) !important;
+}
+
+html.android .search-bar-option span,
+html.android .search-bar-option > div:not(:first-child) > div:first-child {
+  font-size: 16px !important;
+  line-height: 24px;
+  font-weight: 400 !important;
+  color: var(--md-on-surface);
+}
+
+html.android .search-bar-option > div:not(:first-child) > div + div {
+  font-size: 14px !important;
+  line-height: 20px;
+  color: var(--md-on-surface-variant);
+}
+
+html.android .search-bar-option > div:first-child:not(:only-child) {
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 14px !important;
+}
+
+html.android .search-bar-option > svg {
+  width: 24px;
+  height: 24px;
+}
+
+html.android .search-bar-option > svg:last-child:not(:first-child) {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Chip row (line filters + popular stops) as M3 filter chips ─────────── */
+
+html.android .hub-chips-container {
+  top: calc(var(--md-inset-top) + 8px + 56px + 12px);
+  left: 0;
+  right: 0;
+}
+
+html.android .hub-chips {
+  padding: 2px calc(12px + var(--md-inset-right)) 6px calc(12px + var(--md-inset-left));
+  max-width: none;
+}
+
+html.android .hub-chip {
+  font-family: var(--md-font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  border: none;
+  border-radius: 16px;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  box-shadow: var(--md-elev-1);
+}
+
+html.android .hub-chip[data-selected='true'] {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+html.android .locate-notice {
+  top: calc(var(--md-inset-top) + 8px + 56px + 12px + 44px);
+  left: calc(16px + var(--md-inset-left));
+  transform: none;
+  animation: md-chip-in var(--md-dur) var(--md-ease);
+  font-family: var(--md-font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  box-shadow: var(--md-elev-1);
+}
+
+html.android .locate-notice {
+  min-height: 48px;
+  padding: 12px 16px;
+  right: calc(16px + var(--md-inset-right));
+  max-width: none;
+  text-align: left;
+  border-radius: var(--md-shape-card);
+  background: var(--md-surface-container-highest);
+}
+
+@keyframes md-chip-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Locate FAB ──────────────────────────────────────────────────────────── */
+
+html.android .locate-button {
+  /* 20% under the 56px default; the ::after in index.css keeps a 48px target. */
+  width: 45px;
+  height: 45px;
+  border-radius: var(--md-shape-fab);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  box-shadow: var(--md-elev-3);
+  transition: transform var(--md-dur-short) var(--md-ease), background-color var(--md-dur-short) linear;
+}
+
+html.android .locate-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+html.android .locate-button[data-state='unavailable'] {
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+}
+
+/* ── Station panel as a standard bottom sheet ────────────────────────────── */
+
+html.android .station-panel {
+  background: var(--md-surface-container-low);
+  border: none;
+  box-shadow: var(--md-elev-1);
+  animation-duration: var(--md-dur);
+  animation-timing-function: var(--md-ease);
+}
+
+html.android .station-panel[data-landscape='false'] {
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  border-radius: var(--md-shape-sheet) var(--md-shape-sheet) 0 0 !important;
+  padding-bottom: var(--md-inset-bottom);
+  padding-left: var(--md-inset-left);
+  padding-right: var(--md-inset-right);
+}
+
+html.android .station-panel[data-landscape='true'] {
+  top: calc(var(--md-inset-top) + 80px) !important;
+  right: calc(16px + var(--md-inset-right)) !important;
+  max-height: calc(100dvh - 96px - var(--md-inset-top) - var(--md-inset-bottom)) !important;
+  border-radius: var(--md-shape-sheet) !important;
+}
+
+/* 32x4 handle in a 48px touch area. */
+html.android .station-panel .sheet-drag-handle-wrap {
+  height: 48px;
+  padding: 0;
+}
+
+html.android .sheet-drag-handle {
+  width: 32px;
+  height: 4px;
+  background: var(--md-on-surface-variant);
+  opacity: 0.4;
+}
+
+html.android .station-panel-header {
+  align-items: center !important;
+  min-height: 56px;
+  padding: 0 8px 8px 24px !important;
+  border-bottom: none !important;
+}
+
+html.android .station-panel[data-landscape='true'] .station-panel-header {
+  padding-top: 8px !important;
+}
+
+html.android .station-panel-header h2 {
+  font-size: 22px !important;
+  line-height: 28px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+html.android .station-panel-close {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant) !important;
+}
+
+html.android .station-panel-close:hover {
+  background: var(--md-state-hover) !important;
+}
+
+html.android .station-panel-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+html.android .station-panel-body {
+  padding: 0 8px 8px !important;
+}
+
+html.android .station-arrivals-table thead tr {
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+  background: var(--md-surface-container-low) !important;
+}
+
+html.android .station-arrival-row {
+  height: 56px;
+}
+
+html.android .station-arrival-row td {
+  padding: 0 12px !important;
+}
+
+html.android .station-line-badge {
+  min-width: 32px !important;
+  height: 32px !important;
+  border-radius: 16px !important;
+  font-size: 14px !important;
+}
+
+html.android .station-arrival-row td > div:first-child {
+  font-size: 16px !important;
+  line-height: 24px;
+  font-weight: 500 !important;
+}
+
+html.android .station-arrival-row td > div + div {
+  font-size: 12px !important;
+  line-height: 16px;
+}
+
+html.android .station-arrival-due {
+  font-size: 16px !important;
+}
+
+html.android .station-panel footer {
+  padding: 8px 16px 12px !important;
+  border-top: none !important;
+}
+
+/* Filled tonal button. */
+html.android .station-panel-recentre {
+  min-height: 48px !important;
+  border-radius: var(--md-shape-pill) !important;
+  background: var(--md-secondary-container) !important;
+  color: var(--md-on-secondary-container) !important;
+  font-size: 14px !important;
+  line-height: 20px;
+  font-weight: 500 !important;
+  letter-spacing: 0.1px;
+}
+
+/* ── Sidebar as a modal navigation drawer ────────────────────────────────── */
+
+html.android .sidebar {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  width: min(360px, 85vw);
+  height: auto;
+  z-index: 60;
+  padding: calc(var(--md-inset-top) + 16px) 12px calc(var(--md-inset-bottom) + 16px) calc(12px + var(--md-inset-left)) !important;
+  border-radius: 0 var(--md-shape-card) var(--md-shape-card) 0;
+  background: var(--md-surface-container-low);
+  box-shadow: var(--md-elev-1);
+  transform: translateX(0);
+  transition: transform var(--md-dur) var(--md-ease), visibility 0s;
+}
+
+/* Hidden from touch and from TalkBack once it has slid away. */
+html.android .sidebar.collapsed {
+  transform: translateX(-105%);
+  opacity: 1;
+  visibility: hidden;
+  transition: transform 200ms var(--md-ease-accelerate), visibility 0s linear 200ms;
+}
+
+html.android .sidebar-backdrop {
+  z-index: 55;
+  background: var(--md-scrim);
+  transition: opacity var(--md-dur) var(--md-ease);
+}
+
+html.android .sidebar .sheet-drag-handle-wrap {
+  display: none;
+}
+
+html.android .sidebar h1 {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+html.android .sidebar-close-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant);
+}
+
+html.android .sidebar-close-btn:hover {
+  background: var(--md-state-hover) !important;
+}
+
+html.android .sidebar-close-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+html.android .sidebar h2 {
+  padding: 0 16px;
+  font-size: 14px !important;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0.1px !important;
+  text-transform: none !important;
+  color: var(--md-on-surface-variant) !important;
+}
+
+html.android .sidebar-font-size-section > div:first-child {
+  padding: 0 16px;
+}
+
+html.android .sidebar-font-size-section > div:first-child h2 {
+  padding: 0;
+}
+
+html.android .sidebar .sidebar-language-section {
+  padding-top: 0 !important;
+}
+
+html.android .sidebar .sidebar-language-section h2 {
+  margin-bottom: 4px !important;
+}
+
+html.android .sidebar .sidebar-language-section h2 svg {
+  display: none;
+}
+
+/* Text size: a segmented button. */
+html.android .sidebar .font-size-control-group {
+  margin: 0 16px;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-shape-pill);
+}
+
+html.android .sidebar .font-size-option-btn {
+  min-height: 48px;
+  padding: 0 4px;
+  border-radius: 0;
+  color: var(--md-on-surface);
+}
+
+html.android .sidebar .font-size-option-btn + .font-size-option-btn {
+  border-left: 1px solid var(--md-outline);
+}
+
+html.android .sidebar .font-size-option-btn.active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  box-shadow: none;
+}
+
+html.android .sidebar .font-size-option-label {
+  display: none;
+}
+
+/* Language: 56px drawer items with a pill indicator on the selected one. */
+html.android .sidebar .lang-option-group {
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+html.android .sidebar .lang-option-btn {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: 28px;
+  color: var(--md-on-surface-variant);
+}
+
+html.android .sidebar .lang-option-btn.active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  box-shadow: none;
+}
+
+html.android .sidebar .lang-option-preview {
+  min-width: 32px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+html.android .sidebar .lang-option-label {
+  margin-top: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  text-transform: none;
+}
+
+html.android .sidebar [style*='text-align: center'] {
+  background: var(--md-surface-container-highest) !important;
+  border-radius: var(--md-shape-card) !important;
+}
+
+html.android .sidebar-about-btn {
+  min-height: 56px;
+  padding: 0 16px !important;
+  gap: 12px !important;
+  justify-content: flex-start !important;
+  border: none !important;
+  border-radius: 28px !important;
+  background: transparent !important;
+  color: var(--md-on-surface-variant) !important;
+  font-size: 14px !important;
+  line-height: 20px;
+  font-weight: 500 !important;
+  letter-spacing: 0.1px;
+}
+
+html.android .sidebar-about-btn:hover {
+  background: var(--md-state-hover) !important;
+}
+
+html.android .sidebar-about-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── About as a full-screen dialog with a top app bar ────────────────────── */
+
+html.android .about-modal-backdrop {
+  align-items: stretch !important;
+  padding: 0 !important;
+  background: var(--md-surface) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html.android .about-modal-content {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100%;
+  max-height: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--md-surface) !important;
+  box-shadow: none !important;
+}
+
+html.android .about-modal-header {
+  justify-content: flex-start !important;
+  gap: 4px;
+  min-height: calc(64px + var(--md-inset-top));
+  padding: var(--md-inset-top) calc(4px + var(--md-inset-right)) 0 calc(4px + var(--md-inset-left)) !important;
+  border-bottom: none !important;
+  background: var(--md-surface-container) !important;
+}
+
+html.android .about-modal-header > div:first-child > div:first-child {
+  display: none !important;
+}
+
+html.android .about-modal-header h2 {
+  font-size: 22px !important;
+  line-height: 28px;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+html.android .about-modal-close {
+  order: -1;
+  width: 48px !important;
+  height: 48px !important;
+  background: transparent !important;
+  color: var(--md-on-surface) !important;
+}
+
+html.android .about-modal-close:hover {
+  background: var(--md-state-hover) !important;
+}
+
+html.android .about-modal-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+html.android .about-modal-body {
+  padding: 16px calc(16px + var(--md-inset-right)) 16px calc(16px + var(--md-inset-left)) !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+
+html.android .about-modal-body > section[style],
+html.android .about-modal-body section div[style*='padding: 10px 12px'] {
+  border: none !important;
+  border-radius: var(--md-shape-card) !important;
+  background: var(--md-surface-container) !important;
+}
+
+html.android .about-modal-footer {
+  padding: 8px calc(16px + var(--md-inset-right)) calc(12px + var(--md-inset-bottom)) calc(16px + var(--md-inset-left)) !important;
+  border-top: none !important;
+  background: var(--md-surface) !important;
+}
+
+html.android .about-modal-footer button {
+  min-height: 48px !important;
+  border-radius: var(--md-shape-pill) !important;
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.1px;
+}
+
+/* ── Welcome: no long animation; a tap skips it (WelcomeScreen.jsx) ──────── */
+
+html.android .welcome-screen {
+  transition-duration: var(--md-dur-short);
+}
+
+html.android .welcome-screen-content,
+html.android .welcome-screen-logo-wrap,
+html.android .welcome-line,
+html.android .welcome-station-spotlight,
+html.android .welcome-station-ring,
+html.android .welcome-station-core {
+  animation: none;
+  transform: none;
+  opacity: 1;
+  stroke-dashoffset: 0;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html.android .sidebar,
+  html.android .sidebar.collapsed,
+  html.android .sidebar-backdrop,
+  html.android .locate-button,
+  html.android .welcome-screen {
+    transition-duration: 0s;
+    transition-delay: 0s;
+  }
+
+  html.android .station-panel,
+  html.android .locate-notice {
+    animation: none;
+  }
+}

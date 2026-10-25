@@ -6,22 +6,34 @@ import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
+import HubChips from './components/HubChips';
+import WalkBanner from './components/WalkBanner';
+import { COMMON_STOPS } from './utils/commonStops';
 import WelcomeScreen from './components/WelcomeScreen';
 import AppDownloadBanner from './components/AppDownloadBanner';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
 import { locate } from './services/userLocation';
 import { createAutoLocator } from './services/autoLocate';
 import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import LocationRationale from './components/LocationRationale';
+import { isAndroid } from './utils/platform';
+import { resolveBackAction } from './utils/androidBack';
+import { initialTheme, watchSystemTheme } from './utils/systemTheme';
+import { openAppSettings } from './services/openSettings';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
-import { Sun, Moon, X, LayoutDashboard, Menu } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, Menu } from 'lucide-react';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
 // short enough that it is gone before it becomes furniture.
 const LOCATE_NOTICE_MS = 6000;
+
+// How long the floating walking box stays before it hides itself.
+const WALK_BANNER_MS = 6000;
 
 // Dashboard mode is bookmarkable so an unattended tablet can boot straight into
 // it, and reachable from a button so it is discoverable from the map.
@@ -30,9 +42,14 @@ const readMode = () =>
 
 function App() {
   const { t } = useTranslation();
-  const [showWelcome, setShowWelcome] = useState(() => !hasSeenWelcome());
+  const android = isAndroid();
+  // The animated splash is skipped on Android: the system splash already covers
+  // the load, and the language is chosen from the sidebar, not from this screen.
+  const [showWelcome, setShowWelcome] = useState(() => !android && !hasSeenWelcome());
   const [mapReady, setMapReady] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState(() => initialTheme(android));
+  const [themeMode, setThemeMode] = useState(android ? 'system' : 'dark');
+  const [rationale, setRationale] = useState(null);
   const [mode, setMode] = useState(readMode);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -42,7 +59,6 @@ function App() {
     selectedStationRef.current = selectedStation;
   }, [selectedStation]);
 
-  const [flyTarget, setFlyTarget] = useState(null);
   const [activeLineFilter, setActiveLineFilter] = useState([]);
   // Always null: nothing currently triggers a line hover, but MapView still
   // accepts this prop to dim other lines when one does.
@@ -50,6 +66,18 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [locateState, setLocateState] = useState('idle');
   const [locateNotice, setLocateNotice] = useState(null);
+  // The Station the floating walking box points at; null hides the box. The
+  // distance is not stored: the box recomputes it from the latest fix.
+  const [walkTarget, setWalkTarget] = useState(null);
+  const userLocationRef = useRef(null);
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
+  // True while the search field has focus; the chip row steps aside then.
+  const [searchFocused, setSearchFocused] = useState(false);
+  // Where the sheet sits, so the bottom-right stack can ride above (portrait)
+  // or beside (landscape) it instead of overlapping.
+  const [sheetBox, setSheetBox] = useState(null);
   const autoLocatorRef = useRef(null);
   // The Station auto-locate itself selected, so its own refinement may replace
   // it while a Station the viewer chose may not.
@@ -80,16 +108,31 @@ function App() {
     setStoredFontSize(newSize);
   };
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+  // Auto follows the phone's dark/light setting; Android starts there, web and iOS
+  // start dark. Picking Light or Dark (sidebar or top-bar toggle) stops following.
+  const applyTheme = (next) => {
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
   };
+  useEffect(() => {
+    if (themeMode !== 'system') return undefined;
+    applyTheme(initialTheme(true));
+    return watchSystemTheme(applyTheme);
+  }, [themeMode]);
+
+  const handleSelectTheme = (mode) => {
+    setThemeMode(mode);
+    if (mode !== 'system') applyTheme(mode);
+  };
+
+  const toggleTheme = () => handleSelectTheme(theme === 'dark' ? 'light' : 'dark');
 
   // Station click — just opens the detail card, does NOT move the map
   const handleSelectStation = (station) => {
     autoLocatorRef.current?.interrupt();
     setSelectedStation(station);
+    // With a fix in hand, say how far this Station is on foot.
+    if (userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
   };
 
   // Toggle sidebar menu. Opening the menu exits active station focus
@@ -102,13 +145,6 @@ function App() {
       }
       return next;
     });
-  };
-
-  // "Center Station on Map" button — explicitly flies to station
-  const handleCenterStation = (station) => {
-    // Use a new object each time to force the useEffect to re-fire
-    // even if the same station is clicked again
-    setFlyTarget({ ...station, _ts: Date.now() });
   };
 
   // Turns a locate() result into the sentence shown in the notice — built
@@ -130,11 +166,35 @@ function App() {
     return result.message;
   };
 
+  // Android only: explain what location is for before the system prompt, so
+  // the viewer is never asked cold. Resolves true on Continue, false on Not now.
+  // Held in a ref because the launch-time locator is created once.
+  const requestRationaleRef = useRef(null);
+  requestRationaleRef.current = android
+    ? () => new Promise((resolve) => setRationale((prev) => {
+      prev?.resolve(false);
+      return { resolve };
+    }))
+    : null;
+  const answerRationale = (allowed) => {
+    setRationale((current) => {
+      current?.resolve(allowed);
+      return null;
+    });
+  };
+  const beforePrompt = () => requestRationaleRef.current?.() ?? Promise.resolve(true);
+
   // Applies a User Location fix to the state. Does not displace a Station
   // the viewer has chosen manually while a background refinement was in flight.
   const applyUserLocation = (fix, updateStation = true) => {
     setUserLocation(fix);
-    setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
+    userLocationRef.current = fix;
+    if (fix.nearestStation) {
+      // The walking box answers a successful fix; the notice is for errors only.
+      setWalkTarget({ station: fix.nearestStation, _ts: Date.now() });
+    } else {
+      setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
+    }
     if (updateStation && fix.nearestStation) {
       setSelectedStation(fix.nearestStation);
     }
@@ -161,6 +221,7 @@ function App() {
     // is exactly the lie the fade exists to prevent. `maximumAge` inside
     // locate() makes a repeat press within half a minute cheap anyway.
     const result = await locate({
+      beforePrompt: android ? beforePrompt : undefined,
       onProgressiveFix: (interim) => {
         if (interim.status === 'located') {
           initialNearestStation = interim.nearestStation;
@@ -175,7 +236,7 @@ function App() {
     // opposite. Denied and unavailable are states of the device, not of the
     // attempt, so those persist until something changes.
     setLocateState(
-      result.status === 'located' || result.status === 'timeout' ? 'idle' : 'unavailable'
+      ['located', 'timeout', 'declined'].includes(result.status) ? 'idle' : 'unavailable'
     );
 
     if (result.status === 'located') {
@@ -188,7 +249,12 @@ function App() {
       applyUserLocation(result, canUpdateStation);
     } else {
       setUserLocation(null);
-      setLocateNotice({ text: describeLocateResult(result), _ts: Date.now() });
+      setLocateNotice({
+        text: describeLocateResult(result),
+        _ts: Date.now(),
+        // Android can send the viewer straight to this app's permission page.
+        action: android && result.status === 'denied' ? 'open-settings' : null,
+      });
     }
   };
 
@@ -198,6 +264,7 @@ function App() {
   const handleHideLocation = () => {
     if (!userLocation) return;
     setUserLocation(null);
+    setWalkTarget(null);
     setLocateState('idle');
     setLocateNotice({ text: t('app.locationHidden'), _ts: Date.now() });
   };
@@ -210,6 +277,7 @@ function App() {
     if (dashboardMode) return undefined;
     const locator = createAutoLocator({
       isNative: Capacitor.isNativePlatform(),
+      beforePrompt: android ? beforePrompt : undefined,
       onFix: (fix) => {
         const current = selectedStationRef.current;
         if (current && current !== autoSelectedRef.current) return;
@@ -237,6 +305,94 @@ function App() {
     return () => clearTimeout(id);
   }, [locateNotice]);
 
+  useEffect(() => {
+    if (!walkTarget) return undefined;
+    const id = setTimeout(() => setWalkTarget(null), WALK_BANNER_MS);
+    return () => clearTimeout(id);
+  }, [walkTarget]);
+
+  // Track the search field's focus for the chip row.
+  useEffect(() => {
+    const isSearch = (el) => Boolean(el?.closest?.('.search-bar-container')) && el.tagName === 'INPUT';
+    const onIn = (e) => { if (isSearch(e.target)) setSearchFocused(true); };
+    const onOut = (e) => { if (isSearch(e.target)) setSearchFocused(false); };
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+
+  // Measure the open sheet so the bottom stack never overlaps it.
+  useEffect(() => {
+    if (!selectedStation) {
+      setSheetBox(null);
+      return undefined;
+    }
+    let observer = null;
+    const frame = requestAnimationFrame(() => {
+      const el = document.querySelector('.station-panel');
+      if (!el) return;
+      const measure = () => {
+        const next = { height: el.offsetHeight, landscape: el.dataset.landscape === 'true' };
+        setSheetBox((prev) => (prev && prev.height === next.height && prev.landscape === next.landscape ? prev : next));
+      };
+      measure();
+      if (typeof ResizeObserver !== 'undefined') {
+        observer = new ResizeObserver(measure);
+        observer.observe(el);
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [selectedStation]);
+
+  // Android system back button: peel one layer per press, leave the app last.
+  // The listener is registered once and reads the latest state from a ref.
+  const backStateRef = useRef({});
+  backStateRef.current = {
+    rationale,
+    aboutOpen: isAboutOpen,
+    welcomeVisible: showWelcome,
+    dashboardMode: mode === 'dashboard',
+    sidebarOpen: isSidebarOpen,
+    stationOpen: Boolean(selectedStation),
+    lineFilterActive: Array.isArray(activeLineFilter) && activeLineFilter.length > 0,
+  };
+  useEffect(() => {
+    if (!android) return undefined;
+    let handle = null;
+    let cancelled = false;
+    CapApp.addListener('backButton', () => {
+      const st = backStateRef.current;
+      const active = document.activeElement;
+      const searchFocused = Boolean(
+        active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+      );
+      switch (resolveBackAction({ ...st, rationaleOpen: Boolean(st.rationale), searchFocused })) {
+        case 'decline-rationale': st.rationale.resolve(false); setRationale(null); break;
+        case 'close-about': setIsAboutOpen(false); break;
+        case 'dismiss-welcome': setShowWelcome(false); break;
+        case 'exit-dashboard': selectModeRef.current('map'); break;
+        case 'close-search': active.blur(); break;
+        case 'close-sidebar': setIsSidebarOpen(false); break;
+        case 'close-station': setSelectedStation(null); break;
+        case 'clear-filter': setActiveLineFilter([]); break;
+        default: CapApp.exitApp();
+      }
+    }).then((h) => {
+      if (cancelled) h.remove();
+      else handle = h;
+    });
+    return () => {
+      cancelled = true;
+      handle?.remove();
+    };
+  }, [android]);
+
   const handleSelectLine = (lineId) => {
     // null clears selection
     if (!lineId) return setActiveLineFilter([]);
@@ -247,12 +403,6 @@ function App() {
     });
   };
 
-  // Get the active line color for the filter banner
-  const getLineColor = (lineId) => {
-    const colors = { '1': '#FFD100', '3': '#E2001A', '5': '#00994D' };
-    return colors[lineId] || '#888';
-  };
-
   const selectMode = (next) => {
     const url = new URL(window.location.href);
     if (next === 'dashboard') url.searchParams.set('mode', 'dashboard');
@@ -260,6 +410,9 @@ function App() {
     window.history.replaceState({}, '', url);
     setMode(next);
   };
+
+  const selectModeRef = useRef(selectMode);
+  selectModeRef.current = selectMode;
 
   // Back and forward have to land on the mode the URL names, or a bookmarked
   // dashboard stops being a reliable place to return to.
@@ -297,7 +450,6 @@ function App() {
       <MapView
         theme={theme}
         selectedStation={selectedStation}
-        flyTarget={flyTarget}
         onSelectStation={handleSelectStation}
         activeLineFilter={activeLineFilter}
         hoverLine={hoverLine}
@@ -314,6 +466,8 @@ function App() {
         onOpenAbout={() => setIsAboutOpen(true)}
         fontSize={fontSize}
         onSelectFontSize={handleSelectFontSize}
+        themeMode={themeMode}
+        onSelectTheme={handleSelectTheme}
       />
 
       {/* Top Navigation Bar: Sidebar Toggle Button + Search Bar & Quick Actions */}
@@ -373,25 +527,36 @@ function App() {
       </div>
 
 
-      {/* Active Line Filter Banner */}
-      {Array.isArray(activeLineFilter) && activeLineFilter.length > 0 && (
-        <button
-          className="active-filter-banner glass-panel"
-          onClick={() => handleSelectLine(null)}
-          style={{
-            color: '#fff',
-            background: getLineColor(activeLineFilter[0]),
-            borderColor: 'transparent',
-          }}
-          title={t('app.clearFilterTitle')}
-        >
-          <span>{t('app.lineFilterBanner', { lines: activeLineFilter.join(', ') })}</span>
-          <X size={13} style={{ opacity: 0.85 }} />
-        </button>
+      {/* Popular stops, and one chip per active Line filter */}
+      {!searchFocused && (
+        <div className={`hub-chips-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
+          <HubChips
+            hubs={COMMON_STOPS}
+            activeLines={activeLineFilter}
+            selectedName={selectedStation?.properties?.name ?? null}
+            onHub={handleSelectStation}
+            onClearLine={handleSelectLine}
+          />
+        </div>
       )}
 
       {/* What the locate button found, or why it found nothing */}
-      {locateNotice && (
+      {locateNotice && locateNotice.action && (
+        <div className="locate-notice md-snackbar glass-panel" role="status">
+          <span className="md-snackbar-text">{locateNotice.text}</span>
+          <button
+            type="button"
+            className="md-snackbar-action"
+            onClick={() => {
+              setLocateNotice(null);
+              openAppSettings();
+            }}
+          >
+            {t('locate.openSettings')}
+          </button>
+        </div>
+      )}
+      {locateNotice && !locateNotice.action && (
         <button
           className="locate-notice glass-panel"
           onClick={() => setLocateNotice(null)}
@@ -401,12 +566,27 @@ function App() {
         </button>
       )}
 
-      <LocateButton
-        state={locateState}
-        showingLocation={Boolean(userLocation)}
-        onLocate={handleLocate}
-        onHide={handleHideLocation}
-      />
+      {/* One column, bottom right: the walking box above the locate button,
+          lifted over the sheet in portrait and set beside it in landscape */}
+      <div
+        className="bottom-stack"
+        data-sheet={sheetBox ? (sheetBox.landscape ? 'landscape' : 'portrait') : 'none'}
+        style={sheetBox && !sheetBox.landscape ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
+      >
+        {walkTarget && userLocation && (
+          <WalkBanner
+            station={walkTarget.station}
+            userLocation={userLocation}
+            onDismiss={() => setWalkTarget(null)}
+          />
+        )}
+        <LocateButton
+          state={locateState}
+          showingLocation={Boolean(userLocation)}
+          onLocate={handleLocate}
+          onHide={handleHideLocation}
+        />
+      </div>
 
       {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
@@ -415,21 +595,27 @@ function App() {
           station={selectedStation}
           theme={theme}
           onClose={() => setSelectedStation(null)}
-          onCenter={() => handleCenterStation(selectedStation)}
         />
       )}
 
       {/* Invitation to the Android app, under the search bar; steps aside for the
-          panels and notices that share that space */}
+          panels and notices that share that space (it sits below the chip row) */}
       <AppDownloadBanner
         hidden={
           showWelcome ||
           Boolean(selectedStation) ||
           isSidebarOpen ||
           Boolean(locateNotice) ||
-          (Array.isArray(activeLineFilter) && activeLineFilter.length > 0)
+          Boolean(walkTarget)
         }
       />
+
+      {rationale && (
+        <LocationRationale
+          onAllow={() => answerRationale(true)}
+          onDecline={() => answerRationale(false)}
+        />
+      )}
 
       {/* About, Legal & Licenses Modal */}
       <AboutModal

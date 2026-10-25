@@ -461,27 +461,133 @@ button:active {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-.active-filter-banner {
+/* ── Chip row under the search pill: line filters, then popular stops ───── */
+
+.hub-chips-container {
   position: absolute;
-  top: calc(76px + env(safe-area-inset-top, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 15;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  animation: filterBannerIn 0.2s ease-out;
-  cursor: pointer;
-  border: none;
+  top: calc(80px + env(safe-area-inset-top, 0px));
+  left: 12px;
+  right: 12px;
+  z-index: 39; /* just under the top bar (40) */
+  pointer-events: none;
 }
 
-.active-filter-banner:hover {
-  opacity: 0.85;
+@media (min-width: 769px) {
+  .hub-chips-container.sidebar-open { left: 360px; right: auto; max-width: calc(100vw - 380px); }
+  .hub-chips-container.sidebar-collapsed { left: 20px; right: auto; max-width: calc(100vw - 40px); }
+}
+
+.hub-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+  pointer-events: auto;
+  width: max-content;
+  max-width: 100%;
+}
+.hub-chips::-webkit-scrollbar { display: none; }
+
+.hub-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel-solid);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+/* 32px chip, 48px touch target. */
+.hub-chip::after { content: ''; position: absolute; inset: -8px -2px; }
+.hub-chip[data-selected='true'] {
+  background: var(--color-line-1);
+  border-color: transparent;
+  color: #1a1a1a;
+}
+.hub-chip-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.hub-chip-line-id { font-weight: 800; }
+
+/* ── Floating walking box ────────────────────────────────────────────────── */
+
+:root {
+  --walk-short-bg: #1E4B26; --walk-short-fg: #BDEBC0;
+  --walk-medium-bg: #54430A; --walk-medium-fg: #FFE08A;
+  --walk-long-bg: #6A2F10; --walk-long-fg: #FFC9B0;
+}
+[data-theme='light'] {
+  --walk-short-bg: #D7F0D9; --walk-short-fg: #0B3D12;
+  --walk-medium-bg: #FFF1C2; --walk-medium-fg: #4A3800;
+  --walk-long-bg: #FFDCCB; --walk-long-fg: #5A2100;
+}
+
+.walk-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: 48px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 0 0 0 16px;
+  border-radius: 16px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  background: var(--walk-short-bg);
+  color: var(--walk-short-fg);
+  animation: walkBannerIn 0.2s ease-out;
+}
+.walk-banner[data-tone='medium'] { background: var(--walk-medium-bg); color: var(--walk-medium-fg); }
+.walk-banner[data-tone='long'] { background: var(--walk-long-bg); color: var(--walk-long-fg); }
+.walk-banner > svg { flex-shrink: 0; }
+.walk-banner-text { flex: 1; padding: 10px 0; }
+.walk-banner-close {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+@keyframes walkBannerIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .walk-banner { animation: none; }
+}
+
+/* ── Bottom-right stack: walking box over the locate button ─────────────── */
+
+.bottom-stack {
+  position: fixed;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--sheet-lift, 0px));
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  transition: bottom 0.2s ease;
+}
+.bottom-stack > * { pointer-events: auto; }
+/* Landscape: the sheet docks right, so the column sits to its left. */
+.bottom-stack[data-sheet='landscape'] {
+  right: calc(16px + min(380px, 34vw) + 12px + env(safe-area-inset-right, 0px));
 }
 
 /* Custom Scrollbar */
@@ -499,13 +605,12 @@ button:active {
 /* ── Locate ──────────────────────────────────────────────────────────────── */
 
 .locate-button {
-  position: fixed;
-  right: calc(16px + env(safe-area-inset-right, 0px));
-  top: calc(50% - 80px);
-  transform: translateY(-50%);
-  z-index: 25;
-  width: 46px;
-  height: 46px;
+  position: relative;
+  /* 20% under the old 46px; the ::after keeps a 48px hit area. */
+  width: 37px;
+  height: 37px;
+  margin: 5px 6px 5px 0;
+  flex-shrink: 0;
   border-radius: 50%;
   border: none;
   display: flex;
@@ -524,8 +629,14 @@ button:active {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border-color);
 }
 
+.locate-button::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 .locate-button:active {
-  transform: translateY(-50%) scale(0.92);
+  transform: scale(0.92);
 }
 
 .locate-button[data-state="locating"] {
@@ -578,7 +689,7 @@ button:active {
 
 .locate-notice {
   position: absolute;
-  top: calc(76px + env(safe-area-inset-top, 0px));
+  top: calc(124px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 15;
@@ -600,7 +711,7 @@ button:active {
   position: absolute;
   /* Just under the search bar, where the line-filter banner and the locate
      notice also appear, so App hides this one while either is showing. */
-  top: calc(76px + env(safe-area-inset-top, 0px));
+  top: calc(124px + env(safe-area-inset-top, 0px));
   /* Centred with auto margins rather than left: 50% + translate, which would
      cap the width at half the screen and wrap the text. */
   left: 0;

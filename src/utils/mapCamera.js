@@ -3,6 +3,8 @@ import { LANDSCAPE_BREAKPOINT_PX } from './layout';
 export const DEFAULT_MAP_ZOOM = 12.3;
 export const DEFAULT_MAP_CENTER = [-0.3763, 39.4699];
 export const STATION_FOCUS_ZOOM = 14.6;
+/** Every camera ease lasts this long (matches the native app). */
+export const CAMERA_EASE_MS = 400;
 export const ZERO_PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /**
@@ -40,6 +42,17 @@ export const calculateUnfocusCamera = ({
     padding: ZERO_PADDING,
   };
 };
+
+/**
+ * Zoom to ease to when the Station sheet closes: two levels out, but never
+ * closer than now and never further out than the network overview.
+ *
+ * @param {number} currentZoom
+ * @param {number} [overview=DEFAULT_MAP_ZOOM]
+ * @returns {number}
+ */
+export const zoomOutTarget = (currentZoom, overview = DEFAULT_MAP_ZOOM) =>
+  currentZoom <= overview ? currentZoom : Math.max(overview, currentZoom - 2);
 
 export const PORTRAIT_FOCUS_CLEARANCE_PX = 80;
 

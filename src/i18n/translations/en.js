@@ -32,6 +32,12 @@ export default {
     imprecise: 'Your location is too rough to pick a station from.',
     outOfRange: 'You are not near any metro station on this network.',
     nearestStation: '{{station}} · {{distance}} m away',
+    declined: 'Location was not turned on. Tap the locate button when you want to find your nearest station.',
+    openSettings: 'Open settings',
+    rationaleTitle: 'Find your nearest station',
+    rationaleBody: 'Xarxa uses your location only on this device, to find the metro station closest to you. It is never sent anywhere or stored.',
+    rationaleAllow: 'Continue',
+    rationaleDecline: 'Not now',
   },
   sidebar: {
     subtitle: 'Real-Time Tracker',
@@ -53,6 +59,14 @@ export default {
     aboutLegalAria: 'Open About and Legal notices',
     aboutLegalButton: 'About & Legal / Licenses',
     language: 'Language',
+    appearance: 'Appearance',
+    appearanceAria: 'Appearance selection',
+    themeAuto: 'Auto',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    lines: 'Lines',
+    linesAria: 'Filter by line',
+    lineOptionAria: 'Show only line {{line}}',
     languageOptionAria: 'Switch to {{language}}',
     languageNames: {
       en: 'English',
@@ -83,13 +97,24 @@ export default {
     line: 'Line',
     towards: 'Towards',
     due: 'Due',
-    recentreButton: 'Recentre on map',
   },
   aboutModal: {
     closeAria: 'Close About and Legal modal',
     copyrightLicense: 'Copyright & License',
     dataAttributions: 'Data & Attributions',
     done: 'Done',
+    unofficial: 'Unofficial app: not affiliated with or endorsed by FGV/Metrovalencia.',
+  },
+  walk: {
+    to: '{{min}} min walk · {{station}} · {{distance}}',
+    dismiss: 'Close',
+  },
+  hub: {
+    chipAria: 'Show {{station}}',
+  },
+  filter: {
+    clearLine: 'Remove the filter for line {{line}}',
+    clearAll: 'Clear line filter',
   },
   appBanner: {
     banner: 'Get the Android app',
@@ -118,7 +143,6 @@ export default {
     next: 'next: {{station}}',
   },
   mapView: {
-    vehicleSimulated: 'L{{line}} → {{direction}} • simulated from the timetable, not a reported train',
     atPlatform: 'at platform',
     etaMinTo: '{{min}} min to',
     sightings: ' • {{count}} sightings',
@@ -129,6 +153,6 @@ export default {
     lastConfirmed: ' • {{basis}}, last confirmed {{time}}',
     trainCountPinned: '{{count}} live trains · {{pinned}} confirmed at two stations',
     trainCountLive: '{{count}} live trains',
-    trainCountNone: 'No live predictions — showing simulated trains',
+    trainCountNone: 'No live trains right now',
   },
 };

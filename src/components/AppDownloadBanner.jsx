@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Smartphone, X } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from '../i18n';
+import { isAndroid } from '../utils/platform';
 import {
   APK_URL, RELEASE_URL, isIosDevice, wasBannerDismissed, rememberBannerDismissed,
 } from '../utils/appDownload';
@@ -70,7 +71,8 @@ const AppDownloadBanner = ({ hidden = false }) => {
   const [dismissed, setDismissed] = useState(wasBannerDismissed);
   const [open, setOpen] = useState(false);
 
-  const offerable = typeof navigator !== 'undefined' && !Capacitor.isNativePlatform();
+  // Never inside the Android app (it is the app), however the shell reports itself.
+  const offerable = typeof navigator !== 'undefined' && !Capacitor.isNativePlatform() && !isAndroid();
   const ios = typeof navigator !== 'undefined' && isIosDevice(navigator.userAgent, navigator.maxTouchPoints);
 
   const dismiss = (e) => {

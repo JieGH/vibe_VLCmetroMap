@@ -28,6 +28,12 @@ export default {
     imprecise: 'Tu ubicación es demasiado imprecisa para elegir una estación.',
     outOfRange: 'No estás cerca de ninguna estación de metro de esta red.',
     nearestStation: '{{station}} · a {{distance}} m',
+    declined: 'La ubicación no se ha activado. Toca el botón de ubicación cuando quieras encontrar tu estación más cercana.',
+    openSettings: 'Abrir ajustes',
+    rationaleTitle: 'Encuentra tu estación más cercana',
+    rationaleBody: 'Xarxa usa tu ubicación solo en este dispositivo, para encontrar la estación de metro más cercana. Nunca se envía ni se guarda en ningún sitio.',
+    rationaleAllow: 'Continuar',
+    rationaleDecline: 'Ahora no',
   },
   sidebar: {
     subtitle: 'Seguimiento en tiempo real',
@@ -49,6 +55,14 @@ export default {
     aboutLegalAria: 'Abrir información legal y avisos',
     aboutLegalButton: 'Información legal y licencias',
     language: 'Idioma',
+    appearance: 'Apariencia',
+    appearanceAria: 'Selección de apariencia',
+    themeAuto: 'Auto',
+    themeLight: 'Claro',
+    themeDark: 'Oscuro',
+    lines: 'Líneas',
+    linesAria: 'Filtrar por línea',
+    lineOptionAria: 'Mostrar solo la línea {{line}}',
     languageOptionAria: 'Cambiar a {{language}}',
     languageNames: {
       en: 'English',
@@ -79,13 +93,24 @@ export default {
     line: 'Línea',
     towards: 'Dirección',
     due: 'Llega',
-    recentreButton: 'Volver a centrar en el mapa',
   },
   aboutModal: {
     closeAria: 'Cerrar información legal y avisos',
     copyrightLicense: 'Copyright y licencia',
     dataAttributions: 'Datos y atribuciones',
     done: 'Hecho',
+    unofficial: 'App no oficial: no está afiliada ni respaldada por FGV/Metrovalencia.',
+  },
+  walk: {
+    to: '{{min}} min a pie · {{station}} · {{distance}}',
+    dismiss: 'Cerrar',
+  },
+  hub: {
+    chipAria: 'Mostrar {{station}}',
+  },
+  filter: {
+    clearLine: 'Quitar el filtro de la línea {{line}}',
+    clearAll: 'Quitar el filtro de líneas',
   },
   appBanner: {
     banner: 'Descarga la app Android',
@@ -114,7 +139,6 @@ export default {
     next: 'siguiente: {{station}}',
   },
   mapView: {
-    vehicleSimulated: 'L{{line}} → {{direction}} • simulado a partir del horario, no es un tren confirmado',
     atPlatform: 'en el andén',
     etaMinTo: '{{min}} min hasta',
     sightings: ' • {{count}} detecciones',
@@ -125,6 +149,6 @@ export default {
     lastConfirmed: ' • {{basis}}, confirmado {{time}}',
     trainCountPinned: '{{count}} trenes en directo · {{pinned}} confirmados en dos estaciones',
     trainCountLive: '{{count}} trenes en directo',
-    trainCountNone: 'Sin predicciones en directo — mostrando trenes simulados',
+    trainCountNone: 'Sin trenes en directo ahora',
   },
 };
