@@ -1,8 +1,7 @@
 <table>
   <tr>
     <td valign="middle" width="55%">
-      <img src="public/favicon.svg" width="72" height="72" alt="">
-      <h1>Xarxa</h1>
+      <h1><img src="public/favicon.svg" width="72" height="72" align="absmiddle" alt=""> Xarxa</h1>
       <p>
         <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you.<br>
         <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti.<br>
