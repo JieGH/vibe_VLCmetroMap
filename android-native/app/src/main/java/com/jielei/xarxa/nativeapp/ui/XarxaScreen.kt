@@ -224,13 +224,10 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
                             modifier = Modifier.padding(horizontal = 12.dp).heightIn(max = 380.dp),
                         )
                     }
-                } else {
+                } else if (filter.isNotEmpty()) {
                     HubChips(
-                        hubs = g.hubs,
                         lineColors = g.lineColors,
                         activeLines = filter,
-                        selectedId = selected?.id,
-                        onHub = vm::selectStation,
                         onClearLine = vm::toggleLine,
                     )
                 }

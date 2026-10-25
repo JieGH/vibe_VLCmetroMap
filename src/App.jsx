@@ -10,7 +10,6 @@ import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
 import HubChips from './components/HubChips';
 import WalkBanner from './components/WalkBanner';
-import { COMMON_STOPS } from './utils/commonStops';
 import WelcomeScreen from './components/WelcomeScreen';
 import { AppDownloadSheet } from './components/AppDownloadBanner';
 import { isIosDevice } from './utils/appDownload';
@@ -601,14 +600,11 @@ function App() {
       {/* On a retired address (Netlify, workers.dev): ask the visitor to move to xarxa.net */}
       {!showWelcome && <MovedNotice />}
 
-      {/* Popular stops, and one chip per active Line filter */}
-      {!searchFocused && (
+      {/* One dismissible chip per active Line filter */}
+      {!searchFocused && activeLineFilter.length > 0 && (
         <div className={`hub-chips-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
           <HubChips
-            hubs={COMMON_STOPS}
             activeLines={activeLineFilter}
-            selectedName={selectedStation?.properties?.name ?? null}
-            onHub={handleSelectStation}
             onClearLine={handleSelectLine}
           />
         </div>

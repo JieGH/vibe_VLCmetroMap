@@ -274,20 +274,17 @@ private fun SectionHeader(text: String) {
 }
 
 /**
- * Quick-access chips under the search pill: the most common stops, name only. A chip does what
- * tapping the Station on the map does. While a Line filter is active, one dismissible chip per Line leads the row
- * (the drawer's line list sets the filter).
+ * Dismissible filter chips under the search pill: one chip per active Line (line-color dot).
+ * The drawer's line list sets the filter; tapping the chip clears it.
  */
 @Composable
 fun HubChips(
-    hubs: List<Station>,
     lineColors: Map<String, Long>,
     activeLines: Set<String>,
-    selectedId: String?,
-    onHub: (Station) -> Unit,
     onClearLine: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (activeLines.isEmpty()) return
     LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -301,18 +298,6 @@ fun HubChips(
                 label = { Text(id, fontWeight = FontWeight.Bold) },
                 leadingIcon = { Box(Modifier.size(12.dp).background((lineColors[id] ?: 0xFF888888).toComposeColor(), CircleShape)) },
                 trailingIcon = { Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                modifier = Modifier.semantics { contentDescription = desc },
-                shape = RoundedCornerShape(16.dp),
-                colors = chipColors(),
-                elevation = androidx.compose.material3.FilterChipDefaults.filterChipElevation(elevation = 3.dp),
-            )
-        }
-        items(hubs, key = { it.id }) { st ->
-            val desc = stringResource(R.string.hub_chip_desc, st.name)
-            FilterChip(
-                selected = st.id == selectedId,
-                onClick = { onHub(st) },
-                label = { Text(st.name, fontWeight = FontWeight.SemiBold, maxLines = 1) },
                 modifier = Modifier.semantics { contentDescription = desc },
                 shape = RoundedCornerShape(16.dp),
                 colors = chipColors(),
