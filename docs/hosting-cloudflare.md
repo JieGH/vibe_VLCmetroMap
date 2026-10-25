@@ -31,3 +31,7 @@ curl https://<site>/api/probe
 ```
 
 `fgv.ok: true` with a `status` of 200 and `colo` of `MAD` means Cloudflare's Madrid edge can use FGV directly. `fgv.error` or a 403 means FGV refuses Cloudflare's addresses, and `main` (relay) is the right setting. If it works, move `METRO_SOURCE` to `auto` so the relay stays as a fallback.
+
+### Building only this branch
+
+In Workers & Pages, Settings, Build, Branch control: set the production branch to `cloudflare` and turn off "Builds for non-production branches", or `main` keeps building too. If `main` still builds, look for a second project connected to the same repository.
