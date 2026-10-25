@@ -15,7 +15,7 @@ Not requested: background location, notifications, contacts, storage, camera, mi
 ## How location is asked for
 
 1. The app never raises the system prompt cold. On Android, before the first system prompt, `LocationRationale` (an M3-style dialog) explains that location is used only on the device to find the nearest station and is never sent anywhere. **Continue** raises the system prompt; **Not now** does not, and the locate button can be pressed later.
-2. Launch-time auto-locate (ADR-0008) runs only if location was already granted. The one first-launch prompt that ADR-0008 allows on native is preceded by the same dialog on Android.
+2. Launch-time auto-locate (ADR-0008, ADR-0010) runs if location was already granted, and asks once on a first launch. The one first-launch prompt that ADR-0008 allows on native is preceded by the same dialog on Android.
 3. A refusal is final until the viewer changes it. When the system reports "denied", a snackbar with an **Open settings** action is shown; the action calls the `AppSettings.open()` plugin method from `src/services/openSettings.js`.
 
 ## Native piece the web code expects (Capacitor app only)

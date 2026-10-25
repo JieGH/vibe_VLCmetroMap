@@ -81,7 +81,19 @@ describe('createAutoLocator', () => {
     expect(onFix.mock.calls.at(-1)[0].nearestStation.properties.name).toBe('Benimaclet');
   });
 
-  it('web prompt state: makes no request of any kind', async () => {
+  it('web first visit: asks once, sets the flag, then locates', async () => {
+    const provider = fakeProvider({ permission: 'prompt' });
+    const locator = make(provider);
+    locator.setReady();
+    locator.start();
+    await settle();
+    expect(provider.getCurrentPosition).toHaveBeenCalled();
+    expect(storage.data[AUTO_LOCATE_PROMPTED_KEY]).toBe('1');
+    expect(onFix).toHaveBeenCalled();
+  });
+
+  it('web later visit after ignoring the prompt: no request', async () => {
+    storage.setItem(AUTO_LOCATE_PROMPTED_KEY, '1');
     const provider = fakeProvider({ permission: 'prompt' });
     const locator = make(provider);
     locator.setReady();

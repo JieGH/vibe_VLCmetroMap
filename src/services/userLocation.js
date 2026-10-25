@@ -169,11 +169,13 @@ export const AUTO_LOCATE_PROMPTED_KEY = 'xarxa.autoLocatePrompted';
 /**
  * Whether launch-time location may run, and whether it may ask first.
  *
- * Native gets one system prompt for life, because the app is installed to be
- * used on the move and the prompt is the platform's own. The web never gets
- * one: a browser treats a permission prompt on page load as spam, and the
- * viewer who refuses it once is often refused for good. On the web the locate
- * button stays the opt-in, and a grant made there is what later visits act on.
+ * Granted: locate silently, every launch. Denied: never. Otherwise the first launch asks once, native and web
+ * alike, recording `xarxa.autoLocatePrompted` so a viewer who ignores the prompt is not nagged on every visit;
+ * the locate button stays the way back in. Native asks only when the OS says it will show a prompt. The web also
+ * asks when the permission cannot be read (a browser without the Permissions API, older Safari), because
+ * getCurrentPosition is what raises the browser's own prompt and a refusal there is quiet. Opening the map
+ * and finding the viewer is the point of the app, so the web does ask on load (it did not before: ADR-0008, changed
+ * by ADR-0010).
  *
  * `permission` is the plugin's word for it ('granted', 'denied', 'prompt',
  * 'prompt-with-rationale') or anything else when it could not be read.
@@ -183,11 +185,9 @@ export const AUTO_LOCATE_PROMPTED_KEY = 'xarxa.autoLocatePrompted';
  */
 export const autoLocatePolicy = ({ isNative, permission, askedBefore }) => {
   if (permission === 'granted') return 'locate';
-  if (!isNative) return 'skip';
-  if ((permission === 'prompt' || permission === 'prompt-with-rationale') && !askedBefore) {
-    return 'prompt-then-locate';
-  }
-  return 'skip';
+  if (permission === 'denied' || askedBefore) return 'skip';
+  const promptable = permission === 'prompt' || permission === 'prompt-with-rationale';
+  return promptable || !isNative ? 'prompt-then-locate' : 'skip';
 };
 
 const defaultStorage = () => {

@@ -512,10 +512,12 @@ describe('autoLocatePolicy', () => {
     [true, 'unknown', false, 'skip'],
     [false, 'granted', false, 'locate'],
     [false, 'granted', true, 'locate'],
-    [false, 'prompt', false, 'skip'],
+    [false, 'prompt', false, 'prompt-then-locate'],
     [false, 'prompt', true, 'skip'],
     [false, 'denied', false, 'skip'],
-    [false, 'unknown', false, 'skip'],
+    [false, 'denied', true, 'skip'],
+    [false, 'unknown', false, 'prompt-then-locate'],
+    [false, 'unknown', true, 'skip'],
   ];
 
   it.each(cases)('native=%s permission=%s asked=%s -> %s', (isNative, permission, askedBefore, verdict) => {
@@ -553,20 +555,45 @@ describe('resolveAutoLocate', () => {
     })).toBe('skip');
   });
 
-  it('never sets the flag on the web', async () => {
+  it('asks on the web too, once, and records it', async () => {
     const storage = memoryStorage();
     expect(await resolveAutoLocate({
       provider: fakeProvider({ permission: 'prompt' }),
+      isNative: false,
+      storage,
+    })).toBe('locate');
+    expect(storage.data[AUTO_LOCATE_PROMPTED_KEY]).toBe('1');
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ permission: 'prompt' }),
+      isNative: false,
+      storage,
+    })).toBe('skip');
+  });
+
+  it('never prompts a viewer who has blocked the site', async () => {
+    const storage = memoryStorage();
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ permission: 'denied' }),
       isNative: false,
       storage,
     })).toBe('skip');
     expect(storage.data).toEqual({});
   });
 
-  it('skips when the permission cannot be read', async () => {
+  it('still tries once on the web when the permission cannot be read (no Permissions API)', async () => {
+    const storage = memoryStorage();
     expect(await resolveAutoLocate({
       provider: fakeProvider({ checkThrows: geolocationError('UNIMPLEMENTED', 'no') }),
       isNative: false,
+      storage,
+    })).toBe('locate');
+    expect(storage.data[AUTO_LOCATE_PROMPTED_KEY]).toBe('1');
+  });
+
+  it('skips on native when the permission cannot be read', async () => {
+    expect(await resolveAutoLocate({
+      provider: fakeProvider({ checkThrows: geolocationError('UNIMPLEMENTED', 'no') }),
+      isNative: true,
       storage: memoryStorage(),
     })).toBe('skip');
   });
