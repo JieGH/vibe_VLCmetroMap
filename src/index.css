@@ -477,11 +477,12 @@ button:active {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 2px 2px 6px;
+  padding: 2px 96px 6px 2px; /* 96px right padding gives clear way to the floating feedback bubble */
   scrollbar-width: none;
   pointer-events: auto;
   width: max-content;
   max-width: 100%;
+  box-sizing: border-box;
 }
 .hub-chips::-webkit-scrollbar { display: none; }
 
@@ -842,17 +843,27 @@ button:active {
   flex-shrink: 0;
 }
 
+.feedback-trigger-btn:hover {
+  color: #FFD100;
+}
+
+[data-theme='light'] .feedback-trigger-btn:hover {
+  color: #805600;
+}
+
 .feedback-thought-bubble {
   position: absolute;
   top: calc(100% + 11px);
   right: 0;
-  z-index: 50; /* Above top-bar (40) and hub-chips station list (39) */
-  padding: 3px 9px;
-  border-radius: 12px;
-  background: var(--bg-panel-solid, #1D1D29);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  color: var(--text-primary);
+  z-index: 60; /* Top layer above top-bar (40) and hub-chips station list (39) */
+  padding: 3px 10px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 209, 0, 0.16) 0%, rgba(29, 29, 41, 0.94) 100%), #1D1D29;
+  border: 1px solid rgba(255, 209, 0, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px rgba(255, 209, 0, 0.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #FFD100;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.2px;
@@ -861,14 +872,30 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: feedbackBubbleFloat 3.2s ease-in-out infinite;
+  animation: feedbackBubbleFloat 4.2s ease-in-out infinite;
   transform-origin: top right;
-  transition: transform 0.2s ease, background-color 0.15s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  pointer-events: auto;
 }
 
 .feedback-thought-bubble:hover {
-  background: var(--bg-hover-active, var(--bg-hover));
-  transform: translateY(-2px) scale(1.04);
+  background: linear-gradient(135deg, rgba(255, 209, 0, 0.26) 0%, rgba(38, 38, 54, 0.96) 100%), #262636;
+  border-color: rgba(255, 209, 0, 0.75);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 14px rgba(255, 209, 0, 0.3);
+  transform: translateY(-1.5px) scale(1.03);
+}
+
+[data-theme='light'] .feedback-thought-bubble {
+  background: linear-gradient(135deg, rgba(255, 225, 102, 0.32) 0%, rgba(255, 255, 255, 0.94) 100%), #FFFFFF;
+  border: 1px solid rgba(212, 160, 0, 0.55);
+  box-shadow: 0 3px 12px rgba(180, 130, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: #805600;
+}
+
+[data-theme='light'] .feedback-thought-bubble:hover {
+  background: linear-gradient(135deg, rgba(255, 225, 102, 0.45) 0%, rgba(255, 255, 255, 0.98) 100%), #FFFFFF;
+  border-color: rgba(180, 130, 0, 0.8);
+  box-shadow: 0 4px 14px rgba(180, 130, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* Small cloud thought-bubble circles pointing up to the ? button */
@@ -876,12 +903,12 @@ button:active {
   content: '';
   position: absolute;
   top: -5px;
-  right: 14px;
-  width: 6px;
-  height: 6px;
+  right: 13.5px;
+  width: 6.5px;
+  height: 6.5px;
   border-radius: 50%;
-  background: var(--bg-panel-solid, #1D1D29);
-  border: 1px solid var(--border-color);
+  background: #232018;
+  border: 1px solid rgba(255, 209, 0, 0.45);
   pointer-events: none;
 }
 
@@ -889,13 +916,19 @@ button:active {
   content: '';
   position: absolute;
   top: -10px;
-  right: 15.5px;
-  width: 3.5px;
-  height: 3.5px;
+  right: 15px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: var(--bg-panel-solid, #1D1D29);
-  border: 1px solid var(--border-color);
+  background: #232018;
+  border: 1px solid rgba(255, 209, 0, 0.45);
   pointer-events: none;
+}
+
+[data-theme='light'] .feedback-thought-bubble::before,
+[data-theme='light'] .feedback-thought-bubble::after {
+  background: #FFFDF0;
+  border: 1px solid rgba(212, 160, 0, 0.55);
 }
 
 @keyframes feedbackBubbleFloat {
@@ -903,7 +936,7 @@ button:active {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-2.5px);
+    transform: translateY(-1.2px);
   }
 }
 
