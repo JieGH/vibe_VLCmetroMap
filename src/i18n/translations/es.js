@@ -27,6 +27,7 @@ export default {
     timeout: 'No se pudo obtener tu ubicación. Inténtalo de nuevo en un lugar con mejor vista del cielo.',
     imprecise: 'Tu ubicación es demasiado imprecisa para elegir una estación.',
     outOfRange: 'No estás cerca de ninguna estación de metro de esta red.',
+    insecure: 'La ubicación solo funciona en una página segura. Abre la dirección https:// de este sitio.',
     nearestStation: '{{station}} · a {{distance}} m',
     declined: 'La ubicación no se ha activado. Toca el botón de ubicación cuando quieras encontrar tu estación más cercana.',
     openSettings: 'Abrir ajustes',

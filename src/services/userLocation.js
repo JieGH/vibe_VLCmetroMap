@@ -39,6 +39,11 @@ export const FIX_TIMEOUT_MS = 10000;
 // twice in quick succession is instant instead of waiting on the GPS again.
 export const FIX_MAX_AGE_MS = 30000;
 
+// Extra time when the first fix may be sitting behind the browser's permission prompt. On the web nothing asks up
+// front, so the prompt comes from getCurrentPosition itself and the time a person takes to read it and tap Allow
+// would otherwise be spent out of the same stopwatch (iOS Safari: tap Allow after 6 s and the fix times out).
+export const PROMPT_GRACE_MS = 20000;
+
 // Mirrors the station set MapView draws (MapView.jsx). gtfs_expanded.json
 // carries every Station on the network, so it is the single source here;
 // metro_lines.json only contributes points it alone knows about.
@@ -89,7 +94,14 @@ const MESSAGES = {
   timeout: 'Could not get a location fix. Try again somewhere with a clearer view of the sky.',
   imprecise: 'Your location is too rough to pick a station from.',
   'out-of-range': 'You are not near any metro station on this network.',
+  insecure: 'Location only works on a secure page. Open the https:// address of this site.',
 };
+
+// Browsers (Safari on iPhone included) refuse geolocation outright on a page that is not a secure context, such as
+// http://192.168.x.x on a LAN. The native apps are exempt: the plugin asks the OS, not the page.
+const defaultIsSecure = () => (
+  Capacitor.isNativePlatform() || typeof window === 'undefined' || window.isSecureContext !== false
+);
 
 const failure = (status) => ({
   status,
@@ -312,8 +324,12 @@ export const locate = async ({
   now = Date.now(),
   onProgressiveFix = null,
   beforePrompt = null,
+  promptGraceMs = PROMPT_GRACE_MS,
+  isSecureContext = defaultIsSecure(),
 } = {}) => {
   const startTime = Date.now();
+
+  if (!isSecureContext) return failure('insecure');
 
   if (cachedPermission !== 'granted') {
     let permission = null;
@@ -361,9 +377,17 @@ export const locate = async ({
     }
   }
 
+  // Permission not known to be granted: the browser's own prompt may still be open when we ask for the fix, and
+  // a person reading it is not a slow GPS. Give that case the whole budget plus a grace period, and skip the
+  // 2.5 s fast-fix stopwatch, which would expire behind the prompt.
+  const promptMayBePending = cachedPermission !== 'granted';
+  const budget = promptMayBePending ? timeoutMs + promptGraceMs : timeoutMs;
+
   // Stage 1: Fast fix (cell / Wi-Fi / cached fix, enableHighAccuracy: false)
   const elapsedStage1 = Date.now() - startTime;
-  const stage1Timeout = Math.min(FAST_FIX_TIMEOUT_MS, Math.max(10, timeoutMs - elapsedStage1));
+  const stage1Timeout = promptMayBePending
+    ? Math.max(10, budget - elapsedStage1)
+    : Math.min(FAST_FIX_TIMEOUT_MS, Math.max(10, timeoutMs - elapsedStage1));
 
   const { reading: stage1Reading, error: stage1Error } = await queryRawReading(
     provider,
@@ -397,7 +421,7 @@ export const locate = async ({
 
   // Stage 2: Refined high-accuracy fix (enableHighAccuracy: true)
   const elapsedStage2 = Date.now() - startTime;
-  const remainingTimeout = timeoutMs - elapsedStage2;
+  const remainingTimeout = budget - elapsedStage2;
 
   if (remainingTimeout <= 0) {
     return stage1Result || failure('timeout');

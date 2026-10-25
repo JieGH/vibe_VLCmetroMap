@@ -31,6 +31,7 @@ export default {
     timeout: 'Could not get a location fix. Try again somewhere with a clearer view of the sky.',
     imprecise: 'Your location is too rough to pick a station from.',
     outOfRange: 'You are not near any metro station on this network.',
+    insecure: 'Location only works on a secure page. Open the https:// address of this site.',
     nearestStation: '{{station}} · {{distance}} m away',
     declined: 'Location was not turned on. Tap the locate button when you want to find your nearest station.',
     openSettings: 'Open settings',

@@ -269,6 +269,56 @@ describe('locate', () => {
     expect(result.status).toBe('timeout');
   });
 
+  it('refuses on an insecure page, which Safari on iPhone will not geolocate on', async () => {
+    const provider = fakeProvider();
+    provider.getCurrentPosition = vi.fn(provider.getCurrentPosition);
+
+    const result = await locate({ provider, isSecureContext: false });
+
+    expect(result.status).toBe('insecure');
+    expect(provider.getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  describe('a permission prompt that may still be open (the web)', () => {
+    // A fix that only arrives after the person has read the prompt and tapped Allow.
+    const slowAfterPrompt = (delayMs) => {
+      const provider = fakeProvider({ permission: 'prompt' });
+      provider.requestPermissions = async () => {
+        throw capacitorException('UNIMPLEMENTED', 'Not implemented on web.');
+      };
+      provider.getCurrentPosition = () => new Promise((resolve) => setTimeout(() => resolve(fix(NEAR_BENIMACLET)), delayMs));
+      return provider;
+    };
+
+    it('does not spend the fix timeout on the prompt', async () => {
+      const result = await locate({ provider: slowAfterPrompt(120), timeoutMs: 40, promptGraceMs: 400 });
+
+      expect(result.status).toBe('located');
+    });
+
+    it('still times out, after the grace, when no fix ever comes', async () => {
+      const provider = fakeProvider({ permission: 'prompt', hang: true });
+      provider.requestPermissions = async () => {
+        throw capacitorException('UNIMPLEMENTED', 'Not implemented on web.');
+      };
+      const started = Date.now();
+
+      const result = await locate({ provider, timeoutMs: 30, promptGraceMs: 120 });
+
+      expect(result.status).toBe('timeout');
+      expect(Date.now() - started).toBeGreaterThanOrEqual(120);
+    });
+
+    it('keeps the short budget once permission is granted', async () => {
+      const provider = fakeProvider({ permission: 'granted' });
+      provider.getCurrentPosition = () => new Promise((resolve) => setTimeout(() => resolve(fix(NEAR_BENIMACLET)), 200));
+
+      const result = await locate({ provider, timeoutMs: 40, promptGraceMs: 400 });
+
+      expect(result.status).toBe('timeout');
+    });
+  });
+
   it('always says something a person can read', async () => {
     const results = await Promise.all([
       locate({ provider: fakeProvider() }),

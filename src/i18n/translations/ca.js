@@ -27,6 +27,7 @@ export default {
     timeout: 'No s\'ha pogut obtindre la teua ubicació. Torna-ho a provar en un lloc amb millor vista del cel.',
     imprecise: 'La teua ubicació és massa imprecisa per a triar una estació.',
     outOfRange: 'No estàs prop de cap estació de metro d\'esta xarxa.',
+    insecure: "La ubicació només funciona en una pàgina segura. Obri l'adreça https:// d'este lloc.",
     nearestStation: '{{station}} · a {{distance}} m',
     declined: 'La ubicació no s\'ha activat. Toca el botó d\'ubicació quan vulgues trobar l\'estació més pròxima.',
     openSettings: 'Obri la configuració',
