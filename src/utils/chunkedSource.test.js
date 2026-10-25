@@ -40,6 +40,11 @@ describe('createChunkedSource', () => {
     const source = createChunkedSource(manifest, 'https://x/a.pmtiles', f);
     await expect(source.getBytes(0, 2)).rejects.toThrow(/expected 10/);
   });
+  it('rejects a part that answered with HTML (SPA fallback)', async () => {
+    const f = vi.fn(async () => new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } }));
+    const source = createChunkedSource(manifest, 'https://x/a.pmtiles', f);
+    await expect(source.getBytes(0, 2)).rejects.toThrow(/answered with HTML/);
+  });
   it('keys the source by the archive URL, which is what the pmtiles:// style URL names', () => {
     expect(createChunkedSource(manifest, 'https://x/a.pmtiles').getKey()).toBe('https://x/a.pmtiles');
   });
@@ -54,5 +59,6 @@ describe('loadChunkManifest', () => {
   it('returns null on a 404 or on an HTML fallback page', async () => {
     expect(await loadChunkManifest('u', async () => new Response('', { status: 404 }))).toBeNull();
     expect(await loadChunkManifest('u', async () => new Response('<!doctype html>'))).toBeNull();
+    expect(await loadChunkManifest('u', async () => new Response('<html></html>', { headers: { 'content-type': 'text/html' } }))).toBeNull();
   });
 });

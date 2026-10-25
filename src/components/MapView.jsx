@@ -21,7 +21,7 @@ import {
 } from '../utils/mapCamera';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
-import { createChunkedSource, loadChunkManifest } from '../utils/chunkedSource';
+import { probeOfflineBasemap } from '../utils/basemapProbe';
 import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
@@ -100,28 +100,6 @@ const loadLine4Osm = async () => {
     }
   } catch (error) {
     console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
-  }
-};
-
-const probeOfflineBasemap = async () => {
-  // A host that cannot answer Range requests ships the archive as parts plus a manifest (split_basemap.cjs).
-  const manifest = await loadChunkManifest(BASEMAP_ARCHIVE);
-  if (manifest) {
-    pmtilesProtocol.add(new PMTiles(createChunkedSource(manifest, BASEMAP_ARCHIVE)));
-    OFFLINE_BASEMAP_AVAILABLE = true;
-    return;
-  }
-  try {
-    const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
-    OFFLINE_BASEMAP_AVAILABLE = probe.ok;
-    if (!probe.ok) {
-      console.warn(
-        `Offline basemap unavailable (HTTP ${probe.status}); falling back to online raster tiles, ` +
-        'which stop resolving past zoom 16. Run `npm run fetch:basemap`.'
-      );
-    }
-  } catch (error) {
-    console.warn('Offline basemap unreachable; falling back to online raster tiles.', error);
   }
 };
 
@@ -361,7 +339,12 @@ rebuildNetworkGeometry();
 
 // Background asynchronous asset fetch (unblocks main JS thread & React mounting)
 const initBasemapPromise = (typeof window !== 'undefined')
-  ? Promise.all([loadLine4Osm(), probeOfflineBasemap()]).then(() => {
+  ? Promise.all([
+      loadLine4Osm(),
+      probeOfflineBasemap(BASEMAP_ARCHIVE, fetch, pmtilesProtocol).then((available) => {
+        OFFLINE_BASEMAP_AVAILABLE = available;
+      }),
+    ]).then(() => {
       rebuildNetworkGeometry();
     }).catch(() => {})
   : Promise.resolve();
@@ -477,7 +460,7 @@ const metroLayers = [
 // still get a map rather than a void.
 const buildRasterStyle = (tiles, tileSourceId) => ({
   version: 8,
-  glyphs: `${BASEMAP_DIR}/fonts/{fontstack}/{range}.pbf`,
+  glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
   sources: {
     [tileSourceId]: { type: 'raster', tiles, tileSize: 256, attribution: TILE_ATTRIBUTION, maxzoom: 16 },
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
@@ -1148,11 +1131,14 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         }
       });
 
-      // Boots on map mount, not style.load. Calling it on every mount is safe:
-      // syncNetwork returns early while a sweep is in flight (StrictMode's double
-      // mount) and skips Stations inside their memory pause (returning from
-      // dashboard mode), so no Station is dispatched twice.
-      arrivalStore.bootNetwork();
+      // Prioritize initial map assets (tiles, glyphs, sprites) before beginning the heavy arrival sweep.
+      let bootedArrivals = false;
+      const startArrivalSync = () => {
+        if (bootedArrivals) return;
+        bootedArrivals = true;
+        arrivalStore.bootNetwork();
+      };
+      const bootTimer = setTimeout(startArrivalSync, 500);
 
       map.on('style.load', () => {
         // In dev, StrictMode double-mounts this effect, so a stale map from the
@@ -1161,6 +1147,8 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
         // across instances, so letting a stale callback through would clear the
         // live map's markers and re-attach them to the removed one.
         if (mapRef.current !== map) return;
+        startArrivalSync();
+        clearTimeout(bootTimer);
         if (onReadyRef.current) {
           const notifyReady = onReadyRef.current;
           onReadyRef.current = null; // first style.load only; theme swaps reload the style
@@ -1185,6 +1173,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       const stopTracker = startTrainTracker();
 
       teardown = () => {
+        clearTimeout(bootTimer);
         clearInterval(syncTimer);
         stopTracker();
         document.removeEventListener('visibilitychange', syncIfVisible);

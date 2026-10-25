@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -6,6 +6,7 @@ import packageJson from '../../package.json';
 import metroData from '../data/metro_lines.json';
 import paradasData from '../data/paradas_api.json';
 import gtfsData from '../data/gtfs_expanded.json';
+import { probeOfflineBasemap } from './basemapProbe';
 
 function hashFile(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -39,6 +40,65 @@ describe('MapLibre GL & Basemap Integrity', () => {
     expect(declaredVersion).toBeDefined();
     // Verify it is not an older version that has known DOM XSS or worker protocol flaws
     expect(declaredVersion).toMatch(/\^?6\.(1[6-9]|[2-9]\d|\d{3,})\./);
+  });
+
+  describe('Offline Basemap Probe & SPA Guard', () => {
+    it('returns true when chunked manifest is available', async () => {
+      const fakeFetch = vi.fn(async (url) => {
+        if (url.endsWith('.json')) {
+          return new Response(JSON.stringify({ size: 1000, chunkSize: 500, parts: 2 }));
+        }
+        return new Response('', { status: 404 });
+      });
+
+      const available = await probeOfflineBasemap('https://example.com/basemap/valencia.pmtiles', fakeFetch);
+      expect(available).toBe(true);
+    });
+
+    it('rejects SPA HTML 200 fallback pages and prevents PMTiles corrupt vector parse', async () => {
+      const fakeFetch = vi.fn(async (url) => {
+        if (url.endsWith('.json')) {
+          // Cloudflare / Netlify SPA returning index.html for missing manifest
+          return new Response('<!doctype html><html><body>SPA fallback</body></html>', {
+            status: 200,
+            headers: { 'content-type': 'text/html' }
+          });
+        }
+        // Cloudflare / Netlify SPA returning index.html for missing archive
+        return new Response('<!doctype html><html><body>SPA fallback</body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' }
+        });
+      });
+
+      const available = await probeOfflineBasemap('https://example.com/basemap/valencia.pmtiles', fakeFetch);
+      expect(available).toBe(false);
+    });
+
+    it('accepts valid PMTiles binary archive starting with PM header (0x50, 0x4D)', async () => {
+      const fakeFetch = vi.fn(async (url) => {
+        if (url.endsWith('.json')) {
+          return new Response('', { status: 404 });
+        }
+        const pmtilesHeader = new Uint8Array([0x50, 0x4D, 0x03, 0x00]); // 'PM\x03\x00'
+        return new Response(pmtilesHeader, {
+          status: 206,
+          headers: { 'content-type': 'application/octet-stream' }
+        });
+      });
+
+      const available = await probeOfflineBasemap('https://example.com/basemap/valencia.pmtiles', fakeFetch);
+      expect(available).toBe(true);
+    });
+
+    it('returns false on 404 or network failure', async () => {
+      const fakeFetch = vi.fn(async () => {
+        throw new Error('Network error');
+      });
+
+      const available = await probeOfflineBasemap('https://example.com/basemap/valencia.pmtiles', fakeFetch);
+      expect(available).toBe(false);
+    });
   });
 });
 

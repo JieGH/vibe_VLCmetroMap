@@ -15,6 +15,7 @@ const dir = path.resolve(__dirname, '..', 'public', 'basemap');
 const archive = path.join(dir, 'valencia.pmtiles');
 
 const split = (removeArchive) => {
+  if (!fs.existsSync(archive)) return;
   const size = fs.statSync(archive).size;
   const parts = Math.ceil(size / CHUNK_SIZE);
   const fd = fs.openSync(archive, 'r');

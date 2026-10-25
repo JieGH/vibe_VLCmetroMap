@@ -16,6 +16,8 @@ export function createChunkedSource(manifest, baseUrl, fetchImpl = (...args) => 
     if (!cache.has(index)) {
       const promise = fetchImpl(`${baseUrl}.p${index}`).then(async (response) => {
         if (!response.ok) throw new Error(`Basemap part ${index} answered HTTP ${response.status}`);
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.includes('text/html')) throw new Error(`Basemap part ${index} answered with HTML`);
         const bytes = new Uint8Array(await response.arrayBuffer());
         const expected = index === parts - 1 ? size - chunkSize * (parts - 1) : chunkSize;
         if (bytes.length !== expected) throw new Error(`Basemap part ${index} is ${bytes.length} bytes, expected ${expected}`);
@@ -52,6 +54,8 @@ export async function loadChunkManifest(baseUrl, fetchImpl = (...args) => fetch(
   try {
     const response = await fetchImpl(`${baseUrl}.json`);
     if (!response.ok) return null;
+    const contentType = (response.headers?.get?.('content-type') || '').toLowerCase();
+    if (contentType.includes('text/html')) return null;
     const manifest = await response.json();
     return manifest && manifest.parts > 0 && manifest.chunkSize > 0 && manifest.size > 0 ? manifest : null;
   } catch {

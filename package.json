@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "vite",
     "dev:phone": "vite --host",
-    "prebuild": "node scripts/sync_maplibre_worker.cjs && node -e \"if (process.env.WORKERS_CI) require('child_process').execFileSync('node', ['scripts/fetch_basemap.cjs'], { stdio: 'inherit' })\"",
+    "prebuild": "node scripts/sync_maplibre_worker.cjs && node scripts/prepare_basemap.cjs",
     "build": "vite build",
     "postbuild": "[ \"$CI\" = true ] || npx cap sync ios",
     "test": "vitest run",
