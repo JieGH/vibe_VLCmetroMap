@@ -7,7 +7,7 @@
 // Fixed at middle-right of the screen for stable one-handed thumb accessibility,
 // eliminating dynamic repositioning stutters and avoiding clashes with floating cards.
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Navigation, NavigationOff, LoaderCircle } from 'lucide-react';
+import { LocateFixed, LocateOff, LoaderCircle } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 // Long enough not to fire on a slow tap, short enough not to feel like the
@@ -78,7 +78,7 @@ const LocateButton = ({ state = 'idle', showingLocation = false, onLocate, onHid
   const label = t(LABEL_KEYS[state] || LABEL_KEYS.idle) + (showingLocation ? t('locate.hideHint') : '');
   const Icon = state === 'locating'
     ? LoaderCircle
-    : state === 'unavailable' ? NavigationOff : Navigation;
+    : state === 'unavailable' ? LocateOff : LocateFixed;
 
   return (
     <button

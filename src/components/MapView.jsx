@@ -1069,6 +1069,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       zoom: DEFAULT_MAP_ZOOM,
       // No (i) button on the map: OpenStreetMap, Protomaps and MapLibre are credited in About & Legal.
       attributionControl: false,
+      maxTileCacheZoomLevels: 25,
     });
 
     // `originalEvent` is set only when a hand moved the camera (drag, pinch,

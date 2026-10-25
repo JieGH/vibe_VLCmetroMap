@@ -624,7 +624,12 @@ button:active {
   transform: scale(0.92);
 }
 
-/* A deep, calm blue with a soft top light, white arrow: it reads on the dark and the light map alike and
+/* Fill the inner dot of the GPS crosshair so it matches Google Maps' my_location icon. */
+.locate-button .lucide-locate-fixed circle:last-of-type {
+  fill: currentColor;
+}
+
+/* A deep, calm blue with a soft top light, white GPS icon: it reads on the dark and the light map alike and
    matches the blue of the viewer's own dot. Greyed out when location is off for good. */
 .locate-button.glass-panel {
   /* Slightly see-through, so the map shows faintly behind it. */

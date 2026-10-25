@@ -1,25 +1,14 @@
-<p align="center">
-  <img src="public/favicon.svg" width="88" height="88" alt="">
-</p>
-
-<h1 align="center">Xarxa</h1>
-
-<p align="center">
-  <strong>Where every Valencia metro train is, right now, and when the next one reaches you.</strong>
-</p>
-
-<p align="center">
-  <a href="https://xarxa.net">
-    <img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net">
-  </a>
+<p>
+  <img src="public/favicon.svg" width="64" height="64" align="left" alt="">
+  <strong>Xarxa</strong> — Where every Valencia metro train is, right now, and when the next one reaches you.<br>
+  <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
   &nbsp;
-  <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk">
-    <img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app">
-  </a>
+  <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
+  <br clear="left">
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" width="640" alt="Screen recording of the Android app: it opens on Xàtiva station with its live departures, then the whole network with moving trains, then Dr. Lluch on the one-way east coast, then back to the user's location">
+  <img src="docs/demo.gif" width="760" alt="Screen recording of Xarxa in landscape: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network with moving trains, checks Alameda and Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user's location">
 </p>
 
 ---

@@ -11,6 +11,7 @@ describe('LocateButton component', () => {
 
     expect(html).toContain('locate-button');
     expect(html).toContain('glass-panel');
+    expect(html).toContain('lucide-locate-fixed');
     expect(html).toContain('data-state="idle"');
     expect(html).toContain('Centre on me and show my nearest station');
     expect(html).not.toContain('disabled');
@@ -33,6 +34,7 @@ describe('LocateButton component', () => {
     );
 
     expect(html).toContain('data-state="unavailable"');
+    expect(html).toContain('lucide-locate-off');
     expect(html).toContain('Location is unavailable — tap for details');
   });
 
