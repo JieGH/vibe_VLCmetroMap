@@ -3,7 +3,7 @@ import { ChevronLeft, Info, Languages, LayoutDashboard } from 'lucide-react';
 import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
-import { useTranslation, SUPPORTED_LANGUAGES } from '../i18n';
+import { useTranslation, SUPPORTED_LANGUAGES, languageCode } from '../i18n';
 import { isAndroid } from '../utils/platform';
 import AppBadge, { VersionPill } from './AppBadge';
 
@@ -175,7 +175,7 @@ const Sidebar = ({
                     aria-label={t('sidebar.languageOptionAria', { language: name })}
                     title={name}
                   >
-                    <span className="lang-option-preview">{lang.toUpperCase()}</span>
+                    <span className="lang-option-preview">{languageCode(lang)}</span>
                     <span className="lang-option-label">{name}</span>
                   </button>
                 );

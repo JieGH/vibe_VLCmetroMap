@@ -12,3 +12,12 @@ describe('LanguageToggle', () => {
     expect(html).toContain('Valencià');
   });
 });
+
+describe('languageCode', () => {
+  it('shows Valencian as VAL, not CA', async () => {
+    const { languageCode } = await import('../i18n');
+    expect(languageCode('ca')).toBe('VAL');
+    expect(languageCode('es')).toBe('ES');
+    expect(languageCode('en')).toBe('EN');
+  });
+});

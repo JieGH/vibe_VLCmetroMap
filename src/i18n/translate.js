@@ -5,6 +5,11 @@ import ca from './translations/ca';
 export const SUPPORTED_LANGUAGES = ['en', 'es', 'ca'];
 export const FALLBACK_LANGUAGE = 'en';
 
+// The code shown on language buttons. Valencian is stored as 'ca' (the dictionary and locale tag), but people
+// know it as VAL, not CA.
+const DISPLAY_CODES = { ca: 'VAL' };
+export const languageCode = (lang) => DISPLAY_CODES[lang] || String(lang).toUpperCase();
+
 const DICTIONARIES = { en, es, ca };
 
 const getPath = (dict, key) =>

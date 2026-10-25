@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation, SUPPORTED_LANGUAGES } from '../i18n';
+import { useTranslation, SUPPORTED_LANGUAGES, languageCode } from '../i18n';
 
 /** One button that shows the current language and moves to the next on each press. */
 const LanguageToggle = ({ className = '', style }) => {
@@ -18,7 +18,7 @@ const LanguageToggle = ({ className = '', style }) => {
       aria-label={t('sidebar.languageOptionAria', { language: nextName })}
     >
       <span style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.3px', lineHeight: 1 }}>
-        {language.toUpperCase()}
+        {languageCode(language)}
       </span>
     </button>
   );
