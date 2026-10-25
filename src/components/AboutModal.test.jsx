@@ -18,9 +18,9 @@ describe('AboutModal component', () => {
     expect(html).toContain('Metro Valencia');
     expect(html).toContain('Real-Time Transit Tracker');
 
-    // Copyright and Apache-2.0 license terms
+    // Copyright and all-rights-reserved license terms
     expect(html).toContain('© 2026 Jie Lei');
-    expect(html).toContain('Apache License, Version 2.0');
+    expect(html).toContain('All rights reserved');
 
     // Third-party legal attributions
     expect(html).toContain('Ferrocarrils de la Generalitat Valenciana (FGV)');

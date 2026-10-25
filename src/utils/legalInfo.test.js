@@ -14,10 +14,10 @@ describe('APP_LEGAL_INFO metadata', () => {
     expect(APP_LEGAL_INFO.year).toBe('2026');
   });
 
-  it('specifies Apache-2.0 open-source license', () => {
-    expect(APP_LEGAL_INFO.licenseSpdx).toBe('Apache-2.0');
-    expect(APP_LEGAL_INFO.licenseName).toBe('Apache License 2.0');
-    expect(APP_LEGAL_INFO.licenseSummary).toContain('Apache License, Version 2.0');
+  it('specifies the all-rights-reserved source-available license', () => {
+    expect(APP_LEGAL_INFO.licenseSpdx).toBe('LicenseRef-Xarxa-All-Rights-Reserved');
+    expect(APP_LEGAL_INFO.licenseName).toBe('All Rights Reserved (source-available)');
+    expect(APP_LEGAL_INFO.licenseSummary).toContain('All rights reserved');
   });
 
   it('includes required third-party legal attributions', () => {
@@ -72,7 +72,7 @@ describe('Legal metadata sanitation (no raw developer repository links)', () => 
     expect(containsRepoUrls('http://github.com/foo/bar')).toBe(true);
     expect(containsRepoUrls('git@github.com:JieGH/vib_metroValencia.git')).toBe(true);
     expect(containsRepoUrls('Visit our github.com page')).toBe(true);
-    expect(containsRepoUrls('© 2026 Jie Lei. Apache 2.0')).toBe(false);
+    expect(containsRepoUrls('© 2026 Jie Lei. All rights reserved')).toBe(false);
     expect(containsRepoUrls('© OpenStreetMap contributors')).toBe(false);
   });
 

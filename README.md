@@ -61,4 +61,4 @@ Building, running, hosting, data sources, architecture and releasing: **[DEVELOP
 
 ## Credits and license
 
-Made in Valencia by Jie Lei. Code: [Apache 2.0](LICENSE). Thanks to FGV for the live data, to OpenStreetMap's contributors for the track geometry, and to Protomaps for the offline map. FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms.
+Made in Valencia by Jie Lei. Code: source-available, all rights reserved, see [LICENSE](LICENSE); reuse, redistribution or modification needs written permission. Thanks to FGV for the live data, to OpenStreetMap's contributors for the track geometry, and to Protomaps for the offline map. FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms.

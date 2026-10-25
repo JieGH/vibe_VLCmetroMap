@@ -64,4 +64,4 @@ The website and the native apps all read FGV's own keyless arrivals feed. A brow
 
 An independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data. No analytics, no accounts, no tracking; the privacy policy is in [`docs/android/privacy-policy.md`](docs/android/privacy-policy.md).
 
-Code: [Apache 2.0](LICENSE). FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms.
+Code: source-available, all rights reserved ([LICENSE](LICENSE)); reuse, redistribution or modification needs written permission. FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms.

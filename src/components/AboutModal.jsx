@@ -6,7 +6,7 @@ import AppBadge, { VersionPill } from './AppBadge';
 
 /**
  * Native-feeling About & Legal / Licenses modal.
- * Displays formal copyright, open-source license terms, and third-party
+ * Displays formal copyright, license terms, and third-party
  * attributions cleanly without exposing raw developer repository links.
  */
 const AboutModal = ({ isOpen, onClose }) => {

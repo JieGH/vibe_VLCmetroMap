@@ -9,10 +9,10 @@ export const APP_LEGAL_INFO = {
   author: 'Jie Lei',
   year: '2026',
   copyright: '© 2026 Jie Lei',
-  licenseSpdx: 'Apache-2.0',
-  licenseName: 'Apache License 2.0',
+  licenseSpdx: 'LicenseRef-Xarxa-All-Rights-Reserved',
+  licenseName: 'All Rights Reserved (source-available)',
   licenseSummary:
-    'Licensed under the Apache License, Version 2.0 (the "License"). You may use, distribute, and modify this application in compliance with the License terms.',
+    'All rights reserved. You may use the official app as published. The source code is viewable, but you may not copy, modify, or distribute this application or its code, commercially or non-commercially, without prior written permission from the author.',
   disclaimer:
     'This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.',
   attributions: {
@@ -54,10 +54,10 @@ export const APP_LEGAL_INFO_ES = {
   author: 'Jie Lei',
   year: '2026',
   copyright: '© 2026 Jie Lei',
-  licenseSpdx: 'Apache-2.0',
-  licenseName: 'Licencia Apache 2.0',
+  licenseSpdx: 'LicenseRef-Xarxa-All-Rights-Reserved',
+  licenseName: 'Todos los derechos reservados (código disponible)',
   licenseSummary:
-    'Con licencia bajo la Licencia Apache, versión 2.0 (la "Licencia"). Puedes usar, distribuir y modificar esta aplicación conforme a los términos de la Licencia.',
+    'Todos los derechos reservados. Puedes usar la app oficial tal como se publica. El código fuente es visible, pero no puedes copiar, modificar ni distribuir esta aplicación ni su código, ni con fines comerciales ni no comerciales, sin permiso previo y por escrito del autor.',
   disclaimer:
     'Este software se distribuye "TAL CUAL", SIN GARANTÍAS NI CONDICIONES DE NINGÚN TIPO, ni expresas ni implícitas.',
   attributions: {
@@ -98,10 +98,10 @@ export const APP_LEGAL_INFO_CA = {
   author: 'Jie Lei',
   year: '2026',
   copyright: '© 2026 Jie Lei',
-  licenseSpdx: 'Apache-2.0',
-  licenseName: 'Llicència Apache 2.0',
+  licenseSpdx: 'LicenseRef-Xarxa-All-Rights-Reserved',
+  licenseName: 'Tots els drets reservats (codi disponible)',
   licenseSummary:
-    'Amb llicència sota la Llicència Apache, versió 2.0 (la "Llicència"). Pots usar, distribuir i modificar esta aplicació conforme als termes de la Llicència.',
+    'Tots els drets reservats. Pots usar l\'app oficial tal com es publica. El codi font és visible, però no pots copiar, modificar ni distribuir esta aplicació ni el seu codi, ni amb fins comercials ni no comercials, sense permís previ i per escrit de l\'autor.',
   disclaimer:
     'Este programari es distribuïx "TAL QUAL", SENSE GARANTIES NI CONDICIONS DE CAP MENA, ni expresses ni implícites.',
   attributions: {

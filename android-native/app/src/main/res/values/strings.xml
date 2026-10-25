@@ -57,7 +57,7 @@
     <string name="train_count_none">No live predictions — showing simulated trains</string>
     <string name="about_title">About &amp; Legal</string>
     <string name="about_copyright">Copyright &amp; License</string>
-    <string name="about_license_summary">© 2026 Jie Lei. Licensed under the Apache License, Version 2.0. Distributed on an \"AS IS\" basis, without warranties or conditions of any kind.</string>
+    <string name="about_license_summary">© 2026 Jie Lei. All rights reserved. You may use the official app as published, but may not copy, modify, or distribute this app or its code, commercially or non-commercially, without prior written permission. Distributed on an \"AS IS\" basis, without warranties or conditions of any kind.</string>
     <string name="about_data">Data &amp; Attributions</string>
     <string name="about_operator">Metrovalencia is a registered brand of Ferrocarrils de la Generalitat Valenciana (FGV). Network lines, brand colours and timetables are the property of FGV. This independent app is not affiliated with or endorsed by FGV.</string>
     <string name="about_arrivals">Live arrival predictions come from the real-time feed of FGV. Countdowns and train positions are estimated by this app from those predictions.</string>
