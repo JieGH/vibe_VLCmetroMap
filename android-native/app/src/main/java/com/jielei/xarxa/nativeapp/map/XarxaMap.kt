@@ -23,6 +23,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
 import com.jielei.xarxa.nativeapp.BuildConfig
 import com.jielei.xarxa.nativeapp.Perf
+import com.jielei.xarxa.nativeapp.domain.LineReveal
 import com.jielei.xarxa.nativeapp.domain.Station
 import com.jielei.xarxa.nativeapp.domain.TrainPosition
 import kotlinx.coroutines.delay
@@ -49,6 +50,7 @@ import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
 const val DEFAULT_ZOOM = 12.3
+const val MIN_ZOOM = 8.0
 const val STATION_FOCUS_ZOOM = 14.6
 val DEFAULT_CENTER = LatLng(39.4699, -0.3763)
 const val DIM_OPACITY = 0.2f
@@ -60,6 +62,8 @@ sealed interface CameraRequest {
     data class ShowUser(val lat: Double, val lon: Double, override val nonce: Long) : CameraRequest
     /** The sheet closed: pull back from [station], centred on it. */
     data class ZoomOutFrom(val station: Station, override val nonce: Long) : CameraRequest
+    /** A Line was picked: frame all of [points] (its stations) on screen. */
+    data class FitStations(val points: List<LatLng>, override val nonce: Long) : CameraRequest
 }
 
 /**
@@ -85,6 +89,8 @@ private fun zoomStops(value: (Double) -> Float): Expression = Expression.interpo
 )
 
 private const val ST_SRC = "stations"
+/** Rank of every station when no Line filter is active (see [LineReveal]). */
+private const val RANK_ALL = 3
 private const val TR_SRC = "trains"
 private const val USER_SRC = "user"
 private const val TRAIN_PULSE = "trains-pulse"
@@ -157,13 +163,13 @@ fun XarxaMap(
             m.uiSettings.isLogoEnabled = false
             m.uiSettings.isRotateGesturesEnabled = false
             m.uiSettings.isTiltGesturesEnabled = false
-            m.setMinZoomPreference(9.0)
+            m.setMinZoomPreference(MIN_ZOOM) // wide enough to frame the longest Line (L1, 56 km) on a phone
             m.setMaxZoomPreference(19.0)
             m.cameraPosition = CameraPosition.Builder().target(DEFAULT_CENTER).zoom(DEFAULT_ZOOM).build()
             m.addOnMapClickListener { latLng ->
                 val px = m.projection.toScreenLocation(latLng)
                 val r = with(density) { 22.dp.toPx() }
-                val hits = m.queryRenderedFeatures(RectF(px.x - r, px.y - r, px.x + r, px.y + r), "stations-circle")
+                val hits = m.queryRenderedFeatures(RectF(px.x - r, px.y - r, px.x + r, px.y + r), "stations-circle-3", "stations-circle-0", "stations-circle-1", "stations-circle-2")
                 val best = hits.mapNotNull { f ->
                     val id = f.getStringProperty("id") ?: return@mapNotNull null
                     val st = stationsNow[id] ?: return@mapNotNull null
@@ -204,7 +210,7 @@ fun XarxaMap(
     // Stations: colour ring of their first line; dimmed when a filter excludes all their lines.
     LaunchedEffect(style, styleVersion, stations, filter, lineColors) {
         val s = style ?: return@LaunchedEffect
-        (s.getSource(ST_SRC) as? GeoJsonSource)?.setGeoJson(stationsJson(stations, lineColors, filter))
+        (s.getSource(ST_SRC) as? GeoJsonSource)?.setGeoJson(stationsJson(stations, lineColors, filter, if (filter.isEmpty()) emptyMap() else LineReveal.ranks(stations, filter)))
     }
 
     // Line dimming: filtered-out Lines drop to DIM_OPACITY, like lineOpacityExpression on the web.
@@ -305,6 +311,17 @@ fun XarxaMap(
                     .build()
                 m.easeCamera(CameraUpdateFactory.newCameraPosition(pos), CameraPlan.EASE_MS)
             }
+            is CameraRequest.FitStations -> {
+                val bounds = org.maplibre.android.geometry.LatLngBounds.Builder().includes(req.points).build()
+                val pad = with(density) { 32.dp.toPx() }.toInt()
+                val chips = with(density) { 56.dp.toPx() }.toInt() // the line-chip row under the search pill
+                // A station focus leaves its own padding on the camera; fit against the whole view instead.
+                m.moveCamera(CameraUpdateFactory.paddingTo(0.0, 0.0, 0.0, 0.0))
+                m.easeCamera(
+                    CameraUpdateFactory.newLatLngBounds(bounds, pad, topInsetPx + chips + pad, pad, bottomInsetPx + pad),
+                    CameraPlan.EASE_MS,
+                )
+            }
             is CameraRequest.ZoomOutFrom -> {
                 val pos = CameraPosition.Builder()
                     .target(LatLng(req.station.lat, req.station.lon))
@@ -337,23 +354,41 @@ private fun installLayers(style: Style, dark: Boolean, lineColors: Map<String, L
     // One zoom curve (see [zoomCurve]) drives every size: dot, ring, shadow and the selected highlight.
     val radius = zoomStops { 5f * STATION_SCALE * zoomCurve(it) }
     val strokeW = zoomStops { 2f * STATION_SCALE * zoomCurve(it) }
-    style.addLayerAbove(
-        CircleLayer("stations-shadow", ST_SRC).withProperties(
-            circleRadius(radius), circleColor("#000000"), circleOpacity(0.28f), circleBlur(0.9f), circleTranslate(arrayOf(0f, 2f)),
-        ).also { it.minZoom = 9.7f },
-        "metro-fill",
+    // With no Line filter every station is rank RANK_ALL and appears from zoom 9.7, as on the web. With a filter the
+    // ranks of [LineReveal] stagger the stations in: majors in the Line overview, the rest as the map zooms in.
+    // One layer set per rank, because a layer's minZoom is the reliable per-zoom switch.
+    val tiers = listOf(
+        Triple(RANK_ALL, 9.7f, 13.4f),
+        Triple(LineReveal.MAJOR, 8.0f, 10.0f),
+        Triple(LineReveal.MID, 11.2f, 12.2f),
+        Triple(LineReveal.MINOR, 12.2f, 13.4f),
     )
-    style.addLayerAbove(
-        CircleLayer("stations-circle", ST_SRC).withProperties(
-            circleRadius(radius),
-            circleColor(stationFill),
-            circleStrokeColor(get("color")),
-            circleStrokeWidth(strokeW),
-            circleOpacity(dimOpacity),
-            circleStrokeOpacity(dimOpacity),
-        ).also { it.minZoom = 9.7f },
-        "stations-shadow",
-    )
+    var below = "metro-fill"
+    for ((rank, minZ, labelZ) in tiers) {
+        val line = rank != RANK_ALL
+        // In a Line overview the map is wider than the web's 9.7 floor, so the dots keep a minimum size.
+        val rad = if (line) zoomStops { 5f * STATION_SCALE * maxOf(zoomCurve(it), 0.8f) } else radius
+        val sw = if (line) zoomStops { 2f * STATION_SCALE * maxOf(zoomCurve(it), 0.8f) } else strokeW
+        val only = Expression.eq(get("rank"), literal(rank))
+        style.addLayerAbove(
+            CircleLayer("stations-shadow-$rank", ST_SRC).withProperties(
+                circleRadius(rad), circleColor("#000000"), circleOpacity(0.28f), circleBlur(0.9f), circleTranslate(arrayOf(0f, 2f)),
+            ).also { it.minZoom = minZ; it.setFilter(only) },
+            below,
+        )
+        style.addLayerAbove(
+            CircleLayer("stations-circle-$rank", ST_SRC).withProperties(
+                circleRadius(rad),
+                circleColor(stationFill),
+                circleStrokeColor(get("color")),
+                circleStrokeWidth(sw),
+                circleOpacity(dimOpacity),
+                circleStrokeOpacity(dimOpacity),
+            ).also { it.minZoom = minZ; it.setFilter(only) },
+            "stations-shadow-$rank",
+        )
+        below = "stations-circle-$rank"
+    }
     style.addLayerAbove(
         CircleLayer("stations-selected", ST_SRC).withProperties(
             circleRadius(zoomStops { (5f * zoomCurve(it) + 5f) * STATION_SCALE }),
@@ -361,23 +396,27 @@ private fun installLayers(style: Style, dark: Boolean, lineColors: Map<String, L
             circleStrokeColor("#00B4D8"),
             circleStrokeWidth(2.5f * STATION_SCALE),
         ).also { it.setFilter(Expression.eq(get("id"), literal(""))) },
-        "stations-circle",
+        below,
     )
-    style.addLayerAbove(
-        SymbolLayer("stations-label", ST_SRC).withProperties(
-            textField(get("name")),
-            textFont(arrayOf("Noto Sans Medium")),
-            textSize(11.5f),
-            textOffset(arrayOf(0f, 1.1f)),
-            textAnchor("top"),
-            textOptional(true),
-            textColor(text),
-            textHaloColor(halo),
-            textHaloWidth(1.6f),
-            textOpacity(dimOpacity),
-        ).also { it.minZoom = 13.4f },
-        "stations-selected",
-    )
+    var above = "stations-selected"
+    for ((rank, _, labelZ) in tiers) {
+        style.addLayerAbove(
+            SymbolLayer("stations-label-$rank", ST_SRC).withProperties(
+                textField(get("name")),
+                textFont(arrayOf("Noto Sans Medium")),
+                textSize(11.5f),
+                textOffset(arrayOf(0f, 1.1f)),
+                textAnchor("top"),
+                textOptional(true),
+                textColor(text),
+                textHaloColor(halo),
+                textHaloWidth(1.6f),
+                textOpacity(dimOpacity),
+            ).also { it.minZoom = labelZ; it.setFilter(Expression.eq(get("rank"), literal(rank))) },
+            above,
+        )
+        above = "stations-label-$rank"
+    }
     style.addLayer(
         CircleLayer("user-halo", USER_SRC).withProperties(
             circleRadius(16f), circleColor("rgba(66,133,244,0.22)"),
@@ -412,7 +451,7 @@ private fun installLayers(style: Style, dark: Boolean, lineColors: Map<String, L
 
 private fun hex(argb: Long) = String.format("#%06X", argb and 0xFFFFFF)
 
-private fun stationsJson(stations: List<Station>, colors: Map<String, Long>, filter: Set<String>): String {
+private fun stationsJson(stations: List<Station>, colors: Map<String, Long>, filter: Set<String>, ranks: Map<String, Int>): String {
     val features = buildJsonArray {
         for (st in stations) {
             if (filter.isNotEmpty() && st.lines.none { it in filter }) continue // web hides stations outside the Line filter
@@ -427,6 +466,7 @@ private fun stationsJson(stations: List<Station>, colors: Map<String, Long>, fil
                             put("name", st.name)
                             put("color", hex(first ?: 0xFFAAAAAA))
                             put("dim", filter.isNotEmpty() && st.lines.none { it in filter })
+                            put("rank", ranks[st.id] ?: RANK_ALL)
                         },
                     )
                     put("geometry", point(st.lon, st.lat))

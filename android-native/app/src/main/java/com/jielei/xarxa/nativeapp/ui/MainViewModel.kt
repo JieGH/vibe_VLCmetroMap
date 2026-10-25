@@ -125,6 +125,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun filterOnly(id: String) {
         filter = setOf(id)
+        val on = graph?.stations?.filter { id in it.lines }.orEmpty()
+        if (on.size > 1) cameraRequest = CameraRequest.FitStations(on.map { LatLng(it.lat, it.lon) }, nextNonce())
     }
 
     fun clearFilter() {
