@@ -24,6 +24,11 @@ const { execFileSync } = require('node:child_process');
 // Padded so panning off the end of a line does not run off the edge of the map.
 const BBOX = '-0.65,39.02,-0.25,39.68';
 
+// BASEMAP_MAXZOOM caps the archive's deepest zoom. Cloudflare Workers assets allow 25 MiB per file, and the
+// full archive is 36 MB; 14 is 15 MB and MapLibre overzooms vector tiles sharply past it (docs/hosting-cloudflare.md).
+const MAXZOOM = Number(process.env.BASEMAP_MAXZOOM) || null;
+const MIN_BYTES = MAXZOOM ? 5_000_000 : 10_000_000;
+
 const PMTILES_VERSION = '1.31.2';
 const ASSETS = 'https://protomaps.github.io/basemaps-assets';
 
@@ -111,11 +116,11 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
   fs.mkdirSync(cacheDir, { recursive: true });
 
   const archive = path.join(outDir, 'valencia.pmtiles');
-  const cachedArchive = path.join(cacheDir, 'valencia.pmtiles');
+  const cachedArchive = path.join(cacheDir, MAXZOOM ? `valencia-z${MAXZOOM}.pmtiles` : 'valencia.pmtiles');
 
-  if (fs.existsSync(archive) && fs.statSync(archive).size > 10_000_000) {
+  if (fs.existsSync(archive) && fs.statSync(archive).size > MIN_BYTES) {
     console.log(`  reusing existing ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
-  } else if (fs.existsSync(cachedArchive) && fs.statSync(cachedArchive).size > 10_000_000) {
+  } else if (fs.existsSync(cachedArchive) && fs.statSync(cachedArchive).size > MIN_BYTES) {
     fs.copyFileSync(cachedArchive, archive);
     console.log(`  restored cached ${path.relative(root, archive)} — ${mb(fs.statSync(archive).size)}`);
   } else {
@@ -126,8 +131,8 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
     for (const build of builds) {
       try {
         console.log(`Extracting ${BBOX} from ${build}`);
-        execFileSync(cli, ['extract', build, archive, `--bbox=${BBOX}`], { stdio: 'inherit' });
-        if (fs.existsSync(archive) && fs.statSync(archive).size > 10_000_000) {
+        execFileSync(cli, ['extract', build, archive, `--bbox=${BBOX}`, ...(MAXZOOM ? [`--maxzoom=${MAXZOOM}`] : [])], { stdio: 'inherit' });
+        if (fs.existsSync(archive) && fs.statSync(archive).size > MIN_BYTES) {
           fs.copyFileSync(archive, cachedArchive);
           extracted = true;
           break;

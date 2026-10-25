@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers deployment of the public website. See docs/hosting-cloudflare.md.
+  "name": "vibe-vlcmetromap",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  // nodejs_compat_populate_process_env lets the shared proxy read METRO_SOURCE from `vars`.
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": { "METRO_SOURCE": "relay" }
+}

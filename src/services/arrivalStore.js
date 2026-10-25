@@ -59,7 +59,7 @@ const RELAY_MIN_DISPATCH_INTERVAL_MS = 1000;
 export function isRelaySource() {
   if (Capacitor.isNativePlatform()) return false;
   if (import.meta.env?.VITE_METRO_SOURCE === 'relay') return true;
-  if (typeof window !== 'undefined' && /\.netlify\.app$/i.test(window.location?.hostname || '')) return true;
+  if (typeof window !== 'undefined' && /\.(netlify\.app|workers\.dev)$/i.test(window.location?.hostname || '')) return true;
   return false;
 }
 
