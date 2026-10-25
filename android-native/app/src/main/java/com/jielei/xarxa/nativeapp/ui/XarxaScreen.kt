@@ -198,16 +198,25 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
                 if (searchFocused) {
-                    val results = remember(query, g) {
-                        if (query.isBlank()) g.lines.map { SearchResult.LineHit(it) } else g.repo.search(query)
+                    if (query.isBlank()) {
+                        SearchSuggestions(
+                            hubs = g.hubs,
+                            lines = g.lines,
+                            lineColors = g.lineColors,
+                            onLine = { id -> vm.filterOnly(id); closeSearch() },
+                            onStation = { st -> vm.selectStation(st); closeSearch() },
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                        )
+                    } else {
+                        val results = remember(query, g) { g.repo.search(query) }
+                        SearchResults(
+                            results = results,
+                            lineColors = g.lineColors,
+                            onLine = { id -> vm.filterOnly(id); closeSearch() },
+                            onStation = { st -> vm.selectStation(st); closeSearch() },
+                            modifier = Modifier.padding(horizontal = 12.dp).heightIn(max = 380.dp),
+                        )
                     }
-                    SearchResults(
-                        results = results,
-                        lineColors = g.lineColors,
-                        onLine = { id -> vm.filterOnly(id); closeSearch() },
-                        onStation = { st -> vm.selectStation(st); closeSearch() },
-                        modifier = Modifier.padding(horizontal = 12.dp).heightIn(max = 380.dp),
-                    )
                 } else {
                     HubChips(
                         hubs = g.hubs,

@@ -69,4 +69,5 @@
     <string name="about_what_body">Xarxa muestra dónde están ahora los trenes de Metrovalencia, con cuentas atrás en cada estación de la red. Usa el feed de llegadas en directo de FGV y mantiene el mapa sin conexión. Gratuita, de código abierto e independiente.</string>
     <string name="about_source">Código fuente</string>
     <string name="about_privacy_link">Leer la política de privacidad completa</string>
+    <string name="search_popular">Estaciones populares</string>
 </resources>

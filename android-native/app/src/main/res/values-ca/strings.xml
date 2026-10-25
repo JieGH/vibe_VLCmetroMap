@@ -69,4 +69,5 @@
     <string name="about_what_body">Xarxa mostra on estan ara els trens de Metrovalencia, amb comptes enrere a cada estació de la xarxa. Usa el feed d\'arribades en directe de FGV i manté el mapa sense connexió. Gratuïta, de codi obert i independent.</string>
     <string name="about_source">Codi font</string>
     <string name="about_privacy_link">Llig la política de privacitat completa</string>
+    <string name="search_popular">Estacions populars</string>
 </resources>

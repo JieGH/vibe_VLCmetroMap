@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -188,6 +189,72 @@ fun SearchResults(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * What the dropdown shows before anything is typed: two halves side by side, popular stations on the left and a
+ * grid of Line badges on the right. Compact on purpose, no scrolling for the usual 7 stations and 9 lines.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun SearchSuggestions(
+    hubs: List<Station>,
+    lines: List<com.jielei.xarxa.nativeapp.domain.LineInfo>,
+    lineColors: Map<String, Long>,
+    onLine: (String) -> Unit,
+    onStation: (Station) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 3.dp,
+        shadowElevation = 6.dp,
+    ) {
+        Row(Modifier.padding(horizontal = 6.dp, vertical = 8.dp)) {
+            Column(Modifier.weight(1f)) {
+                SectionHeader(stringResource(R.string.search_popular))
+                hubs.forEach { st ->
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(RoundedCornerShape(12.dp))
+                            .clickable { onStation(st) }.padding(horizontal = 10.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            st.name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            st.lines.take(4).forEach { l ->
+                                Box(Modifier.size(8.dp).background((lineColors[l] ?: 0xFF888888).toComposeColor(), CircleShape))
+                            }
+                        }
+                    }
+                }
+            }
+            Box(Modifier.width(1.dp).heightIn(min = 100.dp).background(MaterialTheme.colorScheme.outlineVariant).align(Alignment.CenterVertically))
+            Column(Modifier.weight(1f).padding(start = 6.dp)) {
+                SectionHeader(stringResource(R.string.search_lines))
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(horizontal = 6.dp),
+                    maxItemsInEachRow = 3,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    lines.forEach { l ->
+                        val desc = stringResource(R.string.line_prefix, l.id)
+                        Box(
+                            Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).clickable { onLine(l.id) }
+                                .semantics { contentDescription = desc },
+                            contentAlignment = Alignment.Center,
+                        ) { LineBadge(l.id, l.colorArgb, size = 32.dp) }
                     }
                 }
             }
