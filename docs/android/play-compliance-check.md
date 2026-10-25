@@ -51,3 +51,15 @@ Date: 2026-10-25. Covers the Capacitor wrapper (`android/`, `com.jielei.Xarxa`, 
 ## Not verified
 
 The content-rating, Play impersonation/IP policy pages and the exact webview-wrapper wording were not returned by the fetch tool; those rows rely on the cited summary pages and should be re-read before submission.
+
+## Round 2 (2026-10-25, after the drawer/About rework)
+
+Re-checked NAT against the repo; rules from round 1 were not re-fetched.
+
+- **Fixed: crash on Android 8.0/8.1 (minSdk 26).** `TrainIcons.kt` called `Typeface.create(family, weight, italic)`, which exists from API 28; on API 26/27 it throws `NoSuchMethodError` when the first train icon draws. A pre-launch report device on 8.x would show it. Now guarded by `Build.VERSION.SDK_INT >= 28` with `DEFAULT_BOLD` below.
+- **Fixed: `lintDebug` failed** on `windowLayoutInDisplayCutoutMode` (`values/` and `values-night/themes.xml`); the attribute is ignored on older systems, so `tools:targetApi="o_mr1"` is the right fix. Lint and unit tests now pass.
+- Merged release manifest: INTERNET, ACCESS_NETWORK_STATE, FINE/COARSE_LOCATION, ACCESS_WIFI_STATE (MapLibre), a signature-level `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. No AD_ID, no background location. Unchanged from round 1.
+- New About "Source code" button opens the canonical repo (`JieGH/vibe_VLCmetroMap`) in the browser; it sends nothing, so Data safety answers are unchanged.
+- **Open (owner):** the About dialog has the privacy summary but no link to the hosted privacy policy, and Play expects the policy reachable in the app as well as on the listing. Once the URL exists, add a "Privacy policy" link. A public GitHub URL of `docs/android/privacy-policy.md` is acceptable as a stopgap.
+- **Open (docs):** `privacy-policy.md` says libraries are "listed under About in the app"; About names MapLibre, OpenStreetMap and Protomaps but not every dependency. Reword, or add the list.
+- The sideload APK on the v1.3.1 release (`Xarxa-Native-v0.1.0.apk`) predates both fixes; rebuild it with `tools/release-apk.sh` before sharing it with older phones. It uses a separate key, so it cannot be mixed with the Play build.

@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jielei.xarxa.nativeapp.R
 
-private const val SOURCE_URL = "https://github.com/JieGH/vib_metroValencia"
+private const val SOURCE_URL = "https://github.com/JieGH/vibe_VLCmetroMap"
 
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {

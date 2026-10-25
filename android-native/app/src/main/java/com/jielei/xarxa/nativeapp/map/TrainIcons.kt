@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.os.Build
 import android.util.DisplayMetrics
 import org.maplibre.android.maps.Style
 
@@ -44,7 +45,8 @@ object TrainIcons {
             color = 0xFFFFFFFF.toInt()
             // The number is a fixed share of the disc (a single digit 17/28, "10" 14/28) at every zoom: it lives in the bitmap.
             textSize = (if (line.length > 1) 14f else 17f) * scale
-            typeface = Typeface.create(Typeface.DEFAULT, 800, false)
+            // Variable weights need API 28; minSdk is 26.
+            typeface = if (Build.VERSION.SDK_INT >= 28) Typeface.create(Typeface.DEFAULT, 800, false) else Typeface.DEFAULT_BOLD
             textAlign = Paint.Align.CENTER
         }
         val label = if (line == "?") "" else line
