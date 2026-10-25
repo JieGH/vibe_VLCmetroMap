@@ -12,6 +12,8 @@ export const CompactMetroSection = ({
   theme = 'dark',
   unheardLabel,
   isLive,
+  walkMetres,
+  walkMin,
 }) => {
   const { t } = useTranslation();
 
@@ -27,7 +29,7 @@ export const CompactMetroSection = ({
 
   return (
     <div className="compact-metro-section" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {/* Mini header matching bus feeder style */}
+      {/* Header */}
       <div
         style={{
           display: 'flex',
@@ -40,18 +42,39 @@ export const CompactMetroSection = ({
       >
         <span
           style={{
-            fontSize: '0.72rem',
+            fontSize: '0.74rem',
             fontWeight: 800,
-            letterSpacing: '0.08em',
+            letterSpacing: '0.04em',
             textTransform: 'uppercase',
             color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
-            gap: 5,
+            gap: 6,
           }}
         >
-          <Train size={13} color="#E2001A" />
-          Metrovalencia Rail Platforms
+          <span
+            style={{
+              width: 15,
+              height: 15,
+              borderRadius: '50%',
+              background: '#E2001A',
+              color: '#ffffff',
+              fontSize: '0.60rem',
+              fontWeight: 900,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+            }}
+          >
+            m
+          </span>
+          <span>{stationName || 'Metro'}</span>
+          {walkMetres !== undefined && walkMin !== undefined && (
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'none', marginLeft: 4 }}>
+              · {walkMin} min ({walkMetres}m)
+            </span>
+          )}
         </span>
         <span
           style={{
@@ -67,7 +90,7 @@ export const CompactMetroSection = ({
           }}
         >
           <Radio size={9} />
-          {unheardLabel || 'Live Sync'}
+          {unheardLabel || 'Live'}
         </span>
       </div>
 

@@ -72,7 +72,9 @@ export const BusStopBoard = ({
               boxShadow: '0 2px 8px rgba(214, 40, 40, 0.4)',
             }}
           >
-            🚌
+            <span style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.04em', lineHeight: 1 }}>
+              EMT
+            </span>
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

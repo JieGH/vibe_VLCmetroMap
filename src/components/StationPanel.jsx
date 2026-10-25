@@ -17,6 +17,8 @@ import { useTranslation } from '../i18n';
 import { getStationBusFeeders } from '../data/emtData';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
+import { getDistance } from '../utils/geoUtils';
+import { walkingMinutes } from '../utils/walking';
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
@@ -43,7 +45,7 @@ const ROW_HEIGHT_PX = 48;
 const VISIBLE_ROWS = 4;
 const TABLE_HEAD_PX = 30;
 
-const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFeederStop }) => {
+const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFeederStop, userLocation }) => {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
@@ -105,7 +107,19 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
       : t('stationPanel.minAgo', { min: Math.round(focus.secondsUnheard / 60) });
 
   const stationLines = focus.servedLines || [];
-  const feeders = getStationBusFeeders(focus.name, station.geometry?.coordinates);
+  const userCoords = userLocation?.coordinates;
+  const stationCoords = station.geometry?.coordinates;
+  const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
+  const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
+
+  const rawFeeders = getStationBusFeeders(focus.name, stationCoords);
+  const feeders = rawFeeders.map((f) => {
+    if (!userCoords || !f.coordinates) return f;
+    const dist = Math.round(getDistance(userCoords, f.coordinates));
+    const mins = walkingMinutes(dist);
+    return { ...f, walkMetres: dist, walkMin: mins };
+  }).filter((f) => !userCoords || f.walkMin <= 10); // 10 minutes walk radius
+
   const totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
 
   return (
@@ -192,13 +206,28 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
           </div>
 
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
-            <h2 style={{
-              fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
-              letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              minWidth: 0, margin: 0,
-            }}>
-              {focus.name}
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+              <h2 style={{
+                fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
+                letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                minWidth: 0, margin: 0,
+              }}>
+                {focus.name}
+              </h2>
+              {metroWalkMin !== undefined && metroWalkMeters !== undefined && (
+                <span
+                  style={{
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  · {metroWalkMin} min ({metroWalkMeters}m)
+                </span>
+              )}
+            </div>
 
             <div
               className="station-header-meta"
@@ -230,15 +259,16 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                 <span
                   className="station-header-feeder-badge"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                     height: 20, padding: '0 6px', borderRadius: 5,
                     background: 'rgba(214, 40, 40, 0.22)', color: '#ff6369',
-                    fontSize: '.72rem', fontWeight: 800, lineHeight: 1, border: '1px solid rgba(214, 40, 40, 0.35)',
+                    fontSize: '.68rem', fontWeight: 800, lineHeight: 1, border: '1px solid rgba(214, 40, 40, 0.35)',
                     whiteSpace: 'nowrap',
                   }}
-                  title={`${feeders.length} connecting EMT bus stops within 200m`}
+                  title={`${feeders.length} nearby EMT bus stops within 10 min walk`}
                 >
-                  🚌 +{feeders.length} Feeders
+                  <span style={{ fontSize: '0.54rem', fontWeight: 900, background: '#D62828', color: '#fff', padding: '1px 3px', borderRadius: 2 }}>EMT</span>
+                  <span>+{feeders.length} stops</span>
                 </span>
               )}
 
@@ -329,7 +359,24 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                 transition: 'all 0.15s ease',
               }}
             >
-              <span>🚇 Metro</span>
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
+                  color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
+                  fontSize: '0.58rem',
+                  fontWeight: 900,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+              >
+                m
+              </span>
+              <span>Metro</span>
               <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
                 {focus.arrivals.length}
               </span>
@@ -355,7 +402,21 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                 transition: 'all 0.15s ease',
               }}
             >
-              <span>🚌 EMT Bus</span>
+              <span
+                style={{
+                  fontSize: '0.54rem',
+                  fontWeight: 900,
+                  background: '#D62828',
+                  color: '#ffffff',
+                  padding: '1px 3px',
+                  borderRadius: 2,
+                  letterSpacing: '0.04em',
+                  lineHeight: 1,
+                }}
+              >
+                EMT
+              </span>
+              <span>Bus</span>
               <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
                 {totalBusLines}
               </span>
@@ -382,7 +443,7 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
               transition: 'all 0.15s ease',
             }}
           >
-            <span>⚡ Dual Split</span>
+            <span>Dual Split</span>
           </button>
         </nav>
       )}
@@ -429,6 +490,8 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                   theme={theme}
                   unheardLabel={unheardLabel}
                   isLive={focus.isLive}
+                  walkMetres={metroWalkMeters}
+                  walkMin={metroWalkMin}
                 />
               </div>
 
@@ -470,6 +533,8 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                   theme={theme}
                   unheardLabel={unheardLabel}
                   isLive={focus.isLive}
+                  walkMetres={metroWalkMeters}
+                  walkMin={metroWalkMin}
                 />
               </div>
 

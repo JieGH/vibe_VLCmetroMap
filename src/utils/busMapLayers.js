@@ -173,7 +173,7 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
 
   el.title = `${bus.line} (${bus.destination}) • ${bus.speedKmh} km/h • Next: ${bus.nextStop}`;
   el.innerHTML = `
-    <span style="font-size:10px;line-height:1">🚌</span>
+    <span style="font-size:8px;font-weight:900;background:#ffffff;color:#D62828;padding:1px 2px;border-radius:2px;line-height:1">EMT</span>
     <span>${bus.line}</span>
     <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#4CAF50;box-shadow:0 0 5px #4CAF50"></span>
   `;

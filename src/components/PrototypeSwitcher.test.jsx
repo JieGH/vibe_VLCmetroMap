@@ -9,7 +9,7 @@ describe('PrototypeSwitcher component', () => {
       <PrototypeSwitcher currentVariant="A" onSelectVariant={() => {}} />
     );
     expect(html).toContain('prototype-switcher-dock');
-    expect(html).toContain('A: Multimodal Hub Feeder');
+    expect(html).toContain('A: Location Multimodal Hub');
     expect(html).toContain('PROTOTYPE');
   });
 

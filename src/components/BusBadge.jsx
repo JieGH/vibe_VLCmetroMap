@@ -95,7 +95,23 @@ export const BusBadge = ({
         ...style
       }}
     >
-      {showIcon && <span style={{ fontSize: dims.iconSize, lineHeight: 1 }}>🚌</span>}
+      {showIcon && (
+        <span
+          style={{
+            fontSize: '0.54rem',
+            fontWeight: 900,
+            background: '#D62828',
+            color: '#ffffff',
+            padding: '1px 3px',
+            borderRadius: 2,
+            letterSpacing: '0.04em',
+            lineHeight: 1,
+            display: 'inline-block',
+          }}
+        >
+          EMT
+        </span>
+      )}
       <span>{lineStr}</span>
     </span>
   );

@@ -7,22 +7,22 @@ import { ChevronLeft, ChevronRight, Info, X } from 'lucide-react';
 export const VARIANTS = [
   {
     key: 'A',
-    label: 'A: Multimodal Hub Feeder',
-    shortLabel: 'Hub Feeder',
-    concept: 'Concept 3: Station-as-Multimodal-Hub',
-    subtitle: 'Metro spine + 200m connecting EMT bus stops on station focus',
+    label: 'A: Location Multimodal Hub',
+    shortLabel: 'Location Hub',
+    concept: 'Concept 3: Location-First Multimodal Transit Hub',
+    subtitle: 'Locate user & find nearest Metro + EMT stops within ~10 min walk',
     rationale:
-      'Metrovalencia remains the spine. Focusing on any station (Xàtiva, Colón, Àngel Guimerà) displays both rail platforms and satellite EMT bus stops within a 200m walking shed, answering the primary transfer question for SUMA multi-operator riders.',
+      'Location-first architecture. Rather than dominating as a single-mode rail app, pressing Locate finds all available transportation—both Metro stations and EMT bus stops—within a 10-minute walking radius (~800m). Independent scrolling Metro and EMT lists provide fast, compact access to live departures.',
     pros: [
       'Zero map clutter: preserves the clean, high-contrast rail spine',
-      'Instant SUMA transfer utility: answers "Which bus departs right outside?"',
-      'Lowest data overhead: fetches bus arrivals only for focused stops',
-      'Visual pedestrian links: dashed walking radius connects station to stops'
+      'Location-first multimodal transit: shows nearby Metro and EMT departures within 10 min walk',
+      'Dual Split view: two independent scrolling columns for Metro and EMT Bus',
+      'Authentic badges: crisp "m" and "EMT" emblem badges, no emojis'
     ],
     cons: [
-      'Focuses primarily on rail-to-bus transfers rather than pure bus commutes'
+      'Focuses on immediate walking proximity rather than network-wide line tracing'
     ],
-    question: 'Is a 200m walking radius the most natural threshold for multimodal transit transfers in central València?'
+    question: 'Does the 10-minute walking radius with independent split scrolling feel faster than switching screens?'
   },
   {
     key: 'B',
@@ -48,7 +48,7 @@ export const VARIANTS = [
     label: 'C: Dual-Lens Mode Switcher',
     shortLabel: 'Dual-Lens Switcher',
     concept: 'Concept 4: Dual-Lens Mode Switcher',
-    subtitle: 'Tactile [🚇 Metro | 🚌 Bus | ✨ All] mode control in header',
+    subtitle: 'Tactile [Metro | Bus | All] mode control in header',
     rationale:
       'Provides an explicit tactile mode switcher in the top bar. In Bus Mode, the map transforms into an EMT bus network: circular trunks (C1, C2, C3) and primary arterials (19, 95) become prominent lines, and tapping any bus stop opens a dedicated Bus Stop Departure Board.',
     pros: [

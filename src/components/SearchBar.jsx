@@ -355,8 +355,9 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
               {(filteredLines.length > 0) && (
                 <div style={{ height: '1px', background: 'var(--border-color)', margin: '2px 14px 6px' }} />
               )}
-              <div style={{ padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#ff6369', fontWeight: 800 }}>
-                🚌 EMT València Bus Lines
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#ff6369', fontWeight: 800 }}>
+                <span style={{ fontSize: '0.54rem', fontWeight: 900, background: '#D62828', color: '#fff', padding: '1px 3px', borderRadius: 2 }}>EMT</span>
+                <span>València Bus Lines</span>
               </div>
               {filteredBusLines.map((bus) => {
                 const idx = itemIdx++;

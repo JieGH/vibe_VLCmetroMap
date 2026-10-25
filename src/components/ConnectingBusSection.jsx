@@ -15,7 +15,7 @@ export const ConnectingBusSection = ({
   if (!feeders || feeders.length === 0) {
     return (
       <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        <p style={{ fontSize: '0.85rem', margin: 0 }}>No connecting EMT bus stops detected within 200m.</p>
+        <p style={{ fontSize: '0.85rem', margin: 0 }}>No EMT bus stops found within walking distance.</p>
       </div>
     );
   }
@@ -27,36 +27,46 @@ export const ConnectingBusSection = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '4px 6px',
-          borderBottom: '1px solid var(--border-color)',
+          padding: '2px 4px 6px',
+          borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
         }}
       >
         <span
           style={{
-            fontSize: '0.72rem',
+            fontSize: '0.74rem',
             fontWeight: 800,
-            letterSpacing: '0.08em',
+            letterSpacing: '0.04em',
             textTransform: 'uppercase',
             color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
-            gap: 5,
+            gap: 6,
           }}
         >
-          <Footprints size={13} color="#D62828" />
-          Connecting EMT Buses (within 200m)
+          <span
+            style={{
+              fontSize: '0.58rem',
+              fontWeight: 900,
+              background: '#D62828',
+              color: '#ffffff',
+              padding: '1px 4px',
+              borderRadius: 3,
+              letterSpacing: '0.04em',
+              lineHeight: 1.2,
+            }}
+          >
+            EMT
+          </span>
+          <span>València</span>
         </span>
         <span
           style={{
             fontSize: '0.68rem',
             fontWeight: 700,
-            color: '#4caf50',
-            background: 'rgba(76, 175, 80, 0.14)',
-            padding: '2px 6px',
-            borderRadius: 4,
+            color: 'var(--text-secondary)',
           }}
         >
-          SUMA Transfer
+          {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'} nearby
         </span>
       </div>
 

@@ -640,7 +640,23 @@ function App() {
                   gap: 3,
                 }}
               >
-                <span>🚇</span>
+                <span
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    background: activeMode === 'metro' ? '#ffffff' : '#E2001A',
+                    color: activeMode === 'metro' ? '#E2001A' : '#ffffff',
+                    fontSize: '0.58rem',
+                    fontWeight: 900,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                  }}
+                >
+                  m
+                </span>
                 <span>Metro</span>
               </button>
               <button
@@ -659,10 +675,23 @@ function App() {
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3,
+                  gap: 4,
                 }}
               >
-                <span>🚌</span>
+                <span
+                  style={{
+                    fontSize: '0.54rem',
+                    fontWeight: 900,
+                    background: activeMode === 'bus' ? '#ffffff' : '#D62828',
+                    color: activeMode === 'bus' ? '#D62828' : '#ffffff',
+                    padding: '1px 3px',
+                    borderRadius: 2,
+                    letterSpacing: '0.04em',
+                    lineHeight: 1,
+                  }}
+                >
+                  EMT
+                </span>
                 <span>Bus</span>
               </button>
               <button
@@ -918,6 +947,7 @@ function App() {
           onClose={() => setSelectedStation(null)}
           variant={variant}
           onSelectFeederStop={handleSelectBusStop}
+          userLocation={userLocation}
         />
       )}
 
