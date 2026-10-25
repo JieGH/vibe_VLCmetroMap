@@ -2,28 +2,36 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Capacitor } from '@capacitor/core';
 import { useTranslation } from '../i18n';
-import { newAddressFor, isPostponed, postpone } from '../utils/movedNotice';
+import { newAddressFor, MOVED_REMIND_MS } from '../utils/movedNotice';
 
-/** On a retired address: say the site has moved and link to the same page on the new one. */
+/**
+ * On a retired address: say the site has moved and link to the same page on the new one. It opens on every
+ * visit, and after "Not now" it comes back an hour later if the page is still open.
+ */
 const MovedNotice = () => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(() => (
-    typeof window !== 'undefined' && !Capacitor.isNativePlatform()
-    && Boolean(newAddressFor(window.location)) && !isPostponed()
-  ));
-  const target = typeof window !== 'undefined' ? newAddressFor(window.location) : null;
+  const target = typeof window !== 'undefined' && !Capacitor.isNativePlatform() ? newAddressFor(window.location) : null;
+  const [open, setOpen] = useState(Boolean(target));
+
+  const later = () => setOpen(false);
+
+  // Hidden for now: ask again in an hour.
+  useEffect(() => {
+    if (open || !target) return undefined;
+    const timer = setTimeout(() => setOpen(true), MOVED_REMIND_MS);
+    return () => clearTimeout(timer);
+  }, [open, target]);
 
   useEffect(() => {
     if (!open) return undefined;
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); postpone(); setOpen(false); }
+      if (e.key === 'Escape') { e.preventDefault(); later(); }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open]);
 
   if (!open || !target) return null;
-  const later = () => { postpone(); setOpen(false); };
 
   return createPortal(
     <div className="app-banner-backdrop" onClick={later}>
