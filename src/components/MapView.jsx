@@ -3,7 +3,7 @@ import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } f
 import { Protocol, PMTiles } from 'pmtiles';
 import { Capacitor } from '@capacitor/core';
 import { createBoundedRangeSource } from '../utils/boundedRangeSource';
-import { noLabels, labels } from 'protomaps-themes-base';
+import { buildVectorLabels, buildVectorNoLabels } from '../utils/mapStyle';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -450,11 +450,11 @@ const buildVectorStyle = (flavour) => ({
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
   },
   // Basemap geometry, then the Lines, then the basemap's labels on top.
-  // Building footprints are omitted to keep the transit lines clear and minimize WebGL polygon load.
+  // Building footprints and library POIs are omitted to keep the transit lines clear and minimize visual clutter.
   layers: [
-    ...noLabels('protomaps', flavour).filter((layer) => layer.id !== 'buildings'),
+    ...buildVectorNoLabels(flavour),
     ...structuredClone(metroLayers),
-    ...labels('protomaps', flavour, 'en'),
+    ...buildVectorLabels(flavour, 'en'),
   ],
 });
 
