@@ -14,6 +14,7 @@ import {
   DEFAULT_MAP_CENTER,
   ZERO_PADDING,
   calculateFocusZoom,
+  STATION_FOCUS_ZOOM,
   zoomOutTarget,
   CAMERA_EASE_MS,
   panelAwarePadding as computePanelPadding,
@@ -573,8 +574,13 @@ const TAP_RADIUS_PX = 22;
 
 // How close framing the viewer against their Nearest Station is allowed to get.
 // Without a cap, standing 40 m from a platform fills the screen with one
-// junction and the map stops being a map.
-const USER_FRAME_MAX_ZOOM = 15.5;
+// junction and the map stops being a map. It was 15.5, which still read as too
+// close after a locate press; it now matches the zoom of tapping a Station, so
+// both ways of arriving at a platform land on the same view.
+const USER_FRAME_MAX_ZOOM = STATION_FOCUS_ZOOM;
+
+// With no Station to frame against, the zoom the camera moves to at least.
+const USER_ONLY_ZOOM = 13.8;
 
 // A User Location is a single fix, taken once, and it starts going stale
 // immediately — you can walk 500 m in the time it takes to read a departure
@@ -1401,7 +1407,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       // Being located is still useful, so the camera still goes there.
       map.easeTo({
         center: userLocation.coordinates,
-        zoom: Math.max(map.getZoom(), 14.5),
+        zoom: Math.max(map.getZoom(), USER_ONLY_ZOOM),
         padding,
         duration: CAMERA_EASE_MS,
         essential: true,
