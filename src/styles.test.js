@@ -33,12 +33,13 @@ describe('Top bar CSS layout stability', () => {
     expect(mobileSection).toContain('transition: none');
   });
 
-  it('ensures sidebar toggle button has flex-shrink: 0 and fixed width on mobile', () => {
+  it('keeps the menu button a 52px-wide square stretched to the search bar\'s height on mobile', () => {
     const mobileSection = extractMediaSection(/@media\s*\(\s*max-width:\s*768px\s*\)\s*\{([\s\S]*?)\n\}/);
-    expect(mobileSection).toContain('.sidebar-toggle-btn');
-    expect(mobileSection).toContain('width: 42px');
-    expect(mobileSection).toContain('height: 42px');
-    expect(mobileSection).toContain('flex-shrink: 0');
+    const rule = mobileSection.match(/\.sidebar-toggle-btn\s*\{([^}]*)\}/)?.[1] || '';
+    expect(rule).toContain('width: 52px');
+    expect(rule).toContain('align-self: stretch');
+    expect(rule).toContain('flex-shrink: 0');
+    expect(css).toMatch(/\.search-bar-container\s*\{[^}]*min-height: 52px/);
   });
 });
 

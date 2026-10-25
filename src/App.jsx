@@ -27,7 +27,8 @@ import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
-import { Sun, Moon, Menu } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import AppBadge from './components/AppBadge';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -496,7 +497,7 @@ function App() {
           title={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
           aria-label={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
         >
-          <Menu size={20} />
+          <AppBadge size={40} bare />
         </button>
         <div
           className="search-bar-container glass-panel"

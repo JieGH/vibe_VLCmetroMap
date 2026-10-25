@@ -2,14 +2,16 @@ import React from 'react';
 
 // The launcher icon (same mark as the Android apps) on its dark tile, for the
 // sidebar and About headers.
-const AppBadge = ({ size = 40 }) => (
+// `bare` drops the dark tile and draws the mark directly on whatever is behind it (the centre dot then follows the
+// text colour so it shows on both themes).
+const AppBadge = ({ size = 40, bare = false }) => (
   <svg
     width={size}
     height={size}
     viewBox="22 22 64 64"
     role="img"
     aria-hidden="true"
-    style={{ borderRadius: size * 0.28, background: '#1D1D29', flexShrink: 0, display: 'block' }}
+    style={{ borderRadius: size * 0.28, background: bare ? 'transparent' : '#1D1D29', flexShrink: 0, display: 'block' }}
   >
     <g strokeWidth="6.9" strokeLinecap="round" fill="none">
       <path stroke="#00A862" d="M45.06 45.06L34.65 34.65" />
@@ -19,7 +21,7 @@ const AppBadge = ({ size = 40 }) => (
       <path stroke="#FFD800" d="M32.7 54L41.4 54" />
       <path stroke="#FFD800" d="M66.6 54L75.3 54" />
     </g>
-    <circle cx="54" cy="54" r="6" fill="#fff" />
+    <circle cx="54" cy="54" r="6" fill={bare ? 'currentColor' : '#fff'} />
   </svg>
 );
 
