@@ -66,7 +66,7 @@ export const ConnectingBusSection = ({
             color: 'var(--text-secondary)',
           }}
         >
-          {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'} nearby
+          {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'} within 10 min walk
         </span>
       </div>
 

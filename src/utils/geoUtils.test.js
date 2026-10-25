@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from './geoUtils';
+import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference, createCircleGeoJSON, nearbyFeatures } from './geoUtils';
 import returnTracks from '../data/return_tracks.json';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -101,5 +101,44 @@ describe('nearestFeature', () => {
 
   it('has nothing to offer for an empty list', () => {
     expect(nearestFeature([], [-0.38, 39.47])).toBeNull();
+  });
+});
+
+describe('createCircleGeoJSON', () => {
+  it('returns valid GeoJSON polygon with closed ring', () => {
+    const geo = createCircleGeoJSON([-0.375, 39.47], 800, 32);
+    expect(geo.type).toBe('FeatureCollection');
+    expect(geo.features[0].geometry.type).toBe('Polygon');
+    const ring = geo.features[0].geometry.coordinates[0];
+    expect(ring.length).toBe(33); // 32 points + closed start
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+  });
+
+  it('handles null coordinates gracefully', () => {
+    const geo = createCircleGeoJSON(null, 800);
+    expect(geo.features).toEqual([]);
+  });
+});
+
+describe('nearbyFeatures', () => {
+  const at = (name, coordinates) => ({ properties: { name }, geometry: { type: 'Point', coordinates } });
+  const FEATURES = [
+    at('close', [-0.377, 39.467]),
+    at('medium', [-0.372, 39.467]),
+    at('far', [-0.350, 39.467]),
+  ];
+
+  it('filters by distance and sorts closest first', () => {
+    const matches = nearbyFeatures(FEATURES, [-0.377, 39.467], 800);
+    expect(matches.length).toBe(2);
+    expect(matches[0].feature.properties.name).toBe('close');
+    expect(matches[1].feature.properties.name).toBe('medium');
+    expect(matches[0].distance).toBeLessThan(matches[1].distance);
+    expect(matches[0].walkMin).toBeDefined();
+  });
+
+  it('returns empty array when none match or list empty', () => {
+    expect(nearbyFeatures([], [-0.377, 39.467], 800)).toEqual([]);
+    expect(nearbyFeatures(FEATURES, [-0.377, 39.467], 10)).toHaveLength(1);
   });
 });

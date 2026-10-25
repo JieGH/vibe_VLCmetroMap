@@ -14,6 +14,8 @@ export const CompactMetroSection = ({
   isLive,
   walkMetres,
   walkMin,
+  nearbyMetro = [],
+  onSelectStation,
 }) => {
   const { t } = useTranslation();
 
@@ -202,6 +204,88 @@ export const CompactMetroSection = ({
           </div>
         );
       })}
+
+      {/* Nearby Metro Stations within 10-minute walk radius */}
+      {nearbyMetro && nearbyMetro.length > 0 && (
+        <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+          <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Also within 10 min walk:
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {nearbyMetro.map((m) => {
+              const lines = m.feature.properties.lines || [];
+              return (
+                <div
+                  key={m.feature.properties.name}
+                  onClick={() => onSelectStation && onSelectStation(m.feature)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: onSelectStation ? 'pointer' : 'default',
+                    border: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))',
+                    transition: 'background 0.15s ease',
+                  }}
+                  title={`Switch to ${m.feature.properties.name} (${m.walkMin} min walk)`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    <span
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        background: '#E2001A',
+                        color: '#ffffff',
+                        fontSize: '0.54rem',
+                        fontWeight: 900,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                        flexShrink: 0,
+                      }}
+                    >
+                      m
+                    </span>
+                    <span style={{ fontSize: '0.80rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {m.feature.properties.name}
+                    </span>
+                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      {lines.map((l) => (
+                        <span
+                          key={l}
+                          style={{
+                            minWidth: 15,
+                            height: 15,
+                            borderRadius: 3,
+                            background: lineColor(l),
+                            color: '#000000',
+                            fontSize: '0.58rem',
+                            fontWeight: 900,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 2px',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', fontWeight: 600, flexShrink: 0 }}>
+                    {m.walkMin} min ({m.distance}m)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

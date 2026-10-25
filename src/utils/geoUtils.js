@@ -174,3 +174,51 @@ export const nearestFeature = (features, coordinates) => {
 
   return best;
 };
+
+// Creates a circle polygon GeoJSON for rendering a walking radius boundary on MapLibre.
+export const createCircleGeoJSON = (center, radiusMeters, points = 64) => {
+  if (!center) return { type: 'FeatureCollection', features: [] };
+  const [lng, lat] = center;
+  const coords = [];
+  const distanceX = radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180));
+  const distanceY = radiusMeters / 110574;
+
+  for (let i = 0; i < points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([lng + x, lat + y]);
+  }
+  coords.push(coords[0]); // close polygon
+
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [coords],
+        },
+        properties: { radiusMeters },
+      },
+    ],
+  };
+};
+
+// All features within maxDistanceM, sorted closest first.
+export const nearbyFeatures = (features, coordinates, maxDistanceM = 800) => {
+  if (!features || features.length === 0 || !coordinates) return [];
+  const matches = [];
+  for (const feature of features) {
+    const distance = Math.round(getDistance(coordinates, feature.geometry.coordinates));
+    if (distance <= maxDistanceM) {
+      matches.push({
+        feature,
+        distance,
+        walkMin: Math.max(1, Math.round(distance / 80)),
+      });
+    }
+  }
+  return matches.sort((a, b) => a.distance - b.distance);
+};

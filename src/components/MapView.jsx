@@ -1137,14 +1137,13 @@ const MapView = ({
         setTimeout(() => { wasDraggedRef.current = false; }, 0);
       });
 
-      // A forgiving tap. This fires only for clicks that reach the map canvas —
-      // a click that lands squarely on a Station marker is handled by the marker's
-      // own handler and never gets here — so this is purely the near-miss case.
+      // A forgiving tap on station or multimodal walk hub click.
       map.on('click', (event) => {
         if (wasDraggedRef.current) return;
 
         const { lng, lat } = event.lngLat;
-        const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
+        const currentZoom = map.getZoom();
+        const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, currentZoom);
         const nearest =
           zoomScaleRef.current >= 0.55
             ? nearestFeature(drawnStationsRef.current, [lng, lat])
@@ -1152,7 +1151,29 @@ const MapView = ({
 
         if (nearest && nearest.distance <= radiusM) {
           selectStRef.current(nearest.feature);
-        } else if (selectedStationRef.current) {
+          return;
+        }
+
+        // Multimodal 10-Minute Walk Radius click on the map:
+        // When zoomed in (zoom >= 13), clicking any point explores all transit
+        // (Metro stations and EMT bus stops) within a 10-minute walk (~800m).
+        if (currentZoom >= 13 && drawnStationsRef.current && drawnStationsRef.current.length > 0) {
+          const nearestWithin10Min = nearestFeature(drawnStationsRef.current, [lng, lat]);
+          if (nearestWithin10Min && nearestWithin10Min.distance <= 800) {
+            selectStRef.current(nearestWithin10Min.feature, {
+              userLocation: {
+                coordinates: [lng, lat],
+                accuracy: 15,
+                isMapClick: true,
+                status: 'located',
+                fetchedAt: Date.now(),
+              }
+            });
+            return;
+          }
+        }
+
+        if (selectedStationRef.current) {
           selectStRef.current(null);
         }
       });
@@ -1500,10 +1521,11 @@ const MapView = ({
 
         if (selectedStation) {
           const coords = snappedCoordinates(selectedStation);
-          const feeders = getStationBusFeeders(selectedStation.properties.name, coords);
+          const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;
+          const feeders = getStationBusFeeders(selectedStation.properties.name, centerCoords);
 
-          // 1. Draw dashed feeder walk links
-          setFeederWalkLinks(map, coords, feeders);
+          // 1. Draw 10-minute walk radius circle + dashed feeder walk links
+          setFeederWalkLinks(map, centerCoords, feeders);
 
           // 2. Add satellite feeder bus stop markers
           feeders.forEach((feeder) => {

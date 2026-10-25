@@ -2,6 +2,7 @@
 // Compliant with TCRP Report 45 and 120 FPS performance standards.
 
 import { Marker } from 'maplibre-gl';
+import { createCircleGeoJSON } from './geoUtils';
 
 const ROUTE_SOURCE_ID = 'bus-routes-source';
 const ROUTE_CASING_LAYER = 'bus-routes-casing';
@@ -9,6 +10,10 @@ const ROUTE_FILL_LAYER = 'bus-routes-fill';
 
 const WALK_SOURCE_ID = 'bus-feeder-walk-source';
 const WALK_LAYER = 'bus-feeder-walk-layer';
+
+const WALK_RADIUS_SOURCE_ID = 'bus-walk-radius-source';
+const WALK_RADIUS_FILL_LAYER = 'bus-walk-radius-fill';
+const WALK_RADIUS_LINE_LAYER = 'bus-walk-radius-line';
 
 /**
  * Ensures MapLibre style has sources and layers for bus route ribbons and walking feeder links.
@@ -83,6 +88,36 @@ export const ensureBusLayers = (map, theme = 'dark') => {
       layout: { 'line-cap': 'round', 'line-join': 'round' }
     });
   }
+
+  // 3. Multimodal 10-Minute Walk Radius Circle (Variant A)
+  if (!map.getSource(WALK_RADIUS_SOURCE_ID)) {
+    map.addSource(WALK_RADIUS_SOURCE_ID, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.addLayer({
+      id: WALK_RADIUS_FILL_LAYER,
+      type: 'fill',
+      source: WALK_RADIUS_SOURCE_ID,
+      paint: {
+        'fill-color': '#D62828',
+        'fill-opacity': 0.05
+      }
+    });
+
+    map.addLayer({
+      id: WALK_RADIUS_LINE_LAYER,
+      type: 'line',
+      source: WALK_RADIUS_SOURCE_ID,
+      paint: {
+        'line-color': '#D62828',
+        'line-width': 1.5,
+        'line-dasharray': [4, 3],
+        'line-opacity': 0.45
+      }
+    });
+  }
 };
 
 /**
@@ -115,35 +150,43 @@ export const setBusRoutesData = (map, lines = []) => {
 };
 
 /**
- * Draws dashed walking links between a focused metro station and its satellite bus stops (<200m).
+ * Draws the 10-minute walk radius circle (~800m) and dashed walking links to nearby bus stops.
  */
 export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
   if (!map || !map.isStyleLoaded()) return;
   const source = map.getSource(WALK_SOURCE_ID);
-  if (!source) return;
+  const radiusSource = map.getSource(WALK_RADIUS_SOURCE_ID);
 
   if (!stationCoords || !feeders || feeders.length === 0) {
-    source.setData({ type: 'FeatureCollection', features: [] });
+    if (source) source.setData({ type: 'FeatureCollection', features: [] });
+    if (radiusSource) radiusSource.setData({ type: 'FeatureCollection', features: [] });
     return;
   }
 
-  const features = feeders.map((feeder) => ({
-    type: 'Feature',
-    properties: {
-      stopCode: feeder.stopCode,
-      walkMetres: feeder.walkMetres,
-      walkMin: feeder.walkMin
-    },
-    geometry: {
-      type: 'LineString',
-      coordinates: [stationCoords, feeder.coordinates]
-    }
-  }));
+  // Draw 10-minute walk boundary circle (~800m)
+  if (radiusSource) {
+    radiusSource.setData(createCircleGeoJSON(stationCoords, 800));
+  }
 
-  source.setData({
-    type: 'FeatureCollection',
-    features
-  });
+  if (source) {
+    const features = feeders.map((feeder) => ({
+      type: 'Feature',
+      properties: {
+        stopCode: feeder.stopCode,
+        walkMetres: feeder.walkMetres,
+        walkMin: feeder.walkMin
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: [stationCoords, feeder.coordinates]
+      }
+    }));
+
+    source.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }
 };
 
 /**
@@ -224,7 +267,7 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
 
   el.title = `${stop.stopName} (${stop.walkMetres}m walk from Metro)`;
   el.innerHTML = `
-    <span style="font-size:11px">🚏</span>
+    <span style="font-size:7px;font-weight:900;background:#D62828;color:#ffffff;padding:1px 3px;border-radius:2px;line-height:1">EMT</span>
     <span>${stop.stopCode}</span>
     <span style="font-size:9px;color:#ff8a80;font-weight:600">${stop.walkMetres}m</span>
   `;

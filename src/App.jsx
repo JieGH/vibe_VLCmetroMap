@@ -193,10 +193,14 @@ function App() {
 
   const toggleTheme = () => handleSelectTheme(theme === 'dark' ? 'light' : 'dark');
 
-  // Station click — just opens the detail card, does NOT move the map
-  const handleSelectStation = (station) => {
+  // Station click — opens the multimodal hub card with walking metrics
+  const handleSelectStation = (station, options = {}) => {
     autoLocatorRef.current?.interrupt();
     setSelectedStation(station);
+    if (options.userLocation) {
+      setUserLocation(options.userLocation);
+      userLocationRef.current = options.userLocation;
+    }
     // With a fix in hand, say how far this Station is on foot.
     if (userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
 
@@ -947,6 +951,7 @@ function App() {
           onClose={() => setSelectedStation(null)}
           variant={variant}
           onSelectFeederStop={handleSelectBusStop}
+          onSelectStation={handleSelectStation}
           userLocation={userLocation}
         />
       )}

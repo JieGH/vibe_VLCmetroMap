@@ -17,8 +17,11 @@ import { useTranslation } from '../i18n';
 import { getStationBusFeeders } from '../data/emtData';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
-import { getDistance } from '../utils/geoUtils';
+import { getDistance, nearbyFeatures } from '../utils/geoUtils';
 import { walkingMinutes } from '../utils/walking';
+import gtfsData from '../data/gtfs_expanded.json';
+
+const allMetroStations = gtfsData.features.filter(f => f.geometry.type === 'Point');
 
 // Landscape docks the panel right, portrait docks it bottom. Measured rather
 // than read from an orientation media query, because a narrow landscape window
@@ -45,7 +48,15 @@ const ROW_HEIGHT_PX = 48;
 const VISIBLE_ROWS = 4;
 const TABLE_HEAD_PX = 30;
 
-const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFeederStop, userLocation }) => {
+const StationPanel = ({
+  station,
+  theme,
+  onClose,
+  variant = 'default',
+  onSelectFeederStop,
+  onSelectStation,
+  userLocation,
+}) => {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
@@ -109,16 +120,22 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
   const stationLines = focus.servedLines || [];
   const userCoords = userLocation?.coordinates;
   const stationCoords = station.geometry?.coordinates;
+  const anchorCoords = userCoords || stationCoords;
   const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
   const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
 
+  // Other Metro stations within 10-minute walk radius (~800m) of this station/anchor:
+  const nearbyMetro = anchorCoords ? nearbyFeatures(allMetroStations, anchorCoords, 800)
+    .filter((m) => m.feature.properties.name !== focus.name)
+    .slice(0, 4) : [];
+
   const rawFeeders = getStationBusFeeders(focus.name, stationCoords);
   const feeders = rawFeeders.map((f) => {
-    if (!userCoords || !f.coordinates) return f;
-    const dist = Math.round(getDistance(userCoords, f.coordinates));
+    if (!anchorCoords || !f.coordinates) return f;
+    const dist = Math.round(getDistance(anchorCoords, f.coordinates));
     const mins = walkingMinutes(dist);
     return { ...f, walkMetres: dist, walkMin: mins };
-  }).filter((f) => !userCoords || f.walkMin <= 10); // 10 minutes walk radius
+  }).filter((f) => !anchorCoords || f.walkMin <= 10); // 10 minutes walk radius
 
   const totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
 
@@ -492,6 +509,8 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                   isLive={focus.isLive}
                   walkMetres={metroWalkMeters}
                   walkMin={metroWalkMin}
+                  nearbyMetro={nearbyMetro}
+                  onSelectStation={onSelectStation}
                 />
               </div>
 
@@ -535,6 +554,8 @@ const StationPanel = ({ station, theme, onClose, variant = 'default', onSelectFe
                   isLive={focus.isLive}
                   walkMetres={metroWalkMeters}
                   walkMin={metroWalkMin}
+                  nearbyMetro={nearbyMetro}
+                  onSelectStation={onSelectStation}
                 />
               </div>
 
