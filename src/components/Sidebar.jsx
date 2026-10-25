@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Info, Languages } from 'lucide-react';
+import { ChevronLeft, Info, Languages, LayoutDashboard } from 'lucide-react';
 import { FONT_SIZE_CONFIG } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -34,6 +34,7 @@ const Sidebar = ({
   onToggleSidebar,
   trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
+  onOpenDashboard,
   fontSize = 'default',
   onSelectFontSize,
   themeMode = 'system',
@@ -206,6 +207,23 @@ const Sidebar = ({
               })}
             </div>
           </div>
+
+          {onOpenDashboard && (
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              title={t('app.dashboardModeTitle')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px', width: '100%', minHeight: '44px',
+                padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                background: 'var(--bg-hover)', color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <LayoutDashboard size={16} aria-hidden="true" />
+              {t('sidebar.dashboard')}
+            </button>
+          )}
 
           {/* Live Stats & Footer */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>

@@ -10,7 +10,8 @@ import HubChips from './components/HubChips';
 import WalkBanner from './components/WalkBanner';
 import { COMMON_STOPS } from './utils/commonStops';
 import WelcomeScreen from './components/WelcomeScreen';
-import AppDownloadBanner from './components/AppDownloadBanner';
+import AppDownloadButton from './components/AppDownloadBanner';
+import LanguageToggle from './components/LanguageToggle';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
 import { locate } from './services/userLocation';
 import { createAutoLocator } from './services/autoLocate';
@@ -25,7 +26,7 @@ import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
-import { Sun, Moon, LayoutDashboard, Menu } from 'lucide-react';
+import { Sun, Moon, Menu } from 'lucide-react';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -464,6 +465,7 @@ function App() {
         onToggleSidebar={handleToggleSidebar}
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenDashboard={() => selectMode('dashboard')}
         fontSize={fontSize}
         onSelectFontSize={handleSelectFontSize}
         themeMode={themeMode}
@@ -491,38 +493,18 @@ function App() {
             selectedStation={selectedStation}
           />
           <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
-          <button
-            onClick={() => selectMode('dashboard')}
-            style={{
-              padding: '8px',
-              borderRadius: '8px',
-              background: 'var(--bg-hover)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-            title={t('app.dashboardModeTitle')}
-          >
-            <LayoutDashboard size={18} />
-          </button>
+          <LanguageToggle className="topbar-icon-btn" />
           <button
             onClick={toggleTheme}
-            style={{
-              padding: '8px',
-              borderRadius: '8px',
-              background: 'var(--bg-hover)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className="topbar-icon-btn"
             title={theme === 'dark' ? t('app.switchToLightTheme') : t('app.switchToDarkTheme')}
+            aria-label={theme === 'dark' ? t('app.switchToLightTheme') : t('app.switchToDarkTheme')}
           >
             {theme === 'dark'
               ? <Sun size={18} color="#FFD100" />
               : <Moon size={18} color="#004D99" />}
           </button>
+          <AppDownloadButton className="topbar-icon-btn" />
         </div>
       </div>
 
@@ -598,17 +580,6 @@ function App() {
         />
       )}
 
-      {/* Invitation to the Android app, under the search bar; steps aside for the
-          panels and notices that share that space (it sits below the chip row) */}
-      <AppDownloadBanner
-        hidden={
-          showWelcome ||
-          Boolean(selectedStation) ||
-          isSidebarOpen ||
-          Boolean(locateNotice) ||
-          Boolean(walkTarget)
-        }
-      />
 
       {rationale && (
         <LocationRationale

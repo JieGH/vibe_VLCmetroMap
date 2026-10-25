@@ -4,7 +4,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
 
-import AppDownloadBanner, { AppDownloadSheet } from './AppDownloadBanner';
+import AppDownloadButton, { AppDownloadSheet } from './AppDownloadBanner';
 import { APK_URL } from '../utils/appDownload';
 
 const asUserAgent = (userAgent, maxTouchPoints = 0) =>
@@ -12,46 +12,42 @@ const asUserAgent = (userAgent, maxTouchPoints = 0) =>
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('AppDownloadBanner', () => {
-  it('invites an Android visitor to get the app, with the explanation still closed', () => {
+describe('AppDownloadButton', () => {
+  it('is an icon button in the top bar, with the explanation still closed', () => {
     asUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8)');
-    const html = renderToStaticMarkup(<AppDownloadBanner />);
-    expect(html).toContain('app-banner');
-    expect(html).toContain('Get the Android app');
-    expect(html).toContain('Faster live trains, straight from FGV');
+    const html = renderToStaticMarkup(<AppDownloadButton className="topbar-icon-btn" />);
+    expect(html).toContain('topbar-icon-btn');
+    expect(html).toContain('aria-label="Get the Android app"');
+    expect(html).toContain('<svg');
     expect(html).not.toContain('app-banner-sheet');
   });
 
-  it('shows the same banner to an iPhone and to a desktop browser', () => {
+  it('is shown to an iPhone and to a desktop browser too', () => {
     asUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app');
+    expect(renderToStaticMarkup(<AppDownloadButton />)).toContain('Get the Android app');
     asUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
-    expect(renderToStaticMarkup(<AppDownloadBanner />)).toContain('Get the Android app');
-  });
-
-  it('steps aside while a panel or notice owns that space', () => {
-    asUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8)');
-    expect(renderToStaticMarkup(<AppDownloadBanner hidden />)).toBe('');
+    expect(renderToStaticMarkup(<AppDownloadButton />)).toContain('Get the Android app');
   });
 });
 
 describe('AppDownloadSheet on iPhone', () => {
-  it('explains the situation but offers no APK to download', () => {
+  it('says there is no iPhone app yet and offers no APK', () => {
     const html = renderToStaticMarkup(<AppDownloadSheet ios onClose={() => {}} />);
-    expect(html).toContain('FGV refuses connections');
-    expect(html).toContain('no download yet');
+    expect(html).toContain('there is no app yet');
+    expect(html).toContain('Add to Home Screen');
     expect(html).not.toContain(APK_URL);
     expect(html).not.toContain('app-banner-download');
   });
 });
 
 describe('AppDownloadSheet', () => {
-  it('explains why the website cannot reach FGV and links the APK', () => {
+  it('speaks plainly: what you get, three steps, one download button', () => {
     const html = renderToStaticMarkup(<AppDownloadSheet onClose={() => {}} />);
     expect(html).toContain('role="dialog"');
-    expect(html).toContain('FGV refuses connections');
-    expect(html).toContain('relay');
+    expect(html).toContain('See more trains');
+    expect(html).toContain('How to install it');
     expect(html).toContain(`href="${APK_URL}"`);
-    expect(html).toContain('no download yet');
+    // No operator or relay jargon in the user-facing copy.
+    expect(html).not.toMatch(/FGV|relay|API|test-signed/);
   });
 });

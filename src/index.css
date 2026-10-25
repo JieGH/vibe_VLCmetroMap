@@ -705,78 +705,23 @@ button:active {
   color: var(--text-primary);
 }
 
-/* ── Android app banner and explanation sheet ──────────────────────────── */
+/* ── Top-bar icon buttons (language, theme, Android app) and the app sheet ── */
 
-.app-banner {
-  position: absolute;
-  /* Just under the search bar, where the line-filter banner and the locate
-     notice also appear, so App hides this one while either is showing. */
-  top: calc(124px + env(safe-area-inset-top, 0px));
-  /* Centred with auto margins rather than left: 50% + translate, which would
-     cap the width at half the screen and wrap the text. */
-  left: 0;
-  right: 0;
-  margin: 0 auto;
-  width: fit-content;
-  z-index: 15;
-  display: flex;
-  align-items: center;
-  max-width: min(420px, calc(100vw - 32px));
-  border-radius: 22px;
-  /* Brand yellow with dark text, so it reads on the dark and the light map
-     alike and is not mistaken for another map control. */
-  background: #FFD100;
-  border: none;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.12);
-  animation: filterBannerIn 0.2s ease-out;
-}
-
-/* On a wide screen the search bar hugs the left edge, so sit under it there.
-   The banner is hidden while the sidebar is open, so no offset is needed. */
-@media (min-width: 769px) {
-  .app-banner {
-    left: 20px;
-    right: auto;
-    margin: 0;
-  }
-}
-
-.app-banner-open {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 4px 9px 14px;
-  border: none;
-  background: none;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  cursor: pointer;
-  text-align: left;
-  line-height: 1.25;
-}
-
-.app-banner-open svg { flex-shrink: 0; }
-
-/* Two lines: the ask, then why. */
-.app-banner-text { display: flex; flex-direction: column; gap: 1px; }
-.app-banner-text strong { font-size: 0.86rem; font-weight: 800; }
-.app-banner-text span { font-size: 0.72rem; font-weight: 600; color: rgba(26, 26, 26, 0.78); }
-
-.app-banner-x {
+.topbar-icon-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  margin-right: 4px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.1);
-  color: #1a1a1a;
-  cursor: pointer;
   flex-shrink: 0;
+  border: none;
+  cursor: pointer;
 }
+.topbar-icon-btn:hover { background: var(--bg-hover-active, var(--bg-hover)); }
 
 .app-banner-backdrop {
   position: fixed;
@@ -834,7 +779,7 @@ button:active {
   justify-content: center;
   min-height: 46px;
   border-radius: 10px;
-  background: #FFD100;
+  background: #3DDC84;
   color: #1a1a1a;
   font-weight: 800;
   font-size: 0.9rem;
@@ -1257,3 +1202,10 @@ button:active {
   display: grid; place-items: center;
   font-size: 0.95rem; font-weight: 900;
 }
+
+.app-banner-intro { font-weight: 600; }
+.app-banner-benefits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.app-banner-benefits li { display: flex; gap: 10px; align-items: flex-start; color: var(--text-primary); }
+.app-banner-benefits svg { flex-shrink: 0; margin-top: 2px; color: #3DDC84; }
+.app-banner-steps-title { margin: 4px 0 0; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); }
+.app-banner-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-primary); }
