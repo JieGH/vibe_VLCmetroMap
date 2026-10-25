@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -48,7 +48,7 @@ export default defineConfig({
                 res.setHeader('Content-Type', 'application/json');
                 return res.end(JSON.stringify({ error: 'message is required' }));
               }
-              const cleanMsg = data.message.trim();
+              const cleanMsg = data.message.trim().slice(0, 1000);
               const timestamp = new Date().toISOString();
 
               const forwarded = req.headers['x-forwarded-for'];
@@ -76,11 +76,13 @@ export default defineConfig({
                 fs.appendFileSync(path.resolve('feedback.log.jsonl'), entry, 'utf-8');
               } catch {}
 
-              const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
-              const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
+              const loadedEnv = loadEnv('development', process.cwd(), '');
+              const token = loadedEnv.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+              const chatId = loadedEnv.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID || '5007040501';
               if (token && chatId && typeof globalThis.fetch === 'function') {
-                const safeMsg = cleanMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const safeEmail = (data.email || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const esc = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '');
+                const safeMsg = esc(cleanMsg);
+                const safeEmail = esc(data.email || '');
                 const metadata = data.metadata;
                 const versionStr = metadata?.appVersion
                   ? `v${metadata.appVersion}${metadata.gitSha ? ` (${metadata.gitSha})` : ''}`
@@ -91,16 +93,16 @@ export default defineConfig({
                   `💬 <b>Message:</b>`,
                   `${safeMsg}\n`,
                   `👤 <b>User & Device Info:</b>`,
-                  `• <b>IP:</b> <code>${clientIp}</code>`,
+                  `• <b>IP:</b> <code>${esc(clientIp)}</code>`,
                 ];
-                if (metadata?.platform) lines.push(`• <b>Platform:</b> ${metadata.platform}`);
-                if (metadata?.device && metadata.device !== 'Unknown') lines.push(`• <b>Device:</b> ${metadata.device}`);
-                if (metadata?.screen) lines.push(`• <b>Screen:</b> <code>${metadata.screen}</code>`);
-                if (metadata?.timezone) lines.push(`• <b>Timezone:</b> <code>${metadata.timezone}</code>`);
-                if (metadata?.language) lines.push(`• <b>Language:</b> <code>${metadata.language}</code>`);
-                if (versionStr) lines.push(`• <b>Version:</b> <code>${versionStr}</code>`);
+                if (metadata?.platform) lines.push(`• <b>Platform:</b> ${esc(metadata.platform)}`);
+                if (metadata?.device && metadata.device !== 'Unknown') lines.push(`• <b>Device:</b> ${esc(metadata.device)}`);
+                if (metadata?.screen) lines.push(`• <b>Screen:</b> <code>${esc(metadata.screen)}</code>`);
+                if (metadata?.timezone) lines.push(`• <b>Timezone:</b> <code>${esc(metadata.timezone)}</code>`);
+                if (metadata?.language) lines.push(`• <b>Language:</b> <code>${esc(metadata.language)}</code>`);
+                if (versionStr) lines.push(`• <b>Version:</b> <code>${esc(versionStr)}</code>`);
                 if (safeEmail) lines.push(`• <b>Contact:</b> <code>${safeEmail}</code>`);
-                lines.push(`⏱ <b>Time:</b> <code>${timestamp}</code>`);
+                lines.push(`⏱ <b>Time:</b> <code>${esc(timestamp)}</code>`);
 
                 const text = lines.join('\n');
                 globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

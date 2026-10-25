@@ -45,8 +45,14 @@ src/data/line3_timetable.json
 public/basemap/
 .cache/
 
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
 # Android signing material
 *.jks
 *.keystore
-android/keystore.properties
+*.pass
+**/keystore.properties
 .wrangler/

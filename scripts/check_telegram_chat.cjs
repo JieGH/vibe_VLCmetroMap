@@ -1,5 +1,20 @@
 #!/usr/bin/env node
-const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
+const fs = require('fs');
+const path = require('path');
+
+let token = process.env.TELEGRAM_BOT_TOKEN;
+if (!token) {
+  try {
+    const envContent = fs.readFileSync(path.resolve(__dirname, '../.env'), 'utf-8');
+    const match = envContent.match(/^TELEGRAM_BOT_TOKEN=(.+)$/m);
+    if (match) token = match[1].trim();
+  } catch {}
+}
+
+if (!token) {
+  console.error('Error: TELEGRAM_BOT_TOKEN is not set in environment or .env');
+  process.exit(1);
+}
 
 async function main() {
   console.log('Querying Telegram for recent messages to @Xraxa_bot...');

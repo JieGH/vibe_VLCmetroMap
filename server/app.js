@@ -128,7 +128,7 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
           return sendText(res, 400, '{"error":"message is required"}');
         }
 
-        const cleanMsg = payload.message.trim();
+        const cleanMsg = payload.message.trim().slice(0, 1000);
         const timestamp = new Date().toISOString();
 
         const forwarded = req.headers['x-forwarded-for'];
@@ -170,11 +170,12 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
           return void res.end(JSON.stringify({ success: true, message: 'Feedback received', clientIp }));
         }
 
-        const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
+        const token = process.env.TELEGRAM_BOT_TOKEN;
         const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
         if (token && chatId && typeof globalThis.fetch === 'function') {
-          const safeMsg = cleanMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          const safeEmail = (payload.email || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const esc = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '');
+          const safeMsg = esc(cleanMsg);
+          const safeEmail = esc(payload.email || '');
           const metadata = payload.metadata;
           const versionStr = metadata?.appVersion
             ? `v${metadata.appVersion}${metadata.gitSha ? ` (${metadata.gitSha})` : ''}`
@@ -185,16 +186,16 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
             `💬 <b>Message:</b>`,
             `${safeMsg}\n`,
             `👤 <b>User & Device Info:</b>`,
-            `• <b>IP:</b> <code>${clientIp}</code>${geoStr}`,
+            `• <b>IP:</b> <code>${esc(clientIp)}</code>${geoStr}`,
           ];
-          if (metadata?.platform) lines.push(`• <b>Platform:</b> ${metadata.platform}`);
-          if (metadata?.device && metadata.device !== 'Unknown') lines.push(`• <b>Device:</b> ${metadata.device}`);
-          if (metadata?.screen) lines.push(`• <b>Screen:</b> <code>${metadata.screen}</code>`);
-          if (metadata?.timezone) lines.push(`• <b>Timezone:</b> <code>${metadata.timezone}</code>`);
-          if (metadata?.language) lines.push(`• <b>Language:</b> <code>${metadata.language}</code>`);
-          if (versionStr) lines.push(`• <b>Version:</b> <code>${versionStr}</code>`);
+          if (metadata?.platform) lines.push(`• <b>Platform:</b> ${esc(metadata.platform)}`);
+          if (metadata?.device && metadata.device !== 'Unknown') lines.push(`• <b>Device:</b> ${esc(metadata.device)}`);
+          if (metadata?.screen) lines.push(`• <b>Screen:</b> <code>${esc(metadata.screen)}</code>`);
+          if (metadata?.timezone) lines.push(`• <b>Timezone:</b> <code>${esc(metadata.timezone)}</code>`);
+          if (metadata?.language) lines.push(`• <b>Language:</b> <code>${esc(metadata.language)}</code>`);
+          if (versionStr) lines.push(`• <b>Version:</b> <code>${esc(versionStr)}</code>`);
           if (safeEmail) lines.push(`• <b>Contact:</b> <code>${safeEmail}</code>`);
-          lines.push(`⏱ <b>Time:</b> <code>${timestamp}</code>`);
+          lines.push(`⏱ <b>Time:</b> <code>${esc(timestamp)}</code>`);
 
           const text = lines.join('\n');
           globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

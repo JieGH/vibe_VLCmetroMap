@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle2, Copy, Check, ExternalLink, MessageSquare, AlertCircle, Loader2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useTranslation } from '../i18n';
 import { CONTACT_EMAIL } from '../utils/contact';
 import { getClientDiagnostics } from '../utils/diagnostics';
@@ -84,25 +85,41 @@ const FeedbackModal = ({ isOpen, onClose }) => {
 
     try {
       const metadata = getClientDiagnostics(language);
-      const res = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: cleanMessage,
-          email: email.trim() || undefined,
-          metadata,
-        }),
-      });
+      const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform?.();
+      const endpoints = isNative
+        ? ['https://xarxa.net/api/feedback', 'https://vibe-vlcmetromap.jie-lei-contact.workers.dev/api/feedback']
+        : ['/api/feedback'];
 
-      if (!res.ok) {
-        throw new Error(`Status ${res.status}`);
+      let success = false;
+      let lastError = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: cleanMessage,
+              email: email.trim() || undefined,
+              metadata,
+            }),
+          });
+          if (!res.ok) throw new Error(`Status ${res.status}`);
+          const data = await res.json();
+          if (data && data.success) {
+            success = true;
+            break;
+          }
+          throw new Error(data?.error || 'Server rejected');
+        } catch (err) {
+          lastError = err;
+        }
       }
 
-      const data = await res.json();
-      if (data.success) {
+      if (success) {
         setStatus('success');
       } else {
-        throw new Error(data.error || 'Server rejected');
+        throw lastError || new Error('All endpoints failed');
       }
     } catch {
       setStatus('error');

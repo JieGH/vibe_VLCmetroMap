@@ -95,7 +95,7 @@ async function forwardToTelegram(env, { cleanMsg, email, clientInfo, metadata, t
     return;
   }
 
-  const token = env?.TELEGRAM_BOT_TOKEN || (typeof process !== 'undefined' && process.env?.TELEGRAM_BOT_TOKEN) || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
+  const token = env?.TELEGRAM_BOT_TOKEN || (typeof process !== 'undefined' && process.env?.TELEGRAM_BOT_TOKEN);
   const chatId = env?.TELEGRAM_CHAT_ID || (typeof process !== 'undefined' && process.env?.TELEGRAM_CHAT_ID) || '5007040501';
 
   if (!token || !chatId) return;
@@ -134,7 +134,7 @@ export default async (req, env) => {
       });
     }
 
-    const cleanMsg = data.message.trim();
+    const cleanMsg = data.message.trim().slice(0, 1000);
     const timestamp = new Date().toISOString();
     const clientInfo = extractClientInfo(req);
     const geoParts = [clientInfo.city, clientInfo.region, clientInfo.country].filter(Boolean);
