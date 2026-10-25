@@ -399,10 +399,10 @@ html.android .station-panel[data-landscape='true'] {
   border-radius: var(--md-shape-sheet) !important;
 }
 
-/* 32x4 handle in a 48px touch area. */
+/* 32x4 handle centered above header */
 html.android .station-panel .sheet-drag-handle-wrap {
-  height: 48px;
-  padding: 0;
+  height: 20px;
+  padding: 6px 0 0;
 }
 
 html.android .sheet-drag-handle {
@@ -414,8 +414,8 @@ html.android .sheet-drag-handle {
 
 html.android .station-panel-header {
   align-items: center !important;
-  min-height: 56px;
-  padding: 0 8px 8px 24px !important;
+  min-height: 48px;
+  padding: 2px 8px 10px 24px !important;
   border-bottom: none !important;
 }
 

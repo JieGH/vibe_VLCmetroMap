@@ -135,6 +135,7 @@ const StationPanel = ({ station, theme, onClose }) => {
         <div
           className="sheet-drag-handle-wrap"
           data-testid="station-drag-handle"
+          style={{ padding: '6px 0 2px' }}
           {...handleProps}
         >
           <div className="sheet-drag-handle" />
@@ -146,7 +147,7 @@ const StationPanel = ({ station, theme, onClose }) => {
         className="station-panel-header"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, padding: !landscape ? '8px 16px 12px' : '16px 16px 12px', borderBottom: '1px solid var(--border-color)',
+          gap: 12, padding: !landscape ? '2px 16px 12px' : '12px 16px 12px', borderBottom: '1px solid var(--border-color)',
         }}
         {...(!landscape ? handleProps : {})}
       >
@@ -236,6 +237,7 @@ const StationPanel = ({ station, theme, onClose }) => {
                 aria-label={t('stationPanel.confirmedStatus', { time: unheardLabel })}
                 style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 20, height: 20,
                   color: focus.secondsUnheard !== null && focus.secondsUnheard < 60 ? '#4CAF50' : 'var(--text-secondary)',
                   flexShrink: 0,
                 }}
