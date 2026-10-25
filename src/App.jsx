@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-const MapView = lazy(() => import('./components/MapView'));
+// Early preload: initiates MapView bundle fetch immediately on module evaluation
+const mapViewPromise = import('./components/MapView');
+const MapView = lazy(() => mapViewPromise);
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import StationPanel from './components/StationPanel';
