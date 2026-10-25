@@ -15,7 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.HorizontalDivider
@@ -51,7 +53,9 @@ import com.jielei.xarxa.nativeapp.R
 fun XarxaDrawer(
     themeMode: ThemeMode,
     onTheme: (ThemeMode) -> Unit,
+    onWhatsNew: () -> Unit,
     onAbout: () -> Unit,
+    onFeedback: () -> Unit,
 ) {
     ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
@@ -130,6 +134,15 @@ fun XarxaDrawer(
             }
 
             HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 12.dp))
+
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.whats_new)) },
+                icon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                selected = false,
+                onClick = onWhatsNew,
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).heightIn(min = 48.dp),
+            )
+
             NavigationDrawerItem(
                 label = { Text(stringResource(R.string.about_legal)) },
                 icon = { Icon(Icons.Filled.Info, contentDescription = null) },
@@ -137,7 +150,23 @@ fun XarxaDrawer(
                 onClick = onAbout,
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).heightIn(min = 48.dp),
             )
+
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.contact_author)) },
+                icon = { Icon(Icons.Filled.Email, contentDescription = null) },
+                selected = false,
+                onClick = onFeedback,
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).heightIn(min = 48.dp),
+            )
+
             VersionPill(Modifier.padding(horizontal = 28.dp).padding(top = 8.dp))
+
+            Text(
+                stringResource(R.string.made_by),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 28.dp).padding(top = 16.dp),
+            )
         }
     }
 }

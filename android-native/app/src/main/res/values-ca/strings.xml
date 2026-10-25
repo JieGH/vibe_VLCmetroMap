@@ -69,4 +69,25 @@
     <string name="about_source">Codi font</string>
     <string name="about_privacy_link">Llig la política de privacitat completa</string>
     <string name="search_popular">Estacions populars</string>
+    <string name="whats_new">Novetats</string>
+    <string name="whats_new_title">Novetats a Xarxa</string>
+    <string name="whats_new_item1_title">Seguiment en temps real</string>
+    <string name="whats_new_item1_desc">Posició de trens en directe i comptes enrere en línies 1–10.</string>
+    <string name="whats_new_item2_title">Mapa vectorial d\'alta velocitat</string>
+    <string name="whats_new_item2_desc">Mapa vectorial sense connexió amb cerca bilingüe d\'estacions.</string>
+    <string name="whats_new_item3_title">Temps a peu i navegació</string>
+    <string name="whats_new_item3_desc">Estimació de temps a peu i guia a l\'estació més pròxima.</string>
+    <string name="whats_new_item4_title">Aparença i accessibilitat</string>
+    <string name="whats_new_item4_desc">Canvi fluid de tema clar/fosc i disseny d\'alt contrast.</string>
+    <string name="whats_new_item5_title">Comentaris a l\'app</string>
+    <string name="whats_new_item5_desc">Contacta directament amb l\'autor per a suggeriments o dubtes.</string>
+    <string name="contact_author">Contactar amb l\'autor</string>
+    <string name="made_by">Fet per Jie a València</string>
+    <string name="feedback_title">Comentaris i suport</string>
+    <string name="feedback_desc">Envia suggeriments, informa d\'un error o contacta directament amb l\'autor.</string>
+    <string name="feedback_placeholder">El teu missatge o comentari…</string>
+    <string name="feedback_email_optional">El teu correu electrònic (opcional)</string>
+    <string name="feedback_send">Enviar comentari</string>
+    <string name="feedback_cancel">Cancel·lar</string>
+    <string name="feedback_sent">Gràcies! El teu comentari s\'ha enviat directament a l\'autor.</string>
 </resources>

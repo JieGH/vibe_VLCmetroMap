@@ -26,7 +26,10 @@ private const val SOURCE_URL = "https://github.com/JieGH/vibe_VLCmetroMap"
 private const val PRIVACY_URL = "https://github.com/JieGH/vibe_VLCmetroMap/blob/main/docs/android/privacy-policy.md"
 
 @Composable
-fun AboutDialog(onDismiss: () -> Unit) {
+fun AboutDialog(
+    onDismiss: () -> Unit,
+    onContactAuthor: () -> Unit = {},
+) {
     val uri = LocalUriHandler.current
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -52,7 +55,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            TextButton(onClick = { uri.openUri(SOURCE_URL) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.about_source)) }
+            TextButton(onClick = onContactAuthor, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.contact_author)) }
         },
         confirmButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.done)) }
