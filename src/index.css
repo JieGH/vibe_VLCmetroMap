@@ -1280,3 +1280,17 @@ button:active {
 [data-theme='light'] .theme-icon-btn.active {
   color: #A15C00;
 }
+
+/* ── Walking box, portrait: above the Station list, left edges aligned ─── */
+.walk-dock {
+  position: fixed;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  /* The sheet's top edge is --sheet-lift above the bottom margin; sit a little above it. */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--sheet-lift, 28px) + 10px);
+  /* Leaves room on the right for the locate button (44px + its 12px margin + a gap). */
+  max-width: calc(100vw - 12px - 12px - 44px - 12px - 8px);
+  z-index: 26;
+  pointer-events: none;
+  transition: bottom 0.2s ease;
+}
+.walk-dock > * { pointer-events: auto; }

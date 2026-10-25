@@ -85,6 +85,8 @@ const defaultProvider = {
   checkPermissions: () => Geolocation.checkPermissions(),
   requestPermissions: () => Geolocation.requestPermissions(),
   getCurrentPosition: (options) => Geolocation.getCurrentPosition(options),
+  watchPosition: (options, callback) => Geolocation.watchPosition(options, callback),
+  clearWatch: (id) => Geolocation.clearWatch({ id }),
 };
 
 const MESSAGES = {
@@ -472,3 +474,49 @@ export const locate = async ({
 };
 
 export default locate;
+
+// A live feed of the viewer's position, for the walking box: the distance to a Station keeps counting down as
+// they walk. Only fixes good enough to trust are passed on, and not more often than MIN_WATCH_INTERVAL_MS, so a
+// chatty GPS neither drains the battery through re-renders nor makes the figure flicker.
+export const MIN_WATCH_INTERVAL_MS = 2000;
+
+/**
+ * @param {object} options
+ * @param {(fix: {coordinates: [number, number], accuracy: number|null}) => void} options.onFix
+ * @param {object} [options.provider]
+ * @param {() => number} [options.now]
+ * @returns {() => void} stops the watch (safe to call twice, or before the watch has started)
+ */
+export const watchLocation = ({ onFix, provider = defaultProvider, now = Date.now }) => {
+  if (typeof provider.watchPosition !== 'function') return () => {};
+  let stopped = false;
+  let id = null;
+  let lastAt = -Infinity;
+
+  const clear = () => {
+    if (id === null || typeof provider.clearWatch !== 'function') return;
+    Promise.resolve(provider.clearWatch(id)).catch(() => {});
+    id = null;
+  };
+
+  Promise.resolve(provider.watchPosition(
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
+    (reading, error) => {
+      if (stopped || error || !reading || !reading.coords) return;
+      const accuracy = Number.isFinite(reading.coords.accuracy) ? reading.coords.accuracy : null;
+      if (accuracy !== null && accuracy > MAX_USABLE_ACCURACY_M) return;
+      const at = now();
+      if (at - lastAt < MIN_WATCH_INTERVAL_MS) return;
+      lastAt = at;
+      onFix({ coordinates: [reading.coords.longitude, reading.coords.latitude], accuracy });
+    },
+  )).then((watchId) => {
+    id = watchId;
+    if (stopped) clear();
+  }).catch(() => {});
+
+  return () => {
+    stopped = true;
+    clear();
+  };
+};

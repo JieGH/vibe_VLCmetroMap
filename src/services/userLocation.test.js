@@ -10,6 +10,8 @@ import {
   AUTO_LOCATE_PROMPTED_KEY,
   NEAREST_STATION_RANGE_M,
   MAX_USABLE_ACCURACY_M,
+  watchLocation,
+  MIN_WATCH_INTERVAL_MS,
 } from './userLocation';
 
 // Real coordinates from gtfs_expanded.json. Using the actual data rather than a
@@ -605,5 +607,68 @@ describe('resolveAutoLocate', () => {
       isNative: true,
       storage,
     })).toBe('skip');
+  });
+});
+
+describe('watchLocation', () => {
+  const watcher = () => {
+    let callback = null;
+    const provider = {
+      watchPosition: vi.fn(async (options, cb) => { callback = cb; return 'w1'; }),
+      clearWatch: vi.fn(async () => {}),
+    };
+    return { provider, push: (reading, error) => callback(reading, error) };
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  it('passes on fixes, with their coordinates and accuracy', async () => {
+    const { provider, push } = watcher();
+    const onFix = vi.fn();
+    watchLocation({ onFix, provider, now: () => 10_000 });
+    await tick();
+    push(fix(BENIMACLET, 9));
+    expect(onFix).toHaveBeenCalledWith({ coordinates: BENIMACLET, accuracy: 9 });
+  });
+
+  it('drops fixes that are too rough, errors, and fixes arriving too fast', async () => {
+    const { provider, push } = watcher();
+    const onFix = vi.fn();
+    let clock = 10_000;
+    watchLocation({ onFix, provider, now: () => clock });
+    await tick();
+    push(fix(BENIMACLET, MAX_USABLE_ACCURACY_M + 1));
+    push(null, new Error('boom'));
+    expect(onFix).not.toHaveBeenCalled();
+    push(fix(BENIMACLET, 10));
+    clock += MIN_WATCH_INTERVAL_MS - 1;
+    push(fix(ANGEL_GUIMERA, 10));
+    expect(onFix).toHaveBeenCalledTimes(1);
+    clock += 1;
+    push(fix(ANGEL_GUIMERA, 10));
+    expect(onFix).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops: clears the watch, and ignores anything that arrives afterwards', async () => {
+    const { provider, push } = watcher();
+    const onFix = vi.fn();
+    const stop = watchLocation({ onFix, provider, now: () => 1 });
+    await tick();
+    stop();
+    expect(provider.clearWatch).toHaveBeenCalledWith('w1');
+    push(fix(BENIMACLET, 5));
+    expect(onFix).not.toHaveBeenCalled();
+  });
+
+  it('stops cleanly even before the watch has started', async () => {
+    const { provider } = watcher();
+    const stop = watchLocation({ onFix: () => {}, provider });
+    stop();
+    await tick();
+    expect(provider.clearWatch).toHaveBeenCalledWith('w1');
+  });
+
+  it('does nothing on a provider with no watch', () => {
+    const stop = watchLocation({ onFix: () => {}, provider: {} });
+    expect(() => stop()).not.toThrow();
   });
 });

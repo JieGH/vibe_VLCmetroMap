@@ -579,6 +579,9 @@ const TAP_RADIUS_PX = 22;
 // both ways of arriving at a platform land on the same view.
 const USER_FRAME_MAX_ZOOM = STATION_FOCUS_ZOOM;
 
+// Zooming out past this by hand puts the walking box away.
+const WALK_BANNER_MIN_ZOOM = 13;
+
 // With no Station to frame against, the zoom the camera moves to at least.
 const USER_ONLY_ZOOM = 13.8;
 
@@ -631,7 +634,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
-const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady, onUserInteract }) => {
+const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, hoverLine, userLocation, onReady, onUserInteract, onZoomedOut }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -677,6 +680,8 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
   useEffect(() => { languageRef.current = language; }, [language]);
   useEffect(() => { filterRef.current = activeLineFilter; }, [activeLineFilter]);
   useEffect(() => { selectStRef.current = onSelectStation; }, [onSelectStation]);
+  const zoomedOutRef = useRef(onZoomedOut);
+  useEffect(() => { zoomedOutRef.current = onZoomedOut; }, [onZoomedOut]);
   const interactRef = useRef(onUserInteract);
   useEffect(() => { interactRef.current = onUserInteract; }, [onUserInteract]);
   useEffect(() => { selectedStationRef.current = selectedStation; }, [selectedStation]);
@@ -1072,6 +1077,11 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
     map.on('movestart', (event) => {
       if (event.originalEvent && interactRef.current) interactRef.current();
     });
+    // The viewer pulling out to the network overview is done with the walking box (a hand gesture only: closing
+    // the Station sheet eases out by itself and has its own way of clearing the box).
+    map.on('zoomend', (event) => {
+      if (event.originalEvent && map.getZoom() < WALK_BANNER_MIN_ZOOM && zoomedOutRef.current) zoomedOutRef.current();
+    });
 
     const trainCount = document.createElement('div');
     trainCount.className = 'line3-train-count glass-panel';
@@ -1348,7 +1358,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
     };
 
     const fade = () => {
-      wrapper.style.opacity = userFixOpacity(Date.now() - userLocation.fetchedAt);
+      wrapper.style.opacity = userFixOpacity(Date.now() - (userLocation.updatedAt ?? userLocation.fetchedAt));
     };
 
     sizeAccuracyRing();

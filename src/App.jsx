@@ -14,7 +14,7 @@ import AppDownloadButton from './components/AppDownloadBanner';
 import LanguageToggle from './components/LanguageToggle';
 import MovedNotice from './components/MovedNotice';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
-import { locate } from './services/userLocation';
+import { locate, watchLocation } from './services/userLocation';
 import { createAutoLocator } from './services/autoLocate';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -35,7 +35,6 @@ import './index.css';
 const LOCATE_NOTICE_MS = 6000;
 
 // How long the floating walking box stays before it hides itself.
-const WALK_BANNER_MS = 6000;
 
 // Dashboard mode is bookmarkable so an unattended tablet can boot straight into
 // it, and reachable from a button so it is discoverable from the map.
@@ -307,11 +306,26 @@ function App() {
     return () => clearTimeout(id);
   }, [locateNotice]);
 
+  // The walking box stays until the viewer closes it, closes the Station panel, or zooms the map out (MapView
+  // calls onZoomedOut): it answers "how far is this platform", which stays true for as long as the panel is open.
   useEffect(() => {
-    if (!walkTarget) return undefined;
-    const id = setTimeout(() => setWalkTarget(null), WALK_BANNER_MS);
-    return () => clearTimeout(id);
-  }, [walkTarget]);
+    if (!selectedStation) setWalkTarget(null);
+  }, [selectedStation]);
+
+  // While the box is up, follow the viewer so its distance counts down as they walk. The camera is not touched:
+  // MapView frames once per locate request (keyed by fetchedAt), and `updatedAt` is what keeps the dot fresh.
+  const walking = Boolean(walkTarget) && Boolean(userLocation);
+  useEffect(() => {
+    if (!walking) return undefined;
+    return watchLocation({
+      onFix: ({ coordinates, accuracy }) => setUserLocation((prev) => {
+        if (!prev || prev.status !== 'located') return prev;
+        const next = { ...prev, coordinates, accuracy, updatedAt: Date.now() };
+        userLocationRef.current = next;
+        return next;
+      }),
+    });
+  }, [walking]);
 
   // Track the search field's focus for the chip row.
   useEffect(() => {
@@ -458,6 +472,7 @@ function App() {
         userLocation={userLocation}
         onReady={() => setMapReady(true)}
         onUserInteract={() => autoLocatorRef.current?.interrupt()}
+        onZoomedOut={() => setWalkTarget(null)}
       />
 
       {/* Collapsible Sidebar */}
@@ -559,7 +574,7 @@ function App() {
         data-sheet={sheetBox ? (sheetBox.landscape ? 'landscape' : 'portrait') : 'none'}
         style={sheetBox && !sheetBox.landscape ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
       >
-        {walkTarget && userLocation && (
+        {walkTarget && userLocation && sheetBox?.landscape && (
           <WalkBanner
             station={walkTarget.station}
             userLocation={userLocation}
@@ -573,6 +588,20 @@ function App() {
           onHide={handleHideLocation}
         />
       </div>
+
+      {/* The walking box, portrait: left-aligned with the Station list, just above it, clear of the locate button */}
+      {walkTarget && userLocation && !sheetBox?.landscape && (
+        <div
+          className="walk-dock"
+          style={sheetBox ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
+        >
+          <WalkBanner
+            station={walkTarget.station}
+            userLocation={userLocation}
+            onDismiss={() => setWalkTarget(null)}
+          />
+        </div>
+      )}
 
       {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
