@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle2, Copy, Check, ExternalLink, MessageSquareHeart, AlertCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { CONTACT_EMAIL } from '../utils/contact';
+import { getClientDiagnostics } from '../utils/diagnostics';
 
 /**
  * In-app Feedback & Support Modal.
@@ -72,18 +73,14 @@ const FeedbackModal = ({ isOpen, onClose }) => {
     setStatus('submitting');
 
     try {
+      const metadata = getClientDiagnostics(language);
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: cleanMessage,
           email: email.trim() || undefined,
-          metadata: {
-            language: language || 'es',
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
-            screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'N/A',
-            timestamp: new Date().toISOString(),
-          },
+          metadata,
         }),
       });
 

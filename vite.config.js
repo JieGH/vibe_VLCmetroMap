@@ -51,8 +51,15 @@ export default defineConfig({
               const cleanMsg = data.message.trim();
               const timestamp = new Date().toISOString();
 
+              const forwarded = req.headers['x-forwarded-for'];
+              const clientIp =
+                (forwarded ? String(forwarded).split(',')[0].trim() : null) ||
+                req.socket?.remoteAddress ||
+                '127.0.0.1';
+
               console.log('\n================== [FEEDBACK RECEIVED] ==================');
               console.log(`Time:     ${timestamp}`);
+              console.log(`IP:       ${clientIp}`);
               console.log(`Message:  ${cleanMsg}`);
               if (data.email) console.log(`Email:    ${data.email}`);
               if (data.metadata) console.log(`Metadata: ${JSON.stringify(data.metadata)}`);
@@ -61,6 +68,7 @@ export default defineConfig({
               try {
                 const entry = JSON.stringify({
                   timestamp,
+                  ip: clientIp,
                   message: cleanMsg,
                   email: data.email || null,
                   metadata: data.metadata || null,
@@ -73,12 +81,28 @@ export default defineConfig({
               if (token && chatId && typeof globalThis.fetch === 'function') {
                 const safeMsg = cleanMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const safeEmail = (data.email || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const text =
-                  `📬 <b>New Feedback on Xarxa</b>\n\n` +
-                  `💬 <b>Message:</b>\n${safeMsg}\n\n` +
-                  (data.email ? `📧 <b>Contact:</b> <code>${safeEmail}</code>\n` : '') +
-                  (data.metadata?.language ? `🌐 <b>Language:</b> <code>${data.metadata.language}</code>\n` : '') +
-                  `⏱ <b>Time:</b> <code>${timestamp}</code>`;
+                const metadata = data.metadata;
+                const versionStr = metadata?.appVersion
+                  ? `v${metadata.appVersion}${metadata.gitSha ? ` (${metadata.gitSha})` : ''}`
+                  : '';
+
+                const lines = [
+                  `📬 <b>New Feedback on Xarxa</b>\n`,
+                  `💬 <b>Message:</b>`,
+                  `${safeMsg}\n`,
+                  `👤 <b>User & Device Info:</b>`,
+                  `• <b>IP:</b> <code>${clientIp}</code>`,
+                ];
+                if (metadata?.platform) lines.push(`• <b>Platform:</b> ${metadata.platform}`);
+                if (metadata?.device && metadata.device !== 'Unknown') lines.push(`• <b>Device:</b> ${metadata.device}`);
+                if (metadata?.screen) lines.push(`• <b>Screen:</b> <code>${metadata.screen}</code>`);
+                if (metadata?.timezone) lines.push(`• <b>Timezone:</b> <code>${metadata.timezone}</code>`);
+                if (metadata?.language) lines.push(`• <b>Language:</b> <code>${metadata.language}</code>`);
+                if (versionStr) lines.push(`• <b>Version:</b> <code>${versionStr}</code>`);
+                if (safeEmail) lines.push(`• <b>Contact:</b> <code>${safeEmail}</code>`);
+                lines.push(`⏱ <b>Time:</b> <code>${timestamp}</code>`);
+
+                const text = lines.join('\n');
                 globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -92,6 +116,7 @@ export default defineConfig({
                 success: true,
                 message: 'Feedback received',
                 receivedMessage: cleanMsg,
+                clientIp,
               }));
             } catch {
               res.statusCode = 400;

@@ -131,8 +131,21 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         const cleanMsg = payload.message.trim();
         const timestamp = new Date().toISOString();
 
+        const forwarded = req.headers['x-forwarded-for'];
+        const clientIp =
+          req.headers['cf-connecting-ip'] ||
+          req.headers['x-real-ip'] ||
+          (forwarded ? String(forwarded).split(',')[0].trim() : null) ||
+          req.socket?.remoteAddress ||
+          'Local';
+        const country = req.headers['cf-ipcountry'] || req.headers['x-country'] || null;
+        const city = req.headers['cf-ipcity'] || null;
+        const geoParts = [city, country].filter(Boolean);
+        const geoStr = geoParts.length > 0 ? ` (${geoParts.join(', ')})` : '';
+
         console.log('\n================== [FEEDBACK RECEIVED] ==================');
         console.log(`Time:     ${timestamp}`);
+        console.log(`IP:       ${clientIp}${geoStr}`);
         console.log(`Message:  ${cleanMsg}`);
         if (payload.email) console.log(`Email:    ${payload.email}`);
         if (payload.metadata) console.log(`Metadata: ${JSON.stringify(payload.metadata)}`);
@@ -141,6 +154,8 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         try {
           const entry = JSON.stringify({
             timestamp,
+            ip: clientIp,
+            geo: geoParts.length ? geoParts.join(', ') : null,
             message: cleanMsg,
             email: payload.email || null,
             metadata: payload.metadata || null,
@@ -155,12 +170,28 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         if (token && chatId && typeof globalThis.fetch === 'function') {
           const safeMsg = cleanMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           const safeEmail = (payload.email || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          const text =
-            `📬 <b>New Feedback on Xarxa</b>\n\n` +
-            `💬 <b>Message:</b>\n${safeMsg}\n\n` +
-            (payload.email ? `📧 <b>Contact:</b> <code>${safeEmail}</code>\n` : '') +
-            (payload.metadata?.language ? `🌐 <b>Language:</b> <code>${payload.metadata.language}</code>\n` : '') +
-            `⏱ <b>Time:</b> <code>${timestamp}</code>`;
+          const metadata = payload.metadata;
+          const versionStr = metadata?.appVersion
+            ? `v${metadata.appVersion}${metadata.gitSha ? ` (${metadata.gitSha})` : ''}`
+            : '';
+
+          const lines = [
+            `📬 <b>New Feedback on Xarxa</b>\n`,
+            `💬 <b>Message:</b>`,
+            `${safeMsg}\n`,
+            `👤 <b>User & Device Info:</b>`,
+            `• <b>IP:</b> <code>${clientIp}</code>${geoStr}`,
+          ];
+          if (metadata?.platform) lines.push(`• <b>Platform:</b> ${metadata.platform}`);
+          if (metadata?.device && metadata.device !== 'Unknown') lines.push(`• <b>Device:</b> ${metadata.device}`);
+          if (metadata?.screen) lines.push(`• <b>Screen:</b> <code>${metadata.screen}</code>`);
+          if (metadata?.timezone) lines.push(`• <b>Timezone:</b> <code>${metadata.timezone}</code>`);
+          if (metadata?.language) lines.push(`• <b>Language:</b> <code>${metadata.language}</code>`);
+          if (versionStr) lines.push(`• <b>Version:</b> <code>${versionStr}</code>`);
+          if (safeEmail) lines.push(`• <b>Contact:</b> <code>${safeEmail}</code>`);
+          lines.push(`⏱ <b>Time:</b> <code>${timestamp}</code>`);
+
+          const text = lines.join('\n');
           globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -172,6 +203,7 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
           success: true,
           message: 'Feedback received',
           receivedMessage: cleanMsg,
+          clientIp,
         }));
       } catch {
         return sendText(res, 400, '{"error":"invalid json"}');

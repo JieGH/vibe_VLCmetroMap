@@ -349,12 +349,16 @@ describe('feedback API', () => {
   it('accepts POST /api/feedback with a valid message and returns 200', async () => {
     const res = await fetch(`${base}/api/feedback`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '198.51.100.99',
+      },
       body: JSON.stringify({ message: 'Great app!', email: 'user@example.com' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+    expect(body.clientIp).toBe('198.51.100.99');
   });
 
   it('rejects POST /api/feedback when message is missing or empty', async () => {
