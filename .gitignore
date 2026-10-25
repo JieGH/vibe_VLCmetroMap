@@ -47,3 +47,4 @@ public/basemap/
 *.jks
 *.keystore
 android/keystore.properties
+.wrangler/
