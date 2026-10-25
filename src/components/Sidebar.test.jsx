@@ -49,7 +49,7 @@ describe('Sidebar component', () => {
     expect(html).not.toContain('Lines &amp; Services');
   });
 
-  it('renders font size adjustment section with all options and active state', () => {
+  it('renders text size as a compact stepper showing S / M / L / XL', () => {
     const html = renderToStaticMarkup(
       <Sidebar
         isOpen={true}
@@ -62,19 +62,21 @@ describe('Sidebar component', () => {
     );
 
     expect(html).toContain('Text Size');
-    expect(html).toContain('Large');
-    expect(html).toContain('font-size-control-group');
+    expect(html).toContain('size-stepper');
+    expect(html).toContain('>L<');
+    expect(html).toContain('aria-label="Smaller text"');
+    expect(html).toContain('aria-label="Larger text"');
+    // The old four-button row is gone.
+    expect(html).not.toContain('font-size-option-btn');
+  });
 
-    // S, M, L, XL options
-    expect(html).toContain('Small text size');
-    expect(html).toContain('Default text size');
-    expect(html).toContain('Large text size');
-    expect(html).toContain('X-Large text size');
-
-    // Active state on 'large'
-    expect(html).toContain('class="font-size-option-btn active"');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain('title="Large text size"');
+  it('disables the stepper at either end', () => {
+    const at = (fontSize) => renderToStaticMarkup(
+      <Sidebar isOpen onToggleSidebar={() => {}} fontSize={fontSize} onSelectFontSize={() => {}} />
+    );
+    expect(at('small')).toMatch(/disabled=""[^>]*aria-label="Smaller text"/);
+    expect(at('xlarge')).toMatch(/disabled=""[^>]*aria-label="Larger text"/);
+    expect(at('default')).not.toContain('disabled=""');
   });
 
   it('renders mobile drag handle with sheet-drag-handle and mobile-only-drag-handle classes', () => {
@@ -103,8 +105,11 @@ describe('Sidebar appearance', () => {
       <SidebarMod isOpen onToggleSidebar={() => {}} themeMode="dark" />
     );
     expect(html).toContain('Appearance');
-    expect(html).toContain('Auto');
-    expect(html).toMatch(/theme-option-btn active"[^>]*aria-pressed="true"[^>]*title="Dark"/);
+    // Icons, with the words kept as labels for screen readers and tooltips.
+    expect(html).toContain('aria-label="Light"');
+    expect(html).toContain('aria-label="Auto"');
+    expect(html).toMatch(/theme-icon-btn active"[^>]*aria-pressed="true"[^>]*aria-label="Dark"/);
+    expect(html).not.toContain('theme-option-btn');
     expect(html).not.toContain('sidebar-line-btn');
     expect(html).not.toContain('Show only line');
   });

@@ -55,6 +55,8 @@ export default {
     systemLabel: '📍 Sistema FGV Metrovalència',
     aboutLegalAria: 'Abrir información legal y avisos',
     dashboard: 'Tablón de salidas',
+    textSmaller: 'Texto más pequeño',
+    textLarger: 'Texto más grande',
     madeBy: 'Hecho en València por',
     contactAria: 'Escribir a {{email}}',
     aboutLegalButton: 'Información legal y licencias',

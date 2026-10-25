@@ -7,13 +7,14 @@
   
   /* Theme Variables - Default Dark */
   --bg-base: #121212;
-  --bg-panel: rgba(24, 24, 24, 0.85);
-  --bg-panel-solid: #1e1e24;
-  --bg-hover: rgba(255, 255, 255, 0.08);
-  --bg-hover-active: rgba(255, 255, 255, 0.16);
+  /* The panels float above the map, so they are a step lighter than it: a soft slate grey, not the map's near-black. */
+  --bg-panel: rgba(58, 63, 74, 0.94);
+  --bg-panel-solid: #3a3f4a;
+  --bg-hover: rgba(255, 255, 255, 0.10);
+  --bg-hover-active: rgba(255, 255, 255, 0.18);
   --text-primary: #ffffff;
-  --text-secondary: #a0a0b0;
-  --border-color: rgba(255, 255, 255, 0.12);
+  --text-secondary: #b6bbc8;
+  --border-color: rgba(255, 255, 255, 0.18);
   
   /* Metro Valencia Official Colors */
   --color-line-1: #FFD100; /* Yellow */
@@ -30,7 +31,7 @@
   /* Typography Scaling */
   --font-scale: 1;
 
-  --shadow-panel: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  --shadow-panel: 0 8px 28px 0 rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --radius: 14px;
 }
 
@@ -56,14 +57,15 @@ html {
 
 [data-theme='light'] {
   --bg-base: #f0f2f5;
-  --bg-panel: rgba(255, 255, 255, 0.88);
-  --bg-panel-solid: #ffffff;
-  --bg-hover: rgba(0, 0, 0, 0.06);
-  --bg-hover-active: rgba(0, 0, 0, 0.12);
+  /* A pale cool grey, a touch off white, so panels stand out against the pale map without going dark. */
+  --bg-panel: rgba(237, 240, 245, 0.96);
+  --bg-panel-solid: #edf0f5;
+  --bg-hover: rgba(15, 23, 42, 0.07);
+  --bg-hover-active: rgba(15, 23, 42, 0.14);
   --text-primary: #121212;
-  --text-secondary: #5f6368;
-  --border-color: rgba(0, 0, 0, 0.12);
-  --shadow-panel: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --text-secondary: #525a68;
+  --border-color: rgba(15, 23, 42, 0.18);
+  --shadow-panel: 0 8px 26px 0 rgba(15, 23, 42, 0.30);
 }
 
 * {
@@ -1235,3 +1237,46 @@ button:active {
   text-decoration: none;
 }
 .sidebar-signature-mail:hover { color: var(--text-primary); text-decoration: underline; }
+
+/* ── Sidebar compact rows: text size stepper and theme icons ───────────── */
+.sidebar-compact-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sidebar-row-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+.size-stepper, .theme-icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+.size-stepper-btn, .theme-icon-btn {
+  width: 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.size-stepper-btn:hover:not(:disabled), .theme-icon-btn:hover { color: var(--text-primary); background: var(--bg-hover-active, var(--bg-hover)); }
+.size-stepper-btn:disabled { opacity: 0.35; cursor: default; }
+.theme-icon-btn.active { background: var(--bg-panel-solid); color: #FFD100; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.size-stepper-value { min-width: 38px; text-align: center; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+
+/* Yellow on a light panel is too faint to read: the selected option takes a deeper amber there. */
+[data-theme='light'] .font-size-option-btn.active,
+[data-theme='light'] .lang-option-btn.active,
+[data-theme='light'] .theme-icon-btn.active {
+  color: #A15C00;
+}
