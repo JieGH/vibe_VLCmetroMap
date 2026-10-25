@@ -5,9 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Metrovalencia Live Map</title>
+    <link rel="modulepreload" href="/vendor/maplibre/maplibre-gl-worker.mjs" />
+    <link rel="modulepreload" href="/vendor/maplibre/maplibre-gl-shared.mjs" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-splash" style="position:fixed;inset:0;background:#121316;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f0f0f2;z-index:9999;">
+        <div style="width:48px;height:48px;border-radius:50%;background:#e52421;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(229,36,33,0.35);">
+          <span style="font-family:'Trebuchet MS','Arial Black',Impact,sans-serif;font-weight:900;font-style:italic;font-size:26px;color:#ffffff;line-height:1;margin-left:-2px;margin-top:-2px;user-select:none;">m</span>
+        </div>
+        <div style="margin-top:16px;font-size:15px;font-weight:600;letter-spacing:0.3px;opacity:0.9;">Metrovalencia</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

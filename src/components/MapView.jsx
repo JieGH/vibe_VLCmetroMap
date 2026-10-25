@@ -24,6 +24,12 @@ import { lineRanks, allowedRank } from '../utils/lineReveal';
 import { createChunkedSource, loadChunkManifest } from '../utils/chunkedSource';
 import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
+import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
+import trainPositionEngine from '../services/trainPositionEngine';
+import { renderStationHighlight } from '../utils/focusNode';
+import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
+import returnTrackData from '../data/return_tracks.json';
+import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -119,18 +125,6 @@ const probeOfflineBasemap = async () => {
   }
 };
 
-if (typeof window !== 'undefined') {
-  // eslint-disable-next-line no-undef
-  await Promise.all([loadLine4Osm(), probeOfflineBasemap()]);
-}
-
-import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
-import trainPositionEngine from '../services/trainPositionEngine';
-import { renderStationHighlight } from '../utils/focusNode';
-import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
-import returnTrackData from '../data/return_tracks.json';
-import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
-
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
   ...metroData.features,
@@ -156,87 +150,6 @@ const chaikinSmooth = (coords, iterations = 2) => {
   }
   return pts;
 };
-
-// Deduplicate line features by `properties.line` preferring `metroData` entries.
-const lineById = new Map();
-// First add metroData lines (they appear first in allFeatures already)
-for (const f of metroData.features.filter(f => f.geometry && f.geometry.type === 'LineString')) {
-  if (f.properties && f.properties.line) lineById.set(String(f.properties.line), { ...f });
-}
-// If an OSM-derived Line 4 file is present, prefer its longest LineString as the authoritative Line 4 geometry
-try {
-  if (line4Osm && Array.isArray(line4Osm.features) && line4Osm.features.length) {
-    const longest = line4Osm.features.reduce((best, cur) => {
-      if (!cur.geometry || cur.geometry.type !== 'LineString') return best;
-      const len = cur.geometry.coordinates.length;
-      if (!best || len > best.len) return { feat: cur, len };
-      return best;
-    }, null);
-    if (longest && longest.feat) {
-      const f = { ...longest.feat };
-      f.properties = { ...f.properties, line: '4', source: 'osm' };
-      lineById.set('4', f);
-    }
-  }
-} catch (e) { /* ignore */ }
-// Then add GTFS lines only if not present or if configured to prefer GTFS for a given line
-for (const f of (gtfsData && gtfsData.features ? gtfsData.features : []).filter(f => f.geometry && f.geometry.type === 'LineString')) {
-  const id = f.properties && f.properties.line && String(f.properties.line);
-  if (!id) continue;
-  const preferGTFS = Array.isArray(lineRenderConfig.useGTFS) && lineRenderConfig.useGTFS.map(String).includes(id);
-  if (preferGTFS) {
-    lineById.set(id, { ...f });
-  } else if (!lineById.has(id)) {
-    lineById.set(id, { ...f });
-  }
-}
-
-let lineFeatures = Array.from(lineById.values());
-// Ensure each feature has a resolved `color` property (image override > feature.color > default)
-for (const f of lineFeatures) {
-  const lid = String(f.properties.line);
-  const override = imageLineColors && imageLineColors[lid];
-  f.properties = { ...f.properties, color: override || f.properties.color || '#888888', offset: 0 };
-}
-// Smooth configured lines so their rendered curves match.
-const smoothingApplyTo = (lineRenderConfig && lineRenderConfig.smoothing && Array.isArray(lineRenderConfig.smoothing.applyTo))
-  ? lineRenderConfig.smoothing.applyTo.map(String)
-  : ['3', '4', '9'];
-const smoothingIterations = (lineRenderConfig && lineRenderConfig.smoothing && Number.isFinite(lineRenderConfig.smoothing.iterations))
-  ? lineRenderConfig.smoothing.iterations
-  : 2;
-lineFeatures = lineFeatures.map((f) => {
-  const id = f.properties && String(f.properties.line);
-  if (smoothingApplyTo.includes(id)) {
-    const coords = f.geometry && f.geometry.coordinates;
-    if (coords && coords.length > 4) {
-      try {
-        const smoothed = chaikinSmooth(coords, smoothingIterations);
-        return { ...f, geometry: { ...f.geometry, coordinates: smoothed } };
-      } catch (e) {
-        return f;
-      }
-    }
-  }
-  return f;
-});
-// A Line with a one-way section draws its outbound alignment above, and the
-// return leg it lacks here: on lines 4 and 6, Dr. Lluch → Cabanyal runs on its
-// own street inland of the beach leg (ADR-0007). Only the stretch off the
-// drawn alignment is added, so the shared trunk is not painted twice. Kept out
-// of lineFeatures, which holds one feature per Line, and carrying the same
-// `line` property, so filtering and dimming treat it as part of its Line.
-const returnLegFeatures = lineFeatures.flatMap((f) => {
-  const id = String(f.properties.line);
-  const returnTrack = returnTrackData.lines && returnTrackData.lines[id];
-  if (!returnTrack || !f.geometry || f.geometry.type !== 'LineString') return [];
-  return pathsOffReference(returnTrack.coordinates, f.geometry.coordinates, lineRenderConfig.sharedToleranceMeters)
-    .map(coordinates => ({
-      type: 'Feature',
-      properties: { ...f.properties, offset: 0, returnLeg: true },
-      geometry: { type: 'LineString', coordinates },
-    }));
-});
 
 // gtfs_expanded.json carries every station on the network, so it is the single
 // source here; metro_lines.json only contributes points it alone knows about.
@@ -333,30 +246,133 @@ const snapStationToItsLines = (station) => {
   return station;
 };
 
-const lineCoordsById = new Map();
-for (const f of [...lineFeatures, ...returnLegFeatures]) {
-  if (!f.geometry || f.geometry.type !== 'LineString') continue;
-  const id = String(f.properties.line);
-  lineCoordsById.set(id, [...(lineCoordsById.get(id) || []), f.geometry.coordinates]);
+let lineById = new Map();
+let lineFeatures = [];
+let returnLegFeatures = [];
+let lineCoordsById = new Map();
+let stationFeatures = [];
+let snappedByName = new Map();
+let lineGeoJSON = { type: 'FeatureCollection', features: [] };
+let lineColorMap = {};
+
+function rebuildNetworkGeometry() {
+  lineById = new Map();
+  // First add metroData lines (they appear first in allFeatures already)
+  for (const f of metroData.features.filter(f => f.geometry && f.geometry.type === 'LineString')) {
+    if (f.properties && f.properties.line) lineById.set(String(f.properties.line), { ...f });
+  }
+
+  // If an OSM-derived Line 4 file is present, prefer its longest LineString as the authoritative Line 4 geometry
+  try {
+    if (line4Osm && Array.isArray(line4Osm.features) && line4Osm.features.length) {
+      const longest = line4Osm.features.reduce((best, cur) => {
+        if (!cur.geometry || cur.geometry.type !== 'LineString') return best;
+        const len = cur.geometry.coordinates.length;
+        if (!best || len > best.len) return { feat: cur, len };
+        return best;
+      }, null);
+      if (longest && longest.feat) {
+        const f = { ...longest.feat };
+        f.properties = { ...f.properties, line: '4', source: 'osm' };
+        lineById.set('4', f);
+      }
+    }
+  } catch (e) { /* ignore */ }
+
+  // Then add GTFS lines only if not present or if configured to prefer GTFS for a given line
+  for (const f of (gtfsData && gtfsData.features ? gtfsData.features : []).filter(f => f.geometry && f.geometry.type === 'LineString')) {
+    const id = f.properties && f.properties.line && String(f.properties.line);
+    if (!id) continue;
+    const preferGTFS = Array.isArray(lineRenderConfig.useGTFS) && lineRenderConfig.useGTFS.map(String).includes(id);
+    if (preferGTFS) {
+      lineById.set(id, { ...f });
+    } else if (!lineById.has(id)) {
+      lineById.set(id, { ...f });
+    }
+  }
+
+  let features = Array.from(lineById.values());
+  // Ensure each feature has a resolved `color` property (image override > feature.color > default)
+  for (const f of features) {
+    const lid = String(f.properties.line);
+    const override = imageLineColors && imageLineColors[lid];
+    f.properties = { ...f.properties, color: override || f.properties.color || '#888888', offset: 0 };
+  }
+
+  // Smooth configured lines so their rendered curves match.
+  const smoothingApplyTo = (lineRenderConfig && lineRenderConfig.smoothing && Array.isArray(lineRenderConfig.smoothing.applyTo))
+    ? lineRenderConfig.smoothing.applyTo.map(String)
+    : ['3', '4', '9'];
+  const smoothingIterations = (lineRenderConfig && lineRenderConfig.smoothing && Number.isFinite(lineRenderConfig.smoothing.iterations))
+    ? lineRenderConfig.smoothing.iterations
+    : 2;
+
+  lineFeatures = features.map((f) => {
+    const id = f.properties && String(f.properties.line);
+    if (smoothingApplyTo.includes(id)) {
+      const coords = f.geometry && f.geometry.coordinates;
+      if (coords && coords.length > 4) {
+        try {
+          const smoothed = chaikinSmooth(coords, smoothingIterations);
+          return { ...f, geometry: { ...f.geometry, coordinates: smoothed } };
+        } catch (e) {
+          return f;
+        }
+      }
+    }
+    return f;
+  });
+
+  // A Line with a one-way section draws its outbound alignment above, and the
+  // return leg it lacks here: on lines 4 and 6, Dr. Lluch → Cabanyal runs on its
+  // own street inland of the beach leg (ADR-0007). Only the stretch off the
+  // drawn alignment is added, so the shared trunk is not painted twice. Kept out
+  // of lineFeatures, which holds one feature per Line, and carrying the same
+  // `line` property, so filtering and dimming treat it as part of its Line.
+  returnLegFeatures = lineFeatures.flatMap((f) => {
+    const id = String(f.properties.line);
+    const returnTrack = returnTrackData.lines && returnTrackData.lines[id];
+    if (!returnTrack || !f.geometry || f.geometry.type !== 'LineString') return [];
+    return pathsOffReference(returnTrack.coordinates, f.geometry.coordinates, lineRenderConfig.sharedToleranceMeters)
+      .map(coordinates => ({
+        type: 'Feature',
+        properties: { ...f.properties, offset: 0, returnLeg: true },
+        geometry: { type: 'LineString', coordinates },
+      }));
+  });
+
+  lineCoordsById = new Map();
+  for (const f of [...lineFeatures, ...returnLegFeatures]) {
+    if (!f.geometry || f.geometry.type !== 'LineString') continue;
+    const id = String(f.properties.line);
+    lineCoordsById.set(id, [...(lineCoordsById.get(id) || []), f.geometry.coordinates]);
+  }
+
+  stationFeatures = mergeDuplicateStations(rawStations).map(snapStationToItsLines);
+  snappedByName = new Map(stationFeatures.map(f => [f.properties.name, f]));
+  lineGeoJSON = { type: 'FeatureCollection', features: [...lineFeatures, ...returnLegFeatures] };
+  lineColorMap = Object.fromEntries(
+    lineFeatures.map(f => [f.properties.line, (imageLineColors && imageLineColors[f.properties.line]) ? imageLineColors[f.properties.line] : f.properties.color])
+  );
 }
 
-const stationFeatures = mergeDuplicateStations(rawStations).map(snapStationToItsLines);
+// Synchronous baseline geometry pass
+rebuildNetworkGeometry();
+
+// Background asynchronous asset fetch (unblocks main JS thread & React mounting)
+const initBasemapPromise = (typeof window !== 'undefined')
+  ? Promise.all([loadLine4Osm(), probeOfflineBasemap()]).then(() => {
+      rebuildNetworkGeometry();
+    }).catch(() => {})
+  : Promise.resolve();
 
 // Snapped positions are what the map draws, so a Station handed in from
 // somewhere that has not snapped it — userLocation's Nearest Station, say —
 // still has to be drawn and framed at the same place as its own dot.
-const snappedByName = new Map(stationFeatures.map(f => [f.properties.name, f]));
 const snappedCoordinates = (station) => {
   const snapped = station && snappedByName.get(station.properties.name);
   return snapped ? snapped.geometry.coordinates : station.geometry.coordinates;
 };
-const lineGeoJSON    = { type: 'FeatureCollection', features: [...lineFeatures, ...returnLegFeatures] };
-
-// Build a color lookup from line id → color from actual GeoJSON data,
-// allowing overrides from the sampled image colors file.
-const lineColorMap = Object.fromEntries(
-  lineFeatures.map(f => [f.properties.line, (imageLineColors && imageLineColors[f.properties.line]) ? imageLineColors[f.properties.line] : f.properties.color])
-);
 
 const cartoApiKey = import.meta.env.VITE_CARTO_API_KEY;
 
@@ -461,7 +477,7 @@ const metroLayers = [
 // still get a map rather than a void.
 const buildRasterStyle = (tiles, tileSourceId) => ({
   version: 8,
-  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  glyphs: `${BASEMAP_DIR}/fonts/{fontstack}/{range}.pbf`,
   sources: {
     [tileSourceId]: { type: 'raster', tiles, tileSize: 256, attribution: TILE_ATTRIBUTION, maxzoom: 16 },
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
@@ -1058,129 +1074,141 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    let isCancelled = false;
+    let teardown = null;
 
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: styleFor(theme),
-      center: DEFAULT_MAP_CENTER,
-      // 12.3 is where updateZoomScale's formula below caps marker scale at its
-      // 1.2x maximum, so the default view opens with stations already at their
-      // largest, easiest-to-tap size rather than the network's full extent.
-      zoom: DEFAULT_MAP_ZOOM,
-      // No (i) button on the map: OpenStreetMap, Protomaps and MapLibre are credited in About & Legal.
-      attributionControl: false,
-      maxTileCacheZoomLevels: 25,
+    initBasemapPromise.then(() => {
+      if (isCancelled || !containerRef.current || mapRef.current) return;
+
+      const map = new MapLibreMap({
+        container: containerRef.current,
+        style: styleFor(theme),
+        center: DEFAULT_MAP_CENTER,
+        // 12.3 is where updateZoomScale's formula below caps marker scale at its
+        // 1.2x maximum, so the default view opens with stations already at their
+        // largest, easiest-to-tap size rather than the network's full extent.
+        zoom: DEFAULT_MAP_ZOOM,
+        // No (i) button on the map: OpenStreetMap, Protomaps and MapLibre are credited in About & Legal.
+        attributionControl: false,
+        maxTileCacheZoomLevels: 5,
+        fadeDuration: 0,
+      });
+
+      // `originalEvent` is set only when a hand moved the camera (drag, pinch,
+      // wheel, key); the app's own easeTo/fitBounds carry none. That difference is
+      // how auto-locate tells a viewer taking over from its own framing.
+      map.on('movestart', (event) => {
+        if (event.originalEvent && interactRef.current) interactRef.current();
+      });
+      // The viewer pulling out to the network overview is done with the walking box (a hand gesture only: closing
+      // the Station sheet eases out by itself and has its own way of clearing the box).
+      map.on('zoomend', (event) => {
+        if (event.originalEvent && map.getZoom() < WALK_BANNER_MIN_ZOOM && zoomedOutRef.current) zoomedOutRef.current();
+      });
+
+      const trainCount = document.createElement('div');
+      trainCount.className = 'line3-train-count glass-panel';
+      trainCount.setAttribute('aria-live', 'polite');
+      containerRef.current.appendChild(trainCount);
+      trainCountRef.current = trainCount;
+      updateTrainCount(trainPositionEngine.getLiveVehiclesFromMemory(Date.now()));
+      mapRef.current = map;
+
+      const updateZoomScale = () => {
+        const zoom = map.getZoom();
+        zoomValueRef.current = zoom;
+        applyMarkerScale(zoomCurve(zoom), zoom);
+      };
+      map.on('zoom', updateZoomScale);
+      updateZoomScale();
+
+      // A touch or click on the map cancels a running sheet-close zoom-out.
+      const cancelClosingEase = () => {
+        if (closingZoomRef.current) { closingZoomRef.current = false; map.stop(); }
+      };
+      map.on('mousedown', cancelClosingEase);
+      map.on('touchstart', cancelClosingEase);
+
+      map.on('dragstart', () => { wasDraggedRef.current = true; });
+      map.on('dragend', () => {
+        // Cleared on the next tick so the 'click' MapLibre fires immediately
+        // after some drag gestures still sees the flag set.
+        setTimeout(() => { wasDraggedRef.current = false; }, 0);
+      });
+
+      // A forgiving tap. This fires only for clicks that reach the map canvas —
+      // a click that lands squarely on a Station marker is handled by the marker's
+      // own handler and never gets here — so this is purely the near-miss case.
+      map.on('click', (event) => {
+        if (wasDraggedRef.current) return;
+
+        const { lng, lat } = event.lngLat;
+        const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
+        const nearest =
+          zoomScaleRef.current >= 0.55
+            ? nearestFeature(drawnStationsRef.current, [lng, lat])
+            : null;
+
+        if (nearest && nearest.distance <= radiusM) {
+          selectStRef.current(nearest.feature);
+        } else if (selectedStationRef.current) {
+          selectStRef.current(null);
+        }
+      });
+
+      // Boots on map mount, not style.load. Calling it on every mount is safe:
+      // syncNetwork returns early while a sweep is in flight (StrictMode's double
+      // mount) and skips Stations inside their memory pause (returning from
+      // dashboard mode), so no Station is dispatched twice.
+      arrivalStore.bootNetwork();
+
+      map.on('style.load', () => {
+        // In dev, StrictMode double-mounts this effect, so a stale map from the
+        // first mount can still be sitting on a pending style.load when the
+        // second mount replaces mapRef.current. The marker refs are shared
+        // across instances, so letting a stale callback through would clear the
+        // live map's markers and re-attach them to the removed one.
+        if (mapRef.current !== map) return;
+        if (onReadyRef.current) {
+          const notifyReady = onReadyRef.current;
+          onReadyRef.current = null; // first style.load only; theme swaps reload the style
+          notifyReady();
+        }
+        initStationMarkers(map);
+        initVehicleLoop(map);
+        markersReadyRef.current = true;
+        applyLineFilter(map, filterRef.current);
+        applyLineDim(map, selectedStationRef.current);
+      });
+
+      // Predictions age out after about 18 minutes, so without a repeat sweep the
+      // whole network quietly decays into simulated trains. Stations still inside
+      // their memory pause cost nothing, so this is cheaper than it looks.
+      const syncIfVisible = () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        arrivalStore.syncNetwork();
+      };
+      const syncTimer = setInterval(syncIfVisible, NETWORK_SYNC_INTERVAL_MS);
+      document.addEventListener('visibilitychange', syncIfVisible);
+      const stopTracker = startTrainTracker();
+
+      teardown = () => {
+        clearInterval(syncTimer);
+        stopTracker();
+        document.removeEventListener('visibilitychange', syncIfVisible);
+        stopAnimation();
+        clearVehicleMarkers();
+        clearStationMarkers();
+        trainCount.remove();
+        trainCountRef.current = null;
+        map.remove();
+        mapRef.current = null;
+      };
     });
-
-    // `originalEvent` is set only when a hand moved the camera (drag, pinch,
-    // wheel, key); the app's own easeTo/fitBounds carry none. That difference is
-    // how auto-locate tells a viewer taking over from its own framing.
-    map.on('movestart', (event) => {
-      if (event.originalEvent && interactRef.current) interactRef.current();
-    });
-    // The viewer pulling out to the network overview is done with the walking box (a hand gesture only: closing
-    // the Station sheet eases out by itself and has its own way of clearing the box).
-    map.on('zoomend', (event) => {
-      if (event.originalEvent && map.getZoom() < WALK_BANNER_MIN_ZOOM && zoomedOutRef.current) zoomedOutRef.current();
-    });
-
-    const trainCount = document.createElement('div');
-    trainCount.className = 'line3-train-count glass-panel';
-    trainCount.setAttribute('aria-live', 'polite');
-    containerRef.current.appendChild(trainCount);
-    trainCountRef.current = trainCount;
-    updateTrainCount(trainPositionEngine.getLiveVehiclesFromMemory(Date.now()));
-    mapRef.current = map;
-
-    const updateZoomScale = () => {
-      const zoom = map.getZoom();
-      zoomValueRef.current = zoom;
-      applyMarkerScale(zoomCurve(zoom), zoom);
-    };
-    map.on('zoom', updateZoomScale);
-    updateZoomScale();
-
-    // A touch or click on the map cancels a running sheet-close zoom-out.
-    const cancelClosingEase = () => {
-      if (closingZoomRef.current) { closingZoomRef.current = false; map.stop(); }
-    };
-    map.on('mousedown', cancelClosingEase);
-    map.on('touchstart', cancelClosingEase);
-
-    map.on('dragstart', () => { wasDraggedRef.current = true; });
-    map.on('dragend', () => {
-      // Cleared on the next tick so the 'click' MapLibre fires immediately
-      // after some drag gestures still sees the flag set.
-      setTimeout(() => { wasDraggedRef.current = false; }, 0);
-    });
-
-    // A forgiving tap. This fires only for clicks that reach the map canvas —
-    // a click that lands squarely on a Station marker is handled by the marker's
-    // own handler and never gets here — so this is purely the near-miss case.
-    map.on('click', (event) => {
-      if (wasDraggedRef.current) return;
-
-      const { lng, lat } = event.lngLat;
-      const radiusM = TAP_RADIUS_PX * metresPerPixel(lat, map.getZoom());
-      const nearest =
-        zoomScaleRef.current >= 0.55
-          ? nearestFeature(drawnStationsRef.current, [lng, lat])
-          : null;
-
-      if (nearest && nearest.distance <= radiusM) {
-        selectStRef.current(nearest.feature);
-      } else if (selectedStationRef.current) {
-        selectStRef.current(null);
-      }
-    });
-
-    // Boots on map mount, not style.load. Calling it on every mount is safe:
-    // syncNetwork returns early while a sweep is in flight (StrictMode's double
-    // mount) and skips Stations inside their memory pause (returning from
-    // dashboard mode), so no Station is dispatched twice.
-    arrivalStore.bootNetwork();
-
-    map.on('style.load', () => {
-      // In dev, StrictMode double-mounts this effect, so a stale map from the
-      // first mount can still be sitting on a pending style.load when the
-      // second mount replaces mapRef.current. The marker refs are shared
-      // across instances, so letting a stale callback through would clear the
-      // live map's markers and re-attach them to the removed one.
-      if (mapRef.current !== map) return;
-      if (onReadyRef.current) {
-        const notifyReady = onReadyRef.current;
-        onReadyRef.current = null; // first style.load only; theme swaps reload the style
-        notifyReady();
-      }
-      initStationMarkers(map);
-      initVehicleLoop(map);
-      markersReadyRef.current = true;
-      applyLineFilter(map, filterRef.current);
-      applyLineDim(map, selectedStationRef.current);
-    });
-
-    // Predictions age out after about 18 minutes, so without a repeat sweep the
-    // whole network quietly decays into simulated trains. Stations still inside
-    // their memory pause cost nothing, so this is cheaper than it looks.
-    const syncIfVisible = () => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      arrivalStore.syncNetwork();
-    };
-    const syncTimer = setInterval(syncIfVisible, NETWORK_SYNC_INTERVAL_MS);
-    document.addEventListener('visibilitychange', syncIfVisible);
-    const stopTracker = startTrainTracker();
 
     return () => {
-      clearInterval(syncTimer);
-      stopTracker();
-      document.removeEventListener('visibilitychange', syncIfVisible);
-      stopAnimation();
-      clearVehicleMarkers();
-      clearStationMarkers();
-      trainCount.remove();
-      trainCountRef.current = null;
-      map.remove();
-      mapRef.current = null;
+      isCancelled = true;
+      if (teardown) teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

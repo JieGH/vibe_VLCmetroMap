@@ -176,8 +176,9 @@ class ArrivalStore {
 
   hydrateFromSessionStorage() {
     try {
-      if (typeof window === 'undefined' || !window.sessionStorage) return;
-      const raw = sessionStorage.getItem('metrovalencia_arrival_memory');
+      if (typeof window === 'undefined') return;
+      const raw = (window.localStorage && window.localStorage.getItem('metrovalencia_arrival_memory')) ||
+                  (window.sessionStorage && window.sessionStorage.getItem('metrovalencia_arrival_memory'));
       if (!raw) return;
       const parsed = JSON.parse(raw);
       const now = Date.now();
@@ -193,7 +194,7 @@ class ArrivalStore {
 
   persistToSessionStorage() {
     try {
-      if (typeof window === 'undefined' || !window.sessionStorage) return;
+      if (typeof window === 'undefined') return;
       const obj = {};
       const now = Date.now();
       for (const [k, v] of this.memory.entries()) {
@@ -201,7 +202,13 @@ class ArrivalStore {
           obj[k] = v;
         }
       }
-      sessionStorage.setItem('metrovalencia_arrival_memory', JSON.stringify(obj));
+      const serialized = JSON.stringify(obj);
+      if (window.localStorage) {
+        window.localStorage.setItem('metrovalencia_arrival_memory', serialized);
+      }
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem('metrovalencia_arrival_memory', serialized);
+      }
     } catch {
       // Ignore storage errors
     }

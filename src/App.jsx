@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import MapView from './components/MapView';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+const MapView = lazy(() => import('./components/MapView'));
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import StationPanel from './components/StationPanel';
@@ -464,17 +464,19 @@ function App() {
         <WelcomeScreen ready={mapReady} onComplete={() => setShowWelcome(false)} />
       )}
       {/* Full-screen interactive map */}
-      <MapView
-        theme={theme}
-        selectedStation={selectedStation}
-        onSelectStation={handleSelectStation}
-        activeLineFilter={activeLineFilter}
-        hoverLine={hoverLine}
-        userLocation={userLocation}
-        onReady={() => setMapReady(true)}
-        onUserInteract={() => autoLocatorRef.current?.interrupt()}
-        onZoomedOut={() => setWalkTarget(null)}
-      />
+      <Suspense fallback={<div className="map-loading-placeholder" style={{ position: 'absolute', inset: 0, background: 'var(--bg-canvas)' }} />}>
+        <MapView
+          theme={theme}
+          selectedStation={selectedStation}
+          onSelectStation={handleSelectStation}
+          activeLineFilter={activeLineFilter}
+          hoverLine={hoverLine}
+          userLocation={userLocation}
+          onReady={() => setMapReady(true)}
+          onUserInteract={() => autoLocatorRef.current?.interrupt()}
+          onZoomedOut={() => setWalkTarget(null)}
+        />
+      </Suspense>
 
       {/* Collapsible Sidebar */}
       <Sidebar

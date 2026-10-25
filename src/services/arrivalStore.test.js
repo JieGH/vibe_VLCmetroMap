@@ -18,4 +18,38 @@ describe('the eastern L5/L7 stations once thought to have no live endpoint', () 
       expect(arrivalStore.getStationApiId({ name })).not.toBeNull();
     }
   });
+
+  it('persists and hydrates arrival memory to/from localStorage for unexpired predictions', () => {
+    const originalWindow = global.window;
+    const store = {};
+    const mockStorage = {
+      getItem: (k) => store[k] ?? null,
+      setItem: (k, v) => { store[k] = String(v); },
+      clear: () => { Object.keys(store).forEach(k => delete store[k]); },
+    };
+    global.window = { localStorage: mockStorage, sessionStorage: mockStorage };
+
+    try {
+      const futureTimestamp = Date.now() + 120_000;
+      const testPayload = {
+        arrivals: [{ line: '3', destination: 'Rafelbunyol', targetTimestamp: futureTimestamp }],
+        timestamp: Date.now(),
+      };
+      arrivalStore.memory.set('22', testPayload);
+      arrivalStore.persistToSessionStorage();
+
+      const stored = mockStorage.getItem('metrovalencia_arrival_memory');
+      expect(stored).toBeTruthy();
+      expect(JSON.parse(stored)['22'].arrivals[0].destination).toBe('Rafelbunyol');
+
+      // Clear memory and re-hydrate
+      arrivalStore.memory.clear();
+      expect(arrivalStore.memory.has('22')).toBe(false);
+      arrivalStore.hydrateFromSessionStorage();
+      expect(arrivalStore.memory.has('22')).toBe(true);
+      expect(arrivalStore.memory.get('22').arrivals[0].destination).toBe('Rafelbunyol');
+    } finally {
+      global.window = originalWindow;
+    }
+  });
 });

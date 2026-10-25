@@ -35,22 +35,18 @@ export default defineConfig({
     exclude: ['maplibre-gl']
   },
   build: {
-    // maplibre-gl alone is ~1 MB of ES modules (546K + 470K shared), and a
-    // full-screen map cannot defer its map engine for any real gain. The
-    // default 500 kB warning can therefore never be satisfied, so it is raised
-    // to just above the current bundle rather than silenced: that keeps it
-    // working as a ratchet, tripping if the bundle grows again.
-    //
-    // The only real reduction available was the line geometry, simplified by
-    // scripts/simplify_line_geometry.cjs: 1,373 kB → 1,265 kB, essentially all
-    // of it metro_lines.json. Line 4's geometry moving to public/ and the
-    // react-map-gl removal were correctness and hygiene fixes — neither was in
-    // the bundle to begin with, so neither saved a byte.
-    //
-    // Remaining option if this ever matters: lazy-load MapView so the sidebar
-    // paints before the map engine arrives. It defers bytes rather than
-    // removing them, which is why it was not done here.
-    chunkSizeWarningLimit: 1300,
+    // MapView is lazy-loaded with React.lazy so the initial bundle stays lean (~300 kB)
+    // while MapLibre and its basemap stack load asynchronously in their own chunk.
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor';
+          }
+        },
+      },
+    },
   },
   server: {
     // FGV's CORS policy admits only FGV's own sites, so a browser has to reach
