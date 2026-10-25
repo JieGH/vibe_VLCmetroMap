@@ -491,8 +491,9 @@ const buildVectorStyle = (flavour) => ({
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
   },
   // Basemap geometry, then the Lines, then the basemap's labels on top.
+  // Building footprints are omitted to keep the transit lines clear and minimize WebGL polygon load.
   layers: [
-    ...noLabels('protomaps', flavour),
+    ...noLabels('protomaps', flavour).filter((layer) => layer.id !== 'buildings'),
     ...structuredClone(metroLayers),
     ...labels('protomaps', flavour, 'en'),
   ],

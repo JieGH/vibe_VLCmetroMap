@@ -42,6 +42,14 @@ describe('MapLibre GL & Basemap Integrity', () => {
     expect(declaredVersion).toMatch(/\^?6\.(1[6-9]|[2-9]\d|\d{3,})\./);
   });
 
+  it('omits heavy building footprints from vector basemap to keep transit rendering lightweight', async () => {
+    const { noLabels } = await import('protomaps-themes-base');
+    const layers = noLabels('protomaps', 'white').filter(l => l.id !== 'buildings');
+    expect(layers.some(l => l.id === 'buildings')).toBe(false);
+    expect(layers.some(l => l.id === 'water')).toBe(true);
+    expect(layers.some(l => l.id === 'roads_major')).toBe(true);
+  });
+
   describe('Offline Basemap Probe & SPA Guard', () => {
     it('returns true when chunked manifest is available', async () => {
       const fakeFetch = vi.fn(async (url) => {
