@@ -3,9 +3,46 @@ import {
   calculateDragOffset,
   shouldDismissOnRelease,
   getDragCardStyle,
+  isEditableElement,
+  shouldIgnoreDragStart,
 } from './useDragToDismiss';
 
 describe('useDragToDismiss helpers', () => {
+  describe('isEditableElement & shouldIgnoreDragStart', () => {
+    it('identifies input, textarea, and contenteditable elements as editable', () => {
+      expect(isEditableElement({ tagName: 'INPUT' })).toBe(true);
+      expect(isEditableElement({ tagName: 'TEXTAREA' })).toBe(true);
+      expect(isEditableElement({ tagName: 'DIV', isContentEditable: true })).toBe(true);
+      expect(isEditableElement({ tagName: 'DIV', isContentEditable: false })).toBe(false);
+      expect(isEditableElement(null)).toBe(false);
+      expect(isEditableElement(undefined)).toBe(false);
+    });
+
+    it('ignores drag start when activeElement is an editable input or textarea', () => {
+      const activeInput = { tagName: 'INPUT' };
+      const nonEditableTarget = { tagName: 'DIV', closest: () => null };
+      expect(shouldIgnoreDragStart(nonEditableTarget, activeInput)).toBe(true);
+
+      const activeTextarea = { tagName: 'TEXTAREA' };
+      expect(shouldIgnoreDragStart(nonEditableTarget, activeTextarea)).toBe(true);
+    });
+
+    it('ignores drag start when target is inside an input or textarea', () => {
+      const activeNonInput = { tagName: 'BODY' };
+      const targetInInput = {
+        tagName: 'SPAN',
+        closest: (sel) => sel.includes('input') ? { tagName: 'INPUT' } : null,
+      };
+      expect(shouldIgnoreDragStart(targetInInput, activeNonInput)).toBe(true);
+    });
+
+    it('permits drag start when neither target nor active element is editable', () => {
+      const activeBody = { tagName: 'BODY' };
+      const targetHandle = { tagName: 'DIV', closest: () => null };
+      expect(shouldIgnoreDragStart(targetHandle, activeBody)).toBe(false);
+    });
+  });
+
   describe('calculateDragOffset', () => {
     it('returns 0 when startY and currentY are equal', () => {
       expect(calculateDragOffset(100, 100)).toBe(0);

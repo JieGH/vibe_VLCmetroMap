@@ -265,6 +265,7 @@ textarea {
   display: flex;
   align-items: stretch;
   gap: 10px;
+  touch-action: none;
 }
 
 @media (min-width: 769px) {
@@ -320,6 +321,12 @@ textarea {
   min-width: 0;
   min-height: 52px;
   box-sizing: border-box;
+  touch-action: pan-y;
+}
+
+.search-bar-results {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 
@@ -863,6 +870,7 @@ button:active {
   align-items: center;
   justify-content: center;
   padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  touch-action: none;
 }
 
 .feedback-modal-content {
@@ -875,6 +883,7 @@ button:active {
   border: 1px solid var(--border-color);
   border-radius: 18px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+  overscroll-behavior: contain;
 }
 
 .feedback-modal-header {
@@ -926,6 +935,8 @@ button:active {
 
 .feedback-modal-body {
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;

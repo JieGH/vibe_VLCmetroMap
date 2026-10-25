@@ -165,6 +165,11 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
           // Fallback if read-only filesystem
         }
 
+        // Never fire real external notifications during tests
+        if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+          return void res.end(JSON.stringify({ success: true, message: 'Feedback received', clientIp }));
+        }
+
         const token = process.env.TELEGRAM_BOT_TOKEN || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
         const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
         if (token && chatId && typeof globalThis.fetch === 'function') {

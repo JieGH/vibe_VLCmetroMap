@@ -10,7 +10,7 @@ describe('netlify feedback function', () => {
         'cf-connecting-ip': '198.51.100.42',
         'cf-ipcountry': 'ES',
       },
-      body: JSON.stringify({ message: 'Love the high fps update!' }),
+      body: JSON.stringify({ message: 'Verified feedback message' }),
     });
 
     const res = await feedback(req);

@@ -87,6 +87,14 @@ export function formatTelegramMessage({ cleanMsg, email, clientInfo, metadata, t
 }
 
 async function forwardToTelegram(env, { cleanMsg, email, clientInfo, metadata, timestamp }) {
+  // Never fire real external notifications during tests
+  if (
+    (typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST)) ||
+    env?.NODE_ENV === 'test'
+  ) {
+    return;
+  }
+
   const token = env?.TELEGRAM_BOT_TOKEN || (typeof process !== 'undefined' && process.env?.TELEGRAM_BOT_TOKEN) || '8763009106:AAGwvWk6o8T0FXRVMZZuR6ANFopQ_wMB_mU';
   const chatId = env?.TELEGRAM_CHAT_ID || (typeof process !== 'undefined' && process.env?.TELEGRAM_CHAT_ID) || '5007040501';
 

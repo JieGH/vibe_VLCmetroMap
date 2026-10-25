@@ -17,10 +17,13 @@ const FeedbackModal = ({ isOpen, onClose }) => {
   const [status, setStatus] = useState('idle'); // 'idle' | 'submitting' | 'success' | 'error'
   const [copied, setCopied] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
+  // Swipe-down-to-dismiss is disabled while the user has an input focused to prevent accidental
+  // card movement and premature dismissal while composing feedback.
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
     onDismiss: onClose,
-    enabled: Boolean(isOpen),
+    enabled: Boolean(isOpen) && !isInputFocused,
     threshold: 70,
   });
 
@@ -239,6 +242,8 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                     placeholder={t('feedback.placeholder')}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                     onKeyDown={(e) => {
                       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                         e.preventDefault();
@@ -261,6 +266,8 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                     placeholder={t('feedback.emailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                     disabled={status === 'submitting'}
                   />
                 </div>

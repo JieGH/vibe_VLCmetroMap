@@ -31,6 +31,7 @@ import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fon
 import { useTranslation } from './i18n';
 import { Sun, Moon, MessageSquare } from 'lucide-react';
 import AppBadge from './components/AppBadge';
+import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -343,6 +344,12 @@ function App() {
       document.removeEventListener('focusin', onIn);
       document.removeEventListener('focusout', onOut);
     };
+  }, []);
+
+  // Prevent mobile browser User Agent from dragging/scrolling the UI viewport
+  // when an input or textarea is actively being edited.
+  useEffect(() => {
+    return setupInputScrollDragPrevention();
   }, []);
 
   // Measure the open sheet so the bottom stack never overlaps it.

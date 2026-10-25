@@ -45,4 +45,14 @@ describe('FeedbackModal component', () => {
     expect(html).toContain('sheet-drag-handle-wrap');
     expect(html).toContain('sheet-drag-handle');
   });
+
+  it('renders message textarea and email input with interactive fields for focus and composition', () => {
+    const html = renderToStaticMarkup(<FeedbackModal isOpen={true} onClose={() => {}} />);
+
+    expect(html).toContain('id="feedback-textarea"');
+    expect(html).toContain('class="feedback-textarea"');
+    expect(html).toContain('id="feedback-email"');
+    expect(html).toContain('class="feedback-input"');
+    expect(html).toContain('data-testid="feedback-modal-backdrop"');
+  });
 });

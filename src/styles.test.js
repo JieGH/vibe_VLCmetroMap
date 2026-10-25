@@ -186,6 +186,28 @@ describe('Bottom sheet drag handle styles', () => {
     expect(mobileSection).toContain('.mobile-only-drag-handle');
     expect(mobileSection).toContain('display: flex');
   });
+
+  it('contains overscroll on feedback modal and search results to prevent viewport dragging', () => {
+    const feedbackContent = css.match(/\.feedback-modal-content\s*\{([^}]*)\}/)?.[1] || '';
+    expect(feedbackContent).toContain('overscroll-behavior: contain');
+
+    const feedbackBody = css.match(/\.feedback-modal-body\s*\{([^}]*)\}/)?.[1] || '';
+    expect(feedbackBody).toContain('overscroll-behavior: contain');
+
+    const searchResults = css.match(/\.search-bar-results\s*\{([^}]*)\}/)?.[1] || '';
+    expect(searchResults).toContain('overscroll-behavior: contain');
+  });
+
+  it('applies touch-action constraints on top bar and feedback modal backdrop', () => {
+    const topBar = css.match(/\.top-bar-container\s*\{([^}]*)\}/)?.[1] || '';
+    expect(topBar).toContain('touch-action: none');
+
+    const feedbackBackdrop = css.match(/\.feedback-modal-backdrop\s*\{([^}]*)\}/)?.[1] || '';
+    expect(feedbackBackdrop).toContain('touch-action: none');
+
+    const searchBarContainer = css.match(/\.search-bar-container\s*\{([^}]*)\}/)?.[1] || '';
+    expect(searchBarContainer).toContain('touch-action: pan-y');
+  });
 });
 
 

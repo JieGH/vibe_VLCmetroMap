@@ -62,6 +62,32 @@ export const shouldDismissOnRelease = (offset, threshold = 70) => {
 };
 
 /**
+ * Determines whether a DOM element is editable (input, textarea, or contenteditable).
+ *
+ * @param {any} el
+ * @returns {boolean}
+ */
+export const isEditableElement = (el) => {
+  if (!el || typeof el !== 'object') return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || Boolean(el.isContentEditable);
+};
+
+/**
+ * Checks whether drag-to-dismiss should be suppressed because the user is
+ * interacting with or actively focused inside a text editor.
+ *
+ * @param {any} target
+ * @param {any} [activeElement]
+ * @returns {boolean}
+ */
+export const shouldIgnoreDragStart = (target, activeElement) => {
+  if (isEditableElement(activeElement)) return true;
+  if (target?.isContentEditable || target?.closest?.('input, textarea, [contenteditable]')) return true;
+  return false;
+};
+
+/**
  * Computes the inline style for the card during and after a drag interaction.
  *
  * @param {number} dragOffset
@@ -112,6 +138,12 @@ export const useDragToDismiss = ({
     if (!enabled) return;
     // Only handle primary pointer (left mouse click or touch)
     if (e.button !== undefined && e.button !== 0) return;
+
+    // Do not initiate drag if user is actively editing text or clicked an editable element
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    if (shouldIgnoreDragStart(e.target, active)) {
+      return;
+    }
 
     startYRef.current = e.clientY;
     pointerIdRef.current = e.pointerId;
