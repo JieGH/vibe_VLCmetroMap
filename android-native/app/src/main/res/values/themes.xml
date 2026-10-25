@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.Xarxa" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowBackground">@color/xarxa_window_bg</item>
+    </style>
+    <color name="xarxa_window_bg">#F0F2F5</color>
+</resources>

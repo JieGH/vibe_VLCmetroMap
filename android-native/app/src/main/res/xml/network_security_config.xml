@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HTTPS only. The one network endpoint (FGV arrivals, https://www.fgv.es/...) is HTTPS, so no
+     cleartext exception exists. If a cleartext host is ever needed, scope it with a <domain-config>
+     for that host only and document it in docs/android/play-compliance-check.md. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
