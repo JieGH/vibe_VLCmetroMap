@@ -72,9 +72,9 @@ export const CompactMetroSection = ({
             m
           </span>
           <span>{stationName || 'Metro'}</span>
-          {walkMetres !== undefined && walkMin !== undefined && (
+          {walkMin !== undefined && (
             <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'none', marginLeft: 4 }}>
-              · {walkMin} min walk ({walkMetres}m)
+              · {walkMin} min walk
             </span>
           )}
         </span>
@@ -278,7 +278,7 @@ export const CompactMetroSection = ({
                     </div>
                   </div>
                   <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', fontWeight: 600, flexShrink: 0 }}>
-                    {m.walkMin} min ({m.distance}m)
+                    {m.walkMin} min walk
                   </span>
                 </div>
               );

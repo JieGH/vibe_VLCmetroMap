@@ -1358,7 +1358,7 @@ const MapView = ({
     // A visual anchor only — no countdowns to tick, so it's rendered once per
     // selection rather than on an interval. Arrivals live in the Station panel.
     element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
-    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -14] })
+    const marker = new Marker({ element, anchor: 'bottom', offset: [0, 10] })
       .setLngLat(coordinates)
       .addTo(map);
     focusMarkerRef.current = marker;

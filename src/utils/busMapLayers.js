@@ -248,34 +248,38 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
   const el = document.createElement('div');
   el.className = 'feeder-stop-marker';
   el.style.cssText = `
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 6px;
-    background: rgba(26, 32, 44, 0.95);
-    border: 1.5px solid #D62828;
-    border-radius: 999px;
-    box-shadow: 0 4px 14px rgba(214, 40, 40, 0.4);
+    justify-content: center;
+    background: #1a202c;
+    border: 2px solid #D62828;
+    box-shadow: 0 3px 10px rgba(214, 40, 40, 0.45);
     color: #ffffff;
-    font: 700 10px/1 system-ui, sans-serif;
     cursor: pointer;
-    transition: transform 0.15s ease;
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
     user-select: none;
-    white-space: nowrap;
     z-index: 28;
+    box-sizing: border-box;
   `;
 
-  el.title = `${stop.stopName} • Click to view bus lines & countdowns in tab`;
+  const walkInfo = stop.walkMin !== undefined ? ` · ${stop.walkMin} min walk` : '';
+  el.title = `Parada ${stop.stopCode || ''} · ${stop.stopName || 'EMT Stop'}${walkInfo} • Click to view in tab`;
   el.innerHTML = `
-    <span style="font-size:7.5px;font-weight:900;background:#D62828;color:#ffffff;padding:1px 3.5px;border-radius:2px;letter-spacing:0.02em;line-height:1">EMT</span>
-    <span style="font-size:9.5px;font-weight:800;letter-spacing:0.02em">${stop.stopCode}</span>
+    <span style="font-size:8.5px;font-weight:900;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${stop.stopCode || ''}</span>
   `;
 
   el.addEventListener('mouseenter', () => {
-    el.style.transform = 'scale(1.15)';
+    el.style.transform = 'scale(1.25)';
+    el.style.boxShadow = '0 4px 14px rgba(214, 40, 40, 0.7)';
   });
   el.addEventListener('mouseleave', () => {
     el.style.transform = 'scale(1.0)';
+    el.style.boxShadow = '0 3px 10px rgba(214, 40, 40, 0.45)';
   });
   if (onSelect) {
     el.addEventListener('click', (e) => {

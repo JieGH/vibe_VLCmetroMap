@@ -137,7 +137,7 @@ export const ConnectingBusSection = ({
               }}
             >
               <Footprints size={11} />
-              {stop.walkMin} min walk ({stop.walkMetres}m)
+              {stop.walkMin} min walk
             </span>
           </div>
 

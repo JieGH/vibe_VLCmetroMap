@@ -272,5 +272,13 @@ describe('StationPanel component', () => {
     expect(idxAll).toBeGreaterThan(-1);
     expect(idxMetro).toBeGreaterThan(idxAll);
     expect(idxBus).toBeGreaterThan(idxMetro);
+
+    // Maximize / Minimize icon button in header
+    expect(html).toContain('station-panel-expand');
+    expect(html).toContain('Maximize / Expand full departures');
+
+    // Distance unit is time (min walk), not meters
+    expect(html).toContain('min walk');
+    expect(html).not.toMatch(/\(\d+m\)/);
   });
 });

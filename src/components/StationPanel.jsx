@@ -6,7 +6,7 @@
 // tablet that is where a thumb rests; bottom in portrait, because on a phone it
 // is the only place a thumb reaches at all.
 import React, { useEffect, useState } from 'react';
-import { X, Radio, Database, CheckCircle2, Clock } from 'lucide-react';
+import { X, Radio, Database, CheckCircle2, Clock, Maximize2, Minimize2 } from 'lucide-react';
 import arrivalStore, { CACHE_TTL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
@@ -61,6 +61,7 @@ const StationPanel = ({
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
   const [activeTab, setActiveTab] = useState('split');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
     onDismiss: onClose,
@@ -160,15 +161,20 @@ const StationPanel = ({
           ? {
               top: 84,
               right: 16,
-              maxHeight: 'calc(100vh - 100px)',
-              width: (variant === 'A' && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
-              transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              maxHeight: isExpanded ? 'calc(100vh - 40px)' : 'calc(100vh - 100px)',
+              height: isExpanded ? 'calc(100vh - 100px)' : 'auto',
+              width: isExpanded
+                ? 'min(820px, 68vw)'
+                : (variant === 'A' && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
+              transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }
           : {
               left: 12,
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: 'min(58vh, calc(100vh - 120px))',
+              maxHeight: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'min(58vh, calc(100vh - 120px))',
+              height: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'auto',
+              transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }),
         ...dragStyle,
       }}
@@ -198,6 +204,8 @@ const StationPanel = ({
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
               <h2
+                onClick={() => setIsExpanded((v) => !v)}
+                title={isExpanded ? 'Collapse view' : 'Expand full view'}
                 style={{
                   fontSize: '1.08rem',
                   fontWeight: 800,
@@ -208,6 +216,7 @@ const StationPanel = ({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  cursor: 'pointer',
                 }}
               >
                 Nearby Transit
@@ -286,13 +295,16 @@ const StationPanel = ({
             <div
               className="station-header-icon"
               data-testid="station-header-icon"
-              aria-hidden="true"
+              aria-label="Toggle expand station panel"
+              onClick={() => setIsExpanded((v) => !v)}
+              title={isExpanded ? 'Collapse view' : 'Expand full view'}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, minWidth: 34, borderRadius: '50%',
                 background: '#E2001A', color: '#FFFFFF',
                 boxShadow: '0 2px 6px rgba(226, 0, 26, 0.35)',
                 flexShrink: 0,
+                cursor: 'pointer',
               }}
             >
               <span
@@ -319,7 +331,7 @@ const StationPanel = ({
                 }}>
                   {focus.name}
                 </h2>
-                {metroWalkMin !== undefined && metroWalkMeters !== undefined && (
+                {metroWalkMin !== undefined && (
                   <span
                     style={{
                       fontSize: '0.74rem',
@@ -329,7 +341,7 @@ const StationPanel = ({
                       flexShrink: 0,
                     }}
                   >
-                    · {metroWalkMin} min ({metroWalkMeters}m)
+                    · {metroWalkMin} min walk
                   </span>
                 )}
               </div>
@@ -397,19 +409,49 @@ const StationPanel = ({
           </div>
         )}
 
-        <button
-          onClick={onClose}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="station-panel-close"
-          aria-label={t('stationPanel.closeAria')}
-          style={{
-            width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none',
-            background: 'var(--bg-hover)', color: 'var(--text-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          }}
-        >
-          <X size={16} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded((v) => !v);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="station-panel-expand"
+            aria-label={isExpanded ? 'Collapse station panel' : 'Expand station panel'}
+            title={isExpanded ? 'Minimize / Collapse view' : 'Maximize / Expand full departures'}
+            style={{
+              width: 32,
+              height: 32,
+              minWidth: 32,
+              borderRadius: '50%',
+              border: 'none',
+              background: isExpanded ? 'rgba(255,255,255,0.18)' : 'var(--bg-hover)',
+              color: 'var(--text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+
+          <button
+            onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="station-panel-close"
+            aria-label={t('stationPanel.closeAria')}
+            style={{
+              width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none',
+              background: 'var(--bg-hover)', color: 'var(--text-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
       </header>
 
       {/* Multimodal Hub Tabs in Variant A */}
@@ -570,9 +612,10 @@ const StationPanel = ({
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: 10,
-                height: 'min(50vh, 400px)',
+                height: isExpanded ? 'calc(78vh - 110px)' : 'min(50vh, 400px)',
                 padding: '8px 10px',
                 overflow: 'hidden',
+                transition: 'height 0.22s ease',
               }}
             >
               {/* Left Column: Metro List (Independent scroll) */}
@@ -620,7 +663,7 @@ const StationPanel = ({
             </div>
           ) : (
             /* Single Tab Mode: Two independent tabs preserving scroll viewports */
-            <div style={{ height: 'min(48vh, 390px)', position: 'relative' }}>
+            <div style={{ height: isExpanded ? 'calc(78vh - 110px)' : 'min(48vh, 390px)', position: 'relative', transition: 'height 0.22s ease' }}>
               <div
                 className="independent-metro-scroll"
                 style={{
@@ -670,9 +713,10 @@ const StationPanel = ({
         <div
           className="station-panel-body"
           style={{
-            maxHeight: TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
+            maxHeight: isExpanded ? 'calc(78vh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
             overflowY: 'auto',
-            padding: '0 10px 8px'
+            padding: '0 10px 8px',
+            transition: 'max-height 0.22s ease',
           }}
         >
           {focus.fetchError && (
