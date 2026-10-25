@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.jielei.xarxa.nativeapp.R
 
 private const val SOURCE_URL = "https://github.com/JieGH/vibe_VLCmetroMap"
+private const val PRIVACY_URL = "https://github.com/JieGH/vibe_VLCmetroMap/blob/main/docs/android/privacy-policy.md"
 
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
@@ -47,6 +48,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 Section(R.string.about_what_title, listOf(R.string.about_what_body))
                 Section(R.string.about_copyright, listOf(R.string.about_license_summary))
                 Section(R.string.about_data, listOf(R.string.about_operator, R.string.about_arrivals, R.string.about_osm, R.string.about_privacy))
+                TextButton(onClick = { uri.openUri(PRIVACY_URL) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.about_privacy_link)) }
             }
         },
         dismissButton = {

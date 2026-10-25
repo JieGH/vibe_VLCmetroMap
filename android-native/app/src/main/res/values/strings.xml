@@ -68,4 +68,5 @@
     <string name="about_what_title">About the app</string>
     <string name="about_what_body">Xarxa shows where Metrovalencia trains are right now, with countdowns for every station on the network. It works from FGV\'s live arrival feed and keeps the map offline. Free, open source and independent.</string>
     <string name="about_source">Source code</string>
+    <string name="about_privacy_link">Read the full privacy policy</string>
 </resources>

@@ -28,7 +28,7 @@ The app is a general-purpose public-transport tool and does not knowingly collec
 
 ## Third parties
 
-The app contains no advertising or analytics code. It uses open-source libraries (listed under About in the app) and open map data (OpenStreetMap contributors). They run on your phone and do not send your data anywhere.
+The app contains no advertising or analytics code. It uses open-source libraries (the main ones, MapLibre Native, OpenStreetMap data and Protomaps PMTiles, are credited under About in the app; the full list is in the source code repository) and open map data (OpenStreetMap contributors). They run on your phone and do not send your data anywhere.
 
 ## Changes
 

@@ -60,6 +60,6 @@ Re-checked NAT against the repo; rules from round 1 were not re-fetched.
 - **Fixed: `lintDebug` failed** on `windowLayoutInDisplayCutoutMode` (`values/` and `values-night/themes.xml`); the attribute is ignored on older systems, so `tools:targetApi="o_mr1"` is the right fix. Lint and unit tests now pass.
 - Merged release manifest: INTERNET, ACCESS_NETWORK_STATE, FINE/COARSE_LOCATION, ACCESS_WIFI_STATE (MapLibre), a signature-level `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. No AD_ID, no background location. Unchanged from round 1.
 - New About "Source code" button opens the canonical repo (`JieGH/vibe_VLCmetroMap`) in the browser; it sends nothing, so Data safety answers are unchanged.
-- **Open (owner):** the About dialog has the privacy summary but no link to the hosted privacy policy, and Play expects the policy reachable in the app as well as on the listing. Once the URL exists, add a "Privacy policy" link. A public GitHub URL of `docs/android/privacy-policy.md` is acceptable as a stopgap.
-- **Open (docs):** `privacy-policy.md` says libraries are "listed under About in the app"; About names MapLibre, OpenStreetMap and Protomaps but not every dependency. Reword, or add the list.
+- **Done:** About now has a "Read the full privacy policy" button (`PRIVACY_URL` points at the GitHub copy of `privacy-policy.md` on `main`; it resolves once `dev` is merged and pushed; swap in your own hosted URL if you prefer).
+- **Done:** `privacy-policy.md` library wording now matches what About shows.
 - The sideload APK on the v1.3.1 release (`Xarxa-Native-v0.1.0.apk`) predates both fixes; rebuild it with `tools/release-apk.sh` before sharing it with older phones. It uses a separate key, so it cannot be mixed with the Play build.
