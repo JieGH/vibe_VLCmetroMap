@@ -218,7 +218,9 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
   }
 
   const recentVisits = new Map();
+  const recentStationVisits = new Map();
   const DEDUPE_WINDOW_MS = 60 * 60 * 1000;
+  const STATION_DEDUPE_MS = 10 * 60 * 1000;
   const BOT_UA_REGEX = /(bot|spider|crawl|slurp|mediapartners|googlebot|bingbot|yandex|duckduckbot|baiduspider|sogou|exabot|facebot|ia_archiver|semrush|ahrefs|mj12bot|dotbot|petalbot|headlesschrome|phantomjs|selenium|puppeteer|playwright|cypress|python|curl|wget|httpclient|postman|go-http|java|zgrab|censys|shodan|nmap)/i;
 
   function handleTelemetry(req, res) {
@@ -245,6 +247,42 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
 
         const clientIp = getClientIp(req);
         const now = Date.now();
+        const esc = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '');
+        const timestamp = new Date().toISOString();
+
+        if (payload?.type === 'station_access') {
+          const stationKey = `${clientIp}:${payload?.station}`;
+          const lastSt = recentStationVisits.get(stationKey);
+          if (lastSt && now - lastSt < STATION_DEDUPE_MS) {
+            return sendText(res, 200, '{"ok":true,"throttled":true}');
+          }
+          recentStationVisits.set(stationKey, now);
+
+          if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+            const token = process.env.TELEGRAM_BOT_TOKEN;
+            const chatId = process.env.TELEGRAM_CHAT_ID || '5007040501';
+
+            if (token && chatId) {
+              const text = [
+                `🚉 <b>Station Accessed by User</b>\n`,
+                `📍 <b>Station:</b> <b>${esc(payload.station)}</b>`,
+                payload.lines && Array.isArray(payload.lines) && payload.lines.length > 0 ? `🚇 <b>Lines:</b> ${esc(payload.lines.join(', '))}` : '',
+                payload.zone ? `🏷 <b>Zone:</b> ${esc(payload.zone)}` : '',
+                `👤 <b>User IP:</b> <code>${esc(clientIp)}</code>`,
+                payload.platform ? `📱 <b>Platform:</b> ${esc(payload.platform)}` : '',
+                `⏱ <b>Time:</b> <code>${esc(timestamp)}</code>`,
+              ].filter(Boolean).join('\n');
+
+              globalThis.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+              }).catch(() => {});
+            }
+          }
+          return sendText(res, 200, '{"ok":true}');
+        }
+
         const lastSeen = recentVisits.get(clientIp);
 
         if (payload?.type !== 'incident' && lastSeen && now - lastSeen < DEDUPE_WINDOW_MS) {
@@ -253,9 +291,6 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         if (payload?.type !== 'incident') {
           recentVisits.set(clientIp, now);
         }
-
-        const timestamp = new Date().toISOString();
-        const esc = (s) => (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '');
 
         if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
           const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -278,6 +313,7 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
               text = [
                 `👤 <b>Normal User Visit Detected</b>\n`,
                 `📍 <b>Location & IP:</b> <code>${esc(clientIp)}</code>`,
+                payload.station ? `🚉 <b>Station Accessed:</b> <b>${esc(payload.station)}</b>` : `🚉 <b>Station Accessed:</b> <i>(Browsing Map)</i>`,
                 payload.platform ? `📱 <b>Platform:</b> ${esc(payload.platform)}` : '',
                 payload.screen ? `🖥 <b>Screen:</b> <code>${esc(payload.screen)}</code>` : '',
                 payload.languages || payload.language ? `🗣 <b>Language:</b> <code>${esc(payload.languages || payload.language)}</code>` : '',

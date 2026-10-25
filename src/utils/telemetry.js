@@ -41,7 +41,7 @@ export function isNormalUserEnvironment() {
 /**
  * Reports a verified normal user visit to Telegram via /api/telemetry once per session.
  */
-export async function reportNormalUserVisit() {
+export async function reportNormalUserVisit(options = {}) {
   if (typeof window === 'undefined') return;
 
   try {
@@ -66,6 +66,7 @@ export async function reportNormalUserVisit() {
     const payload = {
       type: 'user_visit',
       platform,
+      station: options.station || null,
       screen: `${window.screen.width}x${window.screen.height} (dpr: ${window.devicePixelRatio || 1})`,
       viewport: `${window.innerWidth}x${window.innerHeight}`,
       language: navigator.language || 'unknown',
@@ -90,6 +91,59 @@ export async function reportNormalUserVisit() {
     window.sessionStorage?.setItem('xarxa_user_visit_reported', '1');
   } catch {
     // Non-fatal telemetry failure
+  }
+}
+
+/**
+ * Reports when a user accesses or focuses on a specific station.
+ * Deduplicates per station per session to avoid notification spam while browsing.
+ */
+export async function reportStationAccess(stationName, extra = {}) {
+  if (!stationName || typeof window === 'undefined') return;
+
+  try {
+    const key = `xarxa_st_reported_${stationName}`;
+    if (window.sessionStorage?.getItem(key) === '1') {
+      return;
+    }
+
+    if (!isNormalUserEnvironment()) {
+      return;
+    }
+
+    let platform = 'Web Desktop';
+    if (Capacitor.isNativePlatform()) {
+      platform = isAndroid() ? 'Android Native' : 'iOS Native';
+    } else if (isIosDevice(navigator.userAgent, navigator.maxTouchPoints)) {
+      platform = 'iOS Safari (Web)';
+    } else if (isAndroid()) {
+      platform = 'Android Chrome (Web)';
+    }
+
+    const payload = {
+      type: 'station_access',
+      station: stationName,
+      lines: extra.lines || null,
+      zone: extra.zone || null,
+      platform,
+      path: window.location.pathname + window.location.search,
+      mode: getAppMode(),
+      userAgent: navigator.userAgent,
+    };
+
+    const targetUrl = Capacitor.isNativePlatform()
+      ? 'https://xarxa.net/api/telemetry'
+      : '/api/telemetry';
+
+    await fetch(targetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    window.sessionStorage?.setItem(key, '1');
+  } catch {
+    // Non-fatal
   }
 }
 

@@ -7,7 +7,9 @@ export const BOT_UA_REGEX = /(bot|spider|crawl|slurp|mediapartners|googlebot|bin
 // In-memory rate limiting / IP deduplication so user's Telegram isn't spammed
 // by rapid reloads from the same human IP (1 notification per IP per hour)
 const recentVisits = new Map();
+const recentStationVisits = new Map();
 const DEDUPE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const STATION_DEDUPE_MS = 10 * 60 * 1000; // 10 minutes per IP:station
 
 function isRateLimited(ip) {
   if (!ip || ip === 'Unknown') return false;
@@ -30,6 +32,26 @@ function isRateLimited(ip) {
   return false;
 }
 
+function isStationRateLimited(key) {
+  if (!key || key.startsWith('Unknown:')) return false;
+  const now = Date.now();
+
+  if (recentStationVisits.size > 500) {
+    for (const [k, timestamp] of recentStationVisits.entries()) {
+      if (now - timestamp > STATION_DEDUPE_MS) {
+        recentStationVisits.delete(k);
+      }
+    }
+  }
+
+  const lastSeen = recentStationVisits.get(key);
+  if (lastSeen && now - lastSeen < STATION_DEDUPE_MS) {
+    return true;
+  }
+  recentStationVisits.set(key, now);
+  return false;
+}
+
 export function isBot(userAgent) {
   if (!userAgent || typeof userAgent !== 'string') return true;
   return BOT_UA_REGEX.test(userAgent);
@@ -44,6 +66,12 @@ export function formatVisitTelegramMessage({ clientInfo, data, timestamp }) {
     `👤 <b>Normal User Visit Detected</b>\n`,
     `📍 <b>Location & IP:</b> ${ipStr}`,
   ];
+
+  if (data?.station) {
+    lines.push(`🚉 <b>Station Accessed:</b> <b>${escapeHtml(data.station)}</b>`);
+  } else {
+    lines.push(`🚉 <b>Station Accessed:</b> <i>(Browsing Map)</i>`);
+  }
 
   if (data?.platform) {
     lines.push(`📱 <b>Platform:</b> ${escapeHtml(data.platform)}`);
@@ -62,6 +90,31 @@ export function formatVisitTelegramMessage({ clientInfo, data, timestamp }) {
   }
   if (data?.path) {
     lines.push(`🧭 <b>Path / Mode:</b> <code>${escapeHtml(data.path)}</code>`);
+  }
+  lines.push(`⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`);
+
+  return lines.join('\n');
+}
+
+export function formatStationAccessTelegramMessage({ clientInfo, data, timestamp }) {
+  const geoParts = [clientInfo?.city, clientInfo?.region, clientInfo?.country].filter(Boolean);
+  const geoStr = geoParts.length > 0 ? ` (${escapeHtml(geoParts.join(', '))})` : '';
+  const ipStr = clientInfo?.ip ? `<code>${escapeHtml(clientInfo.ip)}</code>${geoStr}` : '<code>Unknown</code>';
+
+  const lines = [
+    `🚉 <b>Station Accessed by User</b>\n`,
+    `📍 <b>Station:</b> <b>${escapeHtml(data?.station || 'Unknown')}</b>`,
+  ];
+
+  if (data?.lines && Array.isArray(data.lines) && data.lines.length > 0) {
+    lines.push(`🚇 <b>Lines:</b> ${escapeHtml(data.lines.join(', '))}`);
+  }
+  if (data?.zone) {
+    lines.push(`🏷 <b>Zone:</b> ${escapeHtml(data.zone)}`);
+  }
+  lines.push(`👤 <b>User:</b> ${ipStr}`);
+  if (data?.platform) {
+    lines.push(`📱 <b>Platform:</b> ${escapeHtml(data.platform)}`);
   }
   lines.push(`⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`);
 
@@ -151,6 +204,22 @@ export default async (req, env) => {
       const incidentHtml = formatIncidentTelegramMessage({ clientInfo, data, timestamp });
       await forwardTelegram(env, incidentHtml);
       return new Response(JSON.stringify({ ok: true, type: 'incident' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (data?.type === 'station_access') {
+      const stationKey = `${clientInfo.ip}:${data?.station}`;
+      if (isStationRateLimited(stationKey)) {
+        return new Response(JSON.stringify({ ok: true, throttled: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const stHtml = formatStationAccessTelegramMessage({ clientInfo, data, timestamp });
+      await forwardTelegram(env, stHtml);
+      return new Response(JSON.stringify({ ok: true, type: 'station_access' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });

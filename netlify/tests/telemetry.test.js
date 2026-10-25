@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import telemetryHandler, { isBot, formatVisitTelegramMessage, formatIncidentTelegramMessage } from '../functions/telemetry.js';
+import telemetryHandler, {
+  isBot,
+  formatVisitTelegramMessage,
+  formatIncidentTelegramMessage,
+  formatStationAccessTelegramMessage,
+} from '../functions/telemetry.js';
 
 describe('telemetry serverless function', () => {
   it('correctly classifies bots vs normal human user agents', () => {
@@ -27,7 +32,7 @@ describe('telemetry serverless function', () => {
     expect(body.filtered).toBe('bot');
   });
 
-  it('accepts normal user visit payload and formats Telegram message', async () => {
+  it('accepts normal user visit payload and formats Telegram message with station', async () => {
     const clientInfo = {
       ip: '85.50.12.34',
       city: 'Valencia',
@@ -36,6 +41,7 @@ describe('telemetry serverless function', () => {
     };
     const data = {
       platform: 'iOS Safari (Web)',
+      station: 'Empalme',
       screen: '390x844',
       languages: 'es-ES, es',
       path: '/',
@@ -50,6 +56,51 @@ describe('telemetry serverless function', () => {
     expect(html).toContain('85.50.12.34');
     expect(html).toContain('Valencia');
     expect(html).toContain('iOS Safari');
+    expect(html).toContain('Empalme');
+  });
+
+  it('formats station access Telegram message with lines and zone', () => {
+    const clientInfo = {
+      ip: '85.50.12.34',
+      city: 'Valencia',
+      country: 'ES',
+    };
+    const data = {
+      station: 'Xàtiva',
+      lines: ['3', '5', '9'],
+      zone: 'A',
+      platform: 'Web Desktop',
+    };
+    const html = formatStationAccessTelegramMessage({
+      clientInfo,
+      data,
+      timestamp: '2026-10-25T22:00:00Z',
+    });
+
+    expect(html).toContain('Station Accessed by User');
+    expect(html).toContain('Xàtiva');
+    expect(html).toContain('3, 5, 9');
+    expect(html).toContain('Zone:</b> A');
+  });
+
+  it('handles station_access POST requests properly', async () => {
+    const req = new Request('https://xarxa.net/api/telemetry', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X)',
+      },
+      body: JSON.stringify({
+        type: 'station_access',
+        station: 'Colón',
+        lines: ['3', '7', '9'],
+      }),
+    });
+
+    const res = await telemetryHandler(req, { NODE_ENV: 'test' });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.type).toBe('station_access');
   });
 
   it('formats major incident report with error stack trace', () => {

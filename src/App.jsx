@@ -34,7 +34,7 @@ import { useTranslation } from './i18n';
 import { Sun, Moon, MessageSquare } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
-import { setupIncidentReporting, reportNormalUserVisit } from './utils/telemetry';
+import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -130,7 +130,8 @@ function App() {
   useEffect(() => {
     setupIncidentReporting();
     const timer = setTimeout(() => {
-      reportNormalUserVisit();
+      const initialStation = selectedStationRef.current?.properties?.name || selectedStationRef.current?.name;
+      reportNormalUserVisit({ station: initialStation });
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -170,6 +171,14 @@ function App() {
     setSelectedStation(station);
     // With a fix in hand, say how far this Station is on foot.
     if (userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
+
+    const stName = station?.properties?.name || station?.name;
+    if (stName) {
+      reportStationAccess(stName, {
+        lines: station?.properties?.lines,
+        zone: station?.properties?.zona || station?.properties?.zone,
+      });
+    }
   };
 
   // Toggle sidebar menu. Opening the menu exits active station focus
@@ -234,6 +243,13 @@ function App() {
     }
     if (updateStation && fix.nearestStation) {
       setSelectedStation(fix.nearestStation);
+      const stName = fix.nearestStation.properties?.name || fix.nearestStation.name;
+      if (stName) {
+        reportStationAccess(stName, {
+          lines: fix.nearestStation.properties?.lines,
+          zone: fix.nearestStation.properties?.zona || fix.nearestStation.properties?.zone,
+        });
+      }
     }
   };
 

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   isNormalUserEnvironment,
   reportNormalUserVisit,
+  reportStationAccess,
   reportIncident,
 } from './telemetry';
 
@@ -83,6 +84,31 @@ describe('telemetry utility', () => {
     // Subsequent call in same session is deduplicated
     await reportNormalUserVisit();
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports station access with station name and deduplicates within session', async () => {
+    setupWindow();
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await reportStationAccess('Colón', { lines: ['3', '7', '9'], zone: 'A' });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/telemetry',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"station":"Colón"'),
+      })
+    );
+    expect(mockSessionStorage.setItem).toHaveBeenCalledWith('xarxa_st_reported_Colón', '1');
+
+    // Clicking same station in same session is deduplicated
+    await reportStationAccess('Colón');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Clicking another station sends report
+    await reportStationAccess('Xàtiva');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('reports runtime incidents to telemetry endpoint', async () => {
