@@ -4,6 +4,7 @@
 export const BACK_PRIORITY = [
   ['rationaleOpen', 'decline-rationale'],
   ['feedbackOpen', 'close-feedback'],
+  ['whatsNewOpen', 'close-whats-new'],
   ['downloadOpen', 'close-download'],
   ['aboutOpen', 'close-about'],
   ['welcomeVisible', 'dismiss-welcome'],

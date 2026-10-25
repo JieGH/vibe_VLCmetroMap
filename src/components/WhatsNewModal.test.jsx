@@ -1,0 +1,43 @@
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, it, expect, vi } from 'vitest';
+import WhatsNewModal from './WhatsNewModal';
+
+describe('WhatsNewModal component', () => {
+  it('returns null when isOpen is false', () => {
+    const html = renderToStaticMarkup(
+      <WhatsNewModal isOpen={false} onClose={() => {}} />
+    );
+    expect(html).toBe('');
+  });
+
+  it('renders modal dialog with bullet points and close button when isOpen is true', () => {
+    const html = renderToStaticMarkup(
+      <WhatsNewModal isOpen={true} onClose={() => {}} onOpenFeedback={() => {}} />
+    );
+
+    expect(html).toContain('whats-new-modal-backdrop');
+    expect(html).toContain('whats-new-modal-content');
+    expect(html).toContain("What&#x27;s New in Xarxa");
+    expect(html).toContain('Real-Time Train Tracking');
+    expect(html).toContain('High-Speed Vector Map');
+    expect(html).toContain('Walking Times &amp; Navigation');
+    expect(html).toContain('Appearance &amp; Accessibility');
+    expect(html).toContain('Direct In-App Feedback');
+    expect(html).toContain('whats-new-contact-btn');
+    expect(html).toContain('whats-new-confirm-btn');
+    expect(html).toContain('Got it');
+  });
+
+  it('renders contact author action when onOpenFeedback is supplied', () => {
+    const htmlWithFeedback = renderToStaticMarkup(
+      <WhatsNewModal isOpen={true} onClose={() => {}} onOpenFeedback={() => {}} />
+    );
+    expect(htmlWithFeedback).toContain('whats-new-contact-btn');
+
+    const htmlWithoutFeedback = renderToStaticMarkup(
+      <WhatsNewModal isOpen={true} onClose={() => {}} />
+    );
+    expect(htmlWithoutFeedback).not.toContain('whats-new-contact-btn');
+  });
+});

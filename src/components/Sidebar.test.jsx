@@ -134,10 +134,12 @@ describe('Sidebar contact and signature', () => {
     const { renderToStaticMarkup } = await import('react-dom/server');
     const SidebarMod = (await import('./Sidebar')).default;
     const html = renderToStaticMarkup(
-      <SidebarMod isOpen onToggleSidebar={() => {}} />
+      <SidebarMod isOpen onToggleSidebar={() => {}} onOpenWhatsNew={() => {}} />
     );
     expect(html).toContain('sidebar-contact-btn');
     expect(html).toContain('Contact Author');
+    expect(html).toContain('sidebar-whats-new-btn');
+    expect(html).toContain("What&#x27;s New");
     expect(html).toContain('Made in Valencia by');
     expect(html).toContain('Jie');
     expect(html).not.toContain('Jie Lei');

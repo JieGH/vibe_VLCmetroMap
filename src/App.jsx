@@ -13,6 +13,8 @@ import WelcomeScreen from './components/WelcomeScreen';
 import { AppDownloadSheet } from './components/AppDownloadBanner';
 import { isIosDevice } from './utils/appDownload';
 import FeedbackModal from './components/FeedbackModal';
+import WhatsNewModal from './components/WhatsNewModal';
+import { hasSeenWhatsNew, markWhatsNewSeen } from './utils/whatsNew';
 import LanguageToggle from './components/LanguageToggle';
 import MovedNotice from './components/MovedNotice';
 import { hasSeenWelcome } from './utils/welcomeSchedule';
@@ -59,7 +61,25 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [isAppDownloadOpen, setIsAppDownloadOpen] = useState(false);
+
+  // Show What's New modal when the user first accesses the app (after splash completes or immediately if no splash)
+  useEffect(() => {
+    if (!showWelcome && !hasSeenWhatsNew()) {
+      setIsWhatsNewOpen(true);
+    }
+  }, [showWelcome]);
+
+  const handleCloseWhatsNew = () => {
+    markWhatsNewSeen();
+    setIsWhatsNewOpen(false);
+  };
+
+  const handleContactAuthorFromWhatsNew = () => {
+    handleCloseWhatsNew();
+    setIsFeedbackOpen(true);
+  };
   const [selectedStation, setSelectedStation] = useState(null);
   const selectedStationRef = useRef(selectedStation);
   useEffect(() => {
@@ -384,6 +404,7 @@ function App() {
   backStateRef.current = {
     rationale,
     feedbackOpen: isFeedbackOpen,
+    whatsNewOpen: isWhatsNewOpen,
     downloadOpen: isAppDownloadOpen,
     aboutOpen: isAboutOpen,
     welcomeVisible: showWelcome,
@@ -405,6 +426,7 @@ function App() {
       switch (resolveBackAction({ ...st, rationaleOpen: Boolean(st.rationale), searchFocused })) {
         case 'decline-rationale': st.rationale.resolve(false); setRationale(null); break;
         case 'close-feedback': setIsFeedbackOpen(false); break;
+        case 'close-whats-new': handleCloseWhatsNew(); break;
         case 'close-download': setIsAppDownloadOpen(false); break;
         case 'close-about': setIsAboutOpen(false); break;
         case 'dismiss-welcome': setShowWelcome(false); break;
@@ -500,6 +522,7 @@ function App() {
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenFeedback={() => setIsFeedbackOpen(true)}
+        onOpenWhatsNew={() => setIsWhatsNewOpen(true)}
         onOpenDashboard={() => selectMode('dashboard')}
         onOpenAppDownload={() => setIsAppDownloadOpen(true)}
         fontSize={fontSize}
@@ -654,6 +677,13 @@ function App() {
       <FeedbackModal
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
+      />
+
+      {/* What's New Popout Modal */}
+      <WhatsNewModal
+        isOpen={isWhatsNewOpen}
+        onClose={handleCloseWhatsNew}
+        onOpenFeedback={handleContactAuthorFromWhatsNew}
       />
 
       {/* App Download Sheet */}

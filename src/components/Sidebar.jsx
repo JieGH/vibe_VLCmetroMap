@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Info, LayoutDashboard, MessageSquare, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, LayoutDashboard, MessageSquare, Minus, Plus, Sun, Moon, SunMoon, Sparkles } from 'lucide-react';
 import { FONT_SIZE_CONFIG, FONT_SIZES } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -41,6 +41,7 @@ const Sidebar = ({
   _trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
   onOpenFeedback,
+  onOpenWhatsNew,
   onOpenDashboard,
   onOpenAppDownload,
   fontSize = 'default',
@@ -301,9 +302,37 @@ const Sidebar = ({
 
           {/* Footer controls & info */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '4px' }}>
               <span>{t('sidebar.systemLabel')}</span>
-              <VersionPill />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <VersionPill onClick={onOpenWhatsNew} style={{ cursor: onOpenWhatsNew ? 'pointer' : undefined }} title={t('sidebar.whatsNew')} />
+                {onOpenWhatsNew && (
+                  <button
+                    type="button"
+                    onClick={onOpenWhatsNew}
+                    className="sidebar-whats-new-btn"
+                    aria-label={t('sidebar.whatsNew')}
+                    title={t('sidebar.whatsNew')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      background: 'rgba(0, 122, 255, 0.12)',
+                      color: 'var(--accent-blue, #007AFF)',
+                      border: '1px solid rgba(0, 122, 255, 0.25)',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Sparkles size={11} />
+                    <span>{t('sidebar.whatsNew')}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             <button

@@ -26,9 +26,12 @@ const AppBadge = ({ size = 40, bare = false, className = '', style = {} }) => (
   </svg>
 );
 
-export const VersionPill = ({ style }) => (
+export const VersionPill = ({ style, onClick, title, ...props }) => (
   <span
     className="version-pill"
+    onClick={onClick}
+    title={title}
+    {...(onClick ? { role: 'button', tabIndex: 0, onKeyDown: (e) => (e.key === 'Enter' || e.key === ' ') && onClick(e) } : {})}
     style={{
       display: 'inline-block',
       padding: '3px 10px',
@@ -38,8 +41,10 @@ export const VersionPill = ({ style }) => (
       fontSize: '0.75rem',
       fontWeight: 700,
       fontVariantNumeric: 'tabular-nums',
+      cursor: onClick ? 'pointer' : undefined,
       ...style,
     }}
+    {...props}
   >
     v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}
     {typeof __GIT_SHA__ !== 'undefined' && __GIT_SHA__ && (
