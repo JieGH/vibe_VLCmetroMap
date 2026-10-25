@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { X, ShieldCheck, FileText, Database } from 'lucide-react';
 import { getLegalInfo } from '../utils/legalInfo';
 import { useTranslation } from '../i18n';
+import AppBadge, { VersionPill } from './AppBadge';
 
 /**
  * Native-feeling About & Legal / Licenses modal.
@@ -79,23 +80,7 @@ const AboutModal = ({ isOpen, onClose }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #FFD100 0%, #E2001A 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                color: '#fff',
-                fontSize: '1.25rem',
-                boxShadow: '0 4px 12px rgba(226, 0, 26, 0.3)',
-              }}
-            >
-              V
-            </div>
+            <AppBadge size={44} />
             <div>
               <h2
                 id="about-modal-title"
@@ -104,8 +89,9 @@ const AboutModal = ({ isOpen, onClose }) => {
                 {legalInfo.name}
               </h2>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                {legalInfo.subtitle} · <span style={{ fontVariantNumeric: 'tabular-nums' }}>v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}</span>
+                {legalInfo.subtitle}
               </div>
+              <VersionPill style={{ marginTop: '6px' }} />
             </div>
           </div>
 
@@ -145,6 +131,16 @@ const AboutModal = ({ isOpen, onClose }) => {
             lineHeight: 1.5,
           }}
         >
+          {/* What the app is */}
+          <section>
+            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
+              {t('aboutModal.whatTitle')}
+            </div>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+              {t('aboutModal.tagline')}. {t('aboutModal.whatBody')}
+            </p>
+          </section>
+
           {/* Copyright & License Section */}
           <section
             style={{

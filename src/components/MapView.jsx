@@ -19,6 +19,7 @@ import {
   panelAwarePadding as computePanelPadding,
 } from '../utils/mapCamera';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
+import { lineRanks, allowedRank } from '../utils/lineReveal';
 import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 
@@ -652,6 +653,10 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
   // filter or a hovered Line narrows them. A tap must only ever resolve to
   // something the viewer can currently see.
   const drawnStationsRef = useRef([]);
+  // Reveal rank per station dot while a Line filter is active (aligned with stInnerElemsRef; null otherwise).
+  const stRanksRef = useRef(null);
+  const prevFilterRef = useRef([]);
+  const markersReadyRef = useRef(false); // station/vehicle markers are DOM: only the first style load gates them
   const vehInnerElemsRef= useRef([]); // refs to vehicle inner elements for direct scale updates
 
   useEffect(() => { themeRef.current = theme; }, [theme]);
@@ -680,6 +685,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
     stMarkersRef.current.forEach(m => m.remove());
     stMarkersRef.current = [];
     stInnerElemsRef.current = [];
+    stRanksRef.current = null;
   };
 
   // Apply zoom-based scale directly to all known marker DOM elements. `curve` is
@@ -689,14 +695,19 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
     zoomScaleRef.current = curve;
 
     // Station markers: hide below curve 0.55 (~zoom 9.7)
-    stInnerElemsRef.current.forEach(el => {
-      if (curve < 0.55) {
+    // With a Line filter on, stations appear by rank instead (majors in the Line overview, the rest as
+    // the map zooms in) and keep a minimum size so the overview dots stay visible.
+    const ranks = stRanksRef.current;
+    const maxRank = allowedRank(zoom);
+    stInnerElemsRef.current.forEach((el, i) => {
+      const hide = ranks ? ranks[i] > maxRank : curve < 0.55;
+      if (hide) {
         el.style.visibility = 'hidden';
         el.style.pointerEvents = 'none';
       } else {
         el.style.visibility = '';
         el.style.pointerEvents = '';
-        el.style.transform = `scale(${dotScale(zoom).toFixed(3)})`;
+        el.style.transform = `scale(${(ranks ? Math.max(dotScale(zoom), 0.7) : dotScale(zoom)).toFixed(3)})`;
       }
     });
 
@@ -809,6 +820,14 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
 
       stMarkersRef.current.push(marker);
     });
+
+    if (Array.isArray(activeFilter) && activeFilter.length > 0 && !hovered) {
+      const ranks = lineRanks(drawnStationsRef.current, activeFilter);
+      stRanksRef.current = drawnStationsRef.current.map((st) => ranks.get(st) ?? 2);
+      applyMarkerScale(zoomScaleRef.current, zoomValueRef.current);
+    } else {
+      stRanksRef.current = null;
+    }
   };
 
   // ── Initialize vehicle animation loop ──────────────────────────────────────
@@ -1122,6 +1141,7 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
       }
       initStationMarkers(map);
       initVehicleLoop(map);
+      markersReadyRef.current = true;
       applyLineFilter(map, filterRef.current);
       applyLineDim(map, selectedStationRef.current);
     });
@@ -1176,10 +1196,34 @@ const MapView = ({ theme, selectedStation, onSelectStation, activeLineFilter, ho
     const map = mapRef.current;
     if (!map) return;
     applyLineFilter(map, activeLineFilter);
-    // Rebuild station markers to reflect the active line filter
-    if (map.isStyleLoaded()) {
+    // Rebuild station markers to reflect the active line filter. setFilter leaves the style "not loaded" until
+    // the next frame, so isStyleLoaded() cannot gate this: the markers are DOM, not style layers.
+    if (markersReadyRef.current) {
       initStationMarkers(map);
       initVehicleLoop(map);
+    }
+    // A Line was just picked: frame all of it (its stations) on screen.
+    const now = Array.isArray(activeLineFilter) ? activeLineFilter.map(String) : [];
+    const added = now.filter((l) => !prevFilterRef.current.includes(l));
+    prevFilterRef.current = now;
+    if (added.length > 0) {
+      const onLine = stationFeatures.filter((st) => (st.properties.lines || []).some((l) => now.includes(String(l))));
+      if (onLine.length > 1) {
+        const bounds = new LngLatBounds(onLine[0].geometry.coordinates, onLine[0].geometry.coordinates);
+        onLine.forEach((st) => bounds.extend(st.geometry.coordinates));
+        const pad = panelAwarePadding(map, { hasPanel: Boolean(selectedStationRef.current) });
+        map.fitBounds(bounds, {
+          padding: {
+            top: pad.top + 56, // the line-chip row under the search pill
+            bottom: Math.max(pad.bottom, 0) + 32,
+            left: Math.max(pad.left, 0) + 32,
+            right: Math.max(pad.right, 0) + 32,
+          },
+          maxZoom: 13,
+          duration: CAMERA_EASE_MS,
+          essential: true,
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLineFilter]);

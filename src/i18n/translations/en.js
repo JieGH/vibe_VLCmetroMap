@@ -71,6 +71,7 @@ export default {
     languageNames: {
       en: 'English',
       es: 'Español',
+      ca: 'Valencià',
     },
   },
   searchBar: {
@@ -80,6 +81,7 @@ export default {
     lines: 'Lines',
     stations: 'Stations',
     stationLines: 'Lines: {{lines}}',
+    popularStations: 'Popular stations',
     linePrefix: 'Line {{line}}',
   },
   stationPanel: {
@@ -104,6 +106,9 @@ export default {
     dataAttributions: 'Data & Attributions',
     done: 'Done',
     unofficial: 'Unofficial app: not affiliated with or endorsed by FGV/Metrovalencia.',
+    tagline: 'Live Metrovalencia trains on an offline map',
+    whatTitle: 'About the app',
+    whatBody: "Xarxa shows where Metrovalencia trains are right now, with countdowns for every station on the network. It works from FGV's live arrival feed and keeps the map offline. Free, open source and independent.",
   },
   walk: {
     to: '{{min}} min walk · {{station}} · {{distance}}',

@@ -4,6 +4,15 @@ import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import { searchFuzzy } from '../utils/fuzzySearch';
 import { useTranslation } from '../i18n';
+import { COMMON_STOPS } from '../utils/commonStops';
+import { lineColor } from '../utils/lineColor';
+
+// Black or white text, whichever reads better on a line's colour.
+const onColor = (hex) => {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? '#1d1d29' : '#ffffff';
+};
 
 // gtfs_expanded.json is the canonical station set for the whole network; the
 // handful of points in metro_lines.json are a much older subset.
@@ -17,6 +26,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   const [highlighted, setHighlighted] = useState(-1);
   const dropdownRef = useRef(null);
   const inputRef    = useRef(null);
+  const [suggestStyle, setSuggestStyle] = useState({});
 
   // Filtered results with Valencian accent-insensitive fuzzy search
   const filteredLines = query.trim()
@@ -32,6 +42,15 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     ...filteredLines.map(l  => ({ type: 'line',    data: l  })),
     ...filteredStations.map(st => ({ type: 'station', data: st })),
   ];
+
+  // The suggestions are wider than the search field, so place them inside the viewport.
+  useEffect(() => {
+    if (!isOpen || query.trim() || !dropdownRef.current) return;
+    const rect = dropdownRef.current.getBoundingClientRect();
+    const width = Math.min(380, window.innerWidth - 24);
+    const left = Math.min(Math.max(rect.left, 12), window.innerWidth - 12 - width) - rect.left;
+    setSuggestStyle({ width, right: 'auto', left });
+  }, [isOpen, query]);
 
   // Close on outside click or touch
   useEffect(() => {
@@ -202,6 +221,49 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
           </button>
         )}
       </div>
+
+      {/* Before anything is typed: popular stations and a line grid, side by side and compact */}
+      {isOpen && !query.trim() && (
+        <div className="glass-panel search-suggest" style={suggestStyle} role="group" aria-label={t('searchBar.popularStations')}>
+          <div className="search-suggest-col">
+            <div className="search-suggest-title">{t('searchBar.popularStations')}</div>
+            {COMMON_STOPS.slice(0, 6).map((st) => (
+              <button
+                key={st.properties.name}
+                type="button"
+                className="search-suggest-station"
+                onClick={() => handleSelectStation(st)}
+              >
+                <span className="search-suggest-name">{st.properties.name}</span>
+                <span className="search-suggest-dots" aria-hidden="true">
+                  {(st.properties.lines || []).slice(0, 4).map((l) => (
+                    <i key={l} style={{ background: lineColor(l) }} />
+                  ))}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="search-suggest-sep" aria-hidden="true" />
+          <div className="search-suggest-col">
+            <div className="search-suggest-title">{t('searchBar.lines')}</div>
+            <div className="search-suggest-lines">
+              {lines.map((line) => (
+                <button
+                  key={line.properties.line}
+                  type="button"
+                  className="search-suggest-line"
+                  aria-label={t('searchBar.linePrefix', { line: line.properties.line })}
+                  onClick={() => handleSelectLine(line)}
+                >
+                  <span style={{ background: lineColor(line.properties.line), color: onColor(lineColor(line.properties.line)) }}>
+                    {line.properties.line}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dropdown */}
       {isOpen && allItems.length > 0 && (

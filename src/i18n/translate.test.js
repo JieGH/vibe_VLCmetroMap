@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { translate, SUPPORTED_LANGUAGES, FALLBACK_LANGUAGE } from './translate';
 import en from './translations/en';
 import es from './translations/es';
+import ca from './translations/ca';
 
 const flattenKeys = (obj, prefix = '') =>
   Object.entries(obj).flatMap(([k, v]) => {
@@ -43,5 +44,10 @@ describe('translate', () => {
     const enKeys = flattenKeys(en).sort();
     const esKeys = flattenKeys(es).sort();
     expect(esKeys).toEqual(enKeys);
+  });
+
+  it('keeps the Valencian dictionary in sync too', () => {
+    expect(flattenKeys(ca).sort()).toEqual(flattenKeys(en).sort());
+    expect(translate('ca', 'sidebar.textSize')).toBe('Mida del text');
   });
 });

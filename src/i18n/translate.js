@@ -1,10 +1,11 @@
 import en from './translations/en';
 import es from './translations/es';
+import ca from './translations/ca';
 
-export const SUPPORTED_LANGUAGES = ['en', 'es'];
+export const SUPPORTED_LANGUAGES = ['en', 'es', 'ca'];
 export const FALLBACK_LANGUAGE = 'en';
 
-const DICTIONARIES = { en, es };
+const DICTIONARIES = { en, es, ca };
 
 const getPath = (dict, key) =>
   key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), dict);

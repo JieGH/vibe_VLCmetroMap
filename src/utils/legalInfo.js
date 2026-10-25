@@ -91,13 +91,59 @@ export const APP_LEGAL_INFO_ES = {
   },
 };
 
+// Valencian translation of the same legal metadata, same shape as APP_LEGAL_INFO.
+export const APP_LEGAL_INFO_CA = {
+  name: 'Metro Valencia',
+  subtitle: 'Seguiment en temps real',
+  author: 'Jie Lei',
+  year: '2026',
+  copyright: '© 2026 Jie Lei',
+  licenseSpdx: 'Apache-2.0',
+  licenseName: 'Llicència Apache 2.0',
+  licenseSummary:
+    'Amb llicència sota la Llicència Apache, versió 2.0 (la "Llicència"). Pots usar, distribuir i modificar esta aplicació conforme als termes de la Llicència.',
+  disclaimer:
+    'Este programari es distribuïx "TAL QUAL", SENSE GARANTIES NI CONDICIONS DE CAP MENA, ni expresses ni implícites.',
+  attributions: {
+    operator: {
+      title: 'Metrovalencia / FGV',
+      text: 'Metrovalencia és una marca registrada de Ferrocarrils de la Generalitat Valenciana (FGV). Les línies de la xarxa, les seues denominacions, els colors de marca i els horaris programats són propietat de FGV. Esta aplicació independent no està afiliada, mantinguda ni avalada per FGV.',
+    },
+    arrivals: {
+      title: 'Arribades en temps real',
+      text: 'Les prediccions d\'arribada en directe procedixen del servici en temps real de Ferrocarrils de la Generalitat Valenciana (FGV), operadora de Metrovalencia. Els comptes enrere i les posicions dels trens els estima esta aplicació a partir d\'eixes prediccions.',
+    },
+    osm: {
+      title: 'Col·laboradors d\'OpenStreetMap',
+      text: 'El mapa base de carrers i la geometria de les vies © col·laboradors d\'OpenStreetMap, amb llicència Open Database License (ODbL).',
+    },
+    protomaps: {
+      title: 'Mosaics vectorials de Protomaps',
+      text: 'Extractes de mapa base vectorial sense connexió impulsats per la tecnologia PMTiles de Protomaps.',
+    },
+    maplibre: {
+      title: 'MapLibre GL JS',
+      text: 'Renderitzat de mapes web i vectorials interactius impulsat pel motor de codi obert MapLibre GL (llicència BSD de 3 clàusules).',
+    },
+  },
+  privacy: {
+    title: 'Privacitat i dades del dispositiu',
+    points: [
+      'La teua ubicació es consulta només en el dispositiu quan sol·licites la navegació a l\'estació més pròxima, i mai es registra, emmagatzema ni transmet a cap servidor.',
+      'Zero telemetria: sense analítiques d\'usuari, galetes de seguiment, identificadors publicitaris ni comptes obligatoris.',
+    ],
+  },
+};
+
 /**
  * The legal metadata for `lang`, falling back to the English (canonical)
  * object for any language this app doesn't ship a translation for.
  * @param {string} lang
  */
 export function getLegalInfo(lang) {
-  return lang === 'es' ? APP_LEGAL_INFO_ES : APP_LEGAL_INFO;
+  if (lang === 'es') return APP_LEGAL_INFO_ES;
+  if (lang === 'ca') return APP_LEGAL_INFO_CA;
+  return APP_LEGAL_INFO;
 }
 
 /**

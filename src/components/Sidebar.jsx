@@ -5,6 +5,7 @@ import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation, SUPPORTED_LANGUAGES } from '../i18n';
 import { isAndroid } from '../utils/platform';
+import AppBadge, { VersionPill } from './AppBadge';
 
 const THEME_MODES = [
   { id: 'system', key: 'themeAuto' },
@@ -94,14 +95,7 @@ const Sidebar = ({
           {...(isMobile ? handleProps : {})}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #FFD100 0%, #E2001A 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 800, color: '#fff', fontSize: '1.1rem'
-            }}>
-              V
-            </div>
+            <AppBadge size={40} />
             <div>
               <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.3px' }}>Xarxa</h1>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t('sidebar.subtitle')}</div>
@@ -244,7 +238,7 @@ const Sidebar = ({
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
               <span>{t('sidebar.systemLabel')}</span>
-              <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>v{__APP_VERSION__}</span>
+              <VersionPill />
             </div>
 
             <button

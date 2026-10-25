@@ -1,0 +1,45 @@
+import React from 'react';
+
+// The launcher icon (same mark as the Android apps) on its dark tile, for the
+// sidebar and About headers.
+const AppBadge = ({ size = 40 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="22 22 64 64"
+    role="img"
+    aria-hidden="true"
+    style={{ borderRadius: size * 0.28, background: '#1D1D29', flexShrink: 0, display: 'block' }}
+  >
+    <g strokeWidth="6.9" strokeLinecap="round" fill="none">
+      <path stroke="#00A862" d="M45.06 45.06L34.65 34.65" />
+      <path stroke="#EB2323" d="M62.94 45.06L73.35 34.65" />
+      <path stroke="#EB2323" d="M45.06 62.94L34.65 73.35" />
+      <path stroke="#00A862" d="M62.94 62.94L73.35 73.35" />
+      <path stroke="#FFD800" d="M32.7 54L41.4 54" />
+      <path stroke="#FFD800" d="M66.6 54L75.3 54" />
+    </g>
+    <circle cx="54" cy="54" r="6" fill="#fff" />
+  </svg>
+);
+
+export const VersionPill = ({ style }) => (
+  <span
+    className="version-pill"
+    style={{
+      display: 'inline-block',
+      padding: '3px 10px',
+      borderRadius: '999px',
+      background: 'var(--bg-hover-active, rgba(127,127,127,.2))',
+      color: 'var(--text-primary)',
+      fontSize: '0.75rem',
+      fontWeight: 700,
+      fontVariantNumeric: 'tabular-nums',
+      ...style,
+    }}
+  >
+    v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}
+  </span>
+);
+
+export default AppBadge;

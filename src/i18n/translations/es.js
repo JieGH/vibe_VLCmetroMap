@@ -67,6 +67,7 @@ export default {
     languageNames: {
       en: 'English',
       es: 'Español',
+      ca: 'Valencià',
     },
   },
   searchBar: {
@@ -76,6 +77,7 @@ export default {
     lines: 'Líneas',
     stations: 'Estaciones',
     stationLines: 'Líneas: {{lines}}',
+    popularStations: 'Estaciones populares',
     linePrefix: 'Línea {{line}}',
   },
   stationPanel: {
@@ -100,6 +102,9 @@ export default {
     dataAttributions: 'Datos y atribuciones',
     done: 'Hecho',
     unofficial: 'App no oficial: no está afiliada ni respaldada por FGV/Metrovalencia.',
+    tagline: 'Trenes de Metrovalencia en directo sobre un mapa sin conexión',
+    whatTitle: 'Sobre la app',
+    whatBody: 'Xarxa muestra dónde están ahora los trenes de Metrovalencia, con cuentas atrás en cada estación de la red. Usa el feed de llegadas en directo de FGV y mantiene el mapa sin conexión. Gratuita, de código abierto e independiente.',
   },
   walk: {
     to: '{{min}} min a pie · {{station}} · {{distance}}',
