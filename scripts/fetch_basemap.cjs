@@ -26,7 +26,8 @@ const BBOX = '-0.65,39.02,-0.25,39.68';
 
 // BASEMAP_MAXZOOM caps the archive's deepest zoom. Cloudflare Workers assets allow 25 MiB per file, and the
 // full archive is 36 MB; 14 is 15 MB and MapLibre overzooms vector tiles sharply past it (docs/hosting-cloudflare.md).
-const MAXZOOM = Number(process.env.BASEMAP_MAXZOOM) || null;
+// Workers Builds sets WORKERS_CI, so a Cloudflare build is capped without any dashboard variable.
+const MAXZOOM = Number(process.env.BASEMAP_MAXZOOM) || (process.env.WORKERS_CI ? 14 : null);
 const MIN_BYTES = MAXZOOM ? 5_000_000 : 10_000_000;
 
 const PMTILES_VERSION = '1.31.2';
