@@ -20,6 +20,7 @@ import {
 } from '../utils/mapCamera';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
+import { createChunkedSource, loadChunkManifest } from '../utils/chunkedSource';
 import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 
@@ -96,6 +97,13 @@ const loadLine4Osm = async () => {
 };
 
 const probeOfflineBasemap = async () => {
+  // A host that cannot answer Range requests ships the archive as parts plus a manifest (split_basemap.cjs).
+  const manifest = await loadChunkManifest(BASEMAP_ARCHIVE);
+  if (manifest) {
+    pmtilesProtocol.add(new PMTiles(createChunkedSource(manifest, BASEMAP_ARCHIVE)));
+    OFFLINE_BASEMAP_AVAILABLE = true;
+    return;
+  }
   try {
     const probe = await fetch(BASEMAP_ARCHIVE, { headers: { Range: 'bytes=0-0' } });
     OFFLINE_BASEMAP_AVAILABLE = probe.ok;

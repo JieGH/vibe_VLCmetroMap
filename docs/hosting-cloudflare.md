@@ -35,3 +35,7 @@ curl https://<site>/api/probe
 ### Building only this branch
 
 In Workers & Pages, Settings, Build, Branch control: set the production branch to `cloudflare` and turn off "Builds for non-production branches", or `main` keeps building too. If `main` still builds, look for a second project connected to the same repository.
+
+### Why the basemap is shipped in parts
+
+Workers static assets do not honour HTTP `Range` on a cache hit: they answer a range request with a 200 and the whole file, and PMTiles then refuses it, so the map stays blank in some browsers (it worked in others, which made it look random). On Workers Builds `fetch_basemap.cjs` therefore runs `scripts/split_basemap.cjs`, which cuts the archive into 512 KiB parts (`valencia.pmtiles.p0` ...) with a manifest (`valencia.pmtiles.json`) and removes the full file. `MapView` loads the manifest first and, when it exists, reads tiles through `src/utils/chunkedSource.js`; hosts without a manifest (Netlify, the LAN server, the native apps) keep using Range requests on the single archive. A first view fetches only the few parts it needs (about 2 MB).

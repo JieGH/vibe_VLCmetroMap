@@ -183,6 +183,8 @@ const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
     }
   }
   console.log(`  sprites — ${mb(spriteBytes)}`);
+  // Workers static assets do not honour Range on a cache hit, so ship the archive as plain parts instead.
+  if (process.env.WORKERS_CI) require('./split_basemap.cjs').split(true);
   console.log('Done. `npm run build` then `npx cap sync ios` puts it in the app.');
 })().catch((error) => {
   console.error(`fetch:basemap failed — ${error.message}`);
