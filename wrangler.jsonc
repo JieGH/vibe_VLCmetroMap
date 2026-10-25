@@ -11,5 +11,6 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  "vars": { "METRO_SOURCE": "relay" }
+  // This branch tests whether FGV answers Cloudflare's edge: FGV only, no relay fallback.
+  "vars": { "METRO_SOURCE": "fgv" }
 }

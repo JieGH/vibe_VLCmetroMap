@@ -21,3 +21,13 @@ The deploy picks up `wrangler.jsonc` from the repository root. Change `METRO_SOU
 - `curl -s https://<site>/api/metro/horarios-prevision-3/7` is JSON with `previsiones`.
 
 To try it locally: build with the capped archive, then `npx wrangler dev --local`.
+
+## Branch `cloudflare`: can FGV be reached from Cloudflare's edge?
+
+The `cloudflare` branch sets `METRO_SOURCE` to `fgv` (FGV only, 502 if unreachable) and stops treating `workers.dev` as a relay host, so the page behaves as it does where FGV answers. Deploy the branch, then:
+
+```
+curl https://<site>/api/probe
+```
+
+`fgv.ok: true` with a `status` of 200 and `colo` of `MAD` means Cloudflare's Madrid edge can use FGV directly. `fgv.error` or a 403 means FGV refuses Cloudflare's addresses, and `main` (relay) is the right setting. If it works, move `METRO_SOURCE` to `auto` so the relay stays as a fallback.
