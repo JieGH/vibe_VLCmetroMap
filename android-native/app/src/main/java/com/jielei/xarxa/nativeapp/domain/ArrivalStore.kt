@@ -105,12 +105,12 @@ class ArrivalStore(
         return out.sortedBy { it.seconds }
     }
 
-    /** Synchronous Arrival Memory read; null when nothing is left to count down. */
+    /** Synchronous Arrival Memory read; null when nothing is left to count down and no error. */
     fun cached(station: Station, nowMs: Long = clock.nowMs()): CachedArrivals? {
         val key = stationKey(station) ?: return null
         val entry = synchronized(lock) { memory[key] } ?: return null
         val projected = project(entry, nowMs)
-        if (projected.isEmpty()) return null
+        if (projected.isEmpty() && entry.fetchError == null) return null
         return CachedArrivals(projected, nowMs - entry.fetchedAt < CACHE_TTL_MS, entry.fetchedAt, entry.fetchError)
     }
 
@@ -164,18 +164,23 @@ class ArrivalStore(
                 val response = try {
                     attemptWithRetry(stationId)
                 } catch (e: TimeoutCancellationException) {
-                    return fallback(key)
+                    return fallback(key, stationId, stationName, "Live predictions request timed out.")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    return fallback(key)
+                    return fallback(key, stationId, stationName, "Live predictions network error.")
                 }
                 return try {
                     handle(response, key, stationId, stationName)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    fallback(key)
+                    val reason = if (response.status == 404 || response.status == 400) {
+                        "Service ended for today or station currently offline."
+                    } else {
+                        "Live predictions are currently unavailable."
+                    }
+                    fallback(key, stationId, stationName, reason)
                 }
             }
         } finally {
@@ -200,16 +205,31 @@ class ArrivalStore(
         }
     }
 
-    private fun fallback(key: String): StationArrivals {
+    private fun fallback(
+        key: String,
+        stationId: Int? = null,
+        stationName: String? = null,
+        reason: String = "Live predictions are currently unavailable.",
+    ): StationArrivals {
         val existing = synchronized(lock) { memory[key] }
         val now = clock.nowMs()
         if (existing != null) {
             val projected = project(existing, now)
             if (projected.isNotEmpty()) {
-                return StationArrivals(projected, true, existing.fetchedAt, "Live update failed. Showing countdown from earlier sync.")
+                val errEntry = Entry(existing.stationId, existing.stationName, existing.fetchedAt, existing.arrivals, "Live update failed. Showing countdown from earlier sync.")
+                synchronized(lock) {
+                    memory[key] = errEntry
+                    publishLocked()
+                }
+                return StationArrivals(projected, true, existing.fetchedAt, errEntry.fetchError)
             }
         }
-        return StationArrivals(emptyList(), false, now, "Live predictions are currently unavailable.")
+        val errEntry = Entry(stationId ?: existing?.stationId ?: 0, stationName ?: existing?.stationName ?: "", now, emptyList(), reason)
+        synchronized(lock) {
+            memory[key] = errEntry
+            publishLocked()
+        }
+        return StationArrivals(emptyList(), false, now, reason)
     }
 
     private fun handle(response: PrevisionResponse, key: String, stationId: Int, stationName: String): StationArrivals {

@@ -269,7 +269,7 @@ fun XarxaMap(
                         val t = (System.currentTimeMillis() % 2000L) / 2000f
                         val phase = if (t < 0.5f) t * 2f else (1f - t) * 2f
                         pl.setProperties(
-                            circleRadius(Expression.sum(zoomStops { 14f * TRAIN_SCALE * trainCurve(it) }, literal(6f * TRAIN_SCALE * phase))),
+                            circleRadius(zoomStops { (14f * trainCurve(it) + 6f * phase) * TRAIN_SCALE }),
                             circleOpacity(0.55f * (1f - phase)),
                         )
                     }
