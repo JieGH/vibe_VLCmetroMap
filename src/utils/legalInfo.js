@@ -6,9 +6,9 @@
 export const APP_LEGAL_INFO = {
   name: 'Xarxa',
   subtitle: 'Real-Time Transit Tracker',
-  author: 'Jie Lei',
+  author: 'Jie',
   year: '2026',
-  copyright: '© 2026 Jie Lei',
+  copyright: '© 2026 Jie',
   licenseSpdx: 'LicenseRef-Xarxa-All-Rights-Reserved',
   licenseName: 'All Rights Reserved (source-available)',
   licenseSummary:
@@ -51,9 +51,9 @@ export const APP_LEGAL_INFO = {
 export const APP_LEGAL_INFO_ES = {
   name: 'Xarxa',
   subtitle: 'Seguimiento en tiempo real',
-  author: 'Jie Lei',
+  author: 'Jie',
   year: '2026',
-  copyright: '© 2026 Jie Lei',
+  copyright: '© 2026 Jie',
   licenseSpdx: 'LicenseRef-Xarxa-All-Rights-Reserved',
   licenseName: 'Todos los derechos reservados (código disponible)',
   licenseSummary:
@@ -95,9 +95,9 @@ export const APP_LEGAL_INFO_ES = {
 export const APP_LEGAL_INFO_CA = {
   name: 'Xarxa',
   subtitle: 'Seguiment en temps real',
-  author: 'Jie Lei',
+  author: 'Jie',
   year: '2026',
-  copyright: '© 2026 Jie Lei',
+  copyright: '© 2026 Jie',
   licenseSpdx: 'LicenseRef-Xarxa-All-Rights-Reserved',
   licenseName: 'Tots els drets reservats (codi disponible)',
   licenseSummary:

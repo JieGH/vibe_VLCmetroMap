@@ -499,6 +499,7 @@ function App() {
         onToggleSidebar={handleToggleSidebar}
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenFeedback={() => setIsFeedbackOpen(true)}
         onOpenDashboard={() => selectMode('dashboard')}
         onOpenAppDownload={() => setIsAppDownloadOpen(true)}
         fontSize={fontSize}
@@ -667,6 +668,7 @@ function App() {
       <AboutModal
         isOpen={isAboutOpen}
         onClose={() => setIsAboutOpen(false)}
+        trainStats={trainStats}
       />
     </div>
   );

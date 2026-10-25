@@ -19,7 +19,7 @@ describe('AboutModal component', () => {
     expect(html).toContain('Real-Time Transit Tracker');
 
     // Copyright and all-rights-reserved license terms
-    expect(html).toContain('© 2026 Jie Lei');
+    expect(html).toContain('© 2026 Jie');
     expect(html).toContain('All rights reserved');
 
     // Third-party legal attributions
@@ -43,5 +43,14 @@ describe('AboutModal component', () => {
   it('states plainly that the app is unofficial', () => {
     const html = renderToStaticMarkup(<AboutModal isOpen={true} onClose={() => {}} />);
     expect(html).toContain('not affiliated with or endorsed by FGV/Metrovalencia');
+  });
+
+  it('renders live network train stats within About & Legal modal', () => {
+    const html = renderToStaticMarkup(<AboutModal isOpen={true} onClose={() => {}} trainStats={{ live: 8, confirmed: 5 }} />);
+    expect(html).toContain('Live Network');
+    expect(html).toContain('8');
+    expect(html).toContain('Live trains');
+    expect(html).toContain('5');
+    expect(html).toContain('Confirmed');
   });
 });

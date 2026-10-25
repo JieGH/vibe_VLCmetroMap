@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, ShieldCheck, FileText, Database } from 'lucide-react';
+import { X, ShieldCheck, FileText, Database, Activity } from 'lucide-react';
 import { getLegalInfo } from '../utils/legalInfo';
 import { useTranslation } from '../i18n';
 import AppBadge, { VersionPill } from './AppBadge';
@@ -9,7 +9,7 @@ import AppBadge, { VersionPill } from './AppBadge';
  * Displays formal copyright, license terms, and third-party
  * attributions cleanly without exposing raw developer repository links.
  */
-const AboutModal = ({ isOpen, onClose }) => {
+const AboutModal = ({ isOpen, onClose, trainStats = { live: 0, confirmed: 0 } }) => {
   const { t, language } = useTranslation();
   useEffect(() => {
     if (!isOpen) return;
@@ -139,6 +139,55 @@ const AboutModal = ({ isOpen, onClose }) => {
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
               {t('aboutModal.tagline')}. {t('aboutModal.whatBody')}
             </p>
+          </section>
+
+          {/* Live Network Status Section */}
+          <section
+            style={{
+              padding: '14px',
+              borderRadius: '12px',
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                color: 'var(--text-primary)',
+                marginBottom: '10px',
+              }}
+            >
+              <Activity size={16} color="#4CAF50" />
+              <span>{t('sidebar.liveNetwork')}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{
+                flex: 1, padding: '10px 12px', borderRadius: '10px',
+                background: 'rgba(0, 0, 0, 0.15)', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
+                  {trainStats.live}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  {t('sidebar.liveTrains')}
+                </div>
+              </div>
+              <div style={{
+                flex: 1, padding: '10px 12px', borderRadius: '10px',
+                background: 'rgba(0, 0, 0, 0.15)', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFD100', lineHeight: 1 }}>
+                  {trainStats.confirmed}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  {t('sidebar.confirmed')}
+                </div>
+              </div>
+            </div>
           </section>
 
           {/* Copyright & License Section */}

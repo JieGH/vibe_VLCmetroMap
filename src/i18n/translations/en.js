@@ -66,6 +66,7 @@ export default {
     textLarger: 'Larger text',
     madeBy: 'Made in Valencia by',
     contactAria: 'Email {{email}}',
+    contactAuthor: 'Contact Author',
     aboutLegalButton: 'About & Legal / Licenses',
     language: 'Language',
     appearance: 'Appearance',

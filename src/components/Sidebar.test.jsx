@@ -129,16 +129,23 @@ describe('Sidebar settings row', () => {
   });
 });
 
-describe('Sidebar Android app option', () => {
-  it('renders Android option with icon, title, and brief description', async () => {
+describe('Sidebar contact and signature', () => {
+  it('renders Contact Author button, author first name only, and excludes raw email from first layer', async () => {
     const { renderToStaticMarkup } = await import('react-dom/server');
     const SidebarMod = (await import('./Sidebar')).default;
     const html = renderToStaticMarkup(
       <SidebarMod isOpen onToggleSidebar={() => {}} />
     );
-    expect(html).toContain('sidebar-android-btn');
-    expect(html).toContain('Android App');
-    expect(html).toContain('Offline vector map &amp; live departures');
-    expect(html).toContain('<svg');
+    expect(html).toContain('sidebar-contact-btn');
+    expect(html).toContain('Contact Author');
+    expect(html).toContain('Made in Valencia by');
+    expect(html).toContain('Jie');
+    expect(html).not.toContain('Jie Lei');
+    // Raw email is not exposed in the first-layer menu
+    expect(html).not.toContain('contact@xarxa.net');
+    expect(html).not.toContain('mailto:');
+    // Network train stats were moved to About/Legal modal
+    expect(html).not.toContain('sidebar.liveNetwork');
+    expect(html).not.toContain('Live Network');
   });
 });

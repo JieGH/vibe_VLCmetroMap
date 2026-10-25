@@ -62,6 +62,7 @@ export default {
     textLarger: 'Texto más grande',
     madeBy: 'Hecho en València por',
     contactAria: 'Escribir a {{email}}',
+    contactAuthor: 'Contactar con el autor',
     aboutLegalButton: 'Información legal y licencias',
     language: 'Idioma',
     appearance: 'Apariencia',

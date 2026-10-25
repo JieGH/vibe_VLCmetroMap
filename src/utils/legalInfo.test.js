@@ -9,8 +9,8 @@ import {
 
 describe('APP_LEGAL_INFO metadata', () => {
   it('has correct copyright owner and current year', () => {
-    expect(APP_LEGAL_INFO.copyright).toBe('© 2026 Jie Lei');
-    expect(APP_LEGAL_INFO.author).toBe('Jie Lei');
+    expect(APP_LEGAL_INFO.copyright).toBe('© 2026 Jie');
+    expect(APP_LEGAL_INFO.author).toBe('Jie');
     expect(APP_LEGAL_INFO.year).toBe('2026');
   });
 

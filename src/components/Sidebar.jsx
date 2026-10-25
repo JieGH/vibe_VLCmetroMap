@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Info, LayoutDashboard, Mail, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, LayoutDashboard, MessageSquare, Minus, Plus, Sun, Moon, SunMoon } from 'lucide-react';
 import { FONT_SIZE_CONFIG, FONT_SIZES } from '../utils/fontSize';
 import { MOBILE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -8,7 +8,7 @@ import { useTranslation, SUPPORTED_LANGUAGES, languageCode } from '../i18n';
 import { isAndroid } from '../utils/platform';
 import { Capacitor } from '@capacitor/core';
 import AppBadge, { VersionPill } from './AppBadge';
-import { AUTHOR_NAME, CONTACT_EMAIL } from '../utils/contact';
+import { AUTHOR_NAME } from '../utils/contact';
 import { AndroidIcon, AppDownloadSheet } from './AppDownloadBanner';
 import { isIosDevice } from '../utils/appDownload';
 
@@ -38,8 +38,9 @@ const useIsMobile = () => {
 const Sidebar = ({
   isOpen,
   onToggleSidebar,
-  trainStats = { live: 0, confirmed: 0 },
+  _trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
+  onOpenFeedback,
   onOpenDashboard,
   onOpenAppDownload,
   fontSize = 'default',
@@ -298,36 +299,9 @@ const Sidebar = ({
             document.body
           )}
 
-          {/* Live Stats & Footer */}
+          {/* Footer controls & info */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-            <h2 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-              {t('sidebar.liveNetwork')}
-            </h2>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{
-                flex: 1, padding: '10px 12px', borderRadius: '10px',
-                background: 'var(--bg-hover)', textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4CAF50', lineHeight: 1 }}>
-                  {trainStats.live}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  {t('sidebar.liveTrains')}
-                </div>
-              </div>
-              <div style={{
-                flex: 1, padding: '10px 12px', borderRadius: '10px',
-                background: 'var(--bg-hover)', textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFD100', lineHeight: 1 }}>
-                  {trainStats.confirmed}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  {t('sidebar.confirmed')}
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               <span>{t('sidebar.systemLabel')}</span>
               <VersionPill />
             </div>
@@ -337,7 +311,7 @@ const Sidebar = ({
               onClick={onOpenAbout}
               aria-label={t('sidebar.aboutLegalAria')}
               style={{
-                marginTop: '12px',
+                marginTop: '10px',
                 width: '100%',
                 padding: '8px 12px',
                 borderRadius: '8px',
@@ -359,18 +333,37 @@ const Sidebar = ({
               <span>{t('sidebar.aboutLegalButton')}</span>
             </button>
 
-            {/* The author's signature and where to write */}
-            <div className="sidebar-signature">
+            <button
+              type="button"
+              onClick={onOpenFeedback}
+              aria-label={t('sidebar.contactAuthor')}
+              className="sidebar-contact-btn"
+              style={{
+                marginTop: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-hover)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <MessageSquare size={14} color="var(--accent-blue, #007AFF)" />
+              <span>{t('sidebar.contactAuthor')}</span>
+            </button>
+
+            {/* The author's signature and location */}
+            <div className="sidebar-signature" style={{ marginTop: '12px' }}>
               <span className="sidebar-signature-by">{t('sidebar.madeBy')}</span>
               <span className="sidebar-signature-name">{AUTHOR_NAME}</span>
-              <a
-                className="sidebar-signature-mail"
-                href={`mailto:${CONTACT_EMAIL}`}
-                aria-label={t('sidebar.contactAria', { email: CONTACT_EMAIL })}
-              >
-                <Mail size={13} aria-hidden="true" />
-                {CONTACT_EMAIL}
-              </a>
             </div>
           </div>
 
