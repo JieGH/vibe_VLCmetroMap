@@ -12,5 +12,7 @@
     "run_worker_first": ["/api/*"]
   },
   // This branch tests whether FGV answers Cloudflare's edge: FGV only, no relay fallback.
-  "vars": { "METRO_SOURCE": "fgv" }
+  "vars": { "METRO_SOURCE": "fgv" },
+  // `wrangler preview` (non-production branch builds) wants its own values rather than inheriting production's.
+  "previews": { "vars": { "METRO_SOURCE": "fgv" } }
 }
