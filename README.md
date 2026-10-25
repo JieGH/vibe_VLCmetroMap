@@ -10,6 +10,16 @@
       <p>
         <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
       </p>
+      <h3>What you can do</h3>
+      <ul>
+        <li><b>Watch trains move</b> live on the real track</li>
+        <li><b>Nearest station in one tap</b>, with walk time (location never leaves your phone)</li>
+        <li><b>Live countdowns</b> for any station</li>
+        <li><b>Follow one line</b> or search any stop</li>
+        <li><b>Light, dark or auto</b>, bigger text</li>
+        <li><b>Departures board</b> for a spare screen: <a href="https://xarxa.net/?mode=dashboard">?mode=dashboard</a></li>
+        <li><b>Poor connection OK</b>: the map is stored with the app</li>
+      </ul>
     </td>
     <td valign="middle" align="center" width="45%">
       <img src="docs/demo-phone.gif" width="300" alt="Phone screen recording of Xarxa: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network, jumps to Àngel Guimerà, searches Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user location">
@@ -26,19 +36,6 @@
 | **On the web** | Go to **[xarxa.net](https://xarxa.net)**. Nothing to install: it works in any phone or computer browser, in English, Spanish and Valencian. |
 | **On Android** | **[Download the app](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk)** (a free APK file). The app is not on Google Play yet, so Android will ask you to allow the install. Steps below. |
 | **On iPhone** | There is no iPhone app yet. Open [xarxa.net](https://xarxa.net) in Safari, tap Share, then **Add to Home Screen**: it then opens like an app. |
-
-## What you can do
-
-- **See the trains move.** Every train is drawn on the real track and glides to its next position as new predictions arrive.
-- **Find your nearest station in one tap.** The blue location button centres the map on you, shows how far the walk is, and opens that station's departures. Your location stays on your phone and is never sent anywhere.
-- **Check any station.** Tap it for the next trains in each direction, with live countdowns.
-- **Follow one line.** Pick a line and the map frames the whole line, showing the main stations first and the rest as you zoom in.
-- **Search** for a station or line, or use the shortcuts to the busiest stops.
-- **Light, dark or automatic**, and bigger text if you need it.
-- **A departures board** for a tablet or spare screen: open [xarxa.net/?mode=dashboard](https://xarxa.net/?mode=dashboard).
-- **Works with a poor connection.** The map is stored with the app.
-
-Trains are honest about doubt: a train fades as its exact position becomes a guess, and nothing is drawn where the data cannot place it.
 
 ## Installing the Android app
 
