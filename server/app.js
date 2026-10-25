@@ -127,7 +127,34 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
         if (!payload.message || typeof payload.message !== 'string' || !payload.message.trim()) {
           return sendText(res, 400, '{"error":"message is required"}');
         }
-        return sendText(res, 200, JSON.stringify({ success: true, message: 'Feedback received' }));
+
+        const cleanMsg = payload.message.trim();
+        const timestamp = new Date().toISOString();
+
+        console.log('\n================== [FEEDBACK RECEIVED] ==================');
+        console.log(`Time:     ${timestamp}`);
+        console.log(`Message:  ${cleanMsg}`);
+        if (payload.email) console.log(`Email:    ${payload.email}`);
+        if (payload.metadata) console.log(`Metadata: ${JSON.stringify(payload.metadata)}`);
+        console.log('=========================================================\n');
+
+        try {
+          const entry = JSON.stringify({
+            timestamp,
+            message: cleanMsg,
+            email: payload.email || null,
+            metadata: payload.metadata || null,
+          }) + '\n';
+          fs.appendFileSync(path.resolve('feedback.log.jsonl'), entry, 'utf-8');
+        } catch {
+          // Fallback if read-only filesystem
+        }
+
+        return sendText(res, 200, JSON.stringify({
+          success: true,
+          message: 'Feedback received',
+          receivedMessage: cleanMsg,
+        }));
       } catch {
         return sendText(res, 400, '{"error":"invalid json"}');
       }

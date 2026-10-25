@@ -127,7 +127,7 @@ export default {
   },
   feedback: {
     buttonTitle: 'Comentarios y soporte',
-    bubbleText: 'Feedback',
+    bubbleText: 'Comentarios',
     title: 'Comentarios y soporte',
     subtitle: 'Envía tus comentarios, sugerencias o reporte de errores directamente al equipo.',
     messageLabel: 'Tu mensaje',

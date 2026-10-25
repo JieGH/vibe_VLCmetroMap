@@ -127,7 +127,7 @@ export default {
   },
   feedback: {
     buttonTitle: 'Comentaris i suport',
-    bubbleText: 'Feedback',
+    bubbleText: 'Comentaris',
     title: 'Comentaris i suport',
     subtitle: 'Envia els teus comentaris, suggeriments o informes d\'errors directament a l\'equip.',
     messageLabel: 'El teu missatge',

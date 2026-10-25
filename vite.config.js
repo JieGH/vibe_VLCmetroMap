@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 
 // Build-time date-stamp injected as a global constant so the running app can
 // always report which build it is. Format: YYYY.MM.DD (UTC). Baked in at
@@ -46,9 +48,33 @@ export default defineConfig({
                 res.setHeader('Content-Type', 'application/json');
                 return res.end(JSON.stringify({ error: 'message is required' }));
               }
+              const cleanMsg = data.message.trim();
+              const timestamp = new Date().toISOString();
+
+              console.log('\n================== [FEEDBACK RECEIVED] ==================');
+              console.log(`Time:     ${timestamp}`);
+              console.log(`Message:  ${cleanMsg}`);
+              if (data.email) console.log(`Email:    ${data.email}`);
+              if (data.metadata) console.log(`Metadata: ${JSON.stringify(data.metadata)}`);
+              console.log('=========================================================\n');
+
+              try {
+                const entry = JSON.stringify({
+                  timestamp,
+                  message: cleanMsg,
+                  email: data.email || null,
+                  metadata: data.metadata || null,
+                }) + '\n';
+                fs.appendFileSync(path.resolve('feedback.log.jsonl'), entry, 'utf-8');
+              } catch {}
+
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ success: true, message: 'Feedback received' }));
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Feedback received',
+                receivedMessage: cleanMsg,
+              }));
             } catch {
               res.statusCode = 400;
               res.setHeader('Content-Type', 'application/json');

@@ -9,7 +9,7 @@ import { CONTACT_EMAIL } from '../utils/contact';
  * eliminating the need to open an external mail client.
  */
 const FeedbackModal = ({ isOpen, onClose }) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // 'idle' | 'submitting' | 'success' | 'error'
@@ -52,6 +52,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
           message: cleanMessage,
           email: email.trim() || undefined,
           metadata: {
+            language: language || 'es',
             userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
             screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'N/A',
             timestamp: new Date().toISOString(),

@@ -16,14 +16,21 @@ export default async (req) => {
       });
     }
 
-    console.log('[Feedback Received]', {
-      timestamp: new Date().toISOString(),
-      message: data.message.trim(),
-      email: data.email || null,
-      metadata: data.metadata || null,
-    });
+    const cleanMsg = data.message.trim();
+    const timestamp = new Date().toISOString();
 
-    return new Response(JSON.stringify({ success: true, message: 'Feedback received' }), {
+    console.log('\n================== [FEEDBACK RECEIVED] ==================');
+    console.log(`Time:     ${timestamp}`);
+    console.log(`Message:  ${cleanMsg}`);
+    if (data.email) console.log(`Email:    ${data.email}`);
+    if (data.metadata) console.log(`Metadata: ${JSON.stringify(data.metadata)}`);
+    console.log('=========================================================\n');
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Feedback received',
+      receivedMessage: cleanMsg,
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

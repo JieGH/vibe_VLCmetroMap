@@ -477,7 +477,7 @@ button:active {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 2px 96px 6px 2px; /* 96px right padding gives clear way to the floating feedback bubble */
+  padding: 2px 116px 6px 2px; /* 116px right padding gives clear way to multilingual floating feedback bubble */
   scrollbar-width: none;
   pointer-events: auto;
   width: max-content;
@@ -856,14 +856,15 @@ button:active {
   top: calc(100% + 25px);
   right: 0;
   z-index: 60; /* Top layer dropping down over hub-chips station list (39) */
-  padding: 3px 10px;
+  padding: 3px 11px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(255, 209, 0, 0.16) 0%, rgba(29, 29, 41, 0.94) 100%), #1D1D29;
-  border: 1px solid rgba(255, 209, 0, 0.45);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px rgba(255, 209, 0, 0.16);
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 122, 255, 0.45) 0%, rgba(10, 32, 68, 0.96) 100%), #0A1E44;
+  border: 1px solid rgba(0, 140, 255, 0.7);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 16px rgba(0, 122, 255, 0.6), 0 0 30px rgba(0, 122, 255, 0.35);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: #FFD100;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.2px;
@@ -879,23 +880,24 @@ button:active {
 }
 
 .feedback-thought-bubble:hover {
-  background: linear-gradient(135deg, rgba(255, 209, 0, 0.26) 0%, rgba(38, 38, 54, 0.96) 100%), #262636;
-  border-color: rgba(255, 209, 0, 0.75);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 14px rgba(255, 209, 0, 0.3);
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 150, 255, 0.65) 0%, rgba(14, 45, 95, 0.98) 100%), #0E2A5A;
+  border-color: rgba(64, 185, 255, 0.9);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 140, 255, 0.75), 0 0 40px rgba(0, 140, 255, 0.45);
   transform: translateY(-1.5px) scale(1.03);
 }
 
 [data-theme='light'] .feedback-thought-bubble {
-  background: linear-gradient(135deg, rgba(255, 225, 102, 0.32) 0%, rgba(255, 255, 255, 0.94) 100%), #FFFFFF;
-  border: 1px solid rgba(212, 160, 0, 0.55);
-  box-shadow: 0 3px 12px rgba(180, 130, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
-  color: #805600;
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 122, 255, 0.22) 0%, rgba(224, 242, 255, 0.96) 100%), #EBF5FF;
+  border: 1px solid rgba(0, 122, 255, 0.55);
+  box-shadow: 0 3px 14px rgba(0, 122, 255, 0.35), 0 0 18px rgba(0, 122, 255, 0.3);
+  color: #8C6200;
+  text-shadow: none;
 }
 
 [data-theme='light'] .feedback-thought-bubble:hover {
-  background: linear-gradient(135deg, rgba(255, 225, 102, 0.45) 0%, rgba(255, 255, 255, 0.98) 100%), #FFFFFF;
-  border-color: rgba(180, 130, 0, 0.8);
-  box-shadow: 0 4px 14px rgba(180, 130, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.1);
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 122, 255, 0.32) 0%, rgba(210, 235, 255, 0.98) 100%), #E0F0FF;
+  border-color: rgba(0, 122, 255, 0.8);
+  box-shadow: 0 4px 18px rgba(0, 122, 255, 0.45), 0 0 24px rgba(0, 122, 255, 0.35);
 }
 
 /* Small cloud thought-bubble circles pointing up to the ? button */
@@ -907,9 +909,9 @@ button:active {
   width: 6.5px;
   height: 6.5px;
   border-radius: 50%;
-  background: #232018;
-  border: 1px solid rgba(255, 209, 0, 0.45);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  background: #0A1E44;
+  border: 1px solid rgba(0, 140, 255, 0.7);
+  box-shadow: 0 0 10px rgba(0, 122, 255, 0.6);
   pointer-events: none;
 }
 
@@ -921,17 +923,17 @@ button:active {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #232018;
-  border: 1px solid rgba(255, 209, 0, 0.45);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: #0A1E44;
+  border: 1px solid rgba(0, 140, 255, 0.7);
+  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
   pointer-events: none;
 }
 
 [data-theme='light'] .feedback-thought-bubble::before,
 [data-theme='light'] .feedback-thought-bubble::after {
-  background: #FFFDF0;
-  border: 1px solid rgba(212, 160, 0, 0.55);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: #EBF5FF;
+  border: 1px solid rgba(0, 122, 255, 0.55);
+  box-shadow: 0 0 8px rgba(0, 122, 255, 0.4);
 }
 
 @keyframes feedbackBubbleFloat {
