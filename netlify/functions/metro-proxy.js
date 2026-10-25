@@ -20,6 +20,10 @@ const RELAY_BASE = 'https://metroapi.alexbadi.es';
 // The app abandons a request after 4 s, so FGV gets only part of that.
 const FGV_TIMEOUT_MS = 1500;
 const RELAY_TIMEOUT_MS = 2000;
+// With METRO_SOURCE=fgv there is no fallback to wait for, so FGV gets the whole budget and a hedge: about 1 in 20
+// requests to FGV never answer (ADR-0006), and a second attempt after 1200 ms catches that tail. The first answer wins.
+const FGV_ONLY_DEADLINE_MS = 3500;
+const FGV_ONLY_HEDGE_MS = 1200;
 // After FGV fails, skip it for a while so only the first request pays the wait.
 const FGV_RETRY_AFTER_MS = 5 * 60 * 1000;
 const STATION_PATH = /^\/(?:horarios-prevision-3\/(\d+)|prevision\/(\d+)\/parse)$/;
@@ -61,6 +65,19 @@ async function viaRelay(stationId) {
   return reply(JSON.stringify(regroupByLine(await upstream.json())), 200);
 }
 
+// Runs `start()`, and a second copy of it if the first has not settled after `hedgeMs`. The first fulfilled answer
+// wins; it rejects only when every attempt has.
+function hedged(start, hedgeMs) {
+  return new Promise((resolve, reject) => {
+    let pending = 1;
+    let settled = false;
+    const onOk = (value) => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } };
+    const onFail = (err) => { pending -= 1; if (pending === 0 && !settled) { clearTimeout(timer); reject(err); } };
+    const timer = setTimeout(() => { if (!settled) { pending += 1; start().then(onOk, onFail); } }, hedgeMs);
+    start().then(onOk, onFail);
+  });
+}
+
 export default async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api\/metro/, '');
@@ -71,11 +88,14 @@ export default async (req) => {
 
   if (mode !== 'relay' && Date.now() >= fgvBlockedUntil) {
     try {
-      const upstream = await fetch(`${FGV_BASE}${path}${url.search}`, {
+      const callFgv = (deadlineMs) => fetch(`${FGV_BASE}${path}${url.search}`, {
         method: req.method,
         headers: { 'Accept': req.headers.get('accept') || 'application/json' },
-        signal: AbortSignal.timeout(FGV_TIMEOUT_MS),
+        signal: AbortSignal.timeout(deadlineMs),
       });
+      const upstream = mode === 'fgv'
+        ? await hedged(() => callFgv(FGV_ONLY_DEADLINE_MS), FGV_ONLY_HEDGE_MS)
+        : await callFgv(FGV_TIMEOUT_MS);
       return reply(await upstream.text(), upstream.status, upstream.headers.get('content-type'));
     } catch {
       if (mode === 'fgv') return reply(JSON.stringify({ error: 'FGV unreachable' }), 502);

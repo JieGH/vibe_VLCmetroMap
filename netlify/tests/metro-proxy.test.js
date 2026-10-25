@@ -72,6 +72,36 @@ describe('metro-proxy with METRO_SOURCE=fgv', () => {
     expect((await handler(request())).status).toBe(502);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('sends a second attempt when the first has not answered after 1200 ms, and the first answer wins', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubEnv('METRO_SOURCE', 'fgv');
+      let calls = 0;
+      const fetch = vi.fn(() => (++calls === 1 ? new Promise(() => {}) : Promise.resolve(json(fgvBody))));
+      vi.stubGlobal('fetch', fetch);
+
+      const pending = handler(request());
+      await vi.advanceTimersByTimeAsync(1300);
+      const res = await pending;
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual(fgvBody);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not hedge when FGV answers promptly', async () => {
+    vi.stubEnv('METRO_SOURCE', 'fgv');
+    const fetch = vi.fn(async () => json(fgvBody));
+    vi.stubGlobal('fetch', fetch);
+
+    expect((await handler(request())).status).toBe(200);
+    await new Promise((r) => setTimeout(r, 1300));
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('metro-proxy with METRO_SOURCE=auto', () => {
