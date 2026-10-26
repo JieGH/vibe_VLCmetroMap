@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import StationPanel from './StationPanel';
+import StationPanel, { EXPANDED_SHEET_HEIGHT } from './StationPanel';
 import arrivalStore from '../services/arrivalStore';
 
 describe('StationPanel component', () => {
@@ -328,5 +328,10 @@ describe('StationPanel component', () => {
     expect(html).not.toContain('station-multimodal-tabs');
     expect(html).not.toContain('multimodal-dual-scroll-container');
     expect(html).not.toContain('Autobús');
+  });
+
+  it('sizes the expanded portrait sheet to clear the top bar using both safe-area insets', () => {
+    expect(EXPANDED_SHEET_HEIGHT).toContain('env(safe-area-inset-top');
+    expect(EXPANDED_SHEET_HEIGHT).toContain('env(safe-area-inset-bottom');
   });
 });

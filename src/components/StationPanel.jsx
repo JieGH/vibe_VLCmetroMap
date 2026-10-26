@@ -48,6 +48,13 @@ const ROW_HEIGHT_PX = 48;
 const VISIBLE_ROWS = 4;
 const TABLE_HEAD_PX = 30;
 
+// Portrait expanded sheet: bottom edge is 12px + bottom inset, so its top edge
+// is 100vh - 12 - bottom - height. Subtracting both insets plus 84px keeps that
+// top at (top inset + 72px), just below the top bar row (12px offset, ~52px
+// tall, 8px gap), including Dynamic Island devices.
+export const EXPANDED_SHEET_HEIGHT =
+  'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 84px))';
+
 const StationPanel = ({
   station,
   theme,
@@ -405,12 +412,8 @@ const StationPanel = ({
               left: 12,
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: isExpanded
-                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
-                : 'min(58vh, calc(100vh - 120px))',
-              height: isExpanded
-                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
-                : 'auto',
+              maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58vh, calc(100vh - 120px))',
+              height: isExpanded ? EXPANDED_SHEET_HEIGHT : 'auto',
               transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }),
         ...dragStyle,
@@ -613,7 +616,7 @@ const StationPanel = ({
 
       {/* Body Container */}
       {isMultimodal ? (
-        <div style={{ position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', ...(isExpanded && { flex: '1 1 auto', minHeight: 0 }) }}>
           {focus.fetchError && (
             <div role="status" style={{
               margin: '6px 10px', padding: '6px 10px', borderRadius: 8,
@@ -631,7 +634,7 @@ const StationPanel = ({
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: 10,
-                height: isExpanded ? 'calc(78vh - 110px)' : 'min(50vh, 400px)',
+                height: isExpanded ? '100%' : 'min(50vh, 400px)',
                 padding: '8px 10px',
                 overflow: 'hidden',
                 transition: 'height 0.22s ease',
@@ -687,7 +690,7 @@ const StationPanel = ({
             </div>
           ) : (
             /* Single Tab Mode: Two independent tabs preserving scroll viewports */
-            <div style={{ height: isExpanded ? 'calc(78vh - 110px)' : 'min(48vh, 390px)', position: 'relative', transition: 'height 0.22s ease' }}>
+            <div style={{ height: isExpanded ? '100%' : 'min(48vh, 390px)', position: 'relative', transition: 'height 0.22s ease' }}>
               <div
                 className="independent-metro-scroll"
                 style={{
