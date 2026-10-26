@@ -71,7 +71,7 @@ describe('ConnectingBusSection component', () => {
     expect(html).toContain('3 min');
   });
 
-  it('renders live bus arrivals with BusBadge, real destination, countdown, and wheelchair icon', () => {
+  it('renders live bus arrivals with BusBadge, real destination, and countdown minutes', () => {
     const html = renderToStaticMarkup(
       <ConnectingBusSection feeders={sampleFeeders} theme="dark" />
     );
@@ -80,9 +80,6 @@ describe('ConnectingBusSection component', () => {
     expect(html).toContain('bus-badge');
     expect(html).toContain('Torrefiel');
     expect(html).toContain('Pta.de la Mar');
-
-    // Accessibility icon
-    expect(html).toContain('aria-label="Accessible"');
 
     // Live telemetry indicator
     expect(html).toContain('title="Live GPS AVL Telemetry"');

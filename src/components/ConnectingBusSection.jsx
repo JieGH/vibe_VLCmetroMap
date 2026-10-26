@@ -1,7 +1,7 @@
 // ConnectingBusSection Component for Variant A (Multimodal Hub Feeder)
 // Shows street bus stops within 200m walking shed of the focused metro station.
 import React, { useState, useEffect, useMemo } from 'react';
-import { Accessibility, Footprints } from 'lucide-react';
+import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
@@ -9,12 +9,18 @@ import {
   fetchStopArrivals,
   getEmtCachedArrivals,
   normalizeStopCode,
-  EMT_CACHE_TTL_MS,
 } from '../services/emtArrivalService';
 
+function buildCachedArrivalsMap(codes) {
+  const map = {};
+  for (const code of codes) {
+    const cached = getEmtCachedArrivals(code);
+    if (cached) map[code] = cached;
+  }
+  return map;
+}
+
 export const ConnectingBusSection = ({
-  stationName: _stationName,
-  stationCoords: _stationCoords,
   feeders,
   theme = 'dark',
   showDistance = true,
@@ -29,42 +35,27 @@ export const ConnectingBusSection = ({
   const stopCodesKey = stopCodes.join(',');
 
   const [activeCodesKey, setActiveCodesKey] = useState(stopCodesKey);
-  const [liveArrivalsMap, setLiveArrivalsMap] = useState(() => {
-    const initialMap = {};
-    for (const code of stopCodes) {
-      const cached = getEmtCachedArrivals(code);
-      if (cached) initialMap[code] = cached;
-    }
-    return initialMap;
-  });
+  const [liveArrivalsMap, setLiveArrivalsMap] = useState(() => buildCachedArrivalsMap(stopCodes));
 
   // Re-seed cached arrivals when feeder stops change
   if (activeCodesKey !== stopCodesKey) {
     setActiveCodesKey(stopCodesKey);
-    const updatedMap = {};
-    for (const code of stopCodes) {
-      const cached = getEmtCachedArrivals(code);
-      if (cached) updatedMap[code] = cached;
-    }
-    setLiveArrivalsMap(updatedMap);
+    setLiveArrivalsMap(buildCachedArrivalsMap(stopCodes));
   }
 
-  // Non-blocking on-demand arrival fetch adhering to "Train-First, Then Bus"
+  // Non-blocking strictly on-demand arrival fetch adhering to "Train-First, Then Bus"
   useEffect(() => {
     if (!stopCodesKey) return undefined;
     const codes = stopCodesKey.split(',');
     let isMounted = true;
 
-    const fetchAllFeeders = async (force = false) => {
-      const results = await Promise.allSettled(
-        codes.map(async (code) => {
-          const arrivals = await fetchStopArrivals(code, { forceRefresh: force });
-          return { code, arrivals };
-        })
-      );
-
+    Promise.allSettled(
+      codes.map(async (code) => {
+        const arrivals = await fetchStopArrivals(code);
+        return { code, arrivals };
+      })
+    ).then((results) => {
       if (!isMounted) return;
-
       setLiveArrivalsMap((prev) => {
         const next = { ...prev };
         for (const res of results) {
@@ -74,18 +65,10 @@ export const ConnectingBusSection = ({
         }
         return next;
       });
-    };
-
-    fetchAllFeeders();
-
-    // Auto-refresh predictions every 20 seconds while visible
-    const intervalId = setInterval(() => {
-      fetchAllFeeders(true);
-    }, EMT_CACHE_TTL_MS);
+    });
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
     };
   }, [stopCodesKey]);
 
@@ -299,14 +282,6 @@ export const ConnectingBusSection = ({
                         >
                           {busObj.destination || '...'}
                         </span>
-                        {busObj.wheelchair && (
-                          <Accessibility
-                            size={11}
-                            aria-label="Accessible"
-                            title="Accessible bus"
-                            style={{ color: 'var(--text-secondary)', opacity: 0.8, flexShrink: 0 }}
-                          />
-                        )}
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
