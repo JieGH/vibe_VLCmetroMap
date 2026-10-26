@@ -11,6 +11,7 @@ export const BACK_PRIORITY = [
   ['dashboardMode', 'exit-dashboard'],
   ['searchFocused', 'close-search'],
   ['sidebarOpen', 'close-sidebar'],
+  ['busStopOpen', 'close-bus-stop'],
   ['stationOpen', 'close-station'],
   ['lineFilterActive', 'clear-filter'],
 ];

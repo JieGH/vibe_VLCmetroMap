@@ -34,6 +34,7 @@ import { Search, X } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
+import { isHubStation, captureReturnContext, resolveReturn } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import BusBadge from './components/BusBadge';
@@ -165,15 +166,37 @@ function App() {
     setSelectedStation(null);
   };
 
-  const handleSelectBusStop = (busStop) => {
+  // The split-view hub a stop/station was opened from; closing that view
+  // returns to it (#105). Any other way of selecting something clears it.
+  const returnCtxRef = useRef(null);
+
+  const openBusStop = (busStop, ctx) => {
+    returnCtxRef.current = ctx || null;
     setSelectedBusStop(busStop);
     if (busStop) {
       setSelectedStation(null);
-      if (userLocationRef.current?.isMapClick) {
+      if (!ctx && userLocationRef.current?.isMapClick) {
         setUserLocation(null);
         userLocationRef.current = null;
       }
     }
+  };
+
+  // Map markers and the bus line inspector: closing goes back to the map.
+  const handleSelectBusStop = (busStop) => openBusStop(busStop, null);
+  // Tapped inside the split view: remember the hub.
+  const handleSelectBusStopFromHub = (busStop) =>
+    openBusStop(busStop, busStop ? captureReturnContext({ selectedStation, userLocation }) : null);
+
+  // Leave the stop/station view: back to the remembered hub, else the map.
+  const restoreReturnContext = () => {
+    const back = resolveReturn(returnCtxRef.current);
+    returnCtxRef.current = null;
+    if (!back) return false;
+    setSelectedStation(back.selectedStation);
+    setUserLocation(back.userLocation);
+    userLocationRef.current = back.userLocation;
+    return true;
   };
 
   const [fontSize, setFontSize] = useState(getStoredFontSize);
@@ -204,8 +227,9 @@ function App() {
   };
 
   // Station click — opens the multimodal hub card with walking metrics
-  const handleSelectStation = (station, options = {}) => {
+  const handleSelectStation = (station, options = {}, ctx = null) => {
     autoLocatorRef.current?.interrupt();
+    returnCtxRef.current = ctx;
     setSelectedStation(station);
     if (!station) {
       if (userLocationRef.current?.isMapClick || userLocationRef.current?.status === 'located') {
@@ -236,6 +260,14 @@ function App() {
       });
     }
   };
+
+  // Tapped inside the split view: a real metro station remembers the hub.
+  const handleSelectStationFromHub = (station, options = {}) =>
+    handleSelectStation(
+      station,
+      options,
+      station && !isHubStation(station) ? captureReturnContext({ selectedStation, userLocation }) : null
+    );
 
   // Toggle sidebar menu. Opening the menu exits active station focus
   // so the menu has clear visibility without panel collision.
@@ -511,6 +543,7 @@ function App() {
     welcomeVisible: showWelcome,
     dashboardMode: mode === 'dashboard',
     sidebarOpen: isSidebarOpen,
+    busStopOpen: Boolean(selectedBusStop),
     stationOpen: Boolean(selectedStation),
     lineFilterActive: Array.isArray(activeLineFilter) && activeLineFilter.length > 0,
   };
@@ -534,7 +567,8 @@ function App() {
         case 'exit-dashboard': selectModeRef.current('map'); break;
         case 'close-search': active?.blur?.(); setIsSearchOpen(false); break;
         case 'close-sidebar': setIsSidebarOpen(false); break;
-        case 'close-station': setSelectedStation(null); break;
+        case 'close-bus-stop': setSelectedBusStop(null); restoreReturnContext(); break;
+        case 'close-station': if (!restoreReturnContext()) setSelectedStation(null); break;
         case 'clear-filter': setActiveLineFilter([]); break;
         default: CapApp.exitApp();
       }
@@ -994,6 +1028,8 @@ function App() {
           station={selectedStation}
           theme={theme}
           onClose={() => {
+            if (returnCtxRef.current && !isHubStation(selectedStation) && restoreReturnContext()) return;
+            returnCtxRef.current = null;
             setSelectedStation(null);
             if (userLocationRef.current?.isMapClick || selectedStation?.isPin || selectedStation?.properties?.name === "Where you're at") {
               setUserLocation(null);
@@ -1001,8 +1037,8 @@ function App() {
             }
           }}
           variant={variant}
-          onSelectFeederStop={handleSelectBusStop}
-          onSelectStation={handleSelectStation}
+          onSelectFeederStop={handleSelectBusStopFromHub}
+          onSelectStation={handleSelectStationFromHub}
           userLocation={userLocation}
           isPin={Boolean(
             selectedStation?.isPin ||
@@ -1030,6 +1066,7 @@ function App() {
           theme={theme}
           onClose={() => {
             setSelectedBusStop(null);
+            if (restoreReturnContext()) return;
             if (userLocationRef.current?.isMapClick) {
               setUserLocation(null);
               userLocationRef.current = null;
