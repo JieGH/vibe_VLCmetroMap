@@ -280,6 +280,22 @@ textarea {
   transition: opacity 0.2s ease;
 }
 
+/* Grouped chip boxes (nearby stations / EMT stops with several line chips) fade like the badges (#114).
+   The selected stop's own chart carries .is-selected and stays opaque. */
+.station-floating-chart,
+.bus-floating-chart {
+  transition: opacity 0.2s ease;
+}
+.map-container[data-has-selection="true"] .station-floating-chart:not(.is-selected),
+.map-container[data-has-selection="true"] .bus-floating-chart:not(.is-selected) {
+  opacity: 0.4;
+}
+
+/* Train markers: opacity is set inline (Position Confidence, faded by MapView); animate the change. */
+.ml-vehicle-marker-inner {
+  transition: opacity 0.2s ease;
+}
+
 .line3-train-count {
   position: absolute;
   right: 20px;

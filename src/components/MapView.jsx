@@ -25,7 +25,7 @@ import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
-import { hasMapSelection } from '../utils/selectionFocus';
+import { hasMapSelection, fadesAllVehicles } from '../utils/selectionFocus';
 import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import returnTrackData from '../data/return_tracks.json';
@@ -490,8 +490,13 @@ const styleFor = (theme) => (OFFLINE_BASEMAP_AVAILABLE
 // hollow and dashed is a different claim about a train, not a fainter one.
 // On top of that, a Vehicle running on a Line that doesn't serve the
 // selected Station is dimmed further, same as the Line itself.
-const vehicleOpacity = (v, selectedStation) =>
-  dimmedVehicleOpacity(v.isLive ? (v.positionConfidence ?? 1) : 0.55, v.line, selectedStation).toFixed(2);
+const vehicleOpacity = (v, selectedStation, selectedBusStop = null) =>
+  dimmedVehicleOpacity(
+    v.isLive ? (v.positionConfidence ?? 1) : 0.55,
+    v.line,
+    selectedStation,
+    fadesAllVehicles(selectedStation, selectedBusStop)
+  ).toFixed(2);
 
 // Says in the reader's words — not the model's — why a marker is drawn faint,
 // covering both causes: how far the walk had to reach, and how long since the
@@ -972,7 +977,7 @@ const MapView = ({
         border:2px solid rgba(255,255,255,0.9);
         display:flex; align-items:center; justify-content:center;
         color:#fff; font-size:10px; font-weight:800;
-        opacity:${vehicleOpacity(v, selectedStationRef.current)};
+        opacity:${vehicleOpacity(v, selectedStationRef.current, selectedBusStopRef.current)};
         box-sizing:border-box; position:relative;
         transform: scale(${trainScale(zoomValueRef.current).toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
@@ -994,7 +999,7 @@ const MapView = ({
         title: wrapper.title,
         lng: v.coordinates[0],
         lat: v.coordinates[1],
-        opacity: vehicleOpacity(v, selectedStationRef.current),
+        opacity: vehicleOpacity(v, selectedStationRef.current, selectedBusStopRef.current),
         isPulsing,
       });
     };
@@ -1037,7 +1042,7 @@ const MapView = ({
             existing.title = title;
             existing.marker.getElement().title = title;
           }
-          const opacity = vehicleOpacity(v, selectedStationRef.current);
+          const opacity = vehicleOpacity(v, selectedStationRef.current, selectedBusStopRef.current);
           if (existing.opacity !== opacity) {
             existing.opacity = opacity;
             existing.inner.style.opacity = opacity;
@@ -1468,7 +1473,7 @@ const MapView = ({
       element.className = 'station-focus-node';
       // A visual anchor only — no countdowns to tick, so it's rendered once per
       // selection rather than on an interval. Arrivals live in the Station panel.
-      element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
+      element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current, true);
       marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
         .setLngLat(coordinates)
         .addTo(map);

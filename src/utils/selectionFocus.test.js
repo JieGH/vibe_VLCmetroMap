@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { hasMapSelection } from './selectionFocus';
+import { hasMapSelection, fadesAllVehicles } from './selectionFocus';
 
 const metro = { properties: { name: 'Xàtiva' } };
 
@@ -30,5 +30,19 @@ describe('selection CSS', () => {
     const selected = zOf(/\.station-focus-node:not\(\.spawned-station-node\)[^{]*\{[^}]*z-index:\s*(\d+)/);
     const spawned = zOf(/\.spawned-station-node[^{]*\{[^}]*z-index:\s*(\d+)/);
     expect(selected).toBeGreaterThan(spawned);
+  });
+});
+
+describe('fadesAllVehicles (#114)', () => {
+  const metro = { properties: { name: 'Xàtiva', lines: ['3'] } };
+  it('is true for an EMT stop with no metro station', () => {
+    expect(fadesAllVehicles(null, { stopCode: '1802' })).toBe(true);
+  });
+  it('is true for a ping/hub with an EMT stop selected', () => {
+    expect(fadesAllVehicles({ properties: { name: "Where you're at" } }, { stopCode: '1' })).toBe(true);
+  });
+  it('is false for a metro station (line rule applies) or no selection', () => {
+    expect(fadesAllVehicles(metro, null)).toBe(false);
+    expect(fadesAllVehicles(null, null)).toBe(false);
   });
 });

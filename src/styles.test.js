@@ -270,3 +270,25 @@ describe('EMT zoomed-out dots and tight label (#108)', () => {
     expect(dotSection).not.toMatch(/\.emt-stop-badge\s*[{,]/);
   });
 });
+
+describe('Fade everything else, incl. chip boxes and trains (#114)', () => {
+  const rule = (selector) => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+  };
+
+  it('fades non-selected grouped chip boxes to ~0.4 under data-has-selection', () => {
+    const sel = '.map-container[data-has-selection="true"] .station-floating-chart:not(.is-selected),\n.map-container[data-has-selection="true"] .bus-floating-chart:not(.is-selected)';
+    const body = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+    expect(body).toMatch(/opacity:\s*0\.(35|4|45)\b/);
+  });
+
+  it('transitions chip boxes and train markers in <= 200ms', () => {
+    expect(css).toMatch(/\.bus-floating-chart\s*\{\s*transition:\s*opacity 0\.2s/);
+    expect(css).toMatch(/\.ml-vehicle-marker-inner\s*\{\s*transition:\s*opacity 0\.2s/);
+  });
+
+  it('never fades the selected chart', () => {
+    expect(css).not.toMatch(/data-has-selection="true"\]\s+\.(bus|station)-floating-chart\s*[,{]/);
+  });
+});

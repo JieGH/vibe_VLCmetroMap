@@ -11,3 +11,8 @@ export const hasMapSelection = (selectedStation, selectedBusStop) => {
     name === "Where you're at"
   );
 };
+
+// An EMT stop is selected and no real metro station is: every train fades (#114).
+// With a metro station selected the line-based rule (lineDim.js) applies instead.
+export const fadesAllVehicles = (selectedStation, selectedBusStop) =>
+  Boolean(selectedBusStop) && !hasMapSelection(selectedStation, null);

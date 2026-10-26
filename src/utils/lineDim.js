@@ -10,6 +10,8 @@
 export const DIM_FACTOR = 0.2;
 export const UNSELECTED_LINE_OPACITY = 0.35;
 export const UNSELECTED_CASING_OPACITY = 0.15;
+// Multiplier for every Vehicle while an EMT stop is selected (#114); about the 0.35-0.45 of the CSS fade.
+export const SELECTION_FADE_FACTOR = 0.4;
 
 /**
  * Whether a Line's Station Chain includes the given Station. With no Station
@@ -50,11 +52,16 @@ export const lineOpacityExpression = (selectedStation, fullOpacity, unselectedOp
  * @param {number} baseOpacity
  * @param {string|number} lineId
  * @param {{ properties?: { lines?: (string|number)[] } }|null} selectedStation
+ * With `fadeAll` (an EMT stop is selected, no metro Station) every Vehicle on
+ * every Line fades; Position Confidence still scales it, so it never gets brighter.
+ *
+ * @param {boolean} [fadeAll=false]
  * @returns {number}
  */
-export const dimmedVehicleOpacity = (baseOpacity, lineId, selectedStation) => (
-  lineServesStation(lineId, selectedStation) ? baseOpacity : baseOpacity * DIM_FACTOR
-);
+export const dimmedVehicleOpacity = (baseOpacity, lineId, selectedStation, fadeAll = false) => {
+  if (fadeAll) return baseOpacity * SELECTION_FADE_FACTOR;
+  return lineServesStation(lineId, selectedStation) ? baseOpacity : baseOpacity * DIM_FACTOR;
+};
 
 /**
  * Whether a Vehicle marker should pulse. With no Station selected, nothing

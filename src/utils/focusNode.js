@@ -55,9 +55,10 @@ export const shortenStopName = (name, maxChars = 6) => {
  *
  * @param {{ name: string, lines?: (string|number)[] }} properties
  * @param {'light'|'dark'} theme
+ * @param {boolean} [isSelected=false] the selected station's own label (stays unfaded, #114)
  * @returns {string} HTML string
  */
-export const renderStationHighlight = (properties, theme) => {
+export const renderStationHighlight = (properties, theme, isSelected = false) => {
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
   const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
@@ -70,7 +71,7 @@ export const renderStationHighlight = (properties, theme) => {
   )).join('');
 
   return `
-    <div class="station-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+    <div class="station-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <!-- Two-row square-ish bubble: station name + line badges (transport logo omitted since marker has it) -->
       <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 6px;border-radius:7px;background:${panel};border:1.5px solid ${border};box-shadow:0 3px 12px rgba(0,0,0,.4);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         <!-- Row 1: Shortened Station Name -->

@@ -88,3 +88,24 @@ describe('vehicleShouldPulse', () => {
     expect(vehicleShouldPulse({ isLive: false, line: '3' }, null)).toBe(false);
   });
 });
+
+describe('dimmedVehicleOpacity with an EMT stop selected (#114)', () => {
+  it('fades every line, including ones a metro station would keep prominent', () => {
+    expect(dimmedVehicleOpacity(1, '7', null, true)).toBeCloseTo(0.4, 5);
+    expect(dimmedVehicleOpacity(1, '3', station, true)).toBeCloseTo(0.4, 5);
+  });
+
+  it('keeps Position Confidence: a faint train never gets brighter', () => {
+    expect(dimmedVehicleOpacity(0.5, '7', null, true)).toBeLessThan(0.5);
+    expect(dimmedVehicleOpacity(0.5, '7', null, true)).toBeLessThan(dimmedVehicleOpacity(1, '7', null, true));
+  });
+
+  it('metro-station selection is unchanged: served lines prominent, others dim', () => {
+    expect(dimmedVehicleOpacity(0.8, '3', station, false)).toBe(0.8);
+    expect(dimmedVehicleOpacity(0.8, '1', station, false)).toBeCloseTo(0.8 * DIM_FACTOR, 5);
+  });
+
+  it('with nothing selected nothing fades', () => {
+    expect(dimmedVehicleOpacity(1, '7', null, false)).toBe(1);
+  });
+});
