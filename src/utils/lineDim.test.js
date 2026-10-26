@@ -36,6 +36,10 @@ describe('lineOpacityExpression', () => {
     expect(lineOpacityExpression(null, 1)).toBe(1);
   });
 
+  it('returns unselectedOpacity when provided and no Station is selected', () => {
+    expect(lineOpacityExpression(null, 1, 0.35)).toBe(0.35);
+  });
+
   it('builds a case expression matching the Station Chain when a Station is selected', () => {
     const expr = lineOpacityExpression(station, 1);
     expect(expr).toEqual(['case', ['in', ['get', 'line'], ['literal', ['3', '5']]], 1, DIM_FACTOR]);
@@ -44,6 +48,11 @@ describe('lineOpacityExpression', () => {
   it('scales the dim branch relative to the given full opacity', () => {
     const expr = lineOpacityExpression(station, 0.35);
     expect(expr[3]).toBeCloseTo(0.35 * DIM_FACTOR);
+  });
+
+  it('uses unselectedOpacity for dimmed branch when specified', () => {
+    const expr = lineOpacityExpression(station, 1, 0.35);
+    expect(expr).toEqual(['case', ['in', ['get', 'line'], ['literal', ['3', '5']]], 1, 0.35 * DIM_FACTOR]);
   });
 });
 

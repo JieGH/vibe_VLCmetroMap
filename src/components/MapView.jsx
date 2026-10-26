@@ -414,7 +414,7 @@ const metroLayers = [
         17, 8.5,
         19, 11.0
       ],
-      'line-opacity': 0.35,
+      'line-opacity': 0.15,
       'line-offset': [
         'interpolate', ['linear'], ['zoom'],
         6, 0,
@@ -435,6 +435,7 @@ const metroLayers = [
     source: 'metro-lines',
     paint: {
       'line-color': ['get', 'color'],
+      'line-opacity': 0.35,
       'line-width': [
         'interpolate', ['linear'], ['zoom'],
         6, 0.75,
@@ -672,6 +673,7 @@ const MapView = ({
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const busFocusMarkerRef = useRef(null); // the expanded node for the Bus Stop in focus
+  const spawnedTransitMarkersRef = useRef([]); // transit nodes spawned for 5-min walk radius on pin selection
   const selectedBusStopRef = useRef(selectedBusStop);
   useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
   const onSelectBusStopRef = useRef(onSelectBusStop);
@@ -728,6 +730,11 @@ const MapView = ({
     stMarkersRef.current = [];
     stInnerElemsRef.current = [];
     stRanksRef.current = null;
+  };
+
+  const clearSpawnedTransitMarkers = () => {
+    spawnedTransitMarkersRef.current.forEach(m => m.remove());
+    spawnedTransitMarkersRef.current = [];
   };
 
   // Apply zoom-based scale directly to all known marker DOM elements. `curve` is
@@ -827,35 +834,47 @@ const MapView = ({
       drawnStationsRef.current.push(st);
 
       const wrapper = document.createElement('div');
-      wrapper.className = 'ml-station-marker-wrapper';
-      // Fixed wrapper size; inner scales via transform so MapLibre anchor stays correct
-      wrapper.style.cssText = 'width:10px; height:10px; cursor:pointer; z-index:1; overflow:visible;';
+      wrapper.className = 'ml-station-marker-wrapper metro-stop-marker';
+      wrapper.style.cssText = 'display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; z-index:27;';
 
       const inner = document.createElement('div');
+      inner.className = 'metro-station-badge';
       const isHovered = hoverRef.current && (st.properties.lines || []).includes(hoverRef.current);
       const isHidden = scale < 0.55;
       
       inner.style.cssText = `
-        width:10px; height:10px; border-radius:50%;
-        background:${isDark ? '#1a1a2e' : '#ffffff'};
-        border:${isHovered ? '3px' : '2px'} solid ${stationBorderColor(st)};
-        box-shadow:0 2px 6px rgba(0,0,0,.5);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #E2001A;
+        color: #ffffff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 9px;
+        font-weight: 900;
+        font-style: italic;
+        line-height: 1;
+        border: 1px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 1.5px 4px rgba(0, 0, 0, 0.35);
         transform: scale(${drawnScale.toFixed(3)});
         visibility: ${isHidden ? 'hidden' : ''};
         pointer-events: ${isHidden ? 'none' : ''};
-        box-sizing:border-box;
+        box-sizing: border-box;
         transform-origin: center center;
+        transition: transform 0.12s ease-out;
+        ${isHovered ? 'outline: 2px solid #FFD100;' : ''}
       `;
+      inner.innerHTML = '<span style="transform: translateY(-0.5px); line-height: 1;">m</span>';
       wrapper.appendChild(inner);
       wrapper.title = st.properties.name;
       stInnerElemsRef.current.push(inner);
 
       wrapper.onmouseenter = () => {
-        inner.style.transition = 'transform .1s ease';
-        inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.5).toFixed(3)})`;
+        inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.3).toFixed(3)})`;
       };
       wrapper.onmouseleave = () => {
-        inner.style.transition = 'transform .1s ease';
         inner.style.transform = `scale(${dotScale(zoomValueRef.current).toFixed(3)})`;
       };
       wrapper.onclick = (e) => {
@@ -1072,8 +1091,8 @@ const MapView = ({
   const applyLineDim = (map, selectedStation) => {
     const apply = () => {
       if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
-        map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(selectedStation, 1));
-        map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(selectedStation, 0.35));
+        map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(selectedStation, 1, 0.35));
+        map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(selectedStation, 0.35, 0.15));
       }
     };
     if (map.isStyleLoaded()) apply();
@@ -1162,22 +1181,29 @@ const MapView = ({
         }
 
         // Multimodal 5-Minute Walk Radius click on the map:
-        // When zoomed in (zoom >= 13), clicking any point explores all transit
-        // (Metro stations and EMT bus stops) within a 5-minute walk (~400m).
-        if (currentZoom >= 13 && drawnStationsRef.current && drawnStationsRef.current.length > 0) {
-          const nearestWithin5Min = nearestFeature(drawnStationsRef.current, [lng, lat]);
-          if (nearestWithin5Min && nearestWithin5Min.distance <= 400) {
-            selectStRef.current(nearestWithin5Min.feature, {
-              userLocation: {
-                coordinates: [lng, lat],
-                accuracy: 15,
-                isMapClick: true,
-                status: 'located',
-                fetchedAt: Date.now(),
-              }
-            });
-            return;
-          }
+        // When zoomed in (zoom >= 12.5), clicking any point explores all transit
+        // (Metro stations and EMT bus stops) within a 5-minute walk (~420m).
+        if (currentZoom >= 12.5) {
+          const nearestWithin5Min = drawnStationsRef.current && drawnStationsRef.current.length > 0
+            ? nearestFeature(drawnStationsRef.current, [lng, lat])
+            : null;
+          const targetStation = (nearestWithin5Min && nearestWithin5Min.distance <= 450)
+            ? nearestWithin5Min.feature
+            : (nearestWithin5Min?.feature || {
+                properties: { name: 'Map Ping', lines: [] },
+                geometry: { type: 'Point', coordinates: [lng, lat] },
+              });
+
+          selectStRef.current(targetStation, {
+            userLocation: {
+              coordinates: [lng, lat],
+              accuracy: 15,
+              isMapClick: true,
+              status: 'located',
+              fetchedAt: Date.now(),
+            }
+          });
+          return;
         }
 
         if (selectedStationRef.current) {
@@ -1390,6 +1416,14 @@ const MapView = ({
         duration: CAMERA_EASE_MS,
         essential: true,
       });
+    } else if (userLocationRef.current?.coordinates) {
+      map.easeTo({
+        center: userLocationRef.current.coordinates,
+        zoom: Math.max(map.getZoom(), 15.2),
+        padding: basePadding,
+        duration: CAMERA_EASE_MS,
+        essential: true,
+      });
     }
 
     return () => {
@@ -1478,6 +1512,15 @@ const MapView = ({
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
       `;
       wrapper.innerHTML = `<span>📍</span>`;
+      wrapper.onclick = (e) => {
+        e.stopPropagation();
+        map.easeTo({
+          center: userLocation.coordinates,
+          zoom: Math.max(map.getZoom(), 15.2),
+          padding: panelAwarePadding(map, { hasPanel: true }),
+          duration: CAMERA_EASE_MS,
+        });
+      };
     } else {
       wrapper.style.cssText = `
         position: relative;
@@ -1528,6 +1571,79 @@ const MapView = ({
       marker.remove();
     };
   }, [userLocation]);
+
+  // ── Spawn 5-minute walk surrounding transit popups when pin is selected ───────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    clearSpawnedTransitMarkers();
+
+    const isPing = Boolean(userLocation?.isMapClick);
+    if (!isPing || !userLocation?.coordinates) return undefined;
+
+    const pinCoords = userLocation.coordinates;
+    const MAX_WALK_METRES = 420; // 5-minute walk radius
+    const currentTheme = themeRef.current;
+
+    // 1. Surrounding Metro Stations
+    const nearbyStations = (drawnStationsRef.current || []).filter((st) => {
+      const coords = snappedCoordinates(st);
+      return getDistance(pinCoords, coords) <= MAX_WALK_METRES;
+    });
+
+    nearbyStations.forEach((st) => {
+      const coords = snappedCoordinates(st);
+      const isSelected = selectedStation?.properties?.name === st.properties.name;
+      if (isSelected && focusMarkerRef.current) return;
+
+      const element = document.createElement('div');
+      element.className = 'station-focus-node spawned-station-node';
+      element.innerHTML = renderStationHighlight(st.properties, currentTheme);
+      element.onclick = (e) => {
+        e.stopPropagation();
+        selectStRef.current(st);
+      };
+
+      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
+        .setLngLat(coords)
+        .addTo(map);
+
+      spawnedTransitMarkersRef.current.push(marker);
+    });
+
+    // 2. Surrounding EMT Bus Stops
+    const allBusStops = getAllBusStops();
+    const nearbyBusStops = (allBusStops || []).filter((stop) => {
+      if (!stop.coordinates || !Array.isArray(stop.coordinates)) return false;
+      return getDistance(pinCoords, stop.coordinates) <= MAX_WALK_METRES;
+    });
+
+    nearbyBusStops.forEach((stop) => {
+      const isSelected = String(selectedBusStopRef.current?.stopCode) === String(stop.stopCode);
+      if (isSelected && busFocusMarkerRef.current) return;
+
+      const element = document.createElement('div');
+      element.className = 'bus-focus-node spawned-bus-node';
+      element.innerHTML = renderBusStopHighlight(stop, currentTheme);
+      element.onclick = (e) => {
+        e.stopPropagation();
+        if (onSelectBusStopRef.current) {
+          onSelectBusStopRef.current(stop);
+        }
+      };
+
+      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
+        .setLngLat(stop.coordinates)
+        .addTo(map);
+
+      spawnedTransitMarkersRef.current.push(marker);
+    });
+
+    return () => {
+      clearSpawnedTransitMarkers();
+    };
+  }, [userLocation, selectedStation, selectedBusStop]);
 
   // ── Framing the viewer against their Nearest Station ───────────────────────
   // Declared after the station-focus effect on purpose. A locate that names a
@@ -1723,8 +1839,7 @@ const MapView = ({
           if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
         } else {
           setBusRoutesData(map, []);
-          if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.95);
-          if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
+          applyLineDim(map, selectedStationRef.current);
         }
       }
     };

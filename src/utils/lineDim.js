@@ -8,6 +8,8 @@
 // filter has already let through, expressed as a `line-opacity` paint
 // property so it can never remove a Line the filter kept.
 export const DIM_FACTOR = 0.2;
+export const UNSELECTED_LINE_OPACITY = 0.35;
+export const UNSELECTED_CASING_OPACITY = 0.15;
 
 /**
  * Whether a Line's Station Chain includes the given Station. With no Station
@@ -25,17 +27,19 @@ export const lineServesStation = (lineId, selectedStation) => {
 
 /**
  * A MapLibre `line-opacity` paint expression that renders every Line at
- * `fullOpacity` when no Station is selected, and drops any Line outside the
- * selected Station's Station Chain to `fullOpacity * DIM_FACTOR` once one is.
+ * `unselectedOpacity` when no Station is selected (creating a cleaner, unobtrusive map),
+ * and highlights any Line in the selected Station's Station Chain to `fullOpacity`
+ * once one is, dropping unserved lines to `unselectedOpacity * DIM_FACTOR`.
  *
  * @param {{ properties?: { lines?: (string|number)[] } }|null} selectedStation
  * @param {number} fullOpacity
+ * @param {number} [unselectedOpacity=fullOpacity]
  * @returns {number|Array} a plain number, or a MapLibre expression
  */
-export const lineOpacityExpression = (selectedStation, fullOpacity) => {
-  if (!selectedStation) return fullOpacity;
+export const lineOpacityExpression = (selectedStation, fullOpacity, unselectedOpacity = fullOpacity) => {
+  if (!selectedStation) return unselectedOpacity;
   const served = ((selectedStation.properties && selectedStation.properties.lines) || []).map(String);
-  return ['case', ['in', ['get', 'line'], ['literal', served]], fullOpacity, fullOpacity * DIM_FACTOR];
+  return ['case', ['in', ['get', 'line'], ['literal', served]], fullOpacity, unselectedOpacity * DIM_FACTOR];
 };
 
 /**
