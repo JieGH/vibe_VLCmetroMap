@@ -15,8 +15,8 @@ import {
 
 describe('WelcomeScreen component', () => {
 
-  it('exports a 500ms minimum hold, 1000ms maximum hold and 200ms fade for the splash screen', () => {
-    expect(WELCOME_MIN_HOLD_MS).toBe(500);
+  it('exports a 250ms minimum hold, 1000ms maximum hold and 200ms fade for the splash screen', () => {
+    expect(WELCOME_MIN_HOLD_MS).toBe(250);
     expect(WELCOME_MAX_HOLD_MS).toBe(1000);
     expect(WELCOME_FADE_DURATION_MS).toBe(200);
   });
@@ -58,11 +58,11 @@ describe('WelcomeScreen dismissal schedule', () => {
     return { schedule, onFade, onComplete };
   };
 
-  it('starts a delayed fade at once when ready from the start, completing at 500 + 200 ms', () => {
+  it('starts a delayed fade at once when ready from the start, completing at 250 + 200 ms', () => {
     const { onFade, onComplete } = start(true);
     expect(onFade).toHaveBeenCalledTimes(1);
-    expect(onFade).toHaveBeenCalledWith(500);
-    vi.advanceTimersByTime(699);
+    expect(onFade).toHaveBeenCalledWith(250);
+    vi.advanceTimersByTime(449);
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -94,14 +94,14 @@ describe('WelcomeScreen dismissal schedule', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('ready at 200 ms: onFade(300) at 200 ms, onComplete at 700 ms', () => {
+  it('ready at 100 ms: onFade(150) at 100 ms, onComplete at 450 ms', () => {
     const { schedule, onFade, onComplete } = start(false);
-    vi.advanceTimersByTime(200);
+    vi.advanceTimersByTime(100);
     expect(onFade).not.toHaveBeenCalled();
     schedule.setReady(true);
     expect(onFade).toHaveBeenCalledTimes(1);
-    expect(onFade).toHaveBeenCalledWith(300);
-    vi.advanceTimersByTime(499);
+    expect(onFade).toHaveBeenCalledWith(150);
+    vi.advanceTimersByTime(349);
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -114,7 +114,7 @@ describe('WelcomeScreen dismissal schedule', () => {
     const schedule = createWelcomeSchedule({ ready: false, onFade, onComplete: () => {}, now: () => t });
     t = 120;
     schedule.setReady(true);
-    expect(onFade).toHaveBeenCalledWith(380);
+    expect(onFade).toHaveBeenCalledWith(130);
   });
 
   it('calls onComplete exactly once however long it runs', () => {

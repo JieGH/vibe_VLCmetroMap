@@ -101,6 +101,8 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
     var query by remember { mutableStateOf("") }
     var searchFocused by remember { mutableStateOf(false) }
     var aboutOpen by remember { mutableStateOf(false) }
+    var whatsNewOpen by remember { mutableStateOf(false) }
+    var feedbackOpen by remember { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
     var sheetHeightPx by remember { mutableIntStateOf(0) }
     var topPx by remember { mutableIntStateOf(0) }
@@ -117,8 +119,11 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
     }
 
     // Back peels the interface one layer at a time: dialog > search > drawer > sheet > filter > exit.
-    BackHandler(enabled = searchFocused || drawerState.isOpen || selected != null || filter.isNotEmpty()) {
+    BackHandler(enabled = searchFocused || drawerState.isOpen || selected != null || filter.isNotEmpty() || aboutOpen || whatsNewOpen || feedbackOpen) {
         when {
+            feedbackOpen -> feedbackOpen = false
+            whatsNewOpen -> whatsNewOpen = false
+            aboutOpen -> aboutOpen = false
             searchFocused -> { focusManager.clearFocus(); query = "" }
             drawerState.isOpen -> scope.launch { drawerState.close() }
             selected != null -> vm.clearSelection()
@@ -151,7 +156,9 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
             XarxaDrawer(
                 themeMode = vm.themeMode,
                 onTheme = vm::chooseTheme,
+                onWhatsNew = { scope.launch { drawerState.close() }; whatsNewOpen = true },
                 onAbout = { scope.launch { drawerState.close() }; aboutOpen = true },
+                onFeedback = { scope.launch { drawerState.close() }; feedbackOpen = true },
             )
         },
     ) {
@@ -217,13 +224,10 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
                             modifier = Modifier.padding(horizontal = 12.dp).heightIn(max = 380.dp),
                         )
                     }
-                } else {
+                } else if (filter.isNotEmpty()) {
                     HubChips(
-                        hubs = g.hubs,
                         lineColors = g.lineColors,
                         activeLines = filter,
-                        selectedId = selected?.id,
-                        onHub = vm::selectStation,
                         onClearLine = vm::toggleLine,
                     )
                 }
@@ -307,7 +311,15 @@ private fun Content(vm: MainViewModel, g: Graph, dark: Boolean) {
         }
     }
 
-    if (aboutOpen) AboutDialog(onDismiss = { aboutOpen = false })
+    if (aboutOpen) AboutDialog(
+        onDismiss = { aboutOpen = false },
+        onContactAuthor = { aboutOpen = false; feedbackOpen = true },
+    )
+    if (whatsNewOpen) WhatsNewDialog(
+        onDismiss = { whatsNewOpen = false },
+        onContactAuthor = { whatsNewOpen = false; feedbackOpen = true },
+    )
+    if (feedbackOpen) FeedbackDialog(onDismiss = { feedbackOpen = false })
     LocationRationaleDialog(locate)
 }
 

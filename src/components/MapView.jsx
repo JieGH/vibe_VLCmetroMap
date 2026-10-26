@@ -3,7 +3,7 @@ import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } f
 import { Protocol, PMTiles } from 'pmtiles';
 import { Capacitor } from '@capacitor/core';
 import { createBoundedRangeSource } from '../utils/boundedRangeSource';
-import { noLabels, labels } from 'protomaps-themes-base';
+import { buildVectorLabels, buildVectorNoLabels } from '../utils/mapStyle';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -91,26 +91,7 @@ if (Capacitor.getPlatform() === 'android') {
 }
 addProtocol('pmtiles', pmtilesProtocol.tile);
 
-// Both startup fetches are independent, so they run concurrently: the module
-// evaluates in max(geometry, probe) instead of their sum.
-let line4Osm = null;
 let OFFLINE_BASEMAP_AVAILABLE = false;
-
-const loadLine4Osm = async () => {
-  try {
-    const response = await fetch('/line4_osm.geojson');
-    if (response.ok) {
-      line4Osm = await response.json();
-    } else {
-      console.warn(
-        `Line 4 OSM geometry unavailable (HTTP ${response.status}); ` +
-        'falling back to the coarser metro_lines.json alignment.'
-      );
-    }
-  } catch (error) {
-    console.warn('Line 4 OSM geometry failed to load; falling back to metro_lines.json.', error);
-  }
-};
 
 // ─── Static data (computed once at module load) ────────────────────────────────
 const allFeatures = [
@@ -249,23 +230,6 @@ function rebuildNetworkGeometry() {
     if (f.properties && f.properties.line) lineById.set(String(f.properties.line), { ...f });
   }
 
-  // If an OSM-derived Line 4 file is present, prefer its longest LineString as the authoritative Line 4 geometry
-  try {
-    if (line4Osm && Array.isArray(line4Osm.features) && line4Osm.features.length) {
-      const longest = line4Osm.features.reduce((best, cur) => {
-        if (!cur.geometry || cur.geometry.type !== 'LineString') return best;
-        const len = cur.geometry.coordinates.length;
-        if (!best || len > best.len) return { feat: cur, len };
-        return best;
-      }, null);
-      if (longest && longest.feat) {
-        const f = { ...longest.feat };
-        f.properties = { ...f.properties, line: '4', source: 'osm' };
-        lineById.set('4', f);
-      }
-    }
-  } catch (e) { /* ignore */ }
-
   // Then add GTFS lines only if not present or if configured to prefer GTFS for a given line
   for (const f of (gtfsData && gtfsData.features ? gtfsData.features : []).filter(f => f.geometry && f.geometry.type === 'LineString')) {
     const id = f.properties && f.properties.line && String(f.properties.line);
@@ -346,15 +310,10 @@ function rebuildNetworkGeometry() {
 // Synchronous baseline geometry pass
 rebuildNetworkGeometry();
 
-// Background asynchronous asset fetch (unblocks main JS thread & React mounting)
+// Background asynchronous basemap probe (unblocks main JS thread & React mounting)
 const initBasemapPromise = (typeof window !== 'undefined')
-  ? Promise.all([
-      loadLine4Osm(),
-      probeOfflineBasemap(BASEMAP_ARCHIVE, fetch, pmtilesProtocol).then((available) => {
-        OFFLINE_BASEMAP_AVAILABLE = available;
-      }),
-    ]).then(() => {
-      rebuildNetworkGeometry();
+  ? probeOfflineBasemap(BASEMAP_ARCHIVE, fetch, pmtilesProtocol).then((available) => {
+      OFFLINE_BASEMAP_AVAILABLE = available;
     }).catch(() => {})
   : Promise.resolve();
 
@@ -503,10 +462,11 @@ const buildVectorStyle = (flavour) => ({
     'metro-lines': { type: 'geojson', data: lineGeoJSON, tolerance: 0.6, buffer: 128 },
   },
   // Basemap geometry, then the Lines, then the basemap's labels on top.
+  // Building footprints and library POIs are omitted to keep the transit lines clear and minimize visual clutter.
   layers: [
-    ...noLabels('protomaps', flavour),
+    ...buildVectorNoLabels(flavour),
     ...structuredClone(metroLayers),
-    ...labels('protomaps', flavour, 'en'),
+    ...buildVectorLabels(flavour, 'en'),
   ],
 });
 

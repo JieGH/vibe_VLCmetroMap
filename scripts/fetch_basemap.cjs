@@ -24,11 +24,10 @@ const { execFileSync } = require('node:child_process');
 // Padded so panning off the end of a line does not run off the edge of the map.
 const BBOX = '-0.65,39.02,-0.25,39.68';
 
-// BASEMAP_MAXZOOM caps the archive's deepest zoom. Cloudflare Workers assets allow 25 MiB per file, and the
-// full archive is 36 MB; 14 is 15 MB and MapLibre overzooms vector tiles sharply past it (docs/hosting-cloudflare.md).
-// Workers Builds sets WORKERS_CI, so a Cloudflare build is capped without any dashboard variable.
-const MAXZOOM = Number(process.env.BASEMAP_MAXZOOM) || (process.env.WORKERS_CI ? 14 : null);
-const MIN_BYTES = MAXZOOM ? 5_000_000 : 10_000_000;
+// BASEMAP_MAXZOOM caps the archive's deepest zoom. Default 13 gives an 8.2 MB archive (down from 36 MB)
+// and MapLibre overzooms vector tiles cleanly past it without needing heavy building-level tile data.
+const MAXZOOM = Number(process.env.BASEMAP_MAXZOOM) || 13;
+const MIN_BYTES = 2_000_000;
 
 const PMTILES_VERSION = '1.31.2';
 const ASSETS = 'https://protomaps.github.io/basemaps-assets';

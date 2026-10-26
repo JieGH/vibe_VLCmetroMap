@@ -69,4 +69,25 @@
     <string name="about_source">Source code</string>
     <string name="about_privacy_link">Read the full privacy policy</string>
     <string name="search_popular">Popular stations</string>
+    <string name="whats_new">What\'s New</string>
+    <string name="whats_new_title">What\'s New in Xarxa</string>
+    <string name="whats_new_item1_title">Real-Time Train Tracking</string>
+    <string name="whats_new_item1_desc">Live train positions &amp; platform countdowns across lines 1–10.</string>
+    <string name="whats_new_item2_title">High-Speed Vector Map</string>
+    <string name="whats_new_item2_desc">Offline-ready vector map with bilingual station search.</string>
+    <string name="whats_new_item3_title">Walking Times &amp; Navigation</string>
+    <string name="whats_new_item3_desc">Live walking estimates and guidance to nearest stations.</string>
+    <string name="whats_new_item4_title">Appearance &amp; Accessibility</string>
+    <string name="whats_new_item4_desc">Seamless dark/light theme switching and high-contrast design.</string>
+    <string name="whats_new_item5_title">Direct In-App Feedback</string>
+    <string name="whats_new_item5_desc">Contact the author with suggestions or questions directly.</string>
+    <string name="contact_author">Contact Author</string>
+    <string name="made_by">Made by Jie in Valencia</string>
+    <string name="feedback_title">Feedback &amp; Support</string>
+    <string name="feedback_desc">Send suggestions, report a bug, or reach out to the author directly.</string>
+    <string name="feedback_placeholder">Your message or feedback…</string>
+    <string name="feedback_email_optional">Your email (optional, for reply)</string>
+    <string name="feedback_send">Send Feedback</string>
+    <string name="feedback_cancel">Cancel</string>
+    <string name="feedback_sent">Thank you! Your feedback has been sent directly to the author.</string>
 </resources>

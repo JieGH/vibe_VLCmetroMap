@@ -1,15 +1,14 @@
 // Quick-access chips under the search pill: one dismissible chip per active
-// Line filter (line-colour dot), then the most common stops. Mirrors the native
-// app's HubChips.
+// Line filter (line-colour dot). Mirrors the native app's HubChips.
 import React from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { lineColor } from '../utils/lineColor';
 
-const HubChips = ({ hubs = [], activeLines = [], selectedName = null, onHub, onClearLine }) => {
+const HubChips = ({ activeLines = [], onClearLine }) => {
   const { t } = useTranslation();
   const lines = Array.isArray(activeLines) ? [...activeLines].sort() : [];
-  if (lines.length === 0 && hubs.length === 0) return null;
+  if (lines.length === 0) return null;
 
   return (
     <div className="hub-chips" role="group">
@@ -28,21 +27,6 @@ const HubChips = ({ hubs = [], activeLines = [], selectedName = null, onHub, onC
           <X size={14} aria-hidden="true" />
         </button>
       ))}
-      {hubs.map((st) => {
-        const name = st.properties.name;
-        return (
-          <button
-            key={name}
-            type="button"
-            className="hub-chip"
-            data-selected={name === selectedName ? 'true' : 'false'}
-            aria-label={t('hub.chipAria', { station: name })}
-            onClick={() => onHub?.(st)}
-          >
-            <span className="hub-chip-label">{name}</span>
-          </button>
-        );
-      })}
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-const MapView = lazy(() => import('./components/MapView'));
+// Early preload: initiates MapView bundle fetch immediately on module evaluation
+const mapViewPromise = import('./components/MapView');
+const MapView = lazy(() => mapViewPromise);
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import StationPanel from './components/StationPanel';
@@ -801,8 +803,8 @@ function App() {
       {/* On a retired address (Netlify, workers.dev): ask the visitor to move to xarxa.net */}
       {!showWelcome && <MovedNotice />}
 
-      {/* Popular stops, and one chip per active Line filter */}
-      {!searchFocused && (
+      {/* One dismissible chip per active Line filter (or bus trunks in prototype B/C) */}
+      {!searchFocused && (variant === 'B' || (variant === 'C' && activeMode === 'bus') || activeLineFilter.length > 0) && (
         <div className={`hub-chips-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
           {variant === 'B' ? (
             <div

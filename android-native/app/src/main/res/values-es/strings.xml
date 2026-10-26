@@ -69,4 +69,25 @@
     <string name="about_source">Código fuente</string>
     <string name="about_privacy_link">Leer la política de privacidad completa</string>
     <string name="search_popular">Estaciones populares</string>
+    <string name="whats_new">Novedades</string>
+    <string name="whats_new_title">Novedades en Xarxa</string>
+    <string name="whats_new_item1_title">Seguimiento en tiempo real</string>
+    <string name="whats_new_item1_desc">Posición de trenes en vivo y cuentas atrás en líneas 1–10.</string>
+    <string name="whats_new_item2_title">Mapa vectorial de alta velocidad</string>
+    <string name="whats_new_item2_desc">Mapa vectorial sin conexión con búsqueda bilingüe de estaciones.</string>
+    <string name="whats_new_item3_title">Tiempos a pie y navegación</string>
+    <string name="whats_new_item3_desc">Estimación de tiempo a pie y guía a la estación más cercana.</string>
+    <string name="whats_new_item4_title">Apariencia y accesibilidad</string>
+    <string name="whats_new_item4_desc">Cambio fluido de tema claro/oscuro y diseño de alto contraste.</string>
+    <string name="whats_new_item5_title">Comentarios en la app</string>
+    <string name="whats_new_item5_desc">Contacta directamente con el autor para sugerencias o dudas.</string>
+    <string name="contact_author">Contactar con el autor</string>
+    <string name="made_by">Hecho por Jie en Valencia</string>
+    <string name="feedback_title">Comentarios y soporte</string>
+    <string name="feedback_desc">Envía sugerencias, informa de un error o contacta directamente con el autor.</string>
+    <string name="feedback_placeholder">Tu mensaje o comentario…</string>
+    <string name="feedback_email_optional">Tu correo electrónico (opcional)</string>
+    <string name="feedback_send">Enviar comentario</string>
+    <string name="feedback_cancel">Cancelar</string>
+    <string name="feedback_sent">¡Gracias! Tu comentario ha sido enviado directamente al autor.</string>
 </resources>

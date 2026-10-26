@@ -7,6 +7,7 @@ import metroData from '../data/metro_lines.json';
 import paradasData from '../data/paradas_api.json';
 import gtfsData from '../data/gtfs_expanded.json';
 import { probeOfflineBasemap } from './basemapProbe';
+import { buildVectorLabels, buildVectorNoLabels } from './mapStyle';
 
 function hashFile(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -40,6 +41,25 @@ describe('MapLibre GL & Basemap Integrity', () => {
     expect(declaredVersion).toBeDefined();
     // Verify it is not an older version that has known DOM XSS or worker protocol flaws
     expect(declaredVersion).toMatch(/\^?6\.(1[6-9]|[2-9]\d|\d{3,})\./);
+  });
+
+  it('omits heavy building footprints from vector basemap to keep transit rendering lightweight', () => {
+    const layers = buildVectorNoLabels('white');
+    expect(layers.some(l => l.id === 'buildings')).toBe(false);
+    expect(layers.some(l => l.id === 'water')).toBe(true);
+    expect(layers.some(l => l.id === 'landuse_park')).toBe(true);
+    expect(layers.some(l => l.id === 'roads_major')).toBe(true);
+  });
+
+  it('excludes libraries from POI labels while keeping parks, gardens, and green spaces intact', () => {
+    const darkLayers = buildVectorLabels('dark', 'en');
+    const poi = darkLayers.find(l => l.id === 'pois');
+    expect(poi).toBeDefined();
+    const kinds = poi.filter[1][2][1];
+    expect(kinds).not.toContain('library');
+    expect(kinds).toContain('park');
+    expect(kinds).toContain('garden');
+    expect(kinds).toContain('forest');
   });
 
   describe('Offline Basemap Probe & SPA Guard', () => {

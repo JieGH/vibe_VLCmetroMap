@@ -1,6 +1,6 @@
 // Timing and same-session memory for the splash screen (see WelcomeScreen).
 
-export const WELCOME_MIN_HOLD_MS = 500;
+export const WELCOME_MIN_HOLD_MS = 250;
 export const WELCOME_MAX_HOLD_MS = 1000;
 export const WELCOME_FADE_DURATION_MS = 200;
 export const WELCOME_SEEN_KEY = 'xarxa_welcome_seen';

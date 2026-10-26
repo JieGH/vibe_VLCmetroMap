@@ -88,7 +88,7 @@ fun StationSheet(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 28.dp)
+                    .padding(top = 6.dp, bottom = 2.dp)
                     .draggable(
                         orientation = Orientation.Vertical,
                         state = rememberDraggableState { dragPx = (dragPx + it).coerceAtLeast(0f) },
@@ -113,7 +113,7 @@ fun StationSheet(
             val statusText = if (isFresh) stringResource(R.string.station_live) else stringResource(R.string.station_memory)
             val confirmed = stringResource(R.string.station_confirmed, unheardLabel)
             Row(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp),
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Red dot emblem with stylized custom 'm' typography (distinct from official logo)

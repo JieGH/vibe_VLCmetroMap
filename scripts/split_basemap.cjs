@@ -18,6 +18,17 @@ const split = (removeArchive) => {
   if (!fs.existsSync(archive)) return;
   const size = fs.statSync(archive).size;
   const parts = Math.ceil(size / CHUNK_SIZE);
+
+  // Clean up any stale chunks with higher indices from previous larger archives
+  try {
+    fs.readdirSync(dir).forEach((f) => {
+      const m = f.match(/^valencia\.pmtiles\.p(\d+)$/);
+      if (m && Number(m[1]) >= parts) {
+        try { fs.unlinkSync(path.join(dir, f)); } catch {}
+      }
+    });
+  } catch {}
+
   const fd = fs.openSync(archive, 'r');
   const buffer = Buffer.alloc(CHUNK_SIZE);
   for (let i = 0; i < parts; i++) {

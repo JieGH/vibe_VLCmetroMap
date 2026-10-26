@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../..');
 const require = createRequire(resolve(repo, 'package.json'));
-const { noLabels, labels } = await import(require.resolve('protomaps-themes-base'));
+const { buildVectorNoLabels, buildVectorLabels } = await import(resolve(repo, 'src/utils/mapStyle.js'));
 const { pathsOffReference } = await import(resolve(repo, 'src/utils/geoUtils.js'));
 const lineRenderConfig = (await import(resolve(repo, 'src/data/line_render_config.js'))).default;
 
@@ -103,7 +103,7 @@ for (const [theme, flavour] of Object.entries(FLAVOURS)) {
       // Empty here; the app loads data/lines.geojson (or its own merged result) into this source.
       'metro-lines': { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, tolerance: 0.6, buffer: 128 },
     },
-    layers: [...noLabels('protomaps', flavour), ...metroLayers(), ...labels('protomaps', flavour, 'en')],
+    layers: [...buildVectorNoLabels(flavour), ...metroLayers(), ...buildVectorLabels(flavour, 'en')],
   };
   writeFileSync(resolve(outDir, `style-${theme}.json`), JSON.stringify(style));
   console.log(`style-${theme}.json: ${style.layers.length} layers`);
