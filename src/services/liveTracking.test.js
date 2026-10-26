@@ -228,6 +228,38 @@ describe('liveTracking', () => {
   });
 });
 
+describe('liveTracking lifecycle edges', () => {
+  it('start while tracking only re-seeds: one watch, anchor moves to the new seed', async () => {
+    const h = harness();
+    h.tracker.start({ coordinates: ORIGIN, accuracy: 8 });
+    await h.settle();
+    h.tracker.start({ coordinates: north(100), accuracy: 8 });
+    await h.settle();
+    expect(h.tracker.state).toBe('tracking');
+    expect(h.timers).toHaveLength(1);
+    expect(h.listeners.size).toBe(1);
+    await h.advance(MOVING_INTERVAL_MS);
+    h.emit(north(112)); // 12 m from the new seed: a fix, but not an anchor
+    expect(h.events.fixes).toHaveLength(1);
+    expect(h.events.anchors).toHaveLength(0);
+  });
+
+  it('stop during the in-flight resume fix drops the late fix', async () => {
+    const h = harness();
+    h.tracker.start({ coordinates: ORIGIN, accuracy: 8 });
+    await h.settle();
+    await h.setHidden(true);
+    let resolveFix;
+    h.provider.getCurrentPosition.mockReturnValueOnce(new Promise((r) => { resolveFix = r; }));
+    await h.setHidden(false);
+    h.tracker.stop();
+    resolveFix(reading(north(200)));
+    await h.settle();
+    expect(h.events.fixes).toHaveLength(0);
+    expect(h.tracker.state).toBe('stopped');
+  });
+});
+
 describe('createLiveFixChannel', () => {
   it('publishes to subscribers and keeps the latest', () => {
     const channel = createLiveFixChannel();

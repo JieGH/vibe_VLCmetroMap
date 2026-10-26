@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext } from './returnContext';
+import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, isGpsHub, shouldRefreshGpsHub } from './returnContext';
 
 const ping = { isPin: true, properties: { name: 'Map Ping' } };
 const gps = { properties: { name: "Where you're at" } };
@@ -63,5 +63,38 @@ describe('returnContext', () => {
     const ctx = captureReturnContext({ selectedStation: ping, userLocation: pingLoc });
     expect(ctx).not.toBeNull();
     expect(resolveReturn(ctx)).toEqual({ selectedStation: ping, userLocation: pingLoc });
+  });
+});
+
+describe('GPS hub refresh (#104)', () => {
+  const fix = { coordinates: [-0.37, 39.47], nearestStation: { properties: { name: 'Xàtiva' } } };
+
+  it('buildGpsHub makes the single GPS hub shape', () => {
+    const hub = buildGpsHub(fix);
+    expect(isGpsHub(hub)).toBe(true);
+    expect(isHubStation(hub)).toBe(true);
+    expect(hub.geometry.coordinates).toEqual(fix.coordinates);
+    expect(hub.properties.nearestStation).toBe(fix.nearestStation);
+  });
+
+  it('refreshes only when the GPS hub itself is showing', () => {
+    const hub = buildGpsHub(fix);
+    expect(shouldRefreshGpsHub({ selectedStation: hub, selectedBusStop: null })).toBe(true);
+    expect(shouldRefreshGpsHub({ selectedStation: hub, selectedBusStop: { stopCode: 1 } })).toBe(false);
+    expect(shouldRefreshGpsHub({ selectedStation: null, selectedBusStop: { stopCode: 1 } })).toBe(false);
+    expect(shouldRefreshGpsHub({ selectedStation: { properties: { name: 'Map Ping', isPin: true } } })).toBe(false);
+  });
+
+  it('a refreshed hub does not drop the remembered context while a stop is showing', () => {
+    const ctx = captureReturnContext({ selectedStation: buildGpsHub(fix), userLocation: fix });
+    expect(reconcileReturnContext(ctx, { selectedStation: null, selectedBusStop: { stopCode: 1 } })).toBe(ctx);
+  });
+
+  it('returning to a GPS hub rebuilds it from the latest fix', () => {
+    const ctx = captureReturnContext({ selectedStation: buildGpsHub(fix), userLocation: fix });
+    const later = { coordinates: [-0.371, 39.471], nearestStation: { properties: { name: 'Colón' } } };
+    const back = resolveReturn(ctx, later);
+    expect(back.selectedStation.geometry.coordinates).toEqual(later.coordinates);
+    expect(back.selectedStation.properties.nearestStation).toBe(later.nearestStation);
   });
 });

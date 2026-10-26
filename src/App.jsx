@@ -35,7 +35,7 @@ import { Search, X } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
-import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext } from './utils/returnContext';
+import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import BusBadge from './components/BusBadge';
@@ -77,6 +77,8 @@ function App() {
   const [variant, setVariant] = useState(readVariant);
   const [activeBusLine, setActiveBusLine] = useState(null);
   const [selectedBusStop, setSelectedBusStop] = useState(null);
+  const selectedBusStopRef = useRef(null);
+  selectedBusStopRef.current = selectedBusStop;
   const [activeMode, setActiveMode] = useState('bus'); // In Variant C, bus mode is default so differences are tactile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -352,17 +354,7 @@ function App() {
     }
     if (updateStation) {
       const targetStation = (variant === 'A' && fix.coordinates)
-        ? {
-            properties: {
-              name: "Where you're at",
-              lines: [],
-              isPin: true,
-              apiId: 'user-location-gps',
-              nearestStation: fix.nearestStation,
-            },
-            geometry: { type: 'Point', coordinates: fix.coordinates },
-            isPin: true,
-          }
+        ? buildGpsHub(fix)
         : fix.nearestStation;
 
       if (targetStation) {
@@ -514,19 +506,23 @@ function App() {
       onAnchor: (fix) => {
         const nearest = findNearestStation(fix.coordinates);
         const inRange = nearest && nearest.distance <= NEAREST_STATION_RANGE_M;
-        setUserLocation((prev) => {
-          if (!prev || prev.status !== 'located' || prev.isMapClick) return prev;
-          const next = {
-            ...prev,
-            coordinates: fix.coordinates,
-            accuracy: fix.accuracy,
-            updatedAt: fix.updatedAt,
-            nearestStation: inRange ? nearest.station : null,
-            distance: inRange ? nearest.distance : null,
-          };
-          userLocationRef.current = next;
-          return next;
-        });
+        const prev = userLocationRef.current;
+        if (!prev || prev.status !== 'located' || prev.isMapClick) return;
+        const next = {
+          ...prev,
+          coordinates: fix.coordinates,
+          accuracy: fix.accuracy,
+          updatedAt: fix.updatedAt,
+          nearestStation: inRange ? nearest.station : null,
+          distance: inRange ? nearest.distance : null,
+        };
+        userLocationRef.current = next;
+        setUserLocation(next);
+        // Refresh the GPS hub (geometry, nearest station) in place; fetchedAt is untouched so the camera is not
+        // re-framed. Only when the hub itself is showing; a stop opened from it is refreshed on return.
+        if (shouldRefreshGpsHub({ selectedStation: selectedStationRef.current, selectedBusStop: selectedBusStopRef.current })) {
+          setSelectedStation(buildGpsHub(next));
+        }
       },
       onError: (status) => {
         // Permission revoked or GPS lost: stop quietly, say why once through the existing notice.
@@ -538,12 +534,17 @@ function App() {
   useEffect(() => {
     const tracker = liveTrackerRef.current;
     let handle = null;
+    let cleaned = false;
     if (Capacitor.isNativePlatform()) {
       Promise.resolve(CapApp.addListener('appStateChange', ({ isActive }) => tracker.setForeground(isActive)))
-        .then((h) => { handle = h; })
+        .then((h) => {
+          handle = h;
+          if (cleaned) h?.remove?.(); // cleanup ran before the listener registered
+        })
         .catch(() => {});
     }
     return () => {
+      cleaned = true;
       tracker.stop();
       handle?.remove?.();
     };

@@ -1442,6 +1442,9 @@ const MapView = ({
     }
 
     closingZoomRef.current = false;
+    // Live tracking refreshes the GPS hub in place (#104): same hub, new fix. Rebuild its pieces but leave the camera.
+    const isHubRefresh = prevStationRef.current?.properties?.apiId === 'user-location-gps' &&
+      selectedStation.properties?.apiId === 'user-location-gps';
     prevStationRef.current = selectedStation;
 
     const isPinTarget = Boolean(
@@ -1505,13 +1508,15 @@ const MapView = ({
       ? userLocationRef.current.coordinates
       : coordinates;
 
-    map.easeTo({
-      center: focusCoords,
-      zoom: targetZoom,
-      padding: basePadding,
-      duration: CAMERA_EASE_MS,
-      essential: true,
-    });
+    if (!isHubRefresh) {
+      map.easeTo({
+        center: focusCoords,
+        zoom: targetZoom,
+        padding: basePadding,
+        duration: CAMERA_EASE_MS,
+        essential: true,
+      });
+    }
 
     return () => {
       if (marker) {
