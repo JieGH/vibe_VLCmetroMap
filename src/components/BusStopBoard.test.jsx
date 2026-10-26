@@ -121,6 +121,36 @@ describe('BusStopBoard component', () => {
 
     // Verify countdown and due pulse
     expect(html).toContain('station-arriving-dot');
+    // Verify 5 min renders with min unit
+    expect(html).toContain('>5<');
+    expect(html).toContain('>min<');
+  });
+
+  it('renders 1 min countdown with min unit suffix instead of blank', () => {
+    const oneMinStop = {
+      stopCode: '2261',
+      stopName: 'Xàtiva',
+      lines: ['6'],
+      arrivals: [
+        {
+          line: '6',
+          destination: 'Torrefiel',
+          dueSeconds: 60,
+          minutes: 1,
+          isDue: true,
+          isLive: true,
+          wheelchair: false,
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={oneMinStop} theme="dark" onClose={() => {}} />
+    );
+
+    expect(html).toContain('>1<');
+    expect(html).toContain('>min<');
+    expect(html).not.toContain('station-arriving-dot');
   });
 
   it('renders graceful empty state when no bus arrivals are predicted', () => {

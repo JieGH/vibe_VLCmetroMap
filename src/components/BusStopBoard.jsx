@@ -50,12 +50,20 @@ export const BusStopBoard = ({
     threshold: 70,
   });
 
-  const rawCode = stop ? String(stop.stopCode || stop.code || stop.id || '1002') : '';
+  const rawCode = stop ? String(stop.stopCode || stop.code || stop.id || '') : '';
   const cleanCode = normalizeStopCode(rawCode);
-  const [liveArrivals, setLiveArrivals] = useState(() => {
-    if (!cleanCode) return null;
-    return getEmtCachedArrivals(cleanCode);
-  });
+
+  const [activeCode, setActiveCode] = useState(cleanCode);
+  const [liveArrivals, setLiveArrivals] = useState(() => (cleanCode ? getEmtCachedArrivals(cleanCode) : null));
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(() => Boolean(cleanCode && getEmtCachedArrivals(cleanCode)));
+
+  // Adjust state during render when cleanCode changes (React recommended pattern)
+  if (activeCode !== cleanCode) {
+    setActiveCode(cleanCode);
+    const cached = cleanCode ? getEmtCachedArrivals(cleanCode) : null;
+    setLiveArrivals(cached);
+    setHasAttemptedFetch(Boolean(cached));
+  }
 
   useEffect(() => {
     if (!stop || !cleanCode) return undefined;
@@ -66,9 +74,12 @@ export const BusStopBoard = ({
         const results = await fetchStopArrivals(cleanCode, { forceRefresh: force });
         if (isMounted) {
           setLiveArrivals(results);
+          setHasAttemptedFetch(true);
         }
       } catch {
-        // Retain prior liveArrivals on error
+        if (isMounted) {
+          setHasAttemptedFetch(true);
+        }
       }
     };
 
@@ -102,8 +113,8 @@ export const BusStopBoard = ({
 
   if (!stop) return null;
 
-  const displayName = stop.name || stop.stopName || 'Carrer de Colón';
-  const stopCode = cleanCode ? (cleanCode.startsWith('P-') ? cleanCode : `P-${cleanCode}`) : 'P-1002';
+  const displayName = stop.name || stop.stopName || 'Parada';
+  const stopCode = cleanCode ? `P-${cleanCode}` : '';
   const stopLines = Array.isArray(stop.lines)
     ? stop.lines.map((l) => (typeof l === 'object' && l !== null ? String(l.line || l.id || '') : String(l))).filter(Boolean)
     : [];
@@ -115,12 +126,14 @@ export const BusStopBoard = ({
       ? stop.arrivals
       : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
         ? stop.lines
-        : [
-            { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
-            { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
-            { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
-            { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
-          ];
+        : hasAttemptedFetch
+          ? []
+          : [
+              { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
+              { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
+              { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
+              { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
+            ];
 
   return (
     <aside
@@ -382,8 +395,8 @@ export const BusStopBoard = ({
             </thead>
             <tbody>
               {arrivals.map((a, i) => {
-                const heat = countdownHeat(a.dueSeconds ?? a.seconds ?? 0, theme);
                 const dueSec = a.dueSeconds ?? a.seconds ?? 0;
+                const heat = countdownHeat(dueSec, theme);
                 return (
                   <tr
                     key={i}
@@ -445,10 +458,10 @@ export const BusStopBoard = ({
                         color: heat,
                       }}
                     >
-                      {dueSec <= 30 || a.isDue ? (
+                      {dueSec <= 30 ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
                           <span
-                            className="station-arriving-dot pulse"
+                            className={`station-arriving-dot ${a.isLive ? 'pulse' : ''}`}
                             data-testid="station-arriving-dot"
                             style={{
                               width: 7, height: 7, borderRadius: '50%',
