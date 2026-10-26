@@ -56,12 +56,23 @@ const StationPanel = ({
   onSelectFeederStop,
   onSelectStation,
   userLocation,
+  isPin,
 }) => {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
   const landscape = useIsLandscape();
   const [activeTab, setActiveTab] = useState('split');
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const isPinPlace = isPin !== undefined
+    ? isPin
+    : Boolean(
+        station?.isPin ||
+        station?.properties?.isPin ||
+        station?.properties?.name === 'Map Ping' ||
+        userLocation?.isMapClick ||
+        (variant === 'A' && Boolean(userLocation))
+      );
 
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
     onDismiss: onClose,
@@ -168,7 +179,7 @@ const StationPanel = ({
               height: isExpanded ? 'calc(100vh - 100px)' : 'auto',
               width: isExpanded
                 ? 'min(820px, 68vw)'
-                : (variant === 'A' && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
+                : (isPinPlace && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
               transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }
           : {
@@ -203,7 +214,7 @@ const StationPanel = ({
         }}
         {...(!landscape ? handleProps : {})}
       >
-        {variant === 'A' ? (
+        {isPinPlace ? (
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flex: 1, overflow: 'hidden' }}>
             <span style={{ fontSize: '1.05rem', lineHeight: 1, flexShrink: 0 }}>
               {userLocation ? '📍' : 'm'}
@@ -419,146 +430,176 @@ const StationPanel = ({
         </div>
       </header>
 
-      {/* Multimodal Hub Tabs in Variant A */}
-      {variant === 'A' && (
+      {/* Multimodal Hub Tabs when a Pin is placed */}
+      {isPinPlace && (
         <nav
           className="station-multimodal-tabs"
           aria-label="Multimodal arrivals navigation"
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: 6,
             padding: '6px 12px',
             borderBottom: '1px solid var(--border-color)',
             background: 'rgba(0,0,0,0.12)',
-            overflowX: 'auto',
           }}
         >
-          {/* Tab 1: All (Split View showing both Metro & Bus side-by-side) */}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'split'}
-            onClick={() => setActiveTab('split')}
-            title="All transit departures (Metro and Bus side-by-side)"
-            style={{
-              padding: '4px 10px',
-              borderRadius: 8,
-              border: 'none',
-              background: activeTab === 'split' ? '#37474F' : 'var(--bg-hover)',
-              color: activeTab === 'split' ? '#80D8FF' : '#ffffff',
-              fontWeight: 700,
-              fontSize: '.75rem',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              boxShadow: activeTab === 'split' ? '0 2px 6px rgba(55,71,79,0.35)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <span>All</span>
-            <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-              {allStopsCount}
-            </span>
-          </button>
-
-          {/* Tab 2: Metro */}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'metro'}
-            onClick={() => setActiveTab('metro')}
-            title="Metro departures only"
-            style={{
-              padding: '4px 10px',
-              borderRadius: 8,
-              border: 'none',
-              background: activeTab === 'metro' ? '#E2001A' : 'var(--bg-hover)',
-              color: '#ffffff',
-              fontWeight: 700,
-              fontSize: '.75rem',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              boxShadow: activeTab === 'metro' ? '0 2px 6px rgba(226,0,26,0.35)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <span
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', flex: 1 }}>
+            {/* Tab 1: All (Split View showing both Metro & Bus side-by-side) */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'split'}
+              onClick={() => setActiveTab('split')}
+              title="All transit departures (Metro and Bus side-by-side)"
               style={{
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
-                color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
-                fontSize: '0.58rem',
-                fontWeight: 900,
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: 'none',
+                background: activeTab === 'split' ? '#37474F' : 'var(--bg-hover)',
+                color: activeTab === 'split' ? '#80D8FF' : '#ffffff',
+                fontWeight: 700,
+                fontSize: '.75rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
                 display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                lineHeight: 1,
+                gap: 5,
+                boxShadow: activeTab === 'split' ? '0 2px 6px rgba(55,71,79,0.35)' : 'none',
+                transition: 'all 0.15s ease',
               }}
             >
-              m
-            </span>
-            <span>Metro</span>
-            <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-              {metroStopsCount}
-            </span>
-          </button>
+              <span>All</span>
+              <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
+                {allStopsCount}
+              </span>
+            </button>
 
-          {/* Tab 3: Bus */}
+            {/* Tab 2: Metro */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'metro'}
+              onClick={() => setActiveTab('metro')}
+              title="Metro departures only"
+              style={{
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: 'none',
+                background: activeTab === 'metro' ? '#E2001A' : 'var(--bg-hover)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '.75rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                boxShadow: activeTab === 'metro' ? '0 2px 6px rgba(226,0,26,0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
+                  color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
+                  fontSize: '0.58rem',
+                  fontWeight: 900,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+              >
+                m
+              </span>
+              <span>Metro</span>
+              <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
+                {metroStopsCount}
+              </span>
+            </button>
+
+            {/* Tab 3: Bus */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'bus'}
+              onClick={() => setActiveTab('bus')}
+              title="EMT Bus departures only"
+              style={{
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: 'none',
+                background: activeTab === 'bus' ? '#1565C0' : 'var(--bg-hover)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '.75rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                boxShadow: activeTab === 'bus' ? '0 2px 6px rgba(21,101,192,0.35)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.54rem',
+                  fontWeight: 900,
+                  background: '#D62828',
+                  color: '#ffffff',
+                  padding: '1px 3px',
+                  borderRadius: 2,
+                  letterSpacing: '0.04em',
+                  lineHeight: 1,
+                }}
+              >
+                EMT
+              </span>
+              <span>Bus</span>
+              <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
+                {busStopsCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Quick Expand More / Collapse Action */}
           <button
             type="button"
-            role="tab"
-            aria-selected={activeTab === 'bus'}
-            onClick={() => setActiveTab('bus')}
-            title="EMT Bus departures only"
+            onClick={() => setIsExpanded((v) => !v)}
+            title={isExpanded ? 'Collapse card' : 'Expand more departures'}
+            aria-label={isExpanded ? 'Collapse card' : 'Expand more departures'}
             style={{
-              padding: '4px 10px',
+              padding: '3px 8px',
               borderRadius: 8,
-              border: 'none',
-              background: activeTab === 'bus' ? '#1565C0' : 'var(--bg-hover)',
-              color: '#ffffff',
+              border: '1px solid var(--border-color, rgba(255,255,255,0.15))',
+              background: isExpanded ? 'rgba(255, 209, 0, 0.18)' : 'var(--bg-hover)',
+              color: isExpanded ? '#FFD100' : 'var(--text-secondary)',
               fontWeight: 700,
-              fontSize: '.75rem',
+              fontSize: '.72rem',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 5,
-              boxShadow: activeTab === 'bus' ? '0 2px 6px rgba(21,101,192,0.35)' : 'none',
+              gap: 4,
+              flexShrink: 0,
+              marginLeft: 'auto',
               transition: 'all 0.15s ease',
             }}
           >
-            <span
-              style={{
-                fontSize: '0.54rem',
-                fontWeight: 900,
-                background: '#D62828',
-                color: '#ffffff',
-                padding: '1px 3px',
-                borderRadius: 2,
-                letterSpacing: '0.04em',
-                lineHeight: 1,
-              }}
-            >
-              EMT
-            </span>
-            <span>Bus</span>
-            <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-              {busStopsCount}
-            </span>
+            {isExpanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            <span>{isExpanded ? 'Collapse' : 'Expand more'}</span>
           </button>
         </nav>
       )}
 
       {/* Body Container */}
-      {variant === 'A' ? (
+      {isPinPlace ? (
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           {focus.fetchError && (
             <div role="status" style={{

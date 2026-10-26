@@ -167,6 +167,10 @@ function App() {
     setSelectedBusStop(busStop);
     if (busStop) {
       setSelectedStation(null);
+      if (userLocationRef.current?.isMapClick) {
+        setUserLocation(null);
+        userLocationRef.current = null;
+      }
     }
   };
 
@@ -209,6 +213,12 @@ function App() {
     if (options.userLocation) {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
+    } else if (station && !station.isPin && !station.properties?.isPin && station.properties?.name !== 'Map Ping') {
+      // User explicitly picked a Metro station: clear any previous map-click pin
+      if (userLocationRef.current?.isMapClick) {
+        setUserLocation(null);
+        userLocationRef.current = null;
+      }
     }
     // With a fix in hand, say how far this Station is on foot (omitted in Variant A multimodal hub).
     if (variant !== 'A' && userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
@@ -961,6 +971,12 @@ function App() {
           onSelectFeederStop={handleSelectBusStop}
           onSelectStation={handleSelectStation}
           userLocation={userLocation}
+          isPin={Boolean(
+            selectedStation?.isPin ||
+            selectedStation?.properties?.isPin ||
+            selectedStation?.properties?.name === 'Map Ping' ||
+            userLocation?.isMapClick
+          )}
         />
       )}
 

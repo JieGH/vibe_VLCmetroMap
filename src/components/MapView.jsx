@@ -839,6 +839,9 @@ const MapView = ({
 
       const inner = document.createElement('div');
       inner.className = 'metro-station-badge';
+      if (typeof inner.setAttribute === 'function') {
+        inner.setAttribute('data-station-name', st.properties.name);
+      }
       const isHovered = hoverRef.current && (st.properties.lines || []).includes(hoverRef.current);
       const isHidden = scale < 0.55;
       
@@ -1187,12 +1190,15 @@ const MapView = ({
           const nearestWithin5Min = drawnStationsRef.current && drawnStationsRef.current.length > 0
             ? nearestFeature(drawnStationsRef.current, [lng, lat])
             : null;
-          const targetStation = (nearestWithin5Min && nearestWithin5Min.distance <= 450)
-            ? nearestWithin5Min.feature
-            : (nearestWithin5Min?.feature || {
-                properties: { name: 'Map Ping', lines: [] },
-                geometry: { type: 'Point', coordinates: [lng, lat] },
-              });
+          const targetStation = {
+            properties: {
+              name: 'Map Ping',
+              lines: [],
+              isPin: true,
+            },
+            geometry: { type: 'Point', coordinates: [lng, lat] },
+            isPin: true,
+          };
 
           selectStRef.current(targetStation, {
             userLocation: {
@@ -1200,6 +1206,7 @@ const MapView = ({
               accuracy: 15,
               isMapClick: true,
               status: 'located',
+              nearestStation: nearestWithin5Min?.feature || null,
               fetchedAt: Date.now(),
             }
           });
@@ -1486,6 +1493,50 @@ const MapView = ({
       if (busFocusMarkerRef.current === marker) busFocusMarkerRef.current = null;
     };
   }, [selectedBusStop]);
+
+  // ── Highlight yellow rim around chosen station or bus stop ─────────────────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const selectedMetroName = (selectedStation && !selectedStation.isPin && !selectedStation.properties?.isPin && selectedStation.properties?.name !== 'Map Ping')
+      ? (selectedStation.properties?.name || selectedStation.name)
+      : null;
+
+    container.querySelectorAll('.metro-station-badge').forEach((el) => {
+      const match = Boolean(selectedMetroName && el.getAttribute('data-station-name') === selectedMetroName);
+      if (match) {
+        el.classList.add('is-selected');
+        if (el.parentElement?.parentElement) {
+          el.parentElement.parentElement.style.zIndex = '50';
+        }
+      } else {
+        el.classList.remove('is-selected');
+        if (el.parentElement?.parentElement) {
+          el.parentElement.parentElement.style.zIndex = '';
+        }
+      }
+    });
+
+    const selectedStopCode = selectedBusStop
+      ? String(selectedBusStop.stopCode || selectedBusStop.code || '')
+      : null;
+
+    container.querySelectorAll('.emt-stop-badge').forEach((el) => {
+      const match = Boolean(selectedStopCode && el.getAttribute('data-stop-code') === selectedStopCode);
+      if (match) {
+        el.classList.add('is-selected');
+        if (el.parentElement?.parentElement) {
+          el.parentElement.parentElement.style.zIndex = '50';
+        }
+      } else {
+        el.classList.remove('is-selected');
+        if (el.parentElement?.parentElement) {
+          el.parentElement.parentElement.style.zIndex = '';
+        }
+      }
+    });
+  }, [selectedStation, selectedBusStop]);
 
   // ── The viewer's own dot ───────────────────────────────────────────────────
   // A MapLibre Marker rather than a style layer, matching every other marker
@@ -1858,7 +1909,12 @@ const MapView = ({
     };
   }, [variant, selectedStation, activeBusLine, activeMode, theme, onSelectBusStop, onSelectBusLine]);
 
-  const hasPin = Boolean(userLocation?.isMapClick || selectedStation);
+  const hasPin = Boolean(
+    userLocation?.isMapClick ||
+    selectedStation?.isPin ||
+    selectedStation?.properties?.isPin ||
+    selectedStation?.properties?.name === 'Map Ping'
+  );
 
   return (
     <div

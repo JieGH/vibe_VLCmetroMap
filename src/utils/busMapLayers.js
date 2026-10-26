@@ -259,6 +259,9 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
 
   const inner = document.createElement('div');
   inner.className = 'emt-stop-badge';
+  if (typeof inner.setAttribute === 'function') {
+    inner.setAttribute('data-stop-code', String(stop.stopCode || stop.code || ''));
+  }
   inner.style.cssText = `
     display: inline-flex;
     align-items: center;

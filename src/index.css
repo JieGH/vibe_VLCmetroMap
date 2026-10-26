@@ -166,6 +166,39 @@ textarea {
   opacity: 1.0 !important;
 }
 
+/* Highlight yellow rim around station when chosen */
+@keyframes yellowRimPulse {
+  0% {
+    box-shadow: 0 0 0 2px #FFD100, 0 0 10px rgba(255, 209, 0, 0.85);
+  }
+  50% {
+    box-shadow: 0 0 0 3.5px #FFE066, 0 0 18px rgba(255, 209, 0, 1);
+  }
+  100% {
+    box-shadow: 0 0 0 2px #FFD100, 0 0 10px rgba(255, 209, 0, 0.85);
+  }
+}
+
+.metro-station-badge.is-selected {
+  opacity: 1.0 !important;
+  outline: 3px solid #FFD100 !important;
+  outline-offset: 2.5px !important;
+  box-shadow: 0 0 0 2px #FFD100, 0 0 14px rgba(255, 209, 0, 0.95) !important;
+  transform: scale(1.4) !important;
+  z-index: 50 !important;
+  animation: yellowRimPulse 2.2s infinite ease-in-out;
+}
+
+.emt-stop-badge.is-selected {
+  opacity: 1.0 !important;
+  outline: 3px solid #FFD100 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #FFD100, 0 0 14px rgba(255, 209, 0, 0.95) !important;
+  transform: scale(1.35) !important;
+  z-index: 50 !important;
+  animation: yellowRimPulse 2.2s infinite ease-in-out;
+}
+
 .line3-train-count {
   position: absolute;
   right: 20px;

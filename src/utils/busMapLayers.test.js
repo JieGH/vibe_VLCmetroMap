@@ -20,6 +20,8 @@ describe('busMapLayers marker creators', () => {
         innerHTML: '',
         addEventListener: vi.fn(),
         appendChild: vi.fn(),
+        setAttribute: vi.fn(),
+        getAttribute: vi.fn(),
       }),
     };
   });
