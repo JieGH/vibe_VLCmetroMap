@@ -35,7 +35,7 @@ import { Search, X } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
-import { isHubStation, captureReturnContext, resolveReturn } from './utils/returnContext';
+import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import BusBadge from './components/BusBadge';
@@ -178,6 +178,11 @@ function App() {
   // returns to it (#105). Any other way of selecting something clears it.
   const returnCtxRef = useRef(null);
 
+  // Drop the context once what it was opened from is no longer what is showing.
+  useEffect(() => {
+    returnCtxRef.current = reconcileReturnContext(returnCtxRef.current, { selectedStation, selectedBusStop, activeBusLine });
+  }, [selectedStation, selectedBusStop, activeBusLine]);
+
   const openBusStop = (busStop, ctx) => {
     returnCtxRef.current = ctx || null;
     setSelectedBusStop(busStop);
@@ -198,7 +203,7 @@ function App() {
 
   // Leave the stop/station view: back to the remembered hub, else the map.
   const restoreReturnContext = () => {
-    const back = resolveReturn(returnCtxRef.current);
+    const back = resolveReturn(returnCtxRef.current, userLocationRef.current);
     returnCtxRef.current = null;
     if (!back) return false;
     setSelectedStation(back.selectedStation);

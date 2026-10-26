@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isHubStation, captureReturnContext, resolveReturn } from './returnContext';
+import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext } from './returnContext';
 
 const ping = { isPin: true, properties: { name: 'Map Ping' } };
 const gps = { properties: { name: "Where you're at" } };
@@ -32,8 +32,31 @@ describe('returnContext', () => {
     expect(resolveReturn(null)).toBeNull();
   });
 
-  it('closing the hub itself leaves nothing to restore', () => {
-    expect(resolveReturn(captureReturnContext({}))).toBeNull();
+  it('live GPS hub restores the latest fix, a ping keeps its own location', () => {
+    const old = { status: 'located', coordinates: [1, 1] };
+    const fresh = { status: 'located', coordinates: [2, 2] };
+    expect(resolveReturn({ station: gps, userLocation: old }, fresh).userLocation).toBe(fresh);
+    expect(resolveReturn({ station: ping, userLocation: pingLoc }, fresh).userLocation).toBe(pingLoc);
+  });
+
+  describe('reconcileReturnContext', () => {
+    const ctx = { station: ping, userLocation: pingLoc };
+    it('keeps it while the stop or metro station opened from the hub shows', () => {
+      expect(reconcileReturnContext(ctx, { selectedBusStop: { stopCode: '1' } })).toBe(ctx);
+      expect(reconcileReturnContext(ctx, { selectedStation: metro })).toBe(ctx);
+    });
+    it('drops it when a line inspector opens over the stop', () => {
+      expect(reconcileReturnContext(ctx, { selectedBusStop: { stopCode: '1' }, activeBusLine: { id: 'c1' } })).toBeNull();
+    });
+    it('drops it when the sidebar/closing leaves nothing selected', () => {
+      expect(reconcileReturnContext(ctx, {})).toBeNull();
+    });
+    it('drops it when a new hub is selected (e.g. a fresh GPS fix)', () => {
+      expect(reconcileReturnContext(ctx, { selectedStation: gps })).toBeNull();
+    });
+    it('stays null with no context', () => {
+      expect(reconcileReturnContext(null, { selectedBusStop: {} })).toBeNull();
+    });
   });
 
   it('metro opened from a hub: hub captured, restored with its location', () => {
