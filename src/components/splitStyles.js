@@ -18,3 +18,13 @@ export const splitHeaderBoxStyle = (compact) => ({
   borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
   ...(compact ? { position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg-panel-solid)' } : {}),
 });
+
+// #113: the split-view minute tick (′) renders at the digit size (was 0.68rem / 0.70rem unit size, in
+// the secondary colour). lineHeight 0 keeps the row from growing; colour is inherited from the number.
+export const SPLIT_TICK = { fontSize: '1.2em', lineHeight: 0, marginLeft: 0, color: 'inherit' };
+
+/** Style of the unit span beside a countdown number (`unit` is 'min' | 'sec' ...). */
+export const timeUnitStyle = ({ compact, unit, baseFontSize, gap = 2 }) =>
+  compact && unit === 'min'
+    ? { ...SPLIT_TICK }
+    : { fontSize: baseFontSize, marginLeft: gap, color: 'var(--text-secondary)' };

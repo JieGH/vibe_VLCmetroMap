@@ -5,7 +5,7 @@ import { Footprints } from 'lucide-react';
 import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
-import { SPLIT_HEADER, splitHeaderBoxStyle } from './splitStyles';
+import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 
 export const CompactMetroSection = ({
   arrivals = [],
@@ -26,7 +26,6 @@ export const CompactMetroSection = ({
   const dueLabel = t(compact ? 'common.dueShort' : 'common.due');
   const unitText = (seconds) =>
     compact && countdownUnit(seconds) === 'min' ? '′' : t(`common.${countdownUnit(seconds)}`);
-  const unitGap = (seconds) => (compact && countdownUnit(seconds) === 'min' ? 0 : 2);
 
   const isPin = Boolean(
     isPinMode ||
@@ -324,7 +323,7 @@ export const CompactMetroSection = ({
                             >
                               {countdownLabel(arr.seconds, dueLabel)}
                               {countdownUnit(arr.seconds) && (
-                                <span style={{ fontSize: '0.68rem', marginLeft: unitGap(arr.seconds), color: 'var(--text-secondary)' }}>
+                                <span style={timeUnitStyle({ compact, unit: countdownUnit(arr.seconds), baseFontSize: '0.68rem' })}>
                                   {unitText(arr.seconds)}
                                 </span>
                               )}
@@ -510,7 +509,7 @@ export const CompactMetroSection = ({
                 >
                   {countdownLabel(arrival.seconds, dueLabel)}
                   {countdownUnit(arrival.seconds) && (
-                    <span style={{ fontSize: '0.70rem', marginLeft: unitGap(arrival.seconds), color: 'var(--text-secondary)' }}>
+                    <span style={timeUnitStyle({ compact, unit: countdownUnit(arrival.seconds), baseFontSize: '0.70rem' })}>
                       {unitText(arrival.seconds)}
                     </span>
                   )}

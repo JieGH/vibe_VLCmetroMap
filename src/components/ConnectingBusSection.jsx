@@ -5,7 +5,7 @@ import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
-import { SPLIT_HEADER, splitHeaderBoxStyle } from './splitStyles';
+import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 import {
   fetchStopArrivals,
   getEmtCachedArrivals,
@@ -323,7 +323,7 @@ export const ConnectingBusSection = ({
                             <>
                               {countdownLabel(dueSec, dueLabel)}
                               {countdownUnit(dueSec) && (
-                                <span style={{ fontSize: '0.70rem', marginLeft: compact && countdownUnit(dueSec) === 'min' ? 0 : 2, color: 'var(--text-secondary)' }}>
+                                <span style={timeUnitStyle({ compact, unit: countdownUnit(dueSec), baseFontSize: '0.70rem' })}>
                                   {compact && countdownUnit(dueSec) === 'min' ? '′' : t(`common.${countdownUnit(dueSec)}`)}
                                 </span>
                               )}

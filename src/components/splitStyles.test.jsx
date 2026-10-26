@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import { SPLIT_HEADER, splitHeaderBoxStyle } from './splitStyles';
+import { SPLIT_HEADER, SPLIT_TICK, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 
@@ -33,5 +33,34 @@ describe('#112 split-view headers', () => {
     }
     const busFull = renderToStaticMarkup(<ConnectingBusSection feeders={feeders} theme="dark" />);
     expect(busFull).not.toContain('position:sticky');
+  });
+});
+
+describe('#113 split-view minute tick', () => {
+  it('tick is at least the digit size, tight, no extra line height, inherits the number colour', () => {
+    expect(parseFloat(SPLIT_TICK.fontSize)).toBeGreaterThanOrEqual(1);
+    expect(parseFloat(SPLIT_TICK.fontSize)).toBeLessThanOrEqual(1.3);
+    expect(SPLIT_TICK).toMatchObject({ marginLeft: 0, lineHeight: 0, color: 'inherit' });
+  });
+
+  it('timeUnitStyle: tick only for compact minutes; seconds and detail views keep the unit style', () => {
+    expect(timeUnitStyle({ compact: true, unit: 'min', baseFontSize: '0.70rem' })).toEqual(SPLIT_TICK);
+    const sec = timeUnitStyle({ compact: true, unit: 'sec', baseFontSize: '0.70rem' });
+    expect(sec).toEqual({ fontSize: '0.70rem', marginLeft: 2, color: 'var(--text-secondary)' });
+    expect(timeUnitStyle({ compact: false, unit: 'min', baseFontSize: '0.70rem' })).toEqual(sec);
+  });
+
+  it('renders ′ with the tick style in compact mode and "min" in detail mode, both columns', () => {
+    const tick = 'font-size:1.2em;line-height:0;margin-left:0;color:inherit';
+    const bus = renderToStaticMarkup(<ConnectingBusSection feeders={feeders} compact theme="dark" />);
+    const metro = renderToStaticMarkup(<CompactMetroSection nearbyMetro={nearbyMetro} compact isPinMode theme="dark" />);
+    for (const html of [bus, metro]) {
+      expect(html).toContain(tick);
+      expect(html).toContain('′');
+    }
+    const busFull = renderToStaticMarkup(<ConnectingBusSection feeders={feeders} theme="dark" />);
+    expect(busFull).toContain('min');
+    expect(busFull).not.toContain('′');
+    expect(busFull).not.toContain(tick);
   });
 });
