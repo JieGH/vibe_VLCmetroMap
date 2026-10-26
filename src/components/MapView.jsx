@@ -1587,7 +1587,7 @@ const MapView = ({
     };
   }, [selectedBusStop, selectedStation]);
 
-  // ── Highlight yellow rim around chosen station or bus stop ─────────────────
+  // ── Highlight active chosen station or bus stop ─────────────────
   const updateStopHighlights = () => {
     const container = containerRef.current;
     if (!container) return;
