@@ -612,6 +612,8 @@ const MapView = ({
   activeMode = 'metro',
   selectedBusStop = null,
   onSelectBusStop = null,
+  liveFixChannel = null,
+  following = false,
 }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
@@ -643,6 +645,9 @@ const MapView = ({
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
   const userLocationRef = useRef(userLocation);
   useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
+  const followingRef = useRef(following);
+  useEffect(() => { followingRef.current = following; }, [following]);
+  const userDotRef = useRef(null); // { move(fix) } for the live dot; per-fix updates bypass React (#104)
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // raw zoomCurve value, updated on every zoom event
   const zoomValueRef    = useRef(DEFAULT_MAP_ZOOM); // current map zoom
@@ -1685,16 +1690,19 @@ const MapView = ({
       .setLngLat(userLocation.coordinates)
       .addTo(map);
 
+    // The dot's position and accuracy may be fresher than `userLocation` (live tracking moves it per fix).
+    let shown = { coordinates: userLocation.coordinates, accuracy: userLocation.accuracy, updatedAt: userLocation.updatedAt ?? userLocation.fetchedAt };
+
     const sizeAccuracyRing = () => {
       if (isPing) return;
       const accuracyRing = wrapper.querySelector('.user-location-accuracy');
       if (!accuracyRing) return;
-      if (!Number.isFinite(userLocation.accuracy)) {
+      if (!Number.isFinite(shown.accuracy)) {
         accuracyRing.style.display = 'none';
         return;
       }
-      const scale = metresPerPixel(userLocation.coordinates[1], map.getZoom());
-      const diameter = (2 * userLocation.accuracy) / scale;
+      const scale = metresPerPixel(shown.coordinates[1], map.getZoom());
+      const diameter = (2 * shown.accuracy) / scale;
       accuracyRing.style.display = diameter < 26 ? 'none' : '';
       accuracyRing.style.width = `${diameter}px`;
       accuracyRing.style.height = `${diameter}px`;
@@ -1702,7 +1710,7 @@ const MapView = ({
 
     const fade = () => {
       if (!isPing) {
-        wrapper.style.opacity = userFixOpacity(Date.now() - (userLocation.updatedAt ?? userLocation.fetchedAt));
+        wrapper.style.opacity = userFixOpacity(Date.now() - shown.updatedAt);
       }
     };
 
@@ -1711,7 +1719,31 @@ const MapView = ({
     map.on('zoom', sizeAccuracyRing);
     const fadeTimer = setInterval(fade, 5000);
 
+    // Live tracking: move only this marker (no React render, no other layer touched). When following, ease the
+    // camera at the current zoom (#94) once the dot drifts out of the middle of the visible area, and never
+    // while the viewer is mid-gesture or has panned away (`following` is then false).
+    const FOLLOW_SLACK_PX = 60;
+    const move = (fix) => {
+      if (isPing || !fix) return;
+      shown = fix;
+      marker.setLngLat(fix.coordinates);
+      sizeAccuracyRing();
+      fade();
+      if (!followingRef.current) return;
+      const dot = map.project(fix.coordinates);
+      const middle = map.project(map.getCenter());
+      if (Math.hypot(dot.x - middle.x, dot.y - middle.y) > FOLLOW_SLACK_PX) {
+        map.easeTo({ center: fix.coordinates, duration: CAMERA_EASE_MS, essential: false });
+      }
+    };
+    userDotRef.current = { move };
+    const unsubscribe = liveFixChannel ? liveFixChannel.subscribe(move) : null;
+    const pending = liveFixChannel?.get();
+    if (pending) move(pending);
+
     return () => {
+      userDotRef.current = null;
+      if (unsubscribe) unsubscribe();
       map.off('zoom', sizeAccuracyRing);
       clearInterval(fadeTimer);
       marker.remove();

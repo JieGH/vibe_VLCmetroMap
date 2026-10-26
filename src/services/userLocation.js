@@ -81,7 +81,7 @@ export const findNearestStation = (coordinates) => {
   return best;
 };
 
-const defaultProvider = {
+export const defaultProvider = {
   checkPermissions: () => Geolocation.checkPermissions(),
   requestPermissions: () => Geolocation.requestPermissions(),
   getCurrentPosition: (options) => Geolocation.getCurrentPosition(options),
@@ -120,7 +120,7 @@ const failure = (status) => ({
 // messages, so the text is the only thing left to read. Anything unrecognised
 // is 'unavailable' rather than 'denied', because wrongly telling someone to
 // change a permission they never refused sends them to the wrong screen.
-const classifyError = (error) => {
+export const classifyError = (error) => {
   if (!error) return 'unavailable';
 
   if (error.code === 1) return 'denied';
@@ -485,9 +485,19 @@ export const MIN_WATCH_INTERVAL_MS = 2000;
  * @param {(fix: {coordinates: [number, number], accuracy: number|null}) => void} options.onFix
  * @param {object} [options.provider]
  * @param {() => number} [options.now]
+ * @param {object} [options.watchOptions] Provider watch options (live tracking lowers accuracy when stationary)
+ * @param {number} [options.minIntervalMs] Fixes closer together than this are dropped
+ * @param {(status: 'denied'|'unavailable'|'timeout') => void} [options.onError] Called for provider errors; the watch itself is left running
  * @returns {() => void} stops the watch (safe to call twice, or before the watch has started)
  */
-export const watchLocation = ({ onFix, provider = defaultProvider, now = Date.now }) => {
+export const watchLocation = ({
+  onFix,
+  provider = defaultProvider,
+  now = Date.now,
+  watchOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
+  minIntervalMs = MIN_WATCH_INTERVAL_MS,
+  onError = null,
+}) => {
   if (typeof provider.watchPosition !== 'function') return () => {};
   let stopped = false;
   let id = null;
@@ -500,20 +510,27 @@ export const watchLocation = ({ onFix, provider = defaultProvider, now = Date.no
   };
 
   Promise.resolve(provider.watchPosition(
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 },
+    watchOptions,
     (reading, error) => {
-      if (stopped || error || !reading || !reading.coords) return;
+      if (stopped) return;
+      if (error) {
+        if (onError) onError(classifyError(error));
+        return;
+      }
+      if (!reading || !reading.coords) return;
       const accuracy = Number.isFinite(reading.coords.accuracy) ? reading.coords.accuracy : null;
       if (accuracy !== null && accuracy > MAX_USABLE_ACCURACY_M) return;
       const at = now();
-      if (at - lastAt < MIN_WATCH_INTERVAL_MS) return;
+      if (at - lastAt < minIntervalMs) return;
       lastAt = at;
       onFix({ coordinates: [reading.coords.longitude, reading.coords.latitude], accuracy });
     },
   )).then((watchId) => {
     id = watchId;
     if (stopped) clear();
-  }).catch(() => {});
+  }).catch((error) => {
+    if (!stopped && onError) onError(classifyError(error));
+  });
 
   return () => {
     stopped = true;

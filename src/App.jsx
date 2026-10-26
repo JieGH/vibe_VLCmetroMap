@@ -17,7 +17,8 @@ import FeedbackModal from './components/FeedbackModal';
 import WhatsNewModal from './components/WhatsNewModal';
 import { markWhatsNewSeen } from './utils/whatsNew';
 import MovedNotice from './components/MovedNotice';
-import { locate, watchLocation } from './services/userLocation';
+import { locate, findNearestStation, NEAREST_STATION_RANGE_M } from './services/userLocation';
+import { createLiveTracker, createLiveFixChannel } from './services/liveTracking';
 import { createAutoLocator } from './services/autoLocate';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -113,6 +114,13 @@ function App() {
   useEffect(() => {
     userLocationRef.current = userLocation;
   }, [userLocation]);
+  // Live tracking (#104, ADR-0012). Per-fix positions travel on a channel straight to the map marker, so a fix
+  // every few seconds never re-renders the app; only the larger-movement anchor below updates React state.
+  const liveFixChannelRef = useRef(null);
+  if (!liveFixChannelRef.current) liveFixChannelRef.current = createLiveFixChannel();
+  const liveTrackerRef = useRef(null);
+  // True while the camera follows the dot; broken by a manual pan or by choosing a stop, restored by locate.
+  const [following, setFollowing] = useState(false);
   useEffect(() => {
     if (variant === 'A') {
       setWalkTarget(null);
@@ -323,6 +331,12 @@ function App() {
   const applyUserLocation = (fix, updateStation = true) => {
     setUserLocation(fix);
     userLocationRef.current = fix;
+    if (fix.status === 'located' && fix.coordinates) {
+      // A fresh fix resets the live dot and (re)starts following and tracking from it.
+      liveFixChannelRef.current.publish(null);
+      liveTrackerRef.current.start({ coordinates: fix.coordinates, accuracy: fix.accuracy });
+      setFollowing(true);
+    }
     if (fix.nearestStation) {
       // The walking box answers a successful fix; the notice is for errors only (omitted in Variant A multimodal hub).
       if (variant !== 'A') {
@@ -470,20 +484,79 @@ function App() {
     if (!selectedStation) setWalkTarget(null);
   }, [selectedStation]);
 
-  // While the box is up, follow the viewer so its distance counts down as they walk. The camera is not touched:
-  // MapView frames once per locate request (keyed by fetchedAt), and `updatedAt` is what keeps the dot fresh.
-  const walking = Boolean(walkTarget) && Boolean(userLocation);
-  useEffect(() => {
-    if (!walking) return undefined;
-    return watchLocation({
-      onFix: ({ coordinates, accuracy }) => setUserLocation((prev) => {
-        if (!prev || prev.status !== 'located') return prev;
-        const next = { ...prev, coordinates, accuracy, updatedAt: Date.now() };
-        userLocationRef.current = next;
-        return next;
-      }),
+  // Live tracking: once located, follow the viewer while the app is visible. The tracker (liveTracking.js) owns
+  // cadence, gating and pausing; this wires its three outputs. Per fix: the dot only. Past ANCHOR_RECOMPUTE_M:
+  // the nearest station, the 5-minute-walk nodes and the "Where you're at" hub (all driven by `userLocation`,
+  // whose `fetchedAt` is kept so the camera is not re-framed). No EMT request is made from here (ADR-0011).
+  const walkTargetRef = useRef(null);
+  walkTargetRef.current = walkTarget;
+  const describeRef = useRef(null);
+  describeRef.current = describeLocateResult;
+  if (!liveTrackerRef.current) {
+    liveTrackerRef.current = createLiveTracker({
+      onFix: (fix) => {
+        liveFixChannelRef.current.publish(fix);
+        // The legacy walking box (non-A variants) counts its distance down per fix.
+        if (walkTargetRef.current) {
+          setUserLocation((prev) => {
+            if (!prev || prev.status !== 'located') return prev;
+            const next = { ...prev, coordinates: fix.coordinates, accuracy: fix.accuracy, updatedAt: fix.updatedAt };
+            userLocationRef.current = next;
+            return next;
+          });
+        }
+      },
+      onAnchor: (fix) => {
+        const nearest = findNearestStation(fix.coordinates);
+        const inRange = nearest && nearest.distance <= NEAREST_STATION_RANGE_M;
+        setUserLocation((prev) => {
+          if (!prev || prev.status !== 'located' || prev.isMapClick) return prev;
+          const next = {
+            ...prev,
+            coordinates: fix.coordinates,
+            accuracy: fix.accuracy,
+            updatedAt: fix.updatedAt,
+            nearestStation: inRange ? nearest.station : null,
+            distance: inRange ? nearest.distance : null,
+          };
+          userLocationRef.current = next;
+          return next;
+        });
+      },
+      onError: (status) => {
+        // Permission revoked or GPS lost: stop quietly, say why once through the existing notice.
+        setFollowing(false);
+        setLocateNotice({ text: describeRef.current({ status }), _ts: Date.now() });
+      },
     });
-  }, [walking]);
+  }
+  useEffect(() => {
+    const tracker = liveTrackerRef.current;
+    let handle = null;
+    if (Capacitor.isNativePlatform()) {
+      Promise.resolve(CapApp.addListener('appStateChange', ({ isActive }) => tracker.setForeground(isActive)))
+        .then((h) => { handle = h; })
+        .catch(() => {});
+    }
+    return () => {
+      tracker.stop();
+      handle?.remove?.();
+    };
+  }, []);
+  // Every way of ending the located state (hold-to-hide, closing the hub, dismissing GPS mode, dropping a ping)
+  // clears `userLocation`; tracking ends with it.
+  const liveEligible = Boolean(userLocation) && userLocation.status === 'located' && !userLocation.isMapClick;
+  useEffect(() => {
+    if (!liveEligible) {
+      liveTrackerRef.current.stop();
+      liveFixChannelRef.current.publish(null);
+      setFollowing(false);
+    }
+  }, [liveEligible]);
+  // Choosing a station or bus stop is the viewer steering the camera elsewhere (#95): stop following.
+  useEffect(() => {
+    if (selectedBusStop || (selectedStation && !isHubStation(selectedStation))) setFollowing(false);
+  }, [selectedStation, selectedBusStop]);
 
   // Track the search field's focus for the chip row.
   useEffect(() => {
@@ -645,7 +718,9 @@ function App() {
           hoverLine={hoverLine}
           userLocation={userLocation}
           onReady={() => setMapReady(true)}
-          onUserInteract={() => autoLocatorRef.current?.interrupt()}
+          onUserInteract={() => { autoLocatorRef.current?.interrupt(); setFollowing(false); }}
+          liveFixChannel={liveFixChannelRef.current}
+          following={following}
           onZoomedOut={() => setWalkTarget(null)}
           variant={variant}
           activeBusLine={activeBusLine}
