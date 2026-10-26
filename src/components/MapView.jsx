@@ -677,6 +677,8 @@ const MapView = ({
   const onSelectBusStopRef = useRef(onSelectBusStop);
   useEffect(() => { onSelectBusStopRef.current = onSelectBusStop; }, [onSelectBusStop]);
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
+  const userLocationRef = useRef(userLocation);
+  useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // raw zoomCurve value, updated on every zoom event
   const zoomValueRef    = useRef(DEFAULT_MAP_ZOOM); // current map zoom
