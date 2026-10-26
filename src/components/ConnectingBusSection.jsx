@@ -110,7 +110,7 @@ export const ConnectingBusSection = ({
                 }}
               >
                 <MapPin size={10} />
-                Parada {stop.stopCode}
+                {String(stop.stopCode || '').startsWith('P-') ? stop.stopCode : `P-${stop.stopCode}`}
               </span>
               <span
                 style={{

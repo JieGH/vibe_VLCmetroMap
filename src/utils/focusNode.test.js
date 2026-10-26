@@ -79,16 +79,23 @@ describe('renderBusStopHighlight', () => {
     expect(html).not.toContain('border-bottom');
   });
 
-  it('renders shortened stop name and bus line badges', () => {
+  it('renders bus stop number P-xxxx and consistent red line badges without stop name text', () => {
     const html = renderBusStopHighlight(busStop, 'dark');
-    expect(html).toContain('Ajunt…');
+    // Stop code formatted as P-1024
+    expect(html).toContain('P-1024');
+    // Stop name text removed
+    expect(html).not.toContain('Ajunt…');
+    expect(html).not.toContain("Plaça de l'Ajuntament");
+    // Line badges in consistent EMT red, no blue background
     expect(html).toContain('19</span>');
     expect(html).toContain('35</span>');
     expect(html).toContain('C1</span>');
+    expect(html).toContain('background:#D62828');
+    expect(html).not.toContain('#1976D2');
   });
 
-  it('escapes HTML in stop name', () => {
-    const html = renderBusStopHighlight({ stopName: '<tag>', lines: [] }, 'light');
+  it('escapes HTML in stop number', () => {
+    const html = renderBusStopHighlight({ stopCode: '<tag>', lines: [] }, 'light');
     expect(html).not.toContain('<tag>');
     expect(html).toContain('&lt;tag&gt;');
   });

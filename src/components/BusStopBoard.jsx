@@ -88,10 +88,13 @@ export const BusStopBoard = ({
                   borderRadius: 4,
                 }}
               >
-                PARADA {stop.code || stop.stopCode || '1002'}
+                {(() => {
+                  const c = String(stop.code || stop.stopCode || '1002');
+                  return c.startsWith('P-') ? c : `P-${c}`;
+                })()}
               </span>
               <span style={{ fontSize: '0.70rem', color: '#4caf50', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                <Radio size={10} className="pulse" /> LIVE SAE
+                <Radio size={10} className="pulse" /> LIVE
               </span>
             </div>
             <h2

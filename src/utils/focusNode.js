@@ -85,8 +85,8 @@ export const renderStationHighlight = (properties, theme) => {
 
 /**
  * Renders the compact HTML marker for a selected EMT Bus Stop.
- * Displays a small EMT logo (no bottom dash, nonofficial look), shortened stop name,
- * and available bus line badges.
+ * Displays a small EMT logo (no bottom dash, nonofficial look), the bus stop number (P-xxxx),
+ * and available bus line badges in consistent EMT red (no stop name text).
  *
  * @param {{ stopCode?: string|number, stopName?: string, name?: string, lines?: (string|number)[] }} stop
  * @param {'light'|'dark'} theme
@@ -97,28 +97,22 @@ export const renderBusStopHighlight = (stop, theme) => {
   const text = theme === 'light' ? '#121212' : '#ffffff';
   const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
   const lines = stop?.lines || [];
-  const rawName = stop?.stopName || stop?.name || stop?.stopCode || 'EMT';
-  const displayName = shortenStopName(rawName, 6);
+  const rawCode = String(stop?.stopCode || stop?.code || '').trim();
+  const formattedCode = rawCode.startsWith('P-') ? rawCode : (rawCode ? `P-${rawCode}` : '');
 
-  const getBusLineColor = (l) => {
-    const s = String(l || '').trim();
-    if (s.startsWith('C')) return '#D62828';
-    if (s.startsWith('N')) return '#4338CA';
-    return '#1976D2';
-  };
-
+  // Consistent EMT red bus line badges (no blue backgrounds)
   const lineBadges = lines.slice(0, 4).map((l) => (
-    `<span style="font:900 8.5px/1 system-ui;padding:2px 4px;border-radius:3px;background:${getBusLineColor(l)};color:#ffffff;">${escapeHtml(l)}</span>`
+    `<span style="font:900 8.5px/1 system-ui;padding:1.5px 4.5px;border-radius:3px;background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;">${escapeHtml(l)}</span>`
   )).join('');
 
   return `
     <div class="bus-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
-      <!-- Floating Name Chart Card -->
-      <div style="display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:10px;background:${panel};border:1.5px solid ${border};box-shadow:0 6px 18px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);">
+      <!-- Floating Card: EMT logo + stop number + line numbers (stop name text removed) -->
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:8px;background:${panel};border:1.5px solid ${border};box-shadow:0 6px 18px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);">
         <!-- Small EMT logo without bottom dash (nonofficial look) -->
-        <span style="padding:2px 4px;border-radius:3px;background:#D62828;color:#ffffff;font:900 8.5px/1 system-ui;letter-spacing:0.02em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">EMT</span>
-        <span style="font:800 12px/1.2 system-ui;color:${text};">${escapeHtml(displayName)}</span>
-        ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;margin-left:2px;">${lineBadges}</div>` : ''}
+        <span style="padding:1.5px 4.5px;border-radius:3px;background:#D62828;color:#ffffff;font:900 8.5px/1 system-ui;letter-spacing:0.02em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">EMT</span>
+        ${formattedCode ? `<span style="font:800 11.5px/1.2 system-ui;color:${text};letter-spacing:-0.01em;">${escapeHtml(formattedCode)}</span>` : ''}
+        ${lineBadges ? `<div style="display:flex;gap:3px;align-items:center;margin-left:1px;">${lineBadges}</div>` : ''}
       </div>
 
       <!-- Pointing Caret (No bottom dash / leader line) -->
