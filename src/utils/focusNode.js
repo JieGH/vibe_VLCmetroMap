@@ -71,27 +71,23 @@ export const renderStationHighlight = (properties, theme) => {
 
   return `
     <div class="station-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
-      <!-- Two-row square-ish bubble: avoids horizontal line-of-sheet overlap -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 6px;border-radius:8px;background:${panel};border:1.5px solid ${border};box-shadow:0 4px 14px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
-        <!-- Row 1: Metro logo + Shortened Station Name -->
-        <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
-          <span style="width:13px;height:13px;border-radius:50%;background:#E2001A;color:#ffffff;font:900 italic 8.5px/13px system-ui;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">m</span>
-          <span style="font:800 11px/1.1 system-ui;color:${text};">${escapeHtml(displayName)}</span>
-        </div>
+      <!-- Two-row square-ish bubble: station name + line badges (transport logo omitted since marker has it) -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 6px;border-radius:7px;background:${panel};border:1.5px solid ${border};box-shadow:0 3px 12px rgba(0,0,0,.4);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+        <!-- Row 1: Shortened Station Name -->
+        <span style="font:800 11px/1.1 system-ui;color:${text};letter-spacing:-0.01em;">${escapeHtml(displayName)}</span>
         <!-- Row 2: Metro Line Badges -->
         ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:75px;">${lineBadges}</div>` : ''}
       </div>
 
       <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:4.5px solid ${panel};margin-top:-1px;"></div>
+      <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 
 /**
  * Renders the compact HTML marker for a selected EMT Bus Stop.
- * Displays a small EMT logo (no bottom dash, nonofficial look), the bus stop number (P-xxxx),
- * and available bus line badges in consistent EMT red (no stop name text).
- * Formatted as a two-row square-ish bubble to prevent horizontal overlap when stops are clustered.
+ * Displays only available bus line badges in consistent EMT red.
+ * Omits transport logo and stop ID to save maximum space and avoid clustering overlap.
  *
  * @param {{ stopCode?: string|number, stopName?: string, name?: string, lines?: (string|number)[] }} stop
  * @param {'light'|'dark'} theme
@@ -102,29 +98,25 @@ export const renderBusStopHighlight = (stop, theme) => {
   const text = theme === 'light' ? '#121212' : '#ffffff';
   const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
   const lines = stop?.lines || [];
-  const rawCode = String(stop?.stopCode || stop?.code || '').trim();
-  const formattedCode = rawCode.startsWith('P-') ? rawCode : (rawCode ? `P-${rawCode}` : '');
 
-  // Consistent EMT red bus line badges (no blue backgrounds)
+  // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
   const lineBadges = lines.slice(0, 4).map((l) => (
     `<span style="font:900 8px/1 system-ui;padding:1px 3.5px;border-radius:2.5px;background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;">${escapeHtml(l)}</span>`
   )).join('');
 
+  const content = lineBadges
+    ? `<div style="display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:75px;">${lineBadges}</div>`
+    : `<span style="font:800 8.5px/1 system-ui;color:${text};">Bus</span>`;
+
   return `
     <div class="bus-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
-      <!-- Two-row square-ish bubble: avoids horizontal line-of-sheet overlap -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 6px;border-radius:8px;background:${panel};border:1.5px solid ${border};box-shadow:0 4px 14px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
-        <!-- Row 1: EMT logo + stop number (no stop name text) -->
-        <div style="display:flex;align-items:center;justify-content:center;gap:3.5px;">
-          <span style="padding:1px 3.5px;border-radius:2.5px;background:#D62828;color:#ffffff;font:900 7.5px/1 system-ui;letter-spacing:0.02em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">EMT</span>
-          ${formattedCode ? `<span style="font:800 10.5px/1.1 system-ui;color:${text};letter-spacing:-0.01em;">${escapeHtml(formattedCode)}</span>` : ''}
-        </div>
-        <!-- Row 2: EMT Line badges -->
-        ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:75px;">${lineBadges}</div>` : ''}
+      <!-- Compact bubble: line badges only (transport logo & stop ID omitted to save space) -->
+      <div style="display:flex;align-items:center;justify-content:center;padding:3px 5px;border-radius:6px;background:${panel};border:1.5px solid ${border};box-shadow:0 3px 12px rgba(0,0,0,.4);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+        ${content}
       </div>
 
       <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:4.5px solid ${panel};margin-top:-1px;"></div>
+      <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 

@@ -45,11 +45,11 @@ describe('renderStationHighlight', () => {
     expect(html).toContain('Àngel');
   });
 
-  it('renders the metro logo and line badges', () => {
+  it('renders the line badges and omits redundant transport logo', () => {
     const html = renderStationHighlight(properties, 'dark');
-    expect(html).toContain('>m</span>');
     expect(html).toContain('3</span>');
     expect(html).toContain('5</span>');
+    expect(html).not.toContain('>m</span>'); // omitted since map already has logo
   });
 
   it('escapes HTML in the station name', () => {
@@ -73,16 +73,14 @@ describe('renderBusStopHighlight', () => {
     lines: ['19', '35', 'C1'],
   };
 
-  it('renders small EMT logo without bottom dash', () => {
+  it('omits redundant transport logo and stop ID to save space in small bubble view', () => {
     const html = renderBusStopHighlight(busStop, 'dark');
-    expect(html).toContain('>EMT</span>');
-    expect(html).not.toContain('border-bottom');
+    expect(html).not.toContain('>EMT</span>');
+    expect(html).not.toContain('P-1024');
   });
 
-  it('renders bus stop number P-xxxx and consistent red line badges without stop name text', () => {
+  it('renders line badges in consistent EMT red without stop name text', () => {
     const html = renderBusStopHighlight(busStop, 'dark');
-    // Stop code formatted as P-1024
-    expect(html).toContain('P-1024');
     // Stop name text removed
     expect(html).not.toContain('Ajunt…');
     expect(html).not.toContain("Plaça de l'Ajuntament");
@@ -94,10 +92,9 @@ describe('renderBusStopHighlight', () => {
     expect(html).not.toContain('#1976D2');
   });
 
-  it('escapes HTML in stop number', () => {
-    const html = renderBusStopHighlight({ stopCode: '<tag>', lines: [] }, 'light');
-    expect(html).not.toContain('<tag>');
-    expect(html).toContain('&lt;tag&gt;');
+  it('falls back gracefully to Bus placeholder when lines are empty', () => {
+    const html = renderBusStopHighlight({ stopCode: '1024', lines: [] }, 'light');
+    expect(html).toContain('Bus</span>');
   });
 
   it('does not contain a leader line or target circle', () => {
