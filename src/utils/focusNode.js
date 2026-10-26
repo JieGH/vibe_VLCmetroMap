@@ -1,9 +1,9 @@
-// Station Highlight Marker Markup
+// Station & Bus Stop Highlight Marker Markup
 //
-// The compact marker shown at a selected Station's position on the map: a
-// visual anchor only ("this is the Station you picked"), never arrivals data.
-// The Station panel is the sole place arrivals are shown. Built as a string
-// because it lives inside a MapLibre Marker, outside React's tree.
+// The compact marker shown at a selected Station's or Bus Stop's position on
+// the map: a visual anchor only ("this is the stop you picked"), never arrivals
+// data. Built as a string because it lives inside a MapLibre Marker, outside
+// React's tree.
 import { lineColor } from './lineColor';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
@@ -11,9 +11,47 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
 ));
 
 /**
- * Renders the compact HTML marker for a selected Station: a small dot in the
- * Station's primary Line color plus its name. No arrivals, countdowns, or
- * freshness state — those live in the Station panel.
+ * Shortens a station or bus stop name to ~5-6 characters for compact map popups.
+ * Strips street/place prefixes (Carrer, Pl., Av., Estació, etc.) and secondary subtitles.
+ *
+ * Examples:
+ * - "Àngel Guimerà" -> "Àngel"
+ * - "Xàtiva" -> "Xàtiva"
+ * - "Colón" -> "Colón"
+ * - "Plaça de l'Ajuntament" -> "Ajunt…"
+ * - "Facultats - Manuel Broseta" -> "Facul…"
+ * - "Carrer de Russafa" -> "Russa…"
+ *
+ * @param {string} name
+ * @param {number} [maxChars=6]
+ * @returns {string}
+ */
+export const shortenStopName = (name, maxChars = 6) => {
+  if (!name) return '';
+  let cleaned = String(name).trim()
+    .replace(/^(Carrer|C\/)\s+(del|de\s+l’|de\s+l'|de\s+la|de)?\s*/i, '')
+    .replace(/^(Plaça|Pl\.)\s+(del|de\s+l’|de\s+l'|de\s+la|de)?\s*/i, '')
+    .replace(/^(Avinguda|Av\.)\s+(del|de\s+l’|de\s+l'|de\s+la|de)?\s*/i, '')
+    .replace(/^(Gran\s+Via\s*)/i, '')
+    .replace(/^(Estació\s+(del|de\s+l’|de\s+l'|de\s+la|de)?\s*)/i, '')
+    .replace(/^(Passeig\s+(del|de\s+l’|de\s+l'|de\s+la|de)?\s*)/i, '')
+    .trim();
+
+  // Strip subtitles after hyphen, slash, or em-dash
+  cleaned = cleaned.split(/\s*[-–—/]\s*/)[0].trim();
+
+  // If multi-word (e.g. "Àngel Guimerà"), check if first word is a great standalone name
+  const words = cleaned.split(/\s+/);
+  if (words.length > 1 && words[0].length >= 4 && words[0].length <= maxChars) {
+    cleaned = words[0];
+  }
+
+  if (cleaned.length <= maxChars) return cleaned;
+  return cleaned.slice(0, Math.max(3, maxChars - 1)) + '…';
+};
+
+/**
+ * Renders the compact HTML marker for a selected Metro Station.
  *
  * @param {{ name: string, lines?: (string|number)[] }} properties
  * @param {'light'|'dark'} theme
@@ -23,8 +61,9 @@ export const renderStationHighlight = (properties, theme) => {
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
   const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
-  const lines = properties.lines || [];
-  const accent = lines.length > 0 ? lineColor(lines[0]) : lineColor(undefined);
+  const lines = properties?.lines || [];
+  const rawName = properties?.name || '';
+  const displayName = shortenStopName(rawName, 6);
 
   const lineBadges = lines.slice(0, 4).map((l) => (
     `<span style="font:900 9px/1 system-ui;padding:2px 4px;border-radius:3px;background:${lineColor(l)};color:#000;">${escapeHtml(l)}</span>`
@@ -33,20 +72,57 @@ export const renderStationHighlight = (properties, theme) => {
   return `
     <div class="station-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <!-- Floating Name Chart Card -->
-      <div style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:12px;background:${panel};border:1.5px solid ${border};box-shadow:0 8px 24px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);">
-        <span style="width:16px;height:16px;border-radius:50%;background:#E2001A;color:#ffffff;font:900 italic 10px/16px system-ui;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">m</span>
-        <span style="font:800 12.5px/1.2 system-ui;color:${text};max-width:180px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(properties.name)}</span>
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:10px;background:${panel};border:1.5px solid ${border};box-shadow:0 6px 18px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);">
+        <span style="width:15px;height:15px;border-radius:50%;background:#E2001A;color:#ffffff;font:900 italic 9.5px/15px system-ui;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">m</span>
+        <span style="font:800 12px/1.2 system-ui;color:${text};">${escapeHtml(displayName)}</span>
         ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;margin-left:2px;">${lineBadges}</div>` : ''}
       </div>
 
-      <!-- Pointing Leader Line -->
-      <div style="width:2px;height:22px;background:linear-gradient(to bottom, ${border}, ${accent});"></div>
+      <!-- Pointing Caret (No bottom dash / leader line) -->
+      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid ${panel};margin-top:-1px;"></div>
+    </div>`;
+};
 
-      <!-- Station Location Target Circle -->
-      <div style="position:relative;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
-        <span style="position:absolute;width:20px;height:20px;border-radius:50%;background:${accent};opacity:0.25;"></span>
-        <span style="width:14px;height:14px;border-radius:50%;background:${panel};border:3px solid ${accent};box-shadow:0 2px 8px rgba(0,0,0,0.5);box-sizing:border-box;"></span>
+/**
+ * Renders the compact HTML marker for a selected EMT Bus Stop.
+ * Displays a small EMT logo (no bottom dash, nonofficial look), shortened stop name,
+ * and available bus line badges.
+ *
+ * @param {{ stopCode?: string|number, stopName?: string, name?: string, lines?: (string|number)[] }} stop
+ * @param {'light'|'dark'} theme
+ * @returns {string} HTML string
+ */
+export const renderBusStopHighlight = (stop, theme) => {
+  const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
+  const text = theme === 'light' ? '#121212' : '#ffffff';
+  const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
+  const lines = stop?.lines || [];
+  const rawName = stop?.stopName || stop?.name || stop?.stopCode || 'EMT';
+  const displayName = shortenStopName(rawName, 6);
+
+  const getBusLineColor = (l) => {
+    const s = String(l || '').trim();
+    if (s.startsWith('C')) return '#D62828';
+    if (s.startsWith('N')) return '#4338CA';
+    return '#1976D2';
+  };
+
+  const lineBadges = lines.slice(0, 4).map((l) => (
+    `<span style="font:900 8.5px/1 system-ui;padding:2px 4px;border-radius:3px;background:${getBusLineColor(l)};color:#ffffff;">${escapeHtml(l)}</span>`
+  )).join('');
+
+  return `
+    <div class="bus-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+      <!-- Floating Name Chart Card -->
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:10px;background:${panel};border:1.5px solid ${border};box-shadow:0 6px 18px rgba(0,0,0,.45);white-space:nowrap;transform:translateZ(0);">
+        <!-- Small EMT logo without bottom dash (nonofficial look) -->
+        <span style="padding:2px 4px;border-radius:3px;background:#D62828;color:#ffffff;font:900 8.5px/1 system-ui;letter-spacing:0.02em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">EMT</span>
+        <span style="font:800 12px/1.2 system-ui;color:${text};">${escapeHtml(displayName)}</span>
+        ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;margin-left:2px;">${lineBadges}</div>` : ''}
       </div>
+
+      <!-- Pointing Caret (No bottom dash / leader line) -->
+      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 

@@ -1288,9 +1288,10 @@ button:active {
   border: 0;
 }
 
-/* The highlight marker for the selected Station on the map: a visual anchor
-   only, sitting above vehicle markers. Arrivals live in the Station panel. */
-.station-focus-node {
+/* The highlight marker for the selected Station or Bus Stop on the map: a visual anchor
+   only, sitting above vehicle markers. Arrivals live in the Station/Bus panel. */
+.station-focus-node,
+.bus-focus-node {
   z-index: 1200;
   pointer-events: none;
 }

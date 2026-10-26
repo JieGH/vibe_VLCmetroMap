@@ -26,7 +26,7 @@ import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
-import { renderStationHighlight } from '../utils/focusNode';
+import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import returnTrackData from '../data/return_tracks.json';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
@@ -671,6 +671,11 @@ const MapView = ({
   const lastFramedFetchedAtRef = useRef(null); // prevents camera jumps on accuracy refinements
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
+  const busFocusMarkerRef = useRef(null); // the expanded node for the Bus Stop in focus
+  const selectedBusStopRef = useRef(selectedBusStop);
+  useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
+  const onSelectBusStopRef = useRef(onSelectBusStop);
+  useEffect(() => { onSelectBusStopRef.current = onSelectBusStop; }, [onSelectBusStop]);
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // raw zoomCurve value, updated on every zoom event
@@ -1176,6 +1181,9 @@ const MapView = ({
         if (selectedStationRef.current) {
           selectStRef.current(null);
         }
+        if (selectedBusStopRef.current && onSelectBusStopRef.current) {
+          onSelectBusStopRef.current(null);
+        }
       });
 
       // Boot arrivals early in the background while the splash screen covers initial load.
@@ -1324,6 +1332,10 @@ const MapView = ({
       focusMarkerRef.current.remove();
       focusMarkerRef.current = null;
     }
+    if (busFocusMarkerRef.current) {
+      busFocusMarkerRef.current.remove();
+      busFocusMarkerRef.current = null;
+    }
     // The floating "N live trains" readout and the Station panel say the same
     // kind of thing at once — worse, the panel visually sits on top of it,
     // so the count peeked out from under the panel's corner. The panel is the
@@ -1358,7 +1370,7 @@ const MapView = ({
     // A visual anchor only — no countdowns to tick, so it's rendered once per
     // selection rather than on an interval. Arrivals live in the Station panel.
     element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
-    const marker = new Marker({ element, anchor: 'bottom', offset: [0, 10] })
+    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
       .setLngLat(coordinates)
       .addTo(map);
     focusMarkerRef.current = marker;
@@ -1383,6 +1395,61 @@ const MapView = ({
       if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
     };
   }, [selectedStation]);
+
+  // ── Bus Stop in focus ───────────────────────────────────────────────────────
+  // Clicking an EMT bus stop anchors a compact marker (EMT badge + shortened name + lines)
+  // and smoothly centers the visible map on the stop.
+  const prevBusStopRef = useRef(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    if (busFocusMarkerRef.current) {
+      busFocusMarkerRef.current.remove();
+      busFocusMarkerRef.current = null;
+    }
+
+    if (!selectedBusStop) {
+      if (prevBusStopRef.current) {
+        prevBusStopRef.current = null;
+      }
+      return undefined;
+    }
+
+    if (focusMarkerRef.current) {
+      focusMarkerRef.current.remove();
+      focusMarkerRef.current = null;
+    }
+
+    prevBusStopRef.current = selectedBusStop;
+    const coordinates = selectedBusStop.coordinates;
+    if (!coordinates || !Array.isArray(coordinates)) return undefined;
+
+    const element = document.createElement('div');
+    element.className = 'bus-focus-node';
+    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current);
+    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -12] })
+      .setLngLat(coordinates)
+      .addTo(map);
+    busFocusMarkerRef.current = marker;
+
+    const basePadding = panelAwarePadding(map, { hasPanel: true });
+    const targetZoom = Math.max(map.getZoom(), 15.5);
+
+    map.easeTo({
+      center: coordinates,
+      zoom: targetZoom,
+      padding: basePadding,
+      duration: CAMERA_EASE_MS,
+      essential: true,
+    });
+
+    return () => {
+      marker.remove();
+      if (busFocusMarkerRef.current === marker) busFocusMarkerRef.current = null;
+    };
+  }, [selectedBusStop]);
 
   // ── The viewer's own dot ───────────────────────────────────────────────────
   // A MapLibre Marker rather than a style layer, matching every other marker
@@ -1536,20 +1603,6 @@ const MapView = ({
         const allStops = getAllBusStops();
         allStops.forEach((stop) => {
           const marker = createFeederStopMarker(map, stop, () => {
-            if (drawnStationsRef.current && drawnStationsRef.current.length > 0) {
-              const nearest = nearestFeature(drawnStationsRef.current, stop.coordinates);
-              if (nearest) {
-                selectStRef.current(nearest.feature, {
-                  userLocation: {
-                    coordinates: stop.coordinates,
-                    accuracy: 15,
-                    isMapClick: true,
-                    status: 'located',
-                    fetchedAt: Date.now(),
-                  }
-                });
-              }
-            }
             if (onSelectBusStop) onSelectBusStop(stop);
           });
           busMarkersRef.current.push(marker);

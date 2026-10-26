@@ -165,6 +165,9 @@ function App() {
 
   const handleSelectBusStop = (busStop) => {
     setSelectedBusStop(busStop);
+    if (busStop) {
+      setSelectedStation(null);
+    }
   };
 
   const [fontSize, setFontSize] = useState(getStoredFontSize);
@@ -200,6 +203,9 @@ function App() {
   const handleSelectStation = (station, options = {}) => {
     autoLocatorRef.current?.interrupt();
     setSelectedStation(station);
+    if (station) {
+      setSelectedBusStop(null);
+    }
     if (options.userLocation) {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
