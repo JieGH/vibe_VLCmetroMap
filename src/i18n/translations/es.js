@@ -103,6 +103,7 @@ export default {
     closeAria: 'Cerrar panel de la estación',
     noLiveTrains: 'No hay trenes en directo llegando pronto.',
     nothingFurther: 'No hay más llegadas previstas por ahora.',
+    noInfoShort: 'Sin información',
     laterArrivalsCaption: 'Próximas llegadas en {{station}}',
     noNearbyMetro: 'No hay estaciones de metro a poca distancia a pie.',
     line: 'Línea',

@@ -118,4 +118,18 @@ describe('ConnectingBusSection component', () => {
     expect(html).toContain('C1');
     expect(html).toContain('···');
   });
+
+  it('shows a short single-line label for an empty stop in compact mode only', () => {
+    const compactHtml = renderToStaticMarkup(
+      <ConnectingBusSection feeders={[sampleFeeders[1]]} compact={true} theme="dark" />
+    );
+    expect(compactHtml).toContain('No info');
+    expect(compactHtml).toContain('white-space:nowrap');
+    expect(compactHtml).not.toContain('Nothing further due yet.');
+
+    const fullHtml = renderToStaticMarkup(
+      <ConnectingBusSection feeders={[sampleFeeders[1]]} theme="dark" />
+    );
+    expect(fullHtml).toContain('Nothing further due yet.');
+  });
 });

@@ -255,9 +255,10 @@ export const ConnectingBusSection = ({
                     color: 'var(--text-secondary)',
                     background: 'rgba(0, 0, 0, 0.1)',
                     borderRadius: 6,
+                    ...(compact ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : {}),
                   }}
                 >
-                  {t('stationPanel.nothingFurther')}
+                  {t(compact ? 'stationPanel.noInfoShort' : 'stationPanel.nothingFurther')}
                 </div>
               ) : (
                 itemsToRender.slice(0, MAX_CARD_ARRIVALS).map((busObj, bIdx) => {
