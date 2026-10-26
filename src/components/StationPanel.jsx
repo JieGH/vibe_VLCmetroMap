@@ -658,6 +658,7 @@ const StationPanel = ({
                   walkMin={metroWalkMin}
                   nearbyMetro={nearbyMetroWithFocus}
                   showDistance={false}
+                  compact
                   onSelectStation={onSelectStation}
                   isPinMode={isMultimodal}
                 />
@@ -679,6 +680,7 @@ const StationPanel = ({
                   feeders={feeders}
                   theme={theme}
                   showDistance={false}
+                  compact
                   onSelectFeederStop={onSelectFeederStop}
                 />
               </div>

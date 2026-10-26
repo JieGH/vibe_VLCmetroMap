@@ -27,9 +27,12 @@ export const ConnectingBusSection = ({
   feeders,
   theme = 'dark',
   showDistance = true,
+  compact = false,
   onSelectFeederStop
 }) => {
   const { t } = useTranslation();
+  // Split view: N′ instead of "N min", short due label, no live dot.
+  const dueLabel = t(compact ? 'common.dueShort' : 'common.due');
 
   const stopCodes = useMemo(() => {
     if (!Array.isArray(feeders)) return [];
@@ -184,15 +187,22 @@ export const ConnectingBusSection = ({
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    fontSize: '0.72rem',
+                    fontSize: compact ? '0.58rem' : '0.72rem',
                     fontWeight: 800,
                     background: 'rgba(214, 40, 40, 0.18)',
                     color: '#ff6369',
-                    padding: '2px 6px',
+                    padding: compact ? '2px 4px' : '2px 6px',
                     borderRadius: 4,
+                    flexShrink: 0,
+                    ...(compact ? { flexDirection: 'column', lineHeight: 1.1, textAlign: 'center' } : {}),
                   }}
                 >
-                  {cleanCode ? `P-${cleanCode}` : 'EMT'}
+                  {cleanCode && compact ? (
+                    <>
+                      <span>P-</span>
+                      <span>{cleanCode}</span>
+                    </>
+                  ) : cleanCode ? `P-${cleanCode}` : 'EMT'}
                 </span>
                 <span
                   style={{
@@ -289,7 +299,7 @@ export const ConnectingBusSection = ({
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
-                        {busObj.isLive && (
+                        {busObj.isLive && !compact && (
                           <span
                             title="Live GPS AVL Telemetry"
                             style={{
@@ -314,13 +324,13 @@ export const ConnectingBusSection = ({
                           {dueSec === null || dueSec === undefined ? (
                             <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>···</span>
                           ) : dueSec <= 30 ? (
-                            countdownLabel(dueSec, t('common.due'))
+                            countdownLabel(dueSec, dueLabel)
                           ) : (
                             <>
-                              {countdownLabel(dueSec, t('common.due'))}
+                              {countdownLabel(dueSec, dueLabel)}
                               {countdownUnit(dueSec) && (
-                                <span style={{ fontSize: '0.70rem', marginLeft: 2, color: 'var(--text-secondary)' }}>
-                                  {t(`common.${countdownUnit(dueSec)}`)}
+                                <span style={{ fontSize: '0.70rem', marginLeft: compact && countdownUnit(dueSec) === 'min' ? 0 : 2, color: 'var(--text-secondary)' }}>
+                                  {compact && countdownUnit(dueSec) === 'min' ? '′' : t(`common.${countdownUnit(dueSec)}`)}
                                 </span>
                               )}
                             </>

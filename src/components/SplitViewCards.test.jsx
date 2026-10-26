@@ -65,4 +65,60 @@ describe('split-view cards', () => {
     cards[0].props.onClick();
     expect(onSelect).toHaveBeenCalledWith(feature);
   });
+
+  const texts = (node) =>
+    findAll(node, () => true)
+      .flatMap((e) => (Array.isArray(e.props.children) ? e.props.children : [e.props.children]))
+      .filter((c) => typeof c === 'string');
+
+  it('compact metro card: prime mark, no dots, short due label, slim 16px badges', () => {
+    const nearbyMetro = [
+      { feature: { properties: { name: 'A' } }, name: 'A', lines: ['3'], arrivals: [
+        { line: '3', destination: 'X', seconds: 120 },
+        { line: '3', destination: 'Y', seconds: 10, isLive: true },
+      ] },
+    ];
+    const tree = CompactMetroSection({ isPinMode: true, nearbyMetro, compact: true });
+    const t = texts(tree);
+    expect(t).toContain('′');
+    expect(t).not.toContain('common.min');
+    expect(t).toContain('common.dueShort');
+    expect(t).not.toContain('common.due');
+    expect(findAll(tree, (e) => e.props.className === 'station-arriving-dot pulse')).toHaveLength(0);
+    expect(findAll(tree, (e) => e.props.title === 'Live FGV Telemetry')).toHaveLength(0);
+    const rowBadges = findAll(tree, (e) => e.props.style?.fontSize === '0.60rem' && e.props.style?.border);
+    expect(rowBadges.length).toBeGreaterThan(0);
+  });
+
+  it('non-compact metro card keeps min and full due label', () => {
+    const nearbyMetro = [
+      { feature: { properties: { name: 'A' } }, name: 'A', lines: ['3'], arrivals: [
+        { line: '3', destination: 'X', seconds: 120 },
+        { line: '3', destination: 'Y', seconds: 10 },
+      ] },
+    ];
+    const t = texts(CompactMetroSection({ isPinMode: true, nearbyMetro }));
+    expect(t).toContain('common.min');
+    expect(t).toContain('common.due');
+    expect(t).not.toContain('′');
+  });
+
+  it('compact bus card: prime mark, short due, two-line stop code, no live dot', () => {
+    const feeders = [{ stopCode: '2309', stopName: 'S', arrivals: [
+      { line: '1', destination: 'D', dueSeconds: 120, isLive: true },
+      { line: '2', destination: 'D', dueSeconds: 5 },
+    ] }];
+    const tree = ConnectingBusSection({ feeders, compact: true });
+    const t = texts(tree);
+    expect(t).toContain('′');
+    expect(t).toContain('common.dueShort');
+    expect(t).toContain('P-');
+    expect(t).toContain('2309');
+    expect(t).not.toContain('P-2309');
+    expect(findAll(tree, (e) => e.props.title === 'Live GPS AVL Telemetry')).toHaveLength(0);
+    const full = texts(ConnectingBusSection({ feeders }));
+    expect(full).toContain('common.min');
+    expect(full).toContain('common.due');
+    expect(full).toContain('P-2309');
+  });
 });

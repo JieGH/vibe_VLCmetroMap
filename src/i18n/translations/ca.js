@@ -5,6 +5,7 @@ export default {
     min: 'min',
     sec: 's',
     due: 'Arribant',
+    dueShort: 'Arriba',
   },
   app: {
     openSidebar: 'Obri el menú',

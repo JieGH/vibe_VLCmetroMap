@@ -9,6 +9,7 @@ export default {
     min: 'min',
     sec: 's',
     due: 'Arriving',
+    dueShort: 'Due',
   },
   app: {
     openSidebar: 'Open Sidebar',

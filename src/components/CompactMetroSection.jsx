@@ -18,8 +18,14 @@ export const CompactMetroSection = ({
   showDistance = true,
   onSelectStation,
   isPinMode = false,
+  compact = false,
 }) => {
   const { t } = useTranslation();
+  // Split view: N′ instead of "N min", short due label, no status dots.
+  const dueLabel = t(compact ? 'common.dueShort' : 'common.due');
+  const unitText = (seconds) =>
+    compact && countdownUnit(seconds) === 'min' ? '′' : t(`common.${countdownUnit(seconds)}`);
+  const unitGap = (seconds) => (compact && countdownUnit(seconds) === 'min' ? 0 : 2);
 
   const isPin = Boolean(
     isPinMode ||
@@ -235,18 +241,19 @@ export const CompactMetroSection = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
                           <span
                             style={{
-                              minWidth: 18,
-                              height: 18,
-                              borderRadius: 4,
+                              minWidth: compact ? 16 : 18,
+                              height: compact ? 16 : 18,
+                              borderRadius: compact ? 3 : 4,
                               background: bg,
                               color: '#000000',
-                              fontSize: '0.66rem',
+                              fontSize: compact ? '0.60rem' : '0.66rem',
                               fontWeight: 900,
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              padding: '0 3px',
+                              padding: compact ? '0 2px' : '0 3px',
                               flexShrink: 0,
+                              ...(compact ? { border: '0.5px solid rgba(255, 255, 255, 0.25)', boxSizing: 'border-box' } : {}),
                             }}
                           >
                             {arr.line}
@@ -273,7 +280,7 @@ export const CompactMetroSection = ({
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: 6 }}>
-                          {arr.isLive && (
+                          {arr.isLive && !compact && (
                             <span
                               title="Live FGV Telemetry"
                               style={{
@@ -286,7 +293,7 @@ export const CompactMetroSection = ({
                               }}
                             />
                           )}
-                          {isArriving ? (
+                          {isArriving && !compact ? (
                             <span
                               style={{
                                 display: 'inline-flex',
@@ -322,10 +329,10 @@ export const CompactMetroSection = ({
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {countdownLabel(arr.seconds, t('common.due'))}
+                              {countdownLabel(arr.seconds, dueLabel)}
                               {countdownUnit(arr.seconds) && (
-                                <span style={{ fontSize: '0.68rem', marginLeft: 2, color: 'var(--text-secondary)' }}>
-                                  {t(`common.${countdownUnit(arr.seconds)}`)}
+                                <span style={{ fontSize: '0.68rem', marginLeft: unitGap(arr.seconds), color: 'var(--text-secondary)' }}>
+                                  {unitText(arr.seconds)}
                                 </span>
                               )}
                             </span>
@@ -432,16 +439,18 @@ export const CompactMetroSection = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: 22,
-                  height: 22,
-                  padding: '0 5px',
-                  borderRadius: 11,
+                  minWidth: compact ? 16 : 22,
+                  height: compact ? 16 : 22,
+                  padding: compact ? '0 2px' : '0 5px',
+                  borderRadius: compact ? 3 : 11,
                   background: bg,
                   color: '#000000',
-                  fontSize: '0.74rem',
+                  fontSize: compact ? '0.60rem' : '0.74rem',
                   fontWeight: 900,
                   flexShrink: 0,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  ...(compact
+                    ? { border: '0.5px solid rgba(255, 255, 255, 0.25)', boxSizing: 'border-box' }
+                    : { boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }),
                 }}
               >
                 {arrival.line}
@@ -470,7 +479,7 @@ export const CompactMetroSection = ({
 
             {/* Right: Pulsing Live Indicator + Due Countdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
-              {isArriving ? (
+              {isArriving && !compact ? (
                 <span
                   style={{
                     display: 'inline-flex',
@@ -506,10 +515,10 @@ export const CompactMetroSection = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {countdownLabel(arrival.seconds, t('common.due'))}
+                  {countdownLabel(arrival.seconds, dueLabel)}
                   {countdownUnit(arrival.seconds) && (
-                    <span style={{ fontSize: '0.70rem', marginLeft: 2, color: 'var(--text-secondary)' }}>
-                      {t(`common.${countdownUnit(arrival.seconds)}`)}
+                    <span style={{ fontSize: '0.70rem', marginLeft: unitGap(arrival.seconds), color: 'var(--text-secondary)' }}>
+                      {unitText(arrival.seconds)}
                     </span>
                   )}
                 </span>
