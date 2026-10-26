@@ -138,7 +138,10 @@ const StationPanel = ({
     return { ...f, walkMetres: dist, walkMin: mins };
   }).filter((f) => !anchorCoords || f.walkMin <= 5); // 5 minutes walk radius
 
-  const totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
+  const _totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
+  const metroStopsCount = focus.name === 'Map Ping' ? nearbyMetro.length : (1 + nearbyMetro.length);
+  const busStopsCount = feeders.length;
+  const allStopsCount = metroStopsCount + busStopsCount;
 
   return (
     <>
@@ -216,24 +219,30 @@ const StationPanel = ({
                   letterSpacing: '-.01em',
                   margin: 0,
                   color: 'var(--text-primary)',
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  wordBreak: 'break-word',
                   cursor: 'pointer',
                 }}
               >
                 {userLocation?.isMapClick ? 'Map Ping' : userLocation ? "Where you're at" : 'Nearby Transit'}
               </h2>
               <span
+                title="5 min walk"
                 style={{
                   fontSize: '0.74rem',
                   fontWeight: 600,
                   color: 'var(--text-secondary)',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
                 }}
               >
-                · 5 min walk
+                · 🚶 5 min
               </span>
             </div>
           </div>
@@ -273,22 +282,31 @@ const StationPanel = ({
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
                 <h2 style={{
                   fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
-                  letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  letterSpacing: '-.01em',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  wordBreak: 'break-word',
                   minWidth: 0, margin: 0,
                 }}>
                   {focus.name}
                 </h2>
                 {metroWalkMin !== undefined && (
                   <span
+                    title={`${metroWalkMin} min walk`}
                     style={{
                       fontSize: '0.74rem',
                       fontWeight: 700,
                       color: 'var(--text-secondary)',
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
                     }}
                   >
-                    · {metroWalkMin} min walk
+                    · 🚶 {metroWalkMin} min
                   </span>
                 )}
               </div>
@@ -442,7 +460,7 @@ const StationPanel = ({
           >
             <span>All</span>
             <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-              {focus.arrivals.length + totalBusLines}
+              {allStopsCount}
             </span>
           </button>
 
@@ -489,7 +507,7 @@ const StationPanel = ({
             </span>
             <span>Metro</span>
             <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-              {focus.arrivals.length}
+              {metroStopsCount}
             </span>
           </button>
 
@@ -533,7 +551,7 @@ const StationPanel = ({
             </span>
             <span>Bus</span>
             <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-              {totalBusLines}
+              {busStopsCount}
             </span>
           </button>
         </nav>

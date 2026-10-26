@@ -114,13 +114,20 @@ export const ConnectingBusSection = ({
               </span>
               <span
                 style={{
-                  fontSize: '0.86rem',
+                  fontSize: '0.84rem',
                   fontWeight: 700,
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  lineHeight: 1.25,
+                  wordBreak: 'break-word',
+                  whiteSpace: 'normal',
                   color: 'var(--text-primary)',
+                  flex: 1,
+                  minWidth: 0,
                 }}
+                title={stop.stopName}
               >
                 {stop.stopName}
               </span>
@@ -139,7 +146,7 @@ export const ConnectingBusSection = ({
                 }}
               >
                 <Footprints size={11} />
-                {stop.walkMin} min walk
+                {stop.walkMin} min
               </span>
             )}
           </div>
@@ -164,13 +171,20 @@ export const ConnectingBusSection = ({
                     <BusBadge line={bus.line} size="sm" />
                     <span
                       style={{
-                        fontSize: '0.84rem',
+                        fontSize: '0.82rem',
                         fontWeight: 600,
                         color: 'var(--text-primary)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        lineHeight: 1.2,
+                        wordBreak: 'break-word',
+                        whiteSpace: 'normal',
+                        flex: 1,
+                        minWidth: 0,
                       }}
+                      title={bus.destination}
                     >
                       {bus.destination}
                     </span>

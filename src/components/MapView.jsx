@@ -1858,10 +1858,13 @@ const MapView = ({
     };
   }, [variant, selectedStation, activeBusLine, activeMode, theme, onSelectBusStop, onSelectBusLine]);
 
+  const hasPin = Boolean(userLocation?.isMapClick || selectedStation);
+
   return (
     <div
       ref={containerRef}
       className="map-container"
+      data-has-pin={hasPin ? 'true' : 'false'}
       style={{ width: '100%', height: '100%' }}
     />
   );

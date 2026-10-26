@@ -148,6 +148,24 @@ textarea {
   z-index: 1;
 }
 
+/* Ambient translucency: when user has not placed a pin, all station markers show 50% translucent */
+.map-container:not([data-has-pin="true"]) .metro-station-badge,
+.map-container:not([data-has-pin="true"]) .emt-stop-badge {
+  opacity: 0.50;
+  transition: opacity 0.2s ease, transform 0.12s ease-out;
+}
+
+.map-container[data-has-pin="true"] .metro-station-badge,
+.map-container[data-has-pin="true"] .emt-stop-badge {
+  opacity: 1.0;
+  transition: opacity 0.2s ease, transform 0.12s ease-out;
+}
+
+.metro-station-badge:hover,
+.emt-stop-badge:hover {
+  opacity: 1.0 !important;
+}
+
 .line3-train-count {
   position: absolute;
   right: 20px;

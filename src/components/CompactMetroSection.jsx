@@ -1,6 +1,7 @@
 // CompactMetroSection Component for Variant A (Multimodal Hub Feeder)
 // Compact high-density list of rail arrivals matching the visual rhythm and dimensions of ConnectingBusSection.
 import React from 'react';
+import { Footprints } from 'lucide-react';
 import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
@@ -120,12 +121,18 @@ export const CompactMetroSection = ({
 
               <span
                 style={{
-                  fontSize: '0.84rem',
+                  fontSize: '0.82rem',
                   fontWeight: 600,
                   color: 'var(--text-primary)',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  lineHeight: 1.2,
+                  wordBreak: 'break-word',
+                  whiteSpace: 'normal',
+                  flex: 1,
+                  minWidth: 0,
                 }}
                 title={arrival.destination}
               >
@@ -229,7 +236,23 @@ export const CompactMetroSection = ({
                     >
                       m
                     </span>
-                    <span style={{ fontSize: '0.80rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span
+                      style={{
+                        fontSize: '0.80rem',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: 1.2,
+                        wordBreak: 'break-word',
+                        whiteSpace: 'normal',
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                      title={m.feature.properties.name}
+                    >
                       {m.feature.properties.name}
                     </span>
                     <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
@@ -257,8 +280,19 @@ export const CompactMetroSection = ({
                     </div>
                   </div>
                   {showDistance && (
-                    <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', fontWeight: 600, flexShrink: 0 }}>
-                      {m.walkMin} min walk
+                    <span
+                      style={{
+                        fontSize: '0.70rem',
+                        color: 'var(--text-secondary)',
+                        fontWeight: 600,
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                      }}
+                    >
+                      <Footprints size={11} />
+                      {m.walkMin} min
                     </span>
                   )}
                 </div>
