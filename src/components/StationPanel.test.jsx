@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import StationPanel, { EXPANDED_SHEET_HEIGHT, SPLIT_SHEET_BOTTOM } from './StationPanel';
+import StationPanel, { EXPANDED_SHEET_HEIGHT, SPLIT_SHEET_BOTTOM, multimodalSheetGeometry } from './StationPanel';
 import arrivalStore from '../services/arrivalStore';
 
 describe('StationPanel component', () => {
@@ -342,5 +342,13 @@ describe('StationPanel component', () => {
     expect(html).toContain('grid-template-columns:1fr 1.2fr');
     expect(html).toContain('bottom:' + SPLIT_SHEET_BOTTOM);
     expect(SPLIT_SHEET_BOTTOM).toContain('env(safe-area-inset-bottom');
+  });
+
+  it('#107: collapsed sheet has identical bottom and height on All, Metro and EMT', () => {
+    const g = ['split', 'metro', 'bus'].map((t) => multimodalSheetGeometry(t, false));
+    expect(g[1]).toEqual(g[0]);
+    expect(g[2]).toEqual(g[0]);
+    expect(g[0].bottom).toBe(SPLIT_SHEET_BOTTOM);
+    expect(g[0].bodyHeight).toBe('min(50vh, 400px)');
   });
 });

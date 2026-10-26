@@ -53,6 +53,17 @@ const TABLE_HEAD_PX = 30;
 // top at (top inset + 72px), just below the top bar row (12px offset, ~52px
 // tall, 8px gap), including Dynamic Island devices.
 // Collapsed split-view sheet sits 8px lower than the default 12px gap.
+// #107: the collapsed multimodal body uses one height on every tab so switching never resizes the sheet.
+export const MULTIMODAL_BODY_HEIGHT = 'min(50vh, 400px)';
+
+/** Collapsed-sheet geometry for a multimodal tab (identical across All/Metro/EMT). */
+export function multimodalSheetGeometry(_tab, isExpanded) {
+  return {
+    bottom: isExpanded ? 'calc(12px + env(safe-area-inset-bottom, 0px))' : SPLIT_SHEET_BOTTOM,
+    bodyHeight: isExpanded ? '100%' : MULTIMODAL_BODY_HEIGHT,
+  };
+}
+
 export const SPLIT_SHEET_BOTTOM = 'calc(4px + env(safe-area-inset-bottom, 0px))';
 export const EXPANDED_SHEET_HEIGHT =
   'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 84px))';
@@ -413,7 +424,7 @@ const StationPanel = ({
           : {
               left: 12,
               right: 12,
-              bottom: (isMultimodal && activeTab === 'split' && !isExpanded)
+              bottom: (isMultimodal && !isExpanded)
                 ? SPLIT_SHEET_BOTTOM
                 : 'calc(12px + env(safe-area-inset-bottom, 0px))',
               maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58vh, calc(100vh - 120px))',
@@ -639,9 +650,7 @@ const StationPanel = ({
               display: 'grid',
               gridTemplateColumns: activeTab === 'split' ? '1fr 1.2fr' : '1fr',
               gap: activeTab === 'split' ? 10 : 0,
-              height: isExpanded
-                ? '100%'
-                : (activeTab === 'split' ? 'min(50vh, 400px)' : 'min(48vh, 390px)'),
+              height: multimodalSheetGeometry(activeTab, isExpanded).bodyHeight,
               padding: activeTab === 'split' ? '8px 10px' : 0,
               overflow: 'hidden',
               transition: 'height 0.22s ease',
