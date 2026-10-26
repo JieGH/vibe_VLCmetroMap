@@ -274,7 +274,7 @@ export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) 
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5px 4.5px;
+    padding: 1.5px 3px;
     border-radius: 3.5px;
     background: #D62828;
     color: #ffffff;

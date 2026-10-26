@@ -444,9 +444,9 @@ html.android .station-header-icon {
 }
 
 html.android .bus-stop-header-emblem {
-  width: 46px !important;
+  width: 35px !important;
   height: 18px !important;
-  min-width: 46px !important;
+  min-width: 35px !important;
   border-radius: 4px !important;
   background: #E2001A !important;
   border: none !important;

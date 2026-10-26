@@ -47,6 +47,12 @@ describe('busMapLayers marker creators', () => {
     expect(el.title).toContain('1002');
   });
 
+  it('hugs the EMT letters: horizontal padding 3px (was 4.5px, #108)', () => {
+    const marker = createFeederStopMarker({ isStyleLoaded: () => true }, { stopCode: '1', coordinates: [-0.375, 39.469] }, () => {});
+    const badge = marker.getElement().appendChild.mock.calls[0][0];
+    expect(badge.style.cssText).toContain('padding: 1.5px 3px');
+  });
+
   it('creates bus stop node marker as a rectangular wrap with EMT text', () => {
     const mockMap = { isStyleLoaded: () => true };
     const stop = {

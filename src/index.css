@@ -220,6 +220,54 @@ textarea {
   animation: busStopPulse 2.2s infinite ease-in-out;
 }
 
+/* Zoomed-out dots (#108). MapView flips data-emt-dots on the map container from one zoom check with
+   hysteresis (utils/emtDotMode.js); nothing is rebuilt. Every non-selected EMT stop collapses to a solid
+   red dot (8px incl. its 1px white ring). The ::after is an invisible 24px hit area that bubbles to the
+   marker's own click handler. The selected stop and metro stations are untouched. */
+.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 0 !important;
+  letter-spacing: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+}
+.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) > span {
+  display: none;
+}
+.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected)::after,
+.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected)::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+}
+/* Spawned / nearby stop labels (line chips + caret) become the same dot. */
+.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) {
+  position: relative;
+  width: 8px;
+  height: 8px;
+}
+.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) > * {
+  display: none !important;
+}
+.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected)::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #D62828;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
 /* A station or stop is selected (GPS or ping mode): everything else fades. */
 .map-container[data-has-selection="true"] .metro-station-badge:not(.is-selected),
 .map-container[data-has-selection="true"] .emt-stop-badge:not(.is-selected) {

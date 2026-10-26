@@ -28,6 +28,7 @@ import { hasMapSelection } from '../utils/selectionFocus';
 import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import returnTrackData from '../data/return_tracks.json';
+import { emtDotMode } from '../utils/emtDotMode';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 import {
   ensureBusLayers,
@@ -1190,6 +1191,12 @@ const MapView = ({
         const zoom = map.getZoom();
         zoomValueRef.current = zoom;
         applyMarkerScale(zoomCurve(zoom), zoom);
+        // EMT stops collapse to dots when zoomed out (#108): one attribute, hysteresis in emtDotMode.
+        const el = containerRef.current;
+        if (el) {
+          const dots = emtDotMode(zoom, el.dataset.emtDots === 'true');
+          if (el.dataset.emtDots !== String(dots)) el.dataset.emtDots = String(dots);
+        }
       };
       map.on('zoom', updateZoomScale);
       updateZoomScale();

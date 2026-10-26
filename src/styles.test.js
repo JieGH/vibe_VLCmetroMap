@@ -239,5 +239,34 @@ describe('Bottom sheet drag handle styles', () => {
   });
 });
 
+describe('EMT zoomed-out dots and tight label (#108)', () => {
+  const rule = (selector) => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+  };
 
+  it('turns non-selected EMT badges into 8px round dots under data-emt-dots', () => {
+    const dot = rule('.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected)');
+    expect(dot).toContain('width: 8px');
+    expect(dot).toContain('height: 8px');
+    expect(dot).toContain('border-radius: 50%');
+    expect(dot).toContain('font-size: 0');
+  });
 
+  it('hides the EMT text and the spawned line chips in dot mode', () => {
+    expect(rule('.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) > span')).toContain('display: none');
+    expect(rule('.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) > *')).toContain('display: none');
+  });
+
+  it('keeps a 24px invisible hit area on dots', () => {
+    const hit = css.match(/\.emt-stop-badge:not\(\.is-selected\)::after,[^{]*\{([^}]*)\}/)?.[1] || '';
+    expect(hit).toContain('width: 24px');
+    expect(hit).toContain('height: 24px');
+  });
+
+  it('never targets the selected stop or metro stations with dot rules', () => {
+    const dotSection = css.slice(css.indexOf('Zoomed-out dots (#108)'), css.indexOf('A station or stop is selected'));
+    expect(dotSection).not.toContain('metro-station');
+    expect(dotSection).not.toMatch(/\.emt-stop-badge\s*[{,]/);
+  });
+});

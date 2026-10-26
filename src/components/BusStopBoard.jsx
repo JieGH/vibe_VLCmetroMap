@@ -195,7 +195,7 @@ export const BusStopBoard = ({
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
           <div
             // Own class (not station-header-icon) so android.css keeps the logo rectangle, not a circle.
-            // 46x18 (~2.5:1) is an estimated logo ratio; map EMT labels (busMapLayers.js) are ~2:1.
+            // 35x18 (#108: hugs the letters, same breathing room as the map label in busMapLayers.js).
             className="bus-stop-header-emblem"
             data-testid="station-header-icon"
             aria-label="Toggle expand station panel"
@@ -203,7 +203,7 @@ export const BusStopBoard = ({
             title={isExpanded ? 'Collapse view' : 'Expand full view'}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 46, height: 18, minWidth: 46, borderRadius: 4,
+              width: 35, height: 18, minWidth: 35, borderRadius: 4,
               background: '#D62828', color: '#FFFFFF',
               boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
               flexShrink: 0,
