@@ -8,9 +8,13 @@
         <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
       </p>
       <p>
-        <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you. Honest by design: trains are drawn from live predictions and fade when their position becomes a guess.<br>
-        <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti. Honesto por diseño: los trenes se dibujan con predicciones en directo y se difuminan cuando su posición pasa a ser una suposición.<br>
-        <i>VA</i> · On està cada tren del metro de València, ara mateix, i quan t'arriba el pròxim. Honest per disseny: els trens es dibuixen amb prediccions en directe i es difuminen quan la posició passa a ser una suposició.
+        <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest"><img src="https://img.shields.io/github/v/release/JieGH/vibe_VLCmetroMap?label=release" alt="Latest release"></a>
+        <a href="https://github.com/JieGH/vibe_VLCmetroMap/commits/main"><img src="https://img.shields.io/github/check-runs/JieGH/vibe_VLCmetroMap/main?nameFilter=Workers%20Builds%3A%20vibe-vlcmetromap&label=Cloudflare%20build" alt="Cloudflare build status of the website"></a>
+      </p>
+      <p>
+        <i>EN</i> · Where every Valencia metro train is, right now, and when the next one reaches you, with live city-bus arrivals beside it. Honest by design: trains are drawn from live predictions and fade when their position becomes a guess.<br>
+        <i>ES</i> · Dónde está cada tren del metro de Valencia, ahora mismo, y cuándo llega el próximo hasta ti, con las llegadas del autobús urbano en directo a su lado. Honesto por diseño: los trenes se dibujan con predicciones en directo y se difuminan cuando su posición pasa a ser una suposición.<br>
+        <i>VA</i> · On està cada tren del metro de València, ara mateix, i quan t'arriba el pròxim, amb les arribades de l'autobús urbà en directe al costat. Honest per disseny: els trens es dibuixen amb prediccions en directe i es difuminen quan la posició passa a ser una suposició.
       </p>
     </td>
     <td valign="middle" align="center" width="45%">
