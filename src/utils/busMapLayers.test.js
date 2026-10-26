@@ -61,4 +61,19 @@ describe('busMapLayers marker creators', () => {
     expect(el.className).toBe('emt-stop-marker');
     expect(el.style.cssText).not.toContain('transition: transform');
   });
+
+  it('creates feeder bus stop marker with is-selected and elevated zIndex when isSelected is true', () => {
+    const mockMap = { isStyleLoaded: () => true };
+    const stop = {
+      stopCode: '1002',
+      stopName: 'Carrer de Colón',
+      coordinates: [-0.375, 39.469],
+    };
+
+    const marker = createFeederStopMarker(mockMap, stop, () => {}, true);
+    const el = marker.getElement();
+
+    expect(el.className).toBe('emt-stop-marker');
+    expect(el.style.cssText).toContain('z-index: 50');
+  });
 });

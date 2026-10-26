@@ -245,7 +245,7 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
  * Creates a persistent EMT bus stop marker on the map: a compact rectangular badge wrapping the three-letter EMT text.
  * The outer marker element contains no transition on transform, eliminating any jelly/lag during map navigation.
  */
-export const createFeederStopMarker = (map, stop, onSelect) => {
+export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) => {
   const wrapper = document.createElement('div');
   wrapper.className = 'emt-stop-marker';
   wrapper.style.cssText = `
@@ -254,11 +254,11 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
     justify-content: center;
     cursor: pointer;
     user-select: none;
-    z-index: 26;
+    z-index: ${isSelected ? '50' : '26'};
   `;
 
   const inner = document.createElement('div');
-  inner.className = 'emt-stop-badge';
+  inner.className = isSelected ? 'emt-stop-badge is-selected' : 'emt-stop-badge';
   if (typeof inner.setAttribute === 'function') {
     inner.setAttribute('data-stop-code', String(stop.stopCode || stop.code || ''));
   }
@@ -286,10 +286,14 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
   wrapper.title = `Parada ${stop.stopCode || stop.code || ''} · ${stop.stopName || stop.name || 'EMT Stop'}`;
 
   wrapper.addEventListener('mouseenter', () => {
-    inner.style.transform = 'scale(1.22)';
+    if (!inner.classList.contains('is-selected')) {
+      inner.style.transform = 'scale(1.22)';
+    }
   });
   wrapper.addEventListener('mouseleave', () => {
-    inner.style.transform = 'scale(1.0)';
+    if (!inner.classList.contains('is-selected')) {
+      inner.style.transform = 'scale(1.0)';
+    }
   });
   if (onSelect) {
     wrapper.addEventListener('click', (e) => {
@@ -308,6 +312,6 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
 /**
  * Creates a generic bus stop marker for Variant B & C bus network browsing.
  */
-export const createBusStopNodeMarker = (map, stop, onSelect) => {
-  return createFeederStopMarker(map, stop, onSelect);
+export const createBusStopNodeMarker = (map, stop, onSelect, isSelected = false) => {
+  return createFeederStopMarker(map, stop, onSelect, isSelected);
 };

@@ -711,15 +711,18 @@ const MapView = ({
     const ranks = stRanksRef.current;
     const maxRank = allowedRank(zoom);
     stInnerElemsRef.current.forEach((el, i) => {
+      const isSelected = el.classList.contains('is-selected');
       const hide = ranks ? ranks[i] > maxRank : curve < 0.55;
-      if (hide) {
+      if (hide && !isSelected) {
         el.style.visibility = 'hidden';
         el.style.pointerEvents = 'none';
       } else {
         el.style.visibility = '';
         el.style.pointerEvents = '';
         el.style.transition = 'none';
-        el.style.transform = `scale(${(ranks ? Math.max(dotScale(zoom), 0.7) : dotScale(zoom)).toFixed(3)})`;
+        if (!isSelected) {
+          el.style.transform = `scale(${(ranks ? Math.max(dotScale(zoom), 0.7) : dotScale(zoom)).toFixed(3)})`;
+        }
       }
     });
 
@@ -797,17 +800,22 @@ const MapView = ({
       seenStops.add(sid);
       drawnStationsRef.current.push(st);
 
+      const selectedMetroName = (selectedStationRef.current && !selectedStationRef.current.isPin && !selectedStationRef.current.properties?.isPin && selectedStationRef.current.properties?.name !== 'Map Ping' && selectedStationRef.current.properties?.name !== "Where you're at")
+        ? (selectedStationRef.current.properties?.name || selectedStationRef.current.name)
+        : null;
+      const isSelectedStation = Boolean(selectedMetroName && st.properties.name === selectedMetroName);
+
       const wrapper = document.createElement('div');
       wrapper.className = 'ml-station-marker-wrapper metro-stop-marker';
-      wrapper.style.cssText = 'display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; z-index:27;';
+      wrapper.style.cssText = `display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; z-index:${isSelectedStation ? '50' : '27'};`;
 
       const inner = document.createElement('div');
-      inner.className = 'metro-station-badge';
+      inner.className = isSelectedStation ? 'metro-station-badge is-selected' : 'metro-station-badge';
       if (typeof inner.setAttribute === 'function') {
         inner.setAttribute('data-station-name', st.properties.name);
       }
       const isHovered = hoverRef.current && (st.properties.lines || []).includes(hoverRef.current);
-      const isHidden = scale < 0.55;
+      const isHidden = scale < 0.55 && !isSelectedStation;
       
       inner.style.cssText = `
         display: inline-flex;
@@ -839,10 +847,14 @@ const MapView = ({
       stInnerElemsRef.current.push(inner);
 
       wrapper.onmouseenter = () => {
-        inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.3).toFixed(3)})`;
+        if (!inner.classList.contains('is-selected')) {
+          inner.style.transform = `scale(${(dotScale(zoomValueRef.current) * 1.3).toFixed(3)})`;
+        }
       };
       wrapper.onmouseleave = () => {
-        inner.style.transform = `scale(${dotScale(zoomValueRef.current).toFixed(3)})`;
+        if (!inner.classList.contains('is-selected')) {
+          inner.style.transform = `scale(${dotScale(zoomValueRef.current).toFixed(3)})`;
+        }
       };
       wrapper.onclick = (e) => {
         e.stopPropagation();
@@ -1576,12 +1588,12 @@ const MapView = ({
   }, [selectedBusStop, selectedStation]);
 
   // ── Highlight yellow rim around chosen station or bus stop ─────────────────
-  useEffect(() => {
+  const updateStopHighlights = () => {
     const container = containerRef.current;
     if (!container) return;
 
-    const selectedMetroName = (selectedStation && !selectedStation.isPin && !selectedStation.properties?.isPin && selectedStation.properties?.name !== 'Map Ping')
-      ? (selectedStation.properties?.name || selectedStation.name)
+    const selectedMetroName = (selectedStationRef.current && !selectedStationRef.current.isPin && !selectedStationRef.current.properties?.isPin && selectedStationRef.current.properties?.name !== 'Map Ping' && selectedStationRef.current.properties?.name !== "Where you're at")
+      ? (selectedStationRef.current.properties?.name || selectedStationRef.current.name)
       : null;
 
     container.querySelectorAll('.metro-station-badge').forEach((el) => {
@@ -1599,8 +1611,8 @@ const MapView = ({
       }
     });
 
-    const selectedStopCode = selectedBusStop
-      ? String(selectedBusStop.stopCode || selectedBusStop.code || '')
+    const selectedStopCode = selectedBusStopRef.current
+      ? String(selectedBusStopRef.current.stopCode || selectedBusStopRef.current.code || '')
       : null;
 
     container.querySelectorAll('.emt-stop-badge').forEach((el) => {
@@ -1617,6 +1629,10 @@ const MapView = ({
         }
       }
     });
+  };
+
+  useEffect(() => {
+    updateStopHighlights();
   }, [selectedStation, selectedBusStop]);
 
   // ── The viewer's own dot ───────────────────────────────────────────────────
@@ -1879,10 +1895,16 @@ const MapView = ({
             }
           }
 
+          const selectedCode = selectedBusStopRef.current
+            ? String(selectedBusStopRef.current.stopCode || selectedBusStopRef.current.code || '')
+            : null;
+
           visibleStops.forEach((stop) => {
+            const stopCode = String(stop.stopCode || stop.code || '');
+            const isSelected = Boolean(selectedCode && stopCode === selectedCode);
             const marker = createFeederStopMarker(map, stop, () => {
               if (onSelectBusStop) onSelectBusStop(stop);
-            });
+            }, isSelected);
             busMarkersRef.current.push(marker);
           });
         }
@@ -1919,10 +1941,16 @@ const MapView = ({
           }
 
           // Route stops
+          const selectedCode = selectedBusStopRef.current
+            ? String(selectedBusStopRef.current.stopCode || selectedBusStopRef.current.code || '')
+            : null;
+
           (activeBusLine.stops || []).forEach((st) => {
+            const stopCode = String(st.stopCode || st.code || '');
+            const isSelected = Boolean(selectedCode && stopCode === selectedCode);
             const marker = createBusStopNodeMarker(map, st, (stop) => {
               if (onSelectBusStop) onSelectBusStop(stop);
-            });
+            }, isSelected);
             busMarkersRef.current.push(marker);
           });
 
@@ -1954,9 +1982,11 @@ const MapView = ({
 
           primaryTrunks.forEach((line) => {
             (line.stops || []).forEach((st) => {
+              const stopCode = String(st.stopCode || st.code || '');
+              const isSelected = Boolean(selectedCode && stopCode === selectedCode);
               const marker = createBusStopNodeMarker(map, st, (stop) => {
                 if (onSelectBusStop) onSelectBusStop(stop);
-              });
+              }, isSelected);
               busMarkersRef.current.push(marker);
             });
           });
@@ -1977,6 +2007,8 @@ const MapView = ({
           applyLineDim(map, selectedStationRef.current);
         }
       }
+
+      updateStopHighlights();
     };
 
     if (map.isStyleLoaded()) {
