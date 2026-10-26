@@ -194,7 +194,9 @@ export const BusStopBoard = ({
       >
         <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
           <div
-            className="station-header-icon"
+            // Own class (not station-header-icon) so android.css keeps the logo rectangle, not a circle.
+            // 46x18 (~2.5:1) is an estimated logo ratio; map EMT labels (busMapLayers.js) are ~2:1.
+            className="bus-stop-header-emblem"
             data-testid="station-header-icon"
             aria-label="Toggle expand station panel"
             onClick={() => setIsExpanded((v) => !v)}

@@ -27,6 +27,8 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('bus-stop-board');
     expect(html).toContain('glass-panel');
     expect(html).toContain('data-testid="station-header-icon"');
+    expect(html).toContain('class="bus-stop-header-emblem"');
+    expect(html).not.toContain('class="station-header-icon"');
     expect(html).toContain('EMT');
     expect(html).toContain('P-1002');
     expect(html).toContain('Colón - Pascual i Genís');
