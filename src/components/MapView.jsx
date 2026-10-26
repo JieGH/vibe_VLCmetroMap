@@ -12,11 +12,10 @@ import lineRenderConfig from '../data/line_render_config.js';
 import {
   DEFAULT_MAP_ZOOM,
   DEFAULT_MAP_CENTER,
-  ZERO_PADDING,
-  calculateFocusZoom,
   STATION_FOCUS_ZOOM,
   CAMERA_EASE_MS,
   panelAwarePadding as computePanelPadding,
+  focusTarget,
 } from '../utils/mapCamera';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -1425,19 +1424,8 @@ const MapView = ({
     }
 
     if (!selectedStation) {
-      if (prevStationRef.current && !selectedBusStop) {
-        prevStationRef.current = null;
-        closingZoomRef.current = true;
-        map.once('moveend', () => { closingZoomRef.current = false; });
-        map.easeTo({
-          center: map.getCenter(),
-          padding: ZERO_PADDING,
-          duration: CAMERA_EASE_MS,
-          essential: true,
-        });
-      } else {
-        prevStationRef.current = null;
-      }
+      // Closing never moves the camera (#95): the target stays centred where selection put it.
+      prevStationRef.current = null;
       return undefined;
     }
 
@@ -1495,9 +1483,6 @@ const MapView = ({
 
     // The panel shares this render (same selectedStation update), so it is
     // already in the DOM once this effect runs and can be measured.
-    const basePadding = panelAwarePadding(map, { hasPanel: true });
-    const targetZoom = calculateFocusZoom(map.getZoom());
-
     const isPinMode = Boolean(
       isPinTarget ||
       userLocationRef.current?.isMapClick ||
@@ -1509,13 +1494,7 @@ const MapView = ({
       : coordinates;
 
     if (!isHubRefresh) {
-      map.easeTo({
-        center: focusCoords,
-        zoom: targetZoom,
-        padding: basePadding,
-        duration: CAMERA_EASE_MS,
-        essential: true,
-      });
+      focusTarget(map, focusCoords, panelAwarePadding(map, { hasPanel: true }));
     }
 
     return () => {
@@ -1541,19 +1520,8 @@ const MapView = ({
     }
 
     if (!selectedBusStop) {
-      if (prevBusStopRef.current && !selectedStation) {
-        prevBusStopRef.current = null;
-        closingZoomRef.current = true;
-        map.once('moveend', () => { closingZoomRef.current = false; });
-        map.easeTo({
-          center: map.getCenter(),
-          padding: ZERO_PADDING,
-          duration: CAMERA_EASE_MS,
-          essential: true,
-        });
-      } else {
-        prevBusStopRef.current = null;
-      }
+      // Closing never moves the camera (#95).
+      prevBusStopRef.current = null;
       return undefined;
     }
 
@@ -1576,16 +1544,9 @@ const MapView = ({
       .addTo(map);
     busFocusMarkerRef.current = marker;
 
-    const basePadding = panelAwarePadding(map, { hasPanel: true });
-    const targetZoom = calculateFocusZoom(map.getZoom());
-
-    map.easeTo({
-      center: coordinates,
-      zoom: targetZoom,
-      padding: basePadding,
-      duration: CAMERA_EASE_MS,
-      essential: true,
-    });
+    // Centre the drawn marker (#106 display offset), not the real stop coordinate,
+    // so the marker the rider sees is what ends up in the middle.
+    focusTarget(map, getStopDisplayCoordinates(selectedBusStop) || coordinates, panelAwarePadding(map, { hasPanel: true }));
 
     return () => {
       if (marker) {
@@ -1670,11 +1631,9 @@ const MapView = ({
       wrapper.innerHTML = `<span>📍</span>`;
       wrapper.onclick = (e) => {
         e.stopPropagation();
-        map.easeTo({
-          center: userLocation.coordinates,
-          zoom: Math.max(map.getZoom(), 15.2),
-          padding: panelAwarePadding(map, { hasPanel: true }),
-          duration: CAMERA_EASE_MS,
+        focusTarget(map, userLocation.coordinates, panelAwarePadding(map, { hasPanel: true }), {
+          minZoom: 15.2,
+          essential: false,
         });
       };
     } else {
@@ -1843,14 +1802,7 @@ const MapView = ({
     if (!map) return;
 
     if (!userLocation || userLocation.status !== 'located') {
-      if (prevUserLocationRef.current && !selectedStationRef.current) {
-        map.easeTo({
-          center: map.getCenter(),
-          padding: ZERO_PADDING,
-          duration: CAMERA_EASE_MS,
-          essential: true,
-        });
-      }
+      // Dismissing the ping/location never moves the camera (#95).
       prevUserLocationRef.current = null;
       lastFramedFetchedAtRef.current = null;
       return;
@@ -1866,15 +1818,8 @@ const MapView = ({
     }
     lastFramedFetchedAtRef.current = userLocation.fetchedAt;
 
-    const padding = panelAwarePadding(map, { hasPanel: true });
-    const targetZoom = Math.max(map.getZoom(), STATION_FOCUS_ZOOM);
-
-    map.easeTo({
-      center: userLocation.coordinates,
-      zoom: targetZoom,
-      padding,
-      duration: CAMERA_EASE_MS,
-      essential: true,
+    focusTarget(map, userLocation.coordinates, panelAwarePadding(map, { hasPanel: true }), {
+      minZoom: STATION_FOCUS_ZOOM,
     });
   }, [userLocation]);
 

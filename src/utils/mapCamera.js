@@ -147,3 +147,80 @@ export const panelAwarePadding = ({
     left: 24,
   };
 };
+
+/** A target within this many screen pixels of the usable-space centre counts as already centred (#95). */
+export const RECENTRE_TOLERANCE_PX = 6;
+/** Zoom differences below this are treated as "no zoom change wanted". */
+export const ZOOM_EPSILON = 0.01;
+
+/**
+ * Centre of the map area left free by the padding (above the sheet, below the search bar).
+ * @param {{ width: number, height: number }} size - Map container size in px
+ * @param {{ top: number, right: number, bottom: number, left: number }} padding
+ * @returns {{ x: number, y: number }}
+ */
+export const usableCentre = ({ width, height }, padding) => ({
+  x: (padding.left + (width - padding.right)) / 2,
+  y: (padding.top + (height - padding.bottom)) / 2,
+});
+
+/**
+ * Idempotence decision: does the target need to be moved to the usable-space centre?
+ * @param {{ x: number, y: number }} currentScreenPoint - Where the target is drawn now
+ * @param {{ x: number, y: number }} targetCentre
+ * @param {number} [tolerancePx]
+ * @returns {boolean}
+ */
+export const needsRecentre = (currentScreenPoint, targetCentre, tolerancePx = RECENTRE_TOLERANCE_PX) =>
+  Math.hypot(currentScreenPoint.x - targetCentre.x, currentScreenPoint.y - targetCentre.y) > tolerancePx;
+
+/**
+ * Decide the camera ease for selecting a target. Returns null when the target is
+ * already centred at the wanted zoom, so re-selecting the same place after the
+ * sheet closed causes no camera movement at all.
+ *
+ * @param {object} args
+ * @param {{ x: number, y: number }} args.screenPoint - Target's current screen position
+ * @param {{ width: number, height: number }} args.size
+ * @param {{ top: number, right: number, bottom: number, left: number }} args.padding
+ * @param {{ top: number, right: number, bottom: number, left: number }} [args.currentPadding] - padding the camera carries now
+ * @param {number} args.currentZoom
+ * @param {number} args.targetZoom
+ * @returns {boolean} true when the camera must ease
+ */
+export const shouldEaseToTarget = ({ screenPoint, size, padding, currentPadding, currentZoom, targetZoom }) => {
+  // Already centred under the padding the camera still carries from the previous
+  // selection counts too: the sheet may measure a few px differently the second
+  // time, and that must not nudge a target the user is already looking at.
+  const centredNow = currentPadding && !needsRecentre(screenPoint, usableCentre(size, currentPadding));
+  const centred = centredNow || !needsRecentre(screenPoint, usableCentre(size, padding));
+  return !centred || Math.abs(currentZoom - targetZoom) > ZOOM_EPSILON;
+};
+
+/**
+ * Centre `center` in the usable space, or do nothing if it already is (#95).
+ * Zoom keeps the user's ratio (#94). Returns whether the camera eased.
+ * Closing a sheet has no counterpart here on purpose: dismissal never moves the camera.
+ *
+ * @param {object} map - MapLibre-like: getZoom, getContainer, project, easeTo
+ * @param {[number, number]} center - lng/lat of the drawn marker
+ * @param {{ top: number, right: number, bottom: number, left: number }} padding
+ * @param {{ minZoom?: number, duration?: number, essential?: boolean }} [options]
+ * @returns {boolean}
+ */
+export const focusTarget = (map, center, padding, { minZoom, duration = CAMERA_EASE_MS, essential = true } = {}) => {
+  const currentZoom = map.getZoom();
+  const targetZoom = minZoom != null ? Math.max(currentZoom, minZoom) : calculateFocusZoom(currentZoom);
+  const container = map.getContainer();
+  const needed = shouldEaseToTarget({
+    screenPoint: map.project(center),
+    size: { width: container.clientWidth, height: container.clientHeight },
+    padding,
+    currentPadding: map.getPadding ? map.getPadding() : undefined,
+    currentZoom,
+    targetZoom,
+  });
+  if (!needed) return false;
+  map.easeTo({ center, zoom: targetZoom, padding, duration, essential });
+  return true;
+};
