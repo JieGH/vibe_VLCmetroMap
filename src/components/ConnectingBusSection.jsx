@@ -5,6 +5,7 @@ import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
+import { SPLIT_HEADER, splitHeaderBoxStyle } from './splitStyles';
 import {
   fetchStopArrivals,
   getEmtCachedArrivals,
@@ -88,34 +89,26 @@ export const ConnectingBusSection = ({
 
   return (
     <div className="connecting-bus-feeder-section" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '2px 4px 6px',
-          borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
-        }}
-      >
+      <div style={splitHeaderBoxStyle(compact)}>
         <span
           style={{
-            fontSize: '0.74rem',
+            fontSize: compact ? SPLIT_HEADER.titleFontSize : '0.74rem',
             fontWeight: 800,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
             color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: compact ? SPLIT_HEADER.gap : 6,
           }}
         >
           <span
             style={{
-              fontSize: '0.58rem',
+              fontSize: compact ? SPLIT_HEADER.emtBadge.fontSize : '0.58rem',
               fontWeight: 900,
               background: '#D62828',
               color: '#ffffff',
-              padding: '1px 4px',
+              padding: compact ? SPLIT_HEADER.emtBadge.padding : '1px 4px',
               borderRadius: 3,
               letterSpacing: '0.04em',
               lineHeight: 1.2,
