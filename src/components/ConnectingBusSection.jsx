@@ -20,6 +20,9 @@ function buildCachedArrivalsMap(codes) {
   return map;
 }
 
+// Split view is an overview: each stop card lists only the soonest arrivals.
+const MAX_CARD_ARRIVALS = 3;
+
 export const ConnectingBusSection = ({
   feeders,
   theme = 'dark',
@@ -154,7 +157,11 @@ export const ConnectingBusSection = ({
         return (
           <div
             key={stop.stopCode || sIdx}
+            data-testid="feeder-card"
+            onClick={() => onSelectFeederStop && onSelectFeederStop(stop)}
+            title="Open this street bus stop"
             style={{
+              cursor: onSelectFeederStop ? 'pointer' : 'default',
               background: 'var(--bg-hover, rgba(255, 255, 255, 0.04))',
               borderRadius: 10,
               padding: '8px 10px',
@@ -170,10 +177,7 @@ export const ConnectingBusSection = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                cursor: onSelectFeederStop ? 'pointer' : 'default',
               }}
-              onClick={() => onSelectFeederStop && onSelectFeederStop(stop)}
-              title="Focus this street bus stop on map"
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <span
@@ -246,7 +250,7 @@ export const ConnectingBusSection = ({
                   {t('stationPanel.nothingFurther')}
                 </div>
               ) : (
-                itemsToRender.map((busObj, bIdx) => {
+                itemsToRender.slice(0, MAX_CARD_ARRIVALS).map((busObj, bIdx) => {
                   const dueSec = busObj.dueSeconds ?? busObj.seconds;
                   const heat = countdownHeat(dueSec ?? 0, theme);
                   return (

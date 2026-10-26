@@ -105,7 +105,11 @@ export const CompactMetroSection = ({
           return (
             <div
               key={stName || sIdx}
+              data-testid="metro-card"
+              onClick={() => onSelectStation && onSelectStation(m.feature)}
+              title={`Open ${stName}`}
               style={{
+                cursor: onSelectStation ? 'pointer' : 'default',
                 background: 'var(--bg-hover, rgba(255, 255, 255, 0.04))',
                 borderRadius: 10,
                 padding: '8px 10px',
@@ -121,10 +125,7 @@ export const CompactMetroSection = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  cursor: onSelectStation ? 'pointer' : 'default',
                 }}
-                onClick={() => onSelectStation && onSelectStation(m.feature)}
-                title={`Focus ${stName} on map`}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
                   <span
