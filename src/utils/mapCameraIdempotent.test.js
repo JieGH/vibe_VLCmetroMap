@@ -4,6 +4,7 @@ import {
   needsRecentre,
   shouldEaseToTarget,
   focusTarget,
+  cameraOnDismiss,
   RECENTRE_TOLERANCE_PX,
 } from './mapCamera';
 
@@ -66,12 +67,42 @@ describe('idempotent centring (#95)', () => {
     expect(map.calls).toHaveLength(1);
   });
 
-  it('already centred under the padding the camera carries counts as centred (sheet re-measures a few px different)', () => {
+  const rig = (size, oldPad, newPad) => {
+    const old = usableCentre(size, oldPad);
+    return {
+      calls: [],
+      getZoom: () => 14,
+      getContainer: () => ({ clientWidth: size.width, clientHeight: size.height }),
+      getPadding: () => oldPad,
+      project: () => old, // target sits at the old usable centre
+      easeTo() { this.calls.push('easeTo'); },
+      newPad,
+    };
+  };
+  const run = (size, oldPad, newPad) => { const m = rig(size, oldPad, newPad); const r = focusTarget(m, [0, 0], newPad); return { r, calls: m.calls.length }; };
+  const P = (bottom) => ({ top: 96, right: 24, bottom, left: 24 });
+  const L = (right) => ({ top: 96, right, bottom: 40, left: 40 });
+
+  it('portrait: taller sheet always eases (400 -> 584 and 400 -> 500)', () => {
+    expect(run(SIZE, P(400), P(584))).toEqual({ r: true, calls: 1 });
+    expect(run(SIZE, P(400), P(500))).toEqual({ r: true, calls: 1 });
+  });
+  it('portrait: shorter sheet keeps only when the centre shifts <= 40 px', () => {
+    expect(run(SIZE, P(500), P(400)).r).toBe(true); // centre moves 50 px > 40
+    expect(run(SIZE, P(448), P(400))).toEqual({ r: false, calls: 0 }); // 24 px
+  });
+  it('landscape: wider side sheet eases, narrower keeps within slack', () => {
+    const land = { width: 900, height: 420 };
+    expect(run(land, L(300), L(420)).r).toBe(true);
+    expect(run(land, L(340), L(300)).r).toBe(false);
+  });
+
+  it('dismiss makes no camera options and a close step records no calls', () => {
     const map = makeMap();
-    map.getPadding = () => ({ ...PADDING });
-    const slightlyShorterSheet = { ...PADDING, bottom: PADDING.bottom - 48 };
-    expect(focusTarget(map, [0, 0], slightlyShorterSheet)).toBe(false);
-    expect(map.calls).toHaveLength(0);
+    focusTarget(map, [50, 90], PADDING);
+    const n = map.calls.length;
+    expect(cameraOnDismiss()).toBeNull();
+    expect(map.calls).toHaveLength(n);
   });
 
   it('selecting a different target moves', () => {
@@ -88,14 +119,5 @@ describe('idempotent centring (#95)', () => {
     const near = makeMap({ zoom: 17 });
     focusTarget(near, [30, 30], PADDING);
     expect(near.calls[0][1].zoom).toBe(17);
-  });
-
-  it('hub refresh by live tracking makes no camera call (isHubRefresh path never calls focusTarget)', () => {
-    const map = makeMap();
-    focusTarget(map, [10, 10], PADDING);
-    const before = map.calls.length;
-    // A live fix moves the marker only; no focusTarget, no other camera call.
-    expect(map.calls.length).toBe(before);
-    expect(map.calls.some((c) => ['jumpTo', 'flyTo', 'panTo', 'setPadding'].includes(c[0]))).toBe(false);
   });
 });

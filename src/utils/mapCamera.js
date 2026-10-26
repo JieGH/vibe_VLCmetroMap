@@ -189,13 +189,33 @@ export const needsRecentre = (currentScreenPoint, targetCentre, tolerancePx = RE
  * @returns {boolean} true when the camera must ease
  */
 export const shouldEaseToTarget = ({ screenPoint, size, padding, currentPadding, currentZoom, targetZoom }) => {
-  // Already centred under the padding the camera still carries from the previous
-  // selection counts too: the sheet may measure a few px differently the second
-  // time, and that must not nudge a target the user is already looking at.
-  const centredNow = currentPadding && !needsRecentre(screenPoint, usableCentre(size, currentPadding));
-  const centred = centredNow || !needsRecentre(screenPoint, usableCentre(size, padding));
+  const centred = !needsRecentre(screenPoint, usableCentre(size, padding)) || keepUnderShorterSheet({ screenPoint, size, padding, currentPadding });
   return !centred || Math.abs(currentZoom - targetZoom) > ZOOM_EPSILON;
 };
+
+/** A re-measured sheet may be up to this many px shorter/narrower on a side and the target is kept. */
+export const SHEET_REMEASURE_SLACK_PX = 6;
+/** Largest distance (px) a kept target may sit from the new usable centre. A 48 px shorter sheet shifts it 24 px. */
+export const MAX_KEPT_OFFSET_PX = 40;
+
+/**
+ * Rule: sheet got shorter or equal => keep; sheet got taller => always ease.
+ * The target is kept only when it is centred under the padding the camera still
+ * carries, NO side of the new padding exceeds the carried one (beyond 6 px, so the
+ * sheet cannot newly cover it, portrait or landscape), and it sits within 40 px of the new centre.
+ */
+const keepUnderShorterSheet = ({ screenPoint, size, padding, currentPadding }) => {
+  if (!currentPadding) return false;
+  const notTaller = ['top', 'right', 'bottom', 'left'].every(
+    (side) => padding[side] <= currentPadding[side] + SHEET_REMEASURE_SLACK_PX
+  );
+  if (!notTaller) return false;
+  if (needsRecentre(screenPoint, usableCentre(size, currentPadding))) return false;
+  return !needsRecentre(screenPoint, usableCentre(size, padding), MAX_KEPT_OFFSET_PX);
+};
+
+/** Closing a sheet never moves the camera (#95): no options, no call. */
+export const cameraOnDismiss = () => null;
 
 /**
  * Centre `center` in the usable space, or do nothing if it already is (#95).
