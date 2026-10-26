@@ -8,6 +8,18 @@ export const CAMERA_EASE_MS = 400;
 export const ZERO_PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /**
+ * Options for map.fitBounds that ignore any padding the camera still carries from
+ * an earlier selection (#95: closing a sheet no longer eases the padding away, and
+ * MapLibre otherwise adds the carried padding to the fit padding). `absolutePadding`
+ * makes the given padding the whole story, so the fit equals a zero-padding map's.
+ */
+export const fitBoundsOptions = (padding, rest = {}) => ({
+  ...rest,
+  padding: { ...ZERO_PADDING, ...padding },
+  absolutePadding: true,
+});
+
+/**
  * Calculates camera target zoom when focusing a Station or Bus Stop.
  * Preserves the user's chosen zoom ratio for natural map navigation (Google Maps style),
  * while guarding against extremely far-out zoom levels where a station cannot be seen.

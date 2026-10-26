@@ -14,6 +14,7 @@ import {
   DEFAULT_MAP_CENTER,
   STATION_FOCUS_ZOOM,
   CAMERA_EASE_MS,
+  fitBoundsOptions,
   panelAwarePadding as computePanelPadding,
   focusTarget,
 } from '../utils/mapCamera';
@@ -651,7 +652,6 @@ const MapView = ({
   const prevUserLocationRef = useRef(null); // previous userLocation to detect clear transitions
   const zoomScaleRef    = useRef(1); // raw zoomCurve value, updated on every zoom event
   const zoomValueRef    = useRef(DEFAULT_MAP_ZOOM); // current map zoom
-  const closingZoomRef  = useRef(false); // a sheet-close zoom-out ease is running
   const stInnerElemsRef = useRef([]); // refs to station inner elements for direct scale updates
   // MapLibre still emits a trailing 'click' after some real drag gestures
   // (notably a touch pan that ends without much velocity), which would
@@ -1201,13 +1201,6 @@ const MapView = ({
       map.on('zoom', updateZoomScale);
       updateZoomScale();
 
-      // A touch or click on the map cancels a running sheet-close zoom-out.
-      const cancelClosingEase = () => {
-        if (closingZoomRef.current) { closingZoomRef.current = false; map.stop(); }
-      };
-      map.on('mousedown', cancelClosingEase);
-      map.on('touchstart', cancelClosingEase);
-
       map.on('dragstart', () => { wasDraggedRef.current = true; });
       map.on('dragend', () => {
         // Cleared on the next tick so the 'click' MapLibre fires immediately
@@ -1377,17 +1370,12 @@ const MapView = ({
         const bounds = new LngLatBounds(onLine[0].geometry.coordinates, onLine[0].geometry.coordinates);
         onLine.forEach((st) => bounds.extend(st.geometry.coordinates));
         const pad = panelAwarePadding(map, { hasPanel: Boolean(selectedStationRef.current) });
-        map.fitBounds(bounds, {
-          padding: {
-            top: pad.top + 56, // the line-chip row under the search pill
-            bottom: Math.max(pad.bottom, 0) + 32,
-            left: Math.max(pad.left, 0) + 32,
-            right: Math.max(pad.right, 0) + 32,
-          },
-          maxZoom: 13,
-          duration: CAMERA_EASE_MS,
-          essential: true,
-        });
+        map.fitBounds(bounds, fitBoundsOptions({
+          top: pad.top + 56, // the line-chip row under the search pill
+          bottom: Math.max(pad.bottom, 0) + 32,
+          left: Math.max(pad.left, 0) + 32,
+          right: Math.max(pad.right, 0) + 32,
+        }, { maxZoom: 13, duration: CAMERA_EASE_MS, essential: true }));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1436,7 +1424,6 @@ const MapView = ({
       return undefined;
     }
 
-    closingZoomRef.current = false;
     // Live tracking refreshes the GPS hub in place (#104): same hub, new fix. Rebuild its pieces but leave the camera.
     const isHubRefresh = prevStationRef.current?.properties?.apiId === 'user-location-gps' &&
       selectedStation.properties?.apiId === 'user-location-gps';
@@ -1537,7 +1524,6 @@ const MapView = ({
       focusMarkerRef.current = null;
     }
 
-    closingZoomRef.current = false;
     prevBusStopRef.current = selectedBusStop;
     const coordinates = selectedBusStop.coordinates;
     if (!coordinates || !Array.isArray(coordinates)) return undefined;
@@ -1920,11 +1906,10 @@ const MapView = ({
               (b, c) => b.extend(c),
               new LngLatBounds(activeBusLine.coordinates[0], activeBusLine.coordinates[0])
             );
-            map.fitBounds(bounds, {
-              padding: { top: 120, bottom: 220, left: 60, right: 60 },
-              duration: 900,
-              maxZoom: 15,
-            });
+            map.fitBounds(bounds, fitBoundsOptions(
+              { top: 120, bottom: 220, left: 60, right: 60 },
+              { duration: 900, maxZoom: 15 }
+            ));
           }
 
           // Route stops

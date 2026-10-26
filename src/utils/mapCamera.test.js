@@ -167,3 +167,14 @@ describe('mapCamera', () => {
     expect(CAMERA_EASE_MS).toBe(400);
   });
 });
+
+describe('fitBoundsOptions (#95)', () => {
+  it('makes the given padding absolute so carried padding is never added', async () => {
+    const { fitBoundsOptions } = await import('./mapCamera');
+    const o = fitBoundsOptions({ top: 10, left: 5 }, { maxZoom: 13, duration: 400 });
+    expect(o.absolutePadding).toBe(true);
+    expect(o.padding).toEqual({ top: 10, right: 0, bottom: 0, left: 5 });
+    expect(o.maxZoom).toBe(13);
+    expect(o.duration).toBe(400);
+  });
+});
