@@ -261,10 +261,11 @@ const StationPanel = ({
         </span>
       </button>
 
-      {/* Tab 2: Trains */}
+      {/* Tab 2: Metro Trains */}
       <button
         type="button"
         role="tab"
+        aria-label="Metro train departures"
         aria-selected={activeTab === 'metro'}
         onClick={() => setActiveTab('metro')}
         onPointerDown={(e) => e.stopPropagation()}
@@ -304,7 +305,6 @@ const StationPanel = ({
         >
           m
         </span>
-        <span>Trains</span>
         <span
           style={{
             fontSize: '.72rem',
@@ -318,10 +318,11 @@ const StationPanel = ({
         </span>
       </button>
 
-      {/* Tab 3: Bus */}
+      {/* Tab 3: EMT Bus */}
       <button
         type="button"
         role="tab"
+        aria-label="EMT bus departures"
         aria-selected={activeTab === 'bus'}
         onClick={() => setActiveTab('bus')}
         onPointerDown={(e) => e.stopPropagation()}
@@ -357,7 +358,6 @@ const StationPanel = ({
         >
           EMT
         </span>
-        <span>Bus</span>
         <span
           style={{
             fontSize: '.72rem',
