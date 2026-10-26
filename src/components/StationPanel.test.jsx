@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import StationPanel, { EXPANDED_SHEET_HEIGHT } from './StationPanel';
+import StationPanel, { EXPANDED_SHEET_HEIGHT, SPLIT_SHEET_BOTTOM } from './StationPanel';
 import arrivalStore from '../services/arrivalStore';
 
 describe('StationPanel component', () => {
@@ -333,5 +333,14 @@ describe('StationPanel component', () => {
   it('sizes the expanded portrait sheet to clear the top bar using both safe-area insets', () => {
     expect(EXPANDED_SHEET_HEIGHT).toContain('env(safe-area-inset-top');
     expect(EXPANDED_SHEET_HEIGHT).toContain('env(safe-area-inset-bottom');
+  });
+
+  it('split view weights Trains wider than Autobús and sits lower while collapsed', () => {
+    const html = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" isPin onClose={() => {}} />
+    );
+    expect(html).toContain('grid-template-columns:1.2fr 1fr');
+    expect(html).toContain('bottom:' + SPLIT_SHEET_BOTTOM);
+    expect(SPLIT_SHEET_BOTTOM).toContain('env(safe-area-inset-bottom');
   });
 });

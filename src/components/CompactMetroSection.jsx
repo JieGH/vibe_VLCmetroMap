@@ -241,7 +241,7 @@ export const CompactMetroSection = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
                           <span
                             style={{
-                              minWidth: compact ? 16 : 18,
+                              ...(compact ? { width: 20 } : { minWidth: 18 }),
                               height: compact ? 16 : 18,
                               borderRadius: compact ? 3 : 4,
                               background: bg,
@@ -433,13 +433,13 @@ export const CompactMetroSection = ({
             }}
           >
             {/* Left: Line Badge + Destination */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 6 : 8, minWidth: 0, flex: 1 }}>
               <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: compact ? 16 : 22,
+                  ...(compact ? { width: 20 } : { minWidth: 22 }),
                   height: compact ? 16 : 22,
                   padding: compact ? '0 2px' : '0 5px',
                   borderRadius: compact ? 3 : 11,
