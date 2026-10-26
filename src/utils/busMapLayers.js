@@ -3,6 +3,7 @@
 
 import { Marker } from 'maplibre-gl';
 import { createCircleGeoJSON } from './geoUtils';
+import { getStopDisplayCoordinates } from '../data/emtData';
 
 const ROUTE_SOURCE_ID = 'bus-routes-source';
 const ROUTE_CASING_LAYER = 'bus-routes-casing';
@@ -309,7 +310,7 @@ export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) 
   }
 
   const marker = new Marker({ element: wrapper, anchor: 'center' })
-    .setLngLat(stop.coordinates)
+    .setLngLat(getStopDisplayCoordinates(stop))
     .addTo(map);
 
   return marker;

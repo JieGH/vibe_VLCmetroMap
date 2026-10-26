@@ -3,6 +3,7 @@
 
 import { getDistance } from '../utils/geoUtils';
 import REAL_EMT_STOPS from './emt_stops.json';
+import { buildDisplayCoordinates, displayCoordinatesFor } from '../utils/stopOffsets';
 
 export const EMT_LINES = [
   {
@@ -558,4 +559,12 @@ export const getBusLine = (id) => EMT_LINES.find(l => l.id.toLowerCase() === Str
 
 export const getAllBusStops = () => {
   return REAL_EMT_STOPS;
+};
+
+// Display-only marker offsets (#106), computed once on first use. Real
+// coordinates stay on the stop objects; only drawing uses these.
+let stopDisplayOffsets = null;
+export const getStopDisplayCoordinates = (stop) => {
+  if (!stopDisplayOffsets) stopDisplayOffsets = buildDisplayCoordinates(REAL_EMT_STOPS);
+  return displayCoordinatesFor(stop, stopDisplayOffsets);
 };

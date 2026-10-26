@@ -38,7 +38,7 @@ import {
   createFeederStopMarker,
   createBusStopNodeMarker,
 } from '../utils/busMapLayers';
-import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders, getAllBusStops } from '../data/emtData';
+import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -1572,7 +1572,7 @@ const MapView = ({
     element.className = 'bus-focus-node';
     element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true);
     marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
-      .setLngLat(coordinates)
+      .setLngLat(getStopDisplayCoordinates(selectedBusStop) || coordinates)
       .addTo(map);
     busFocusMarkerRef.current = marker;
 
@@ -1820,7 +1820,7 @@ const MapView = ({
       };
 
       const marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
-        .setLngLat(stop.coordinates)
+        .setLngLat(getStopDisplayCoordinates(stop))
         .addTo(map);
 
       spawnedTransitMarkersRef.current.push(marker);
