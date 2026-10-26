@@ -30,6 +30,7 @@ import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNo
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import returnTrackData from '../data/return_tracks.json';
 import { emtDotMode } from '../utils/emtDotMode';
+import { markerSyncPlan } from '../utils/markerSync';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 import {
   ensureBusLayers,
@@ -1839,12 +1840,16 @@ const MapView = ({
     if (!map) return undefined;
 
     const syncBus = () => {
-      ensureBusLayers(map, theme);
+      // #115: markers are DOM and never wait for the style; only the layer work does (see markerSyncPlan).
+      const plan = markerSyncPlan(map.isStyleLoaded());
+      const styled = (fn, ...args) => (plan.layers ? fn(...args) : undefined);
+      if (plan.retryOnIdle) map.once('idle', syncBus);
+      styled(ensureBusLayers, map, theme);
       clearBusMarkers();
 
       // VARIANT A: Multimodal Hub Feeder with Persistent EMT Bus Stops
       if (variant === 'A') {
-        setBusRoutesData(map, []);
+        styled(setBusRoutesData, map, []);
 
         // 1. Persistent EMT bus stops across the map (rectangular EMT badges)
         const allStops = getAllBusStops();
@@ -1892,18 +1897,18 @@ const MapView = ({
           const coords = snappedCoordinates(selectedStation);
           const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;
           const feeders = getStationBusFeeders(selectedStation.properties.name, centerCoords);
-          setFeederWalkLinks(map, centerCoords, feeders);
+          styled(setFeederWalkLinks, map, centerCoords, feeders);
         } else {
-          setFeederWalkLinks(map, null, []);
+          styled(setFeederWalkLinks, map, null, []);
         }
       }
 
       // VARIANT B: Line-on-Demand Canvas
       else if (variant === 'B') {
-        setFeederWalkLinks(map, null, []);
+        styled(setFeederWalkLinks, map, null, []);
 
         if (activeBusLine) {
-          setBusRoutesData(map, [activeBusLine]);
+          styled(setBusRoutesData, map, [activeBusLine]);
 
           // Zoom to route
           if (activeBusLine.coordinates && activeBusLine.coordinates.length > 0) {
@@ -1942,17 +1947,17 @@ const MapView = ({
             busMarkersRef.current.push(marker);
           });
         } else {
-          setBusRoutesData(map, []);
+          styled(setBusRoutesData, map, []);
         }
       }
 
       // VARIANT C: Dual-Lens Mode Switcher
       else if (variant === 'C') {
-        setFeederWalkLinks(map, null, []);
+        styled(setFeederWalkLinks, map, null, []);
 
         if (activeMode === 'bus') {
           const primaryTrunks = EMT_LINES.slice(0, 5);
-          setBusRoutesData(map, primaryTrunks);
+          styled(setBusRoutesData, map, primaryTrunks);
 
           if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.15);
           if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.10);
@@ -1976,11 +1981,11 @@ const MapView = ({
             busMarkersRef.current.push(marker);
           });
         } else if (activeMode === 'all') {
-          setBusRoutesData(map, EMT_LINES.slice(0, 3));
+          styled(setBusRoutesData, map, EMT_LINES.slice(0, 3));
           if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.85);
           if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
         } else {
-          setBusRoutesData(map, []);
+          styled(setBusRoutesData, map, []);
           applyLineDim(map, selectedStationRef.current);
         }
       }
@@ -1988,16 +1993,13 @@ const MapView = ({
       updateStopHighlights();
     };
 
-    if (map.isStyleLoaded()) {
-      syncBus();
-    } else {
-      map.once('style.load', syncBus);
-    }
+    syncBus();
 
     map.on('moveend', syncBus);
 
     return () => {
       map.off('moveend', syncBus);
+      map.off('idle', syncBus);
       clearBusMarkers();
     };
   }, [variant, selectedStation, activeBusLine, activeMode, theme, onSelectBusStop, onSelectBusLine]);
