@@ -28,11 +28,14 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
   if (!isOpen) return null;
 
   const features = [
+    { title: t('whatsNew.itemBusTitle'), desc: t('whatsNew.itemBusDesc') },
+    { title: t('whatsNew.itemSplitTitle'), desc: t('whatsNew.itemSplitDesc') },
+    { title: t('whatsNew.itemFollowTitle'), desc: t('whatsNew.itemFollowDesc') },
+    { title: t('whatsNew.itemStopsTitle'), desc: t('whatsNew.itemStopsDesc') },
     { title: t('whatsNew.item1Title'), desc: t('whatsNew.item1Desc') },
     { title: t('whatsNew.item2Title'), desc: t('whatsNew.item2Desc') },
     { title: t('whatsNew.item3Title'), desc: t('whatsNew.item3Desc') },
     { title: t('whatsNew.item4Title'), desc: t('whatsNew.item4Desc') },
-    { title: t('whatsNew.item5Title'), desc: t('whatsNew.item5Desc') },
   ];
 
   return (

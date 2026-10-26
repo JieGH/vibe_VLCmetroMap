@@ -24,8 +24,12 @@
 - **Watch trains move** live on the real track
 - **Nearest station in one tap**, with walk time (location never leaves your phone)
 - **Live countdowns** for any station
+- **City buses too**: live EMT València arrivals at any stop, loaded when you tap it
+- **Metro and bus side by side**: drop a pin or find yourself and see the nearby trains and buses in one view, a few soonest departures per stop
+- **Follows you as you walk**: while the app is open your position keeps updating, kept gentle on the battery (nothing runs in the background)
+- **Clearer bus stops**: stops for each direction are drawn apart, and shrink to small dots when you zoom out
 - **Follow one line** or search any stop
-- **Light, dark or auto**, bigger text
+- **Light, dark or auto**, bigger text that scales the map markers too
 - **Departures board** for a spare screen: [?mode=dashboard](https://xarxa.net/?mode=dashboard)
 - **3 languages**: English, Español, Valencià
 - **Poor connection OK**: the map is stored with the app
@@ -56,8 +60,9 @@ Metrovalencia publishes when a train is due at a station, but not where it is. X
 
 ## Questions
 
-- **Is it official?** No. It is an independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data.
-- **What about my privacy?** No accounts, no analytics, no tracking. Your location is only used on your device to find the nearest station. See the [privacy policy](docs/android/privacy-policy.md).
+- **Is it official?** No. It is an independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data, nor by EMT València, whose public bus arrival times it shows.
+- **How does it get the bus times?** Only when you ask: tapping a stop, or opening a pin or your own location, fetches that stop's arrivals from EMT València's public service, briefly cached. Xarxa never polls all 1,155 stops in the background.
+- **What about my privacy?** No accounts, no analytics, no tracking. Your location is only used on your device to find the nearby stations and stops, and to follow you while the app is open. See the [privacy policy](docs/android/privacy-policy.md).
 - **Something is wrong or missing?** [Open an issue](https://github.com/JieGH/vibe_VLCmetroMap/issues), or write to the author from the menu inside the app.
 - **Where is the old address?** The previous site (`tangerine-panda-1aeea5.netlify.app`) now just points visitors to xarxa.net.
 
