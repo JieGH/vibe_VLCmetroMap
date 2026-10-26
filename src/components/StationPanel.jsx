@@ -636,7 +636,7 @@ const StationPanel = ({
               className="multimodal-dual-scroll-container"
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1.2fr 1fr',
+                gridTemplateColumns: '1fr 1.2fr',
                 gap: 10,
                 height: isExpanded ? '100%' : 'min(50vh, 400px)',
                 padding: '8px 10px',

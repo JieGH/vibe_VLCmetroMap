@@ -335,11 +335,11 @@ describe('StationPanel component', () => {
     expect(EXPANDED_SHEET_HEIGHT).toContain('env(safe-area-inset-bottom');
   });
 
-  it('split view weights Trains wider than Autobús and sits lower while collapsed', () => {
+  it('split view weights Autobús wider than Trains and sits lower while collapsed', () => {
     const html = renderToStaticMarkup(
       <StationPanel station={sampleStation} theme="dark" isPin onClose={() => {}} />
     );
-    expect(html).toContain('grid-template-columns:1.2fr 1fr');
+    expect(html).toContain('grid-template-columns:1fr 1.2fr');
     expect(html).toContain('bottom:' + SPLIT_SHEET_BOTTOM);
     expect(SPLIT_SHEET_BOTTOM).toContain('env(safe-area-inset-bottom');
   });
