@@ -208,7 +208,7 @@ function App() {
     autoLocatorRef.current?.interrupt();
     setSelectedStation(station);
     if (!station) {
-      if (userLocationRef.current?.isMapClick) {
+      if (userLocationRef.current?.isMapClick || userLocationRef.current?.status === 'located') {
         setUserLocation(null);
         userLocationRef.current = null;
       }
@@ -218,9 +218,9 @@ function App() {
     if (options.userLocation) {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
-    } else if (station && !station.isPin && !station.properties?.isPin && station.properties?.name !== 'Map Ping') {
-      // User explicitly picked a Metro station: clear any previous map-click pin
-      if (userLocationRef.current?.isMapClick) {
+    } else if (station && !station.isPin && !station.properties?.isPin && station.properties?.name !== 'Map Ping' && station.properties?.name !== "Where you're at") {
+      // User explicitly picked a Metro station: clear any previous pin / GPS ping
+      if (userLocationRef.current?.isMapClick || userLocationRef.current?.status === 'located') {
         setUserLocation(null);
         userLocationRef.current = null;
       }
@@ -299,13 +299,29 @@ function App() {
     } else {
       setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
     }
-    if (updateStation && fix.nearestStation) {
-      setSelectedStation(fix.nearestStation);
-      const stName = fix.nearestStation.properties?.name || fix.nearestStation.name;
+    if (updateStation) {
+      const targetStation = (variant === 'A' && fix.coordinates)
+        ? {
+            properties: {
+              name: "Where you're at",
+              lines: [],
+              isPin: true,
+              apiId: 'user-location-gps',
+              nearestStation: fix.nearestStation,
+            },
+            geometry: { type: 'Point', coordinates: fix.coordinates },
+            isPin: true,
+          }
+        : fix.nearestStation;
+
+      if (targetStation) {
+        setSelectedStation(targetStation);
+      }
+      const stName = fix.nearestStation?.properties?.name || fix.nearestStation?.name;
       if (stName) {
         reportStationAccess(stName, {
-          lines: fix.nearestStation.properties?.lines,
-          zone: fix.nearestStation.properties?.zona || fix.nearestStation.properties?.zone,
+          lines: fix.nearestStation?.properties?.lines,
+          zone: fix.nearestStation?.properties?.zona || fix.nearestStation?.properties?.zone,
         });
       }
     }
@@ -973,7 +989,7 @@ function App() {
           theme={theme}
           onClose={() => {
             setSelectedStation(null);
-            if (userLocationRef.current?.isMapClick) {
+            if (userLocationRef.current?.isMapClick || selectedStation?.isPin || selectedStation?.properties?.name === "Where you're at") {
               setUserLocation(null);
               userLocationRef.current = null;
             }
@@ -986,7 +1002,9 @@ function App() {
             selectedStation?.isPin ||
             selectedStation?.properties?.isPin ||
             selectedStation?.properties?.name === 'Map Ping' ||
-            userLocation?.isMapClick
+            selectedStation?.properties?.name === "Where you're at" ||
+            userLocation?.isMapClick ||
+            (variant === 'A' && userLocation?.status === 'located')
           )}
         />
       )}

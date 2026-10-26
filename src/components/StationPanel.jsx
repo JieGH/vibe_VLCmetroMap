@@ -70,6 +70,7 @@ const StationPanel = ({
         station?.isPin ||
         station?.properties?.isPin ||
         station?.properties?.name === 'Map Ping' ||
+        station?.properties?.name === "Where you're at" ||
         userLocation?.isMapClick ||
         (variant === 'A' && Boolean(userLocation))
       );

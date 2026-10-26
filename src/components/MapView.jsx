@@ -1398,35 +1398,50 @@ const MapView = ({
     closingZoomRef.current = false;
     prevStationRef.current = selectedStation;
 
+    const isPinTarget = Boolean(
+      selectedStation.isPin ||
+      selectedStation.properties?.isPin ||
+      selectedStation.properties?.name === 'Map Ping' ||
+      selectedStation.properties?.name === "Where you're at"
+    );
+
     const coordinates = snappedCoordinates(selectedStation);
 
-    const element = document.createElement('div');
-    element.className = 'station-focus-node';
-    // A visual anchor only — no countdowns to tick, so it's rendered once per
-    // selection rather than on an interval. Arrivals live in the Station panel.
-    element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
-    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
-      .setLngLat(coordinates)
-      .addTo(map);
-    focusMarkerRef.current = marker;
+    if (!isPinTarget) {
+      const element = document.createElement('div');
+      element.className = 'station-focus-node';
+      // A visual anchor only — no countdowns to tick, so it's rendered once per
+      // selection rather than on an interval. Arrivals live in the Station panel.
+      element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
+      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
+        .setLngLat(coordinates)
+        .addTo(map);
+      focusMarkerRef.current = marker;
+    }
 
     // The panel shares this render (same selectedStation update), so it is
     // already in the DOM once this effect runs and can be measured.
     const basePadding = panelAwarePadding(map, { hasPanel: true });
     const targetZoom = calculateFocusZoom(map.getZoom());
 
-    if (!userLocationRef.current?.isMapClick) {
+    const isPinMode = Boolean(
+      isPinTarget ||
+      userLocationRef.current?.isMapClick ||
+      userLocationRef.current?.status === 'located'
+    );
+
+    if (isPinMode && userLocationRef.current?.coordinates) {
       map.easeTo({
-        center: coordinates,
-        zoom: targetZoom,
+        center: userLocationRef.current.coordinates,
+        zoom: Math.max(map.getZoom(), 15.2),
         padding: basePadding,
         duration: CAMERA_EASE_MS,
         essential: true,
       });
-    } else if (userLocationRef.current?.coordinates) {
+    } else {
       map.easeTo({
-        center: userLocationRef.current.coordinates,
-        zoom: Math.max(map.getZoom(), 15.2),
+        center: coordinates,
+        zoom: targetZoom,
         padding: basePadding,
         duration: CAMERA_EASE_MS,
         essential: true,
@@ -1630,8 +1645,11 @@ const MapView = ({
 
     clearSpawnedTransitMarkers();
 
-    const isPing = Boolean(userLocation?.isMapClick);
-    if (!isPing || !userLocation?.coordinates) return undefined;
+    const isPingOrGps = Boolean(
+      userLocation?.isMapClick ||
+      (userLocation?.status === 'located' && userLocation?.coordinates && (selectedStation?.isPin || !selectedStation))
+    );
+    if (!isPingOrGps || !userLocation?.coordinates) return undefined;
 
     const pinCoords = userLocation.coordinates;
     const MAX_WALK_METRES = 375; // 5-minute walk radius (1.25 m/s * 300s = 375m)
@@ -1911,9 +1929,11 @@ const MapView = ({
 
   const hasPin = Boolean(
     userLocation?.isMapClick ||
+    (userLocation?.status === 'located' && userLocation?.coordinates) ||
     selectedStation?.isPin ||
     selectedStation?.properties?.isPin ||
-    selectedStation?.properties?.name === 'Map Ping'
+    selectedStation?.properties?.name === 'Map Ping' ||
+    selectedStation?.properties?.name === "Where you're at"
   );
 
   return (
