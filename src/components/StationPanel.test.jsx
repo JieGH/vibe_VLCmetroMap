@@ -263,18 +263,19 @@ describe('StationPanel component', () => {
     expect(gpsHtml).toContain('Trains');
     expect(gpsHtml).not.toContain('station-header-meta');
 
-    // Multimodal tabs promoted to top bar: All on far left, then Trains, then Bus
-    expect(gpsHtml).toContain('>All<');
-    expect(gpsHtml).toContain('>Trains<');
-    expect(gpsHtml).toContain('>Bus<');
+    // Multimodal tabs promoted to top bar: All on far left, then Metro logo, then EMT logo (text 'Trains' and 'Bus' removed from tab buttons)
+    const tabsNav = gpsHtml.slice(gpsHtml.indexOf('class="station-multimodal-tabs"'), gpsHtml.indexOf('</nav>'));
+    expect(tabsNav).toContain('>All<');
+    expect(tabsNav).not.toContain('>Trains<');
+    expect(tabsNav).not.toContain('>Bus<');
     expect(gpsHtml).not.toContain('Dual Split');
 
-    const idxAll = gpsHtml.indexOf('>All<');
-    const idxTrains = gpsHtml.indexOf('>Trains<');
-    const idxBus = gpsHtml.indexOf('>Bus<');
+    const idxAll = tabsNav.indexOf('>All<');
+    const idxMetro = tabsNav.indexOf('aria-label="Metro train departures"');
+    const idxBus = tabsNav.indexOf('aria-label="EMT bus departures"');
     expect(idxAll).toBeGreaterThan(-1);
-    expect(idxTrains).toBeGreaterThan(idxAll);
-    expect(idxBus).toBeGreaterThan(idxTrains);
+    expect(idxMetro).toBeGreaterThan(idxAll);
+    expect(idxBus).toBeGreaterThan(idxMetro);
 
     // Expand toggle is a compact visual Maximize/Minimize button integrated next to the close button
     expect(gpsHtml).toContain('station-panel-expand');
