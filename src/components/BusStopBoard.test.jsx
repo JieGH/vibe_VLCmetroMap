@@ -74,4 +74,68 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('>19<');
     expect(html).toContain('>C1<');
   });
+
+  it('renders live arrival predictions with BusBadge, destination, countdown, and wheelchair icon', () => {
+    const liveStop = {
+      stopCode: 'P-2261',
+      stopName: 'Xàtiva - Estació del Nord',
+      lines: ['6', '8'],
+      arrivals: [
+        {
+          line: '6',
+          destination: 'Torrefiel',
+          dueSeconds: 30,
+          minutes: 0,
+          isDue: true,
+          isLive: true,
+          wheelchair: true,
+        },
+        {
+          line: '8',
+          destination: 'Pta.de la Mar',
+          dueSeconds: 300,
+          minutes: 5,
+          isDue: false,
+          isLive: true,
+          wheelchair: false,
+        },
+      ],
+      coordinates: [-0.3772, 39.4672],
+    };
+
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={liveStop} theme="dark" onClose={() => {}} />
+    );
+
+    // Verify stop header
+    expect(html).toContain('P-2261');
+    expect(html).toContain('Xàtiva - Estació del Nord');
+
+    // Verify BusBadge rendered
+    expect(html).toContain('bus-badge');
+    expect(html).toContain('Torrefiel');
+    expect(html).toContain('Pta.de la Mar');
+
+    // Verify wheelchair accessibility icon
+    expect(html).toContain('aria-label="Accessible"');
+
+    // Verify countdown and due pulse
+    expect(html).toContain('station-arriving-dot');
+  });
+
+  it('renders graceful empty state when no bus arrivals are predicted', () => {
+    const emptyStop = {
+      id: 'P-9999',
+      stopName: 'Empty Terminal',
+      lines: [],
+      arrivals: [],
+    };
+
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={emptyStop} theme="dark" onClose={() => {}} />
+    );
+
+    expect(html).toContain('data-testid="no-live-arrivals"');
+    expect(html).not.toContain('station-arrivals-table');
+  });
 });

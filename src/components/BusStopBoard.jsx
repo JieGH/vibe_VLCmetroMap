@@ -1,11 +1,18 @@
 // BusStopBoard Component: Dedicated departure board for an EMT bus stop node (EMT-only card).
 // Perfectly mirrors the visual layout, typography, and design of StationPanel (Metro station view).
 import React, { useState, useEffect } from 'react';
-import { X, Radio, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
+import { Accessibility, X, Radio, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
+import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
+import {
+  fetchStopArrivals,
+  getEmtCachedArrivals,
+  normalizeStopCode,
+  EMT_CACHE_TTL_MS,
+} from '../services/emtArrivalService';
 
 const ROW_HEIGHT_PX = 48;
 const VISIBLE_ROWS = 4;
@@ -43,6 +50,41 @@ export const BusStopBoard = ({
     threshold: 70,
   });
 
+  const rawCode = stop ? String(stop.stopCode || stop.code || stop.id || '1002') : '';
+  const cleanCode = normalizeStopCode(rawCode);
+  const [liveArrivals, setLiveArrivals] = useState(() => {
+    if (!cleanCode) return null;
+    return getEmtCachedArrivals(cleanCode);
+  });
+
+  useEffect(() => {
+    if (!stop || !cleanCode) return undefined;
+    let isMounted = true;
+
+    const loadArrivals = async (force = false) => {
+      try {
+        const results = await fetchStopArrivals(cleanCode, { forceRefresh: force });
+        if (isMounted) {
+          setLiveArrivals(results);
+        }
+      } catch {
+        // Retain prior liveArrivals on error
+      }
+    };
+
+    loadArrivals();
+
+    // Auto-refresh predictions every 20 seconds while board is open
+    const intervalId = setInterval(() => {
+      loadArrivals(true);
+    }, EMT_CACHE_TTL_MS);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [cleanCode, stop]);
+
   useEffect(() => {
     if (!stop) return undefined;
     const handleKeyDown = (e) => {
@@ -61,23 +103,24 @@ export const BusStopBoard = ({
   if (!stop) return null;
 
   const displayName = stop.name || stop.stopName || 'Carrer de Colón';
-  const rawCode = String(stop.code || stop.stopCode || '1002');
-  const stopCode = rawCode.startsWith('P-') ? rawCode : `P-${rawCode}`;
+  const stopCode = cleanCode ? (cleanCode.startsWith('P-') ? cleanCode : `P-${cleanCode}`) : 'P-1002';
   const stopLines = Array.isArray(stop.lines)
     ? stop.lines.map((l) => (typeof l === 'object' && l !== null ? String(l.line || l.id || '') : String(l))).filter(Boolean)
     : [];
 
-  // If stop.lines contains real arrival objects from feeder transfers, use them directly
-  const arrivals = (Array.isArray(stop.arrivals) && stop.arrivals.length > 0)
-    ? stop.arrivals
-    : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
-      ? stop.lines
-      : [
-          { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
-          { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
-          { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
-          { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
-        ];
+  // Use live arrivals if fetched; fallback to stop.arrivals, feeder arrival objects, or default initial list
+  const arrivals = (liveArrivals !== null)
+    ? liveArrivals
+    : Array.isArray(stop.arrivals)
+      ? stop.arrivals
+      : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
+        ? stop.lines
+        : [
+            { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
+            { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
+            { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
+            { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
+          ];
 
   return (
     <aside
@@ -311,92 +354,128 @@ export const BusStopBoard = ({
           transition: 'max-height 0.22s ease',
         }}
       >
-        <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
-          <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: displayName })}</caption>
-          <thead>
-            <tr style={{
-              fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
-              position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
-            }}>
-              <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-              <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
-              <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {arrivals.map((a, i) => {
-              const heat = countdownHeat(a.dueSeconds ?? a.seconds ?? 0, theme);
-              const dueSec = a.dueSeconds ?? a.seconds ?? 0;
-              return (
-                <tr
-                  key={i}
-                  className="station-arrival-row"
-                  style={{
-                    borderTop: '1px solid var(--border-color)',
-                    height: ROW_HEIGHT_PX,
-                    cursor: onSelectLine ? 'pointer' : 'default',
-                  }}
-                  onClick={() => onSelectLine && onSelectLine(a.line)}
-                >
-                  <td style={{ padding: '5px 6px', width: 1 }}>
-                    <span
-                      className="station-line-badge"
+        {arrivals.length === 0 ? (
+          <p
+            data-testid="no-live-arrivals"
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              fontSize: '.88rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+            }}
+          >
+            {t('stationPanel.noLivePredictions', { station: displayName })}
+          </p>
+        ) : (
+          <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
+            <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: displayName })}</caption>
+            <thead>
+              <tr style={{
+                fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
+              }}>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {arrivals.map((a, i) => {
+                const heat = countdownHeat(a.dueSeconds ?? a.seconds ?? 0, theme);
+                const dueSec = a.dueSeconds ?? a.seconds ?? 0;
+                return (
+                  <tr
+                    key={i}
+                    className="station-arrival-row"
+                    style={{
+                      borderTop: '1px solid var(--border-color)',
+                      height: ROW_HEIGHT_PX,
+                      cursor: onSelectLine ? 'pointer' : 'default',
+                    }}
+                    onClick={() => onSelectLine && onSelectLine(a.line)}
+                  >
+                    <td style={{ padding: '5px 6px', width: 1 }}>
+                      <BusBadge
+                        line={a.line}
+                        className="station-line-badge"
+                        style={{
+                          minWidth: 28,
+                          height: 28,
+                          borderRadius: 8,
+                          fontSize: '.86rem',
+                          fontWeight: 900,
+                          padding: '0 6px',
+                        }}
+                      />
+                    </td>
+                    <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        minWidth: 0,
+                      }}>
+                        <span style={{
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
+                          minWidth: 0,
+                        }}>
+                          {a.destination}
+                        </span>
+                        {a.wheelchair && (
+                          <Accessibility
+                            size={14}
+                            aria-label="Accessible"
+                            title="Accessible bus"
+                            style={{
+                              color: 'var(--text-secondary)',
+                              opacity: 0.8,
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </td>
+                    <td
+                      className="station-arrival-due"
                       style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
-                        background: '#D62828', color: '#fff',
-                        fontSize: '.86rem', fontWeight: 900,
+                        padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
+                        fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
+                        color: heat,
                       }}
                     >
-                      {a.line}
-                    </span>
-                  </td>
-                  <td style={{ padding: '5px 6px', maxWidth: 0 }}>
-                    <div style={{
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
-                    }}>
-                      {a.destination}
-                    </div>
-                  </td>
-                  <td
-                    className="station-arrival-due"
-                    style={{
-                      padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
-                      fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
-                      color: heat,
-                    }}
-                  >
-                    {dueSec <= 30 ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
-                        <span
-                          className="station-arriving-dot pulse"
-                          data-testid="station-arriving-dot"
-                          style={{
-                            width: 7, height: 7, borderRadius: '50%',
-                            background: heat, display: 'inline-block',
-                          }}
-                        />
-                        {countdownLabel(dueSec, t('common.due'))}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="station-arrival-num">
+                      {dueSec <= 30 || a.isDue ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                          <span
+                            className="station-arriving-dot pulse"
+                            data-testid="station-arriving-dot"
+                            style={{
+                              width: 7, height: 7, borderRadius: '50%',
+                              background: heat, display: 'inline-block',
+                            }}
+                          />
                           {countdownLabel(dueSec, t('common.due'))}
                         </span>
-                        {countdownUnit(dueSec) && (
-                          <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
-                            {t(`common.${countdownUnit(dueSec)}`)}
+                      ) : (
+                        <>
+                          <span className="station-arrival-num">
+                            {countdownLabel(dueSec, t('common.due'))}
                           </span>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                          {countdownUnit(dueSec) && (
+                            <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
+                              {t(`common.${countdownUnit(dueSec)}`)}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </aside>
   );
