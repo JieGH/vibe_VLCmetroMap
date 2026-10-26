@@ -204,7 +204,7 @@ const StationPanel = ({
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
               <span style={{ fontSize: '1rem', lineHeight: 1 }}>
-                {userLocation?.isMapClick ? '📍' : userLocation ? '🛰️' : 'm'}
+                {userLocation ? '📍' : 'm'}
               </span>
               <h2
                 onClick={() => setIsExpanded((v) => !v)}
@@ -222,7 +222,7 @@ const StationPanel = ({
                   cursor: 'pointer',
                 }}
               >
-                {userLocation?.isMapClick ? 'Map Ping' : userLocation ? 'GPS Location' : 'Nearby Transit'}
+                {userLocation?.isMapClick ? 'Map Ping' : userLocation ? "Where you're at" : 'Nearby Transit'}
               </h2>
               <span
                 style={{

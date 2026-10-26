@@ -3,7 +3,7 @@
 import React from 'react';
 import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
-import { Train, Radio } from 'lucide-react';
+import { Radio } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 export const CompactMetroSection = ({
@@ -12,8 +12,8 @@ export const CompactMetroSection = ({
   theme = 'dark',
   unheardLabel,
   isLive,
-  walkMetres,
-  walkMin,
+  _walkMetres,
+  _walkMin,
   nearbyMetro = [],
   showDistance = true,
   onSelectStation,
@@ -73,11 +73,6 @@ export const CompactMetroSection = ({
             m
           </span>
           <span>{stationName || 'Metro'}</span>
-          {showDistance && walkMin !== undefined && (
-            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'none', marginLeft: 4 }}>
-              · {walkMin} min walk
-            </span>
-          )}
         </span>
         <span
           style={{
@@ -210,7 +205,7 @@ export const CompactMetroSection = ({
       {nearbyMetro && nearbyMetro.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
           <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Also within 10 min walk:
+            Also within 5 min walk:
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {nearbyMetro.map((m) => {

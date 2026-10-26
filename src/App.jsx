@@ -112,6 +112,11 @@ function App() {
   useEffect(() => {
     userLocationRef.current = userLocation;
   }, [userLocation]);
+  useEffect(() => {
+    if (variant === 'A') {
+      setWalkTarget(null);
+    }
+  }, [variant]);
   // True while the search field has focus; the chip row steps aside then.
   const [searchFocused, setSearchFocused] = useState(false);
   // Where the sheet sits, so the bottom-right stack can ride above (portrait)
@@ -201,8 +206,8 @@ function App() {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
     }
-    // With a fix in hand, say how far this Station is on foot.
-    if (userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
+    // With a fix in hand, say how far this Station is on foot (omitted in Variant A multimodal hub).
+    if (variant !== 'A' && userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
 
     const stName = station?.properties?.name || station?.name;
     if (stName) {
@@ -268,8 +273,10 @@ function App() {
     setUserLocation(fix);
     userLocationRef.current = fix;
     if (fix.nearestStation) {
-      // The walking box answers a successful fix; the notice is for errors only.
-      setWalkTarget({ station: fix.nearestStation, _ts: Date.now() });
+      // The walking box answers a successful fix; the notice is for errors only (omitted in Variant A multimodal hub).
+      if (variant !== 'A') {
+        setWalkTarget({ station: fix.nearestStation, _ts: Date.now() });
+      }
     } else {
       setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
     }
@@ -913,7 +920,7 @@ function App() {
         data-sheet={sheetBox ? (sheetBox.landscape ? 'landscape' : 'portrait') : 'none'}
         style={sheetBox && !sheetBox.landscape ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
       >
-        {walkTarget && userLocation && sheetBox?.landscape && (
+        {variant !== 'A' && walkTarget && userLocation && sheetBox?.landscape && (
           <WalkBanner
             station={walkTarget.station}
             userLocation={userLocation}
@@ -929,7 +936,7 @@ function App() {
       </div>
 
       {/* The walking box, portrait: left-aligned with the Station list, just above it, clear of the locate button */}
-      {walkTarget && userLocation && !sheetBox?.landscape && (
+      {variant !== 'A' && walkTarget && userLocation && !sheetBox?.landscape && (
         <div
           className="walk-dock"
           style={sheetBox ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}

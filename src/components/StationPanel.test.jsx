@@ -242,7 +242,7 @@ describe('StationPanel component', () => {
     expect(html).not.toContain('<footer');
   });
 
-  it('renders Variant A as a multimodal 5-minute walk transit hub with GPS/Ping header', () => {
+  it("renders Variant A as a multimodal 5-minute walk transit hub with Where you're at/Ping header", () => {
     // 1. With GPS user location
     const gpsHtml = renderToStaticMarkup(
       <StationPanel
@@ -254,8 +254,9 @@ describe('StationPanel component', () => {
       />
     );
 
-    // Title reflects GPS origin and 5 min walk radius
-    expect(gpsHtml).toContain('GPS Location');
+    // Title reflects user location origin ("Where you're at") and 5 min walk radius
+    expect(gpsHtml).toMatch(/Where you(&#x27;|')re at/);
+    expect(gpsHtml).not.toContain('GPS Location');
     expect(gpsHtml).toContain('5 min walk');
     expect(gpsHtml).toContain('Metro station');
     expect(gpsHtml).toContain('bus stop');
