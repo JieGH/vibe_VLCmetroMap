@@ -630,117 +630,72 @@ const StationPanel = ({
             </div>
           )}
 
-          {/* Dual Split Mode: Two independent side-by-side columns */}
-          {activeTab === 'split' ? (
+          {/* #107: one grid, one instance of each section. Tabs only toggle column visibility
+              and per-tab props, so a tab switch never unmounts/remounts the sections (no cold
+              placeholder flash, no extra fetches). */}
+          <div
+            className="multimodal-dual-scroll-container"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: activeTab === 'split' ? '1fr 1.2fr' : '1fr',
+              gap: activeTab === 'split' ? 10 : 0,
+              height: isExpanded
+                ? '100%'
+                : (activeTab === 'split' ? 'min(50vh, 400px)' : 'min(48vh, 390px)'),
+              padding: activeTab === 'split' ? '8px 10px' : 0,
+              overflow: 'hidden',
+              transition: 'height 0.22s ease',
+            }}
+          >
             <div
-              className="multimodal-dual-scroll-container"
+              className="independent-metro-scroll"
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1.2fr',
-                gap: 10,
-                height: isExpanded ? '100%' : 'min(50vh, 400px)',
-                padding: '8px 10px',
-                overflow: 'hidden',
-                transition: 'height 0.22s ease',
+                display: activeTab === 'bus' ? 'none' : 'block',
+                height: '100%',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                ...(activeTab === 'split'
+                  ? { paddingRight: 6, borderRight: '1px solid var(--border-color, rgba(255,255,255,0.08))' }
+                  : { padding: '8px 12px 10px' }),
               }}
             >
-              {/* Left Column: Metro List (Independent scroll) */}
-              <div
-                className="independent-metro-scroll"
-                style={{
-                  height: '100%',
-                  overflowY: 'auto',
-                  WebkitOverflowScrolling: 'touch',
-                  paddingRight: 6,
-                  borderRight: '1px solid var(--border-color, rgba(255,255,255,0.08))',
-                }}
-              >
-                <CompactMetroSection
-                  arrivals={focus.arrivals}
-                  stationName={focus.name}
-                  theme={theme}
-                  unheardLabel={unheardLabel}
-                  isLive={focus.isLive}
-                  walkMetres={metroWalkMeters}
-                  walkMin={metroWalkMin}
-                  nearbyMetro={nearbyMetroWithFocus}
-                  showDistance={false}
-                  compact
-                  onSelectStation={onSelectStation}
-                  isPinMode={isMultimodal}
-                />
-              </div>
-
-              {/* Right Column: Bus List (Independent scroll) */}
-              <div
-                className="independent-bus-scroll"
-                style={{
-                  height: '100%',
-                  overflowY: 'auto',
-                  WebkitOverflowScrolling: 'touch',
-                  paddingLeft: 6,
-                }}
-              >
-                <ConnectingBusSection
-                  stationName={focus.name}
-                  stationCoords={station.geometry?.coordinates}
-                  feeders={feeders}
-                  theme={theme}
-                  showDistance={false}
-                  compact
-                  onSelectFeederStop={onSelectFeederStop}
-                />
-              </div>
+              <CompactMetroSection
+                arrivals={focus.arrivals}
+                stationName={focus.name}
+                theme={theme}
+                unheardLabel={unheardLabel}
+                isLive={focus.isLive}
+                walkMetres={metroWalkMeters}
+                walkMin={metroWalkMin}
+                nearbyMetro={nearbyMetroWithFocus}
+                showDistance={activeTab !== 'split'}
+                compact={activeTab === 'split'}
+                onSelectStation={onSelectStation}
+                isPinMode={isMultimodal}
+              />
             </div>
-          ) : (
-            /* Single Tab Mode: Two independent tabs preserving scroll viewports */
-            <div style={{ height: isExpanded ? '100%' : 'min(48vh, 390px)', position: 'relative', transition: 'height 0.22s ease' }}>
-              <div
-                className="independent-metro-scroll"
-                style={{
-                  display: activeTab === 'metro' ? 'block' : 'none',
-                  height: '100%',
-                  overflowY: 'auto',
-                  WebkitOverflowScrolling: 'touch',
-                  padding: '8px 12px 10px',
-                }}
-              >
-                <CompactMetroSection
-                  arrivals={focus.arrivals}
-                  stationName={focus.name}
-                  theme={theme}
-                  unheardLabel={unheardLabel}
-                  isLive={focus.isLive}
-                  walkMetres={metroWalkMeters}
-                  walkMin={metroWalkMin}
-                  nearbyMetro={nearbyMetroWithFocus}
-                  showDistance={true}
-                  onSelectStation={onSelectStation}
-                  isPinMode={isMultimodal}
-                />
-              </div>
 
-              <div
-                className="independent-bus-scroll"
-                style={{
-                  display: activeTab === 'bus' ? 'block' : 'none',
-                  height: '100%',
-                  overflowY: 'auto',
-                  WebkitOverflowScrolling: 'touch',
-                  padding: '8px 12px 10px',
-                }}
-              >
-                <ConnectingBusSection
-                  stationName={focus.name}
-                  stationCoords={station.geometry?.coordinates}
-                  feeders={feeders}
-                  theme={theme}
-                  showDistance={true}
-                  onSelectFeederStop={onSelectFeederStop}
-                />
-              </div>
+            <div
+              className="independent-bus-scroll"
+              style={{
+                display: activeTab === 'metro' ? 'none' : 'block',
+                height: '100%',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                ...(activeTab === 'split' ? { paddingLeft: 6 } : { padding: '8px 12px 10px' }),
+              }}
+            >
+              <ConnectingBusSection
+                stationName={focus.name}
+                stationCoords={station.geometry?.coordinates}
+                feeders={feeders}
+                theme={theme}
+                showDistance={activeTab !== 'split'}
+                compact={activeTab === 'split'}
+                onSelectFeederStop={onSelectFeederStop}
+              />
             </div>
-          )}
+          </div>
         </div>
       ) : (
         /* Baseline view for other variants and existing tests */
