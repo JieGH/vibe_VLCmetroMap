@@ -105,6 +105,17 @@ describe('EMT Arrival Service (ADR-0011 / Issue #87)', () => {
       expect(res.isDue).toBe(false);
     });
 
+    it('clamps overdue or delayed arrivals to 0 seconds and isDue true instead of rolling over to tomorrow', () => {
+      const baseDate = new Date();
+      baseDate.setHours(14, 3, 0, 0);
+
+      // Bus was scheduled for 14:00 (3 minutes overdue)
+      const res = calculateDueSeconds('', '14:00', baseDate);
+      expect(res.dueSeconds).toBe(0);
+      expect(res.minutes).toBe(0);
+      expect(res.isDue).toBe(true);
+    });
+
     it('returns null timing for empty or unparseable input', () => {
       const res = calculateDueSeconds('', '');
       expect(res).toEqual({ dueSeconds: null, minutes: null, isDue: false });

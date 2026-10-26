@@ -39,10 +39,20 @@ function extractTagContent(chunk, tagName) {
 }
 
 /**
+ * Helper to retrieve fallback arrivals from cache or an empty array.
+ */
+function getFallbackArrivals(code) {
+  if (emtCache.has(code)) {
+    return emtCache.get(code).arrivals;
+  }
+  return [];
+}
+
+/**
  * Converts EMT wait-time representations into normalized countdown seconds.
  * - "Pròxim" / "Próximo" -> 30 seconds (isDue: true)
- * - "X min." / "X min" -> X * 60 seconds
- * - "HH:MM" -> delta seconds until target time
+ * - "X min." / "X min" / "X" -> X * 60 seconds
+ * - "HH:MM" -> delta seconds until target time (handling midnight crossover vs delayed arrivals)
  */
 export function calculateDueSeconds(minutos, horaLlegada, now = new Date()) {
   const cleanMin = cleanCdata(minutos);
@@ -53,8 +63,8 @@ export function calculateDueSeconds(minutos, horaLlegada, now = new Date()) {
     return { dueSeconds: 30, minutes: 0, isDue: true };
   }
 
-  // 2. "X min." or "X min"
-  const minMatch = cleanMin.match(/^(\d+)\s*min/i);
+  // 2. "X min.", "X min" or plain integer "X"
+  const minMatch = cleanMin.match(/^(\d+)(?:\s*min\.?)?$/i);
   if (minMatch) {
     const mins = parseInt(minMatch[1], 10);
     const dueSeconds = mins * 60;
@@ -65,18 +75,7 @@ export function calculateDueSeconds(minutos, horaLlegada, now = new Date()) {
     };
   }
 
-  // 3. Plain integer in minutos
-  if (/^\d+$/.test(cleanMin)) {
-    const mins = parseInt(cleanMin, 10);
-    const dueSeconds = mins * 60;
-    return {
-      dueSeconds,
-      minutes: mins,
-      isDue: dueSeconds <= 60,
-    };
-  }
-
-  // 4. Clock time HH:MM (for late-night arrivals)
+  // 3. Clock time HH:MM (for late-night arrivals)
   const clockMatch = cleanHora.match(/^(\d{1,2}):(\d{2})$/);
   if (clockMatch) {
     const hh = parseInt(clockMatch[1], 10);
@@ -84,12 +83,13 @@ export function calculateDueSeconds(minutos, horaLlegada, now = new Date()) {
     const target = new Date(now.getTime());
     target.setHours(hh, mm, 0, 0);
 
-    let diffSec = Math.round((target.getTime() - now.getTime()) / 1000);
-    // If target timestamp is in the past by more than 2 minutes, assume next day
-    if (diffSec < -120) {
+    // Midnight rollover: target is early morning (< 06:00) while current time is late evening (>= 20:00)
+    if (hh < 6 && now.getHours() >= 20) {
       target.setDate(target.getDate() + 1);
-      diffSec = Math.round((target.getTime() - now.getTime()) / 1000);
     }
+
+    const diffSec = Math.round((target.getTime() - now.getTime()) / 1000);
+    // Overdue/delayed arrivals clamp to 0 seconds (isDue: true)
     const dueSeconds = Math.max(0, diffSec);
     const minutes = Math.round(dueSeconds / 60);
     return {
@@ -225,19 +225,13 @@ export async function fetchStopArrivals(stopCode, options = {}) {
       });
 
       if (!response.ok) {
-        if (emtCache.has(code)) {
-          return emtCache.get(code).arrivals;
-        }
-        return [];
+        return getFallbackArrivals(code);
       }
 
       const xmlText = await response.text();
 
       if (/Temporalment no disponible/i.test(xmlText)) {
-        if (emtCache.has(code)) {
-          return emtCache.get(code).arrivals;
-        }
-        return [];
+        return getFallbackArrivals(code);
       }
 
       const arrivals = parseEmtArrivalXml(xmlText, now);
@@ -248,10 +242,7 @@ export async function fetchStopArrivals(stopCode, options = {}) {
       return arrivals;
     } catch {
       // Graceful fallback on network timeout or abort
-      if (emtCache.has(code)) {
-        return emtCache.get(code).arrivals;
-      }
-      return [];
+      return getFallbackArrivals(code);
     } finally {
       clearTimeout(timer);
       inFlightRequests.delete(code);
