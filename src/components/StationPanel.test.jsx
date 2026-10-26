@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import StationPanel, { EXPANDED_SHEET_HEIGHT, SPLIT_SHEET_BOTTOM, multimodalSheetGeometry } from './StationPanel';
+import StationPanel, { EXPANDED_SHEET_HEIGHT, SPLIT_LAYOUT, SPLIT_SHEET_BOTTOM, multimodalSheetGeometry } from './StationPanel';
 import arrivalStore from '../services/arrivalStore';
 
 describe('StationPanel component', () => {
@@ -339,7 +339,7 @@ describe('StationPanel component', () => {
     const html = renderToStaticMarkup(
       <StationPanel station={sampleStation} theme="dark" isPin onClose={() => {}} />
     );
-    expect(html).toContain('grid-template-columns:1fr 1.2fr');
+    expect(html).toContain('grid-template-columns:1fr 1.25fr');
     expect(html).toContain('bottom:' + SPLIT_SHEET_BOTTOM);
     expect(SPLIT_SHEET_BOTTOM).toContain('env(safe-area-inset-bottom');
   });
@@ -350,5 +350,16 @@ describe('StationPanel component', () => {
     expect(g[2]).toEqual(g[0]);
     expect(g[0].bottom).toBe(SPLIT_SHEET_BOTTOM);
     expect(g[0].bodyHeight).toBe('min(50vh, 400px)');
+  });
+
+  it('#111: split layout trims dead space so bus cards start further left', () => {
+    expect(SPLIT_LAYOUT).toEqual({ columns: '1fr 1.25fr', gap: 3, sidePadding: 6, metroPadRight: 3, busPadLeft: 0 });
+    const deadStrip = SPLIT_LAYOUT.metroPadRight + 1 + SPLIT_LAYOUT.gap + SPLIT_LAYOUT.busPadLeft;
+    expect(deadStrip).toBeLessThanOrEqual(7); // was 6 + 1 + 10 + 6 = 23
+    const html = renderToStaticMarkup(
+      <StationPanel station={sampleStation} theme="dark" isPin onClose={() => {}} />
+    );
+    expect(html).toContain('gap:3px');
+    expect(html).toContain('padding:8px 6px');
   });
 });

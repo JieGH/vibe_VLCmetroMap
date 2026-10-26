@@ -64,6 +64,9 @@ export function multimodalSheetGeometry(_tab, isExpanded) {
   };
 }
 
+// #111: split-view horizontal spacing. Was gap 10 + side padding 10 + metro padR 6 + bus padL 6 (23px dead strip).
+export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 3, sidePadding: 6, metroPadRight: 3, busPadLeft: 0 };
+
 export const SPLIT_SHEET_BOTTOM = 'calc(4px + env(safe-area-inset-bottom, 0px))';
 export const EXPANDED_SHEET_HEIGHT =
   'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 84px))';
@@ -648,10 +651,10 @@ const StationPanel = ({
             className="multimodal-dual-scroll-container"
             style={{
               display: 'grid',
-              gridTemplateColumns: activeTab === 'split' ? '1fr 1.2fr' : '1fr',
-              gap: activeTab === 'split' ? 10 : 0,
+              gridTemplateColumns: activeTab === 'split' ? SPLIT_LAYOUT.columns : '1fr',
+              gap: activeTab === 'split' ? SPLIT_LAYOUT.gap : 0,
               height: multimodalSheetGeometry(activeTab, isExpanded).bodyHeight,
-              padding: activeTab === 'split' ? '8px 10px' : 0,
+              padding: activeTab === 'split' ? `8px ${SPLIT_LAYOUT.sidePadding}px` : 0,
               overflow: 'hidden',
               transition: 'height 0.22s ease',
             }}
@@ -664,7 +667,7 @@ const StationPanel = ({
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 ...(activeTab === 'split'
-                  ? { paddingRight: 6, borderRight: '1px solid var(--border-color, rgba(255,255,255,0.08))' }
+                  ? { paddingRight: SPLIT_LAYOUT.metroPadRight, borderRight: '1px solid var(--border-color, rgba(255,255,255,0.08))' }
                   : { padding: '8px 12px 10px' }),
               }}
             >
@@ -691,7 +694,7 @@ const StationPanel = ({
                 height: '100%',
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
-                ...(activeTab === 'split' ? { paddingLeft: 6 } : { padding: '8px 12px 10px' }),
+                ...(activeTab === 'split' ? { paddingLeft: SPLIT_LAYOUT.busPadLeft } : { padding: '8px 12px 10px' }),
               }}
             >
               <ConnectingBusSection
