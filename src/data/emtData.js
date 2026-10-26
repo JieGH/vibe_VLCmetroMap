@@ -524,45 +524,10 @@ export const LIVE_BUS_TELEMETRY = [
   }
 ];
 
+import REAL_EMT_STOPS from './emt_stops.json';
+
 export const getBusLine = (id) => EMT_LINES.find(l => l.id.toLowerCase() === String(id).toLowerCase());
 
 export const getAllBusStops = () => {
-  const map = new Map();
-
-  Object.values(STATION_BUS_TRANSFERS).forEach((stops) => {
-    stops.forEach((s) => {
-      const code = s.stopCode;
-      if (code && s.coordinates) {
-        map.set(String(code), {
-          stopCode: String(code),
-          stopName: s.stopName,
-          coordinates: s.coordinates,
-          lines: s.lines || [],
-        });
-      }
-    });
-  });
-
-  EMT_LINES.forEach((line) => {
-    (line.stops || []).forEach((s) => {
-      const code = String(s.code);
-      if (code && s.coordinates) {
-        const existing = map.get(code);
-        if (existing) {
-          if (!existing.lines.includes(line.id)) {
-            existing.lines.push(line.id);
-          }
-        } else {
-          map.set(code, {
-            stopCode: code,
-            stopName: s.name,
-            coordinates: s.coordinates,
-            lines: [line.id],
-          });
-        }
-      }
-    });
-  });
-
-  return Array.from(map.values());
+  return REAL_EMT_STOPS;
 };

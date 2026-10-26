@@ -242,52 +242,60 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
 };
 
 /**
- * Creates a persistent EMT bus stop marker on the map: a square with EMT text inside.
+ * Creates a persistent EMT bus stop marker on the map: a compact rectangular badge wrapping the three-letter EMT text.
+ * The outer marker element contains no transition on transform, eliminating any jelly/lag during map navigation.
  */
 export const createFeederStopMarker = (map, stop, onSelect) => {
-  const el = document.createElement('div');
-  el.className = 'emt-stop-marker';
-  el.style.cssText = `
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
-    min-height: 20px;
-    border-radius: 4px;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'emt-stop-marker';
+  wrapper.style.cssText = `
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    z-index: 26;
+  `;
+
+  const inner = document.createElement('div');
+  inner.className = 'emt-stop-badge';
+  inner.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5px 4.5px;
+    border-radius: 3.5px;
     background: #D62828;
     color: #ffffff;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 8px;
     font-weight: 900;
-    letter-spacing: -0.02em;
-    border: 1.5px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-    cursor: pointer;
-    transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
-    user-select: none;
-    z-index: 26;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1.5px 4px rgba(0, 0, 0, 0.35);
     box-sizing: border-box;
+    transition: transform 0.12s ease-out;
   `;
+  inner.innerHTML = `<span style="transform: translateY(-0.5px); line-height: 1;">EMT</span>`;
+  wrapper.appendChild(inner);
 
-  el.title = `Parada ${stop.stopCode || stop.code || ''} · ${stop.stopName || stop.name || 'EMT Stop'}`;
-  el.innerHTML = `<span style="transform: translateY(-0.5px); line-height: 1;">EMT</span>`;
+  wrapper.title = `Parada ${stop.stopCode || stop.code || ''} · ${stop.stopName || stop.name || 'EMT Stop'}`;
 
-  el.addEventListener('mouseenter', () => {
-    el.style.transform = 'scale(1.25)';
+  wrapper.addEventListener('mouseenter', () => {
+    inner.style.transform = 'scale(1.22)';
   });
-  el.addEventListener('mouseleave', () => {
-    el.style.transform = 'scale(1.0)';
+  wrapper.addEventListener('mouseleave', () => {
+    inner.style.transform = 'scale(1.0)';
   });
   if (onSelect) {
-    el.addEventListener('click', (e) => {
+    wrapper.addEventListener('click', (e) => {
       e.stopPropagation();
       onSelect(stop);
     });
   }
 
-  const marker = new Marker({ element: el, anchor: 'center' })
+  const marker = new Marker({ element: wrapper, anchor: 'center' })
     .setLngLat(stop.coordinates)
     .addTo(map);
 

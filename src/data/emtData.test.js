@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { EMT_LINES, STATION_BUS_TRANSFERS, getStationBusFeeders, getBusLine, LIVE_BUS_TELEMETRY } from './emtData';
+import {
+  EMT_LINES,
+  STATION_BUS_TRANSFERS,
+  getStationBusFeeders,
+  getAllBusStops,
+  LIVE_BUS_TELEMETRY,
+} from './emtData';
 
 describe('EMT Prototype Data', () => {
   it('defines primary EMT lines including C1, C2, C3, 19, 95', () => {
@@ -44,5 +50,16 @@ describe('EMT Prototype Data', () => {
     expect(bus.vehicleId).toMatch(/^EMT-\d+$/);
     expect(bus.coordinates).toHaveLength(2);
     expect(bus.speedKmh).toBeGreaterThan(0);
+  });
+
+  it('loads real EMT bus stops from official Valencia Open Data', () => {
+    const stops = getAllBusStops();
+    expect(stops.length).toBeGreaterThan(1000);
+    const stop = stops[0];
+    expect(stop.stopCode).toBeTruthy();
+    expect(stop.stopName).toBeTruthy();
+    expect(stop.coordinates).toHaveLength(2);
+    expect(stop.coordinates[0]).toBeLessThan(0); // Valencia is west of prime meridian
+    expect(stop.coordinates[1]).toBeGreaterThan(39.0);
   });
 });

@@ -1431,7 +1431,7 @@ const MapView = ({
     const element = document.createElement('div');
     element.className = 'bus-focus-node';
     element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current);
-    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -12] })
+    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
       .setLngLat(coordinates)
       .addTo(map);
     busFocusMarkerRef.current = marker;
@@ -1601,14 +1601,40 @@ const MapView = ({
       if (variant === 'A') {
         setBusRoutesData(map, []);
 
-        // 1. Persistent EMT bus stops across the map (square EMT markers)
+        // 1. Persistent EMT bus stops across the map (rectangular EMT badges)
         const allStops = getAllBusStops();
-        allStops.forEach((stop) => {
-          const marker = createFeederStopMarker(map, stop, () => {
-            if (onSelectBusStop) onSelectBusStop(stop);
+        const currentZoom = map.getZoom();
+
+        // Gated to zoom >= 12.5 and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
+        if (currentZoom >= 12.5) {
+          const bounds = map.getBounds();
+          const lngSpan = bounds.getEast() - bounds.getWest();
+          const latSpan = bounds.getNorth() - bounds.getSouth();
+          const minLng = bounds.getWest() - lngSpan * 0.3;
+          const maxLng = bounds.getEast() + lngSpan * 0.3;
+          const minLat = bounds.getSouth() - latSpan * 0.3;
+          const maxLat = bounds.getNorth() + latSpan * 0.3;
+
+          const visibleStops = allStops.filter((stop) => {
+            const [lng, lat] = stop.coordinates;
+            return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
           });
-          busMarkersRef.current.push(marker);
-        });
+
+          // Always ensure selected bus stop is mounted if present
+          if (selectedBusStopRef.current?.coordinates) {
+            const selCode = String(selectedBusStopRef.current.stopCode);
+            if (!visibleStops.some((s) => String(s.stopCode) === selCode)) {
+              visibleStops.push(selectedBusStopRef.current);
+            }
+          }
+
+          visibleStops.forEach((stop) => {
+            const marker = createFeederStopMarker(map, stop, () => {
+              if (onSelectBusStop) onSelectBusStop(stop);
+            });
+            busMarkersRef.current.push(marker);
+          });
+        }
 
         // 2. When a station/ping is focused, draw the 5-min walk radius circle + dashed feeder walk links
         if (selectedStation) {
@@ -1709,7 +1735,10 @@ const MapView = ({
       map.once('style.load', syncBus);
     }
 
+    map.on('moveend', syncBus);
+
     return () => {
+      map.off('moveend', syncBus);
       clearBusMarkers();
     };
   }, [variant, selectedStation, activeBusLine, activeMode, theme, onSelectBusStop, onSelectBusLine]);

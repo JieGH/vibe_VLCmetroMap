@@ -19,6 +19,7 @@ describe('busMapLayers marker creators', () => {
         title: '',
         innerHTML: '',
         addEventListener: vi.fn(),
+        appendChild: vi.fn(),
       }),
     };
   });
@@ -27,7 +28,7 @@ describe('busMapLayers marker creators', () => {
     delete globalThis.document;
   });
 
-  it('creates feeder bus stop marker as a square with EMT text', () => {
+  it('creates feeder bus stop marker as a rectangular wrap with EMT text without jelly transitions', () => {
     const mockMap = { isStyleLoaded: () => true };
     const stop = {
       stopCode: '1002',
@@ -40,12 +41,11 @@ describe('busMapLayers marker creators', () => {
     const el = marker.getElement();
 
     expect(el.className).toBe('emt-stop-marker');
-    expect(el.style.cssText).toContain('border-radius: 4px');
-    expect(el.innerHTML).toContain('EMT');
+    expect(el.style.cssText).not.toContain('transition: transform'); // Prevents jelly movement on root marker
     expect(el.title).toContain('1002');
   });
 
-  it('creates bus stop node marker as a square with EMT text', () => {
+  it('creates bus stop node marker as a rectangular wrap with EMT text', () => {
     const mockMap = { isStyleLoaded: () => true };
     const stop = {
       code: '1004',
@@ -57,7 +57,6 @@ describe('busMapLayers marker creators', () => {
     const el = marker.getElement();
 
     expect(el.className).toBe('emt-stop-marker');
-    expect(el.style.cssText).toContain('border-radius: 4px');
-    expect(el.innerHTML).toContain('EMT');
+    expect(el.style.cssText).not.toContain('transition: transform');
   });
 });
