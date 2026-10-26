@@ -25,6 +25,7 @@ import { startTrainTracker } from '../services/trainTracker';
 import { useTranslation, translate } from '../i18n';
 import arrivalStore, { NETWORK_SYNC_INTERVAL_MS, STATION_ID_MAP } from '../services/arrivalStore';
 import trainPositionEngine from '../services/trainPositionEngine';
+import { hasMapSelection } from '../utils/selectionFocus';
 import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import returnTrackData from '../data/return_tracks.json';
@@ -2036,6 +2037,7 @@ const MapView = ({
       ref={containerRef}
       className="map-container"
       data-has-pin={hasPin ? 'true' : 'false'}
+      data-has-selection={hasMapSelection(selectedStation, selectedBusStop) ? 'true' : 'false'}
       style={{ width: '100%', height: '100%' }}
     />
   );

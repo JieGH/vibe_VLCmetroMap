@@ -209,6 +209,18 @@ textarea {
   animation: busStopPulse 2.2s infinite ease-in-out;
 }
 
+/* A station or stop is selected (GPS or ping mode): everything else fades. */
+.map-container[data-has-selection="true"] .metro-station-badge:not(.is-selected),
+.map-container[data-has-selection="true"] .emt-stop-badge:not(.is-selected) {
+  opacity: 0.35;
+}
+
+.map-container[data-has-selection="true"] .spawned-station-node,
+.map-container[data-has-selection="true"] .spawned-bus-node {
+  opacity: 0.45;
+  transition: opacity 0.2s ease;
+}
+
 .line3-train-count {
   position: absolute;
   right: 20px;
@@ -1440,6 +1452,18 @@ button:active {
 .bus-focus-node {
   z-index: 1200;
   pointer-events: none;
+}
+
+/* Walk-radius spawns sit below the selected focus node so the pick is always
+   the topmost symbol (metro, bus, ping). */
+.spawned-station-node,
+.spawned-bus-node {
+  z-index: 1150;
+}
+
+.station-focus-node:not(.spawned-station-node),
+.bus-focus-node:not(.spawned-bus-node) {
+  z-index: 1300;
 }
 
 /* ── Welcome / Splash Screen ─────────────────────────────────────────────── */
