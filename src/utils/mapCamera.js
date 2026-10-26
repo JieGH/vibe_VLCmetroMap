@@ -8,34 +8,40 @@ export const CAMERA_EASE_MS = 400;
 export const ZERO_PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /**
- * Calculates camera target zoom when focusing a Station.
+ * Calculates camera target zoom when focusing a Station or Bus Stop.
+ * Preserves the user's chosen zoom ratio for natural map navigation (Google Maps style),
+ * while guarding against extremely far-out zoom levels where a station cannot be seen.
  *
  * @param {number} currentZoom - The map's current zoom level
- * @param {number} [focusZoom=STATION_FOCUS_ZOOM] - Target focus zoom
+ * @param {number} [minZoom=DEFAULT_MAP_ZOOM] - Minimum overview zoom threshold
  * @returns {number} Target focus zoom
  */
-export const calculateFocusZoom = (currentZoom, focusZoom = STATION_FOCUS_ZOOM) =>
-  Math.max(currentZoom, focusZoom);
+export const calculateFocusZoom = (currentZoom, minZoom = DEFAULT_MAP_ZOOM) =>
+  Math.max(currentZoom, minZoom);
 
 /**
  * Calculates camera target zoom and padding when exiting station focus.
  *
  * Resets camera padding to zero so dragging, zooming, and viewport bounds are
- * unconstrained, and smoothly restores the pre-focus zoom or default network overview.
+ * unconstrained, and smoothly preserves the user's current zoom or default network overview.
  *
  * @param {object} [options]
+ * @param {number | null} [options.currentZoom] - Active map zoom level to preserve
  * @param {number | null} [options.preFocusZoom] - Zoom level before station was focused
  * @param {number} [options.defaultZoom=DEFAULT_MAP_ZOOM] - Fallback overview zoom
  * @returns {{ zoom: number, padding: { top: number, right: number, bottom: number, left: number } }}
  */
 export const calculateUnfocusCamera = ({
+  currentZoom = null,
   preFocusZoom = null,
   defaultZoom = DEFAULT_MAP_ZOOM,
 } = {}) => {
   const targetZoom =
-    preFocusZoom !== null && preFocusZoom !== undefined
-      ? preFocusZoom
-      : defaultZoom;
+    currentZoom !== null && currentZoom !== undefined
+      ? currentZoom
+      : preFocusZoom !== null && preFocusZoom !== undefined
+        ? preFocusZoom
+        : defaultZoom;
 
   return {
     zoom: targetZoom,
@@ -44,15 +50,13 @@ export const calculateUnfocusCamera = ({
 };
 
 /**
- * Zoom to ease to when the Station sheet closes: two levels out, but never
- * closer than now and never further out than the network overview.
+ * Zoom to ease to when the Station or Bus Stop sheet closes.
+ * Preserves the user's chosen zoom ratio on exit without forced zoom-out jumps (Google Maps style).
  *
- * @param {number} currentZoom
- * @param {number} [overview=DEFAULT_MAP_ZOOM]
- * @returns {number}
+ * @param {number} currentZoom - The map's current zoom level
+ * @returns {number} Current zoom level preserved
  */
-export const zoomOutTarget = (currentZoom, overview = DEFAULT_MAP_ZOOM) =>
-  currentZoom <= overview ? currentZoom : Math.max(overview, currentZoom - 2);
+export const zoomOutTarget = (currentZoom) => currentZoom;
 
 export const PORTRAIT_FOCUS_CLEARANCE_PX = 80;
 

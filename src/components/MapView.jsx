@@ -15,7 +15,6 @@ import {
   ZERO_PADDING,
   calculateFocusZoom,
   STATION_FOCUS_ZOOM,
-  zoomOutTarget,
   CAMERA_EASE_MS,
   panelAwarePadding as computePanelPadding,
 } from '../utils/mapCamera';
@@ -1427,7 +1426,6 @@ const MapView = ({
         map.easeTo({
           center: map.getCenter(),
           padding: ZERO_PADDING,
-          zoom: zoomOutTarget(map.getZoom()),
           duration: CAMERA_EASE_MS,
           essential: true,
         });
@@ -1539,7 +1537,6 @@ const MapView = ({
         map.easeTo({
           center: map.getCenter(),
           padding: ZERO_PADDING,
-          zoom: zoomOutTarget(map.getZoom()),
           duration: CAMERA_EASE_MS,
           essential: true,
         });

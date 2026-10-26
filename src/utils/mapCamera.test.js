@@ -23,39 +23,45 @@ describe('mapCamera', () => {
   });
 
   describe('calculateFocusZoom', () => {
-    it('eases in to STATION_FOCUS_ZOOM if current zoom is lower (e.g. default overview)', () => {
-      const zoom = calculateFocusZoom(12.3);
-      expect(zoom).toBe(15.0);
+    it('preserves user zoom level when focused (Google Maps natural interaction)', () => {
+      expect(calculateFocusZoom(13.8)).toBe(13.8);
+      expect(calculateFocusZoom(14.5)).toBe(14.5);
+      expect(calculateFocusZoom(16.0)).toBe(16.0);
     });
 
-    it('preserves higher zoom if already zoomed in further than STATION_FOCUS_ZOOM', () => {
-      const zoom = calculateFocusZoom(16.0);
-      expect(zoom).toBe(16.0);
+    it('clamps to DEFAULT_MAP_ZOOM if current zoom is lower than network overview', () => {
+      const zoom = calculateFocusZoom(10.0);
+      expect(zoom).toBe(DEFAULT_MAP_ZOOM);
     });
   });
 
   describe('calculateUnfocusCamera', () => {
     it('always resets padding to ZERO_PADDING', () => {
       const result = calculateUnfocusCamera({
-        preFocusZoom: 12.3,
+        currentZoom: 14.5,
       });
       expect(result.padding).toEqual(ZERO_PADDING);
     });
 
-    it('restores preFocusZoom when exiting station focus', () => {
+    it('preserves currentZoom when exiting station focus', () => {
       const result = calculateUnfocusCamera({
-        preFocusZoom: 12.3,
+        currentZoom: 14.5,
       });
-      expect(result.zoom).toBe(12.3);
+      expect(result.zoom).toBe(14.5);
       expect(result.padding).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
     });
 
-    it('falls back to DEFAULT_MAP_ZOOM if preFocusZoom is null', () => {
-      const result = calculateUnfocusCamera({
+    it('falls back to preFocusZoom or DEFAULT_MAP_ZOOM if currentZoom is null', () => {
+      const resultWithPreFocus = calculateUnfocusCamera({
+        preFocusZoom: 13.0,
+      });
+      expect(resultWithPreFocus.zoom).toBe(13.0);
+
+      const resultDefault = calculateUnfocusCamera({
+        currentZoom: null,
         preFocusZoom: null,
       });
-      expect(result.zoom).toBe(12.3);
-      expect(result.padding).toEqual(ZERO_PADDING);
+      expect(resultDefault.zoom).toBe(DEFAULT_MAP_ZOOM);
     });
 
     it('restores higher preFocusZoom if user entered search while already zoomed in', () => {
@@ -150,14 +156,9 @@ describe('mapCamera', () => {
   });
 
   describe('zoomOutTarget', () => {
-    it('zooms out two levels', () => {
-      expect(zoomOutTarget(15)).toBeCloseTo(13);
-    });
-    it('stops at the overview zoom', () => {
-      expect(zoomOutTarget(13.5)).toBe(DEFAULT_MAP_ZOOM);
-    });
-    it('never zooms in', () => {
-      expect(zoomOutTarget(11)).toBe(11);
+    it('preserves current zoom ratio on sheet exit (Google Maps natural interaction)', () => {
+      expect(zoomOutTarget(15.0)).toBe(15.0);
+      expect(zoomOutTarget(13.5)).toBe(13.5);
       expect(zoomOutTarget(DEFAULT_MAP_ZOOM)).toBe(DEFAULT_MAP_ZOOM);
     });
   });
