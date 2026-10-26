@@ -102,4 +102,15 @@ describe('renderBusStopHighlight', () => {
     expect(html).not.toContain('height:22px');
     expect(html).not.toContain('opacity:0.25');
   });
+
+  it('stacks bus line badges in a 2-column grid layout when more than 2 lines are present', () => {
+    const multiLineStop = { stopCode: '1024', lines: ['19', 'C1', '92'] };
+    const html = renderBusStopHighlight(multiLineStop, 'dark');
+    expect(html).toContain('grid-template-columns:repeat(2, auto)');
+
+    const twoLineStop = { stopCode: '1025', lines: ['19', 'C1'] };
+    const twoLineHtml = renderBusStopHighlight(twoLineStop, 'dark');
+    expect(twoLineHtml).toContain('display:flex');
+    expect(twoLineHtml).not.toContain('grid-template-columns');
+  });
 });

@@ -98,14 +98,20 @@ export const renderBusStopHighlight = (stop, theme) => {
   const text = theme === 'light' ? '#121212' : '#ffffff';
   const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
   const lines = stop?.lines || [];
+  const displayLines = lines.slice(0, 6);
+  const isMultiColumn = displayLines.length > 2;
 
   // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
-  const lineBadges = lines.slice(0, 4).map((l) => (
-    `<span style="font:900 8px/1 system-ui;padding:1px 3.5px;border-radius:2.5px;background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;">${escapeHtml(l)}</span>`
+  const lineBadges = displayLines.map((l) => (
+    `<span style="font:900 8px/1 system-ui;padding:1.5px 3.5px;border-radius:2.5px;background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;text-align:center;">${escapeHtml(l)}</span>`
   )).join('');
 
+  const containerStyle = isMultiColumn
+    ? 'display:grid;grid-template-columns:repeat(2, auto);gap:2.5px;align-items:center;justify-content:center;'
+    : 'display:flex;gap:2.5px;align-items:center;justify-content:center;';
+
   const content = lineBadges
-    ? `<div style="display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:75px;">${lineBadges}</div>`
+    ? `<div style="${containerStyle}">${lineBadges}</div>`
     : `<span style="font:800 8.5px/1 system-ui;color:${text};">Bus</span>`;
 
   return `

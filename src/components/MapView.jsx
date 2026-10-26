@@ -1634,7 +1634,7 @@ const MapView = ({
     if (!isPing || !userLocation?.coordinates) return undefined;
 
     const pinCoords = userLocation.coordinates;
-    const MAX_WALK_METRES = 420; // 5-minute walk radius
+    const MAX_WALK_METRES = 375; // 5-minute walk radius (1.25 m/s * 300s = 375m)
     const currentTheme = themeRef.current;
 
     // 1. Surrounding Metro Stations

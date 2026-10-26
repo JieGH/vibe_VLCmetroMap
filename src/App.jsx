@@ -207,7 +207,12 @@ function App() {
   const handleSelectStation = (station, options = {}) => {
     autoLocatorRef.current?.interrupt();
     setSelectedStation(station);
-    if (station) {
+    if (!station) {
+      if (userLocationRef.current?.isMapClick) {
+        setUserLocation(null);
+        userLocationRef.current = null;
+      }
+    } else {
       setSelectedBusStop(null);
     }
     if (options.userLocation) {
@@ -966,7 +971,13 @@ function App() {
           key={selectedStation?.properties?.name || selectedStation?.properties?.apiId || 'station-panel'}
           station={selectedStation}
           theme={theme}
-          onClose={() => setSelectedStation(null)}
+          onClose={() => {
+            setSelectedStation(null);
+            if (userLocationRef.current?.isMapClick) {
+              setUserLocation(null);
+              userLocationRef.current = null;
+            }
+          }}
           variant={variant}
           onSelectFeederStop={handleSelectBusStop}
           onSelectStation={handleSelectStation}
@@ -995,7 +1006,13 @@ function App() {
         <BusStopBoard
           stop={selectedBusStop}
           theme={theme}
-          onClose={() => setSelectedBusStop(null)}
+          onClose={() => {
+            setSelectedBusStop(null);
+            if (userLocationRef.current?.isMapClick) {
+              setUserLocation(null);
+              userLocationRef.current = null;
+            }
+          }}
           onSelectLine={(lineId) => {
             const found = EMT_LINES.find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
             if (found) handleSelectBusLine(found);

@@ -1,11 +1,15 @@
 // BusStopBoard Component: Dedicated departure board for an EMT bus stop node (EMT-only card).
-// Matches the visual architecture of StationPanel with responsive docking, swipe-to-dismiss, and expand/collapse.
+// Perfectly mirrors the visual layout, typography, and design of StationPanel (Metro station view).
 import React, { useState, useEffect } from 'react';
-import BusBadge from './BusBadge';
-import { X, Radio, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Radio, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
+import { useTranslation } from '../i18n';
+
+const ROW_HEIGHT_PX = 48;
+const VISIBLE_ROWS = 4;
+const TABLE_HEAD_PX = 30;
 
 const useIsLandscape = () => {
   const [landscape, setLandscape] = useState(
@@ -29,6 +33,7 @@ export const BusStopBoard = ({
   onClose,
   onSelectLine,
 }) => {
+  const { t } = useTranslation();
   const landscape = useIsLandscape();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -55,6 +60,11 @@ export const BusStopBoard = ({
 
   if (!stop) return null;
 
+  const displayName = stop.name || stop.stopName || 'Carrer de Colón';
+  const rawCode = String(stop.code || stop.stopCode || '1002');
+  const stopCode = rawCode.startsWith('P-') ? rawCode : `P-${rawCode}`;
+  const stopLines = Array.isArray(stop.lines) ? stop.lines : [];
+
   // Mock real-time departures if not directly provided
   const arrivals = stop.arrivals || [
     { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
@@ -63,46 +73,31 @@ export const BusStopBoard = ({
     { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
   ];
 
-  const stopCode = (() => {
-    const c = String(stop.code || stop.stopCode || '1002');
-    return c.startsWith('P-') ? c : `P-${c}`;
-  })();
-
-  const stopLines = Array.isArray(stop.lines) ? stop.lines : [];
-
   return (
     <aside
-      className="bus-stop-board glass-panel"
-      role="region"
-      aria-label={`Bus stop ${stop.name || stop.stopName}`}
+      className="glass-panel station-panel bus-stop-board"
+      aria-label={`Bus stop ${displayName}`}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
-        zIndex: 45,
-        borderRadius: 16,
-        overflow: 'hidden',
-        background: 'var(--bg-panel, #1a202c)',
-        border: '1px solid var(--border-color, rgba(255,255,255,0.18))',
-        boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
-        color: 'var(--text-primary, #ffffff)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        zIndex: 30,
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
+        borderRadius: 16,
         ...(landscape
           ? {
               top: 84,
               right: 16,
               maxHeight: isExpanded ? 'calc(100vh - 40px)' : 'calc(100vh - 100px)',
               height: isExpanded ? 'calc(100vh - 100px)' : 'auto',
-              width: isExpanded ? 'min(820px, 68vw)' : 'min(400px, 34vw)',
+              width: isExpanded ? 'min(820px, 68vw)' : 'min(380px, 34vw)',
               transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }
           : {
               left: 12,
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxWidth: 480,
-              margin: '0 auto',
               maxHeight: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'min(58vh, calc(100vh - 120px))',
               height: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'auto',
               transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -114,7 +109,7 @@ export const BusStopBoard = ({
       {!landscape && (
         <div
           className="sheet-drag-handle-wrap"
-          data-testid="bus-drag-handle"
+          data-testid="station-drag-handle"
           style={{ padding: '6px 0 2px' }}
           {...handleProps}
         >
@@ -122,104 +117,132 @@ export const BusStopBoard = ({
         </div>
       )}
 
-      {/* Header */}
+      {/* Header: stop emblem, stop name, line icons underneath, and live status */}
       <header
+        className="station-panel-header"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-          padding: !landscape ? '2px 16px 12px' : '12px 16px',
-          borderBottom: '1px solid var(--border-color)',
-          background: 'rgba(214, 40, 40, 0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: !landscape ? '2px 16px 12px' : '12px 16px 12px', borderBottom: '1px solid var(--border-color)',
         }}
         {...(!landscape ? handleProps : {})}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
           <div
+            className="station-header-icon"
+            data-testid="station-header-icon"
+            aria-label="Toggle expand station panel"
             onClick={() => setIsExpanded((v) => !v)}
-            title={isExpanded ? 'Collapse view' : 'Expand full departures'}
+            title={isExpanded ? 'Collapse view' : 'Expand full view'}
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 8,
-              background: '#D62828',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 900,
-              fontSize: '1rem',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 34, minWidth: 34, borderRadius: '50%',
+              background: '#D62828', color: '#FFFFFF',
+              boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
               flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(214, 40, 40, 0.4)',
               cursor: 'pointer',
             }}
           >
-            <span style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.04em', lineHeight: 1 }}>
+            <span
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                letterSpacing: '0.04em',
+                lineHeight: 1,
+                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                userSelect: 'none',
+              }}
+            >
               EMT
             </span>
           </div>
 
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  background: '#D62828',
-                  color: '#ffffff',
-                  padding: '1px 5px',
-                  borderRadius: 4,
-                }}
-              >
-                {stopCode}
-              </span>
-              <span style={{ fontSize: '0.70rem', color: '#4caf50', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                <Radio size={10} className="pulse" /> LIVE
-              </span>
-            </div>
-
-            <h2
-              style={{
-                fontSize: '1.08rem',
-                fontWeight: 800,
-                lineHeight: 1.2,
-                margin: '2px 0 0',
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+              <h2 style={{
+                fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
+                letterSpacing: '-.01em',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
                 wordBreak: 'break-word',
+                minWidth: 0, margin: 0,
+              }}>
+                {displayName}
+              </h2>
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  background: 'rgba(214, 40, 40, 0.2)',
+                  color: '#ff6369',
+                  padding: '1px 5px',
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                {stopCode}
+              </span>
+            </div>
+
+            <div
+              className="station-header-meta"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
               }}
             >
-              {stop.name || stop.stopName || 'Carrer de Colón'}
-            </h2>
+              {stopLines.map((lineId) => (
+                <span
+                  key={lineId}
+                  className="station-header-line-badge"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
+                    background: '#1565C0', color: '#fff',
+                    fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
+                  }}
+                >
+                  {lineId}
+                </span>
+              ))}
 
-            {stopLines.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {stopLines.map((lineId) => (
-                  <span
-                    key={lineId}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 18,
-                      height: 18,
-                      padding: '0 4px',
-                      borderRadius: 4,
-                      background: '#1565C0',
-                      color: '#ffffff',
-                      fontSize: '.68rem',
-                      fontWeight: 900,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {lineId}
-                  </span>
-                ))}
-              </div>
-            )}
+              {/* Live status badge */}
+              <span
+                className="station-status-badge"
+                title={t('stationPanel.live')}
+                aria-label={t('stationPanel.live')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  width: 20, height: 20, borderRadius: '50%',
+                  color: '#4CAF50',
+                  background: 'rgba(76,175,80,.15)',
+                  marginLeft: stopLines.length > 0 ? 2 : 0,
+                }}
+              >
+                <Radio size={11} className="pulse" />
+              </span>
+
+              {/* Confirmed checkmark */}
+              <span
+                className="station-confirmed-badge"
+                title={t('stationPanel.confirmedStatus', { time: t('stationPanel.justNow') })}
+                aria-label={t('stationPanel.confirmedStatus', { time: t('stationPanel.justNow') })}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 20, height: 20,
+                  color: '#4CAF50',
+                  flexShrink: 0,
+                }}
+              >
+                <CheckCircle2 size={12} />
+              </span>
+            </div>
           </div>
         </div>
 
@@ -231,15 +254,17 @@ export const BusStopBoard = ({
               setIsExpanded((v) => !v);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            aria-label={isExpanded ? 'Collapse bus stop panel' : 'Expand bus stop panel'}
+            className="station-panel-expand"
+            aria-label={isExpanded ? 'Collapse station panel' : 'Expand station panel'}
             title={isExpanded ? 'Minimize / Collapse view' : 'Maximize / Expand full departures'}
             style={{
               width: 32,
               height: 32,
+              minWidth: 32,
               borderRadius: '50%',
               border: 'none',
-              background: isExpanded ? 'rgba(255,255,255,0.18)' : 'var(--bg-hover, rgba(255,255,255,0.1))',
-              color: 'inherit',
+              background: isExpanded ? 'rgba(255,255,255,0.18)' : 'var(--bg-hover)',
+              color: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -251,21 +276,14 @@ export const BusStopBoard = ({
           </button>
 
           <button
-            type="button"
             onClick={onClose}
             onPointerDown={(e) => e.stopPropagation()}
-            aria-label="Close bus stop board"
+            className="station-panel-close"
+            aria-label={t('stationPanel.closeAria')}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              border: 'none',
-              background: 'var(--bg-hover, rgba(255,255,255,0.1))',
-              color: 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
+              width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none',
+              background: 'var(--bg-hover)', color: 'var(--text-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             }}
           >
             <X size={16} />
@@ -275,63 +293,94 @@ export const BusStopBoard = ({
 
       {/* Departures Table */}
       <div
+        className="station-panel-body"
         style={{
-          padding: '8px 12px 14px',
-          maxHeight: isExpanded ? 'calc(78vh - 110px)' : 260,
+          maxHeight: isExpanded ? 'calc(78vh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
           overflowY: 'auto',
+          padding: '0 10px 8px',
           transition: 'max-height 0.22s ease',
         }}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
+        <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
+          <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: displayName })}</caption>
           <thead>
-            <tr style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border-color)' }}>
-              <th style={{ textAlign: 'left', padding: '6px 4px' }}>Línia</th>
-              <th style={{ textAlign: 'left', padding: '6px 6px' }}>Destinació</th>
-              <th style={{ textAlign: 'right', padding: '6px 4px' }}>Temps</th>
+            <tr style={{
+              fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+              position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
+            }}>
+              <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+              <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+              <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
             </tr>
           </thead>
           <tbody>
-            {arrivals.map((arr, i) => {
-              const heat = countdownHeat(arr.dueSeconds, theme);
+            {arrivals.map((a, i) => {
+              const heat = countdownHeat(a.dueSeconds ?? a.seconds ?? 0, theme);
+              const dueSec = a.dueSeconds ?? a.seconds ?? 0;
               return (
                 <tr
                   key={i}
+                  className="station-arrival-row"
                   style={{
-                    borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.06))',
+                    borderTop: '1px solid var(--border-color)',
+                    height: ROW_HEIGHT_PX,
                     cursor: onSelectLine ? 'pointer' : 'default',
                   }}
-                  onClick={() => onSelectLine && onSelectLine(arr.line)}
+                  onClick={() => onSelectLine && onSelectLine(a.line)}
                 >
-                  <td style={{ padding: '8px 4px', width: 1 }}>
-                    <BusBadge line={arr.line} size="sm" />
+                  <td style={{ padding: '5px 6px', width: 1 }}>
+                    <span
+                      className="station-line-badge"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
+                        background: '#1565C0', color: '#fff',
+                        fontSize: '.86rem', fontWeight: 900,
+                      }}
+                    >
+                      {a.line}
+                    </span>
                   </td>
-                  <td style={{ padding: '8px 6px' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {arr.destination}
+                  <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                    <div style={{
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
+                    }}>
+                      {a.destination}
                     </div>
                   </td>
-                  <td style={{ padding: '8px 4px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                      {arr.isLive && (
+                  <td
+                    className="station-arrival-due"
+                    style={{
+                      padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
+                      fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
+                      color: heat,
+                    }}
+                  >
+                    {dueSec <= 30 ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
                         <span
+                          className="station-arriving-dot pulse"
+                          data-testid="station-arriving-dot"
                           style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: '#4CAF50',
-                            display: 'inline-block',
+                            width: 7, height: 7, borderRadius: '50%',
+                            background: heat, display: 'inline-block',
                           }}
                         />
-                      )}
-                      <span style={{ fontWeight: 800, color: heat, fontVariantNumeric: 'tabular-nums' }}>
-                        {countdownLabel(arr.dueSeconds, 'Due')}
-                        {countdownUnit(arr.dueSeconds) && (
-                          <span style={{ fontSize: '0.72rem', marginLeft: 2, color: 'var(--text-secondary)' }}>
-                            {countdownUnit(arr.dueSeconds)}
+                        {countdownLabel(dueSec, t('common.due'))}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="station-arrival-num">
+                          {countdownLabel(dueSec, t('common.due'))}
+                        </span>
+                        {countdownUnit(dueSec) && (
+                          <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
+                            {t(`common.${countdownUnit(dueSec)}`)}
                           </span>
                         )}
-                      </span>
-                    </div>
+                      </>
+                    )}
                   </td>
                 </tr>
               );

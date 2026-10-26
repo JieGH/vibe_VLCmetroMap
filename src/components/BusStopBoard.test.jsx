@@ -18,32 +18,33 @@ describe('BusStopBoard component', () => {
     expect(html).toBe('');
   });
 
-  it('renders dedicated EMT stop departure board with stop code, LIVE status, and lines', () => {
+  it('renders dedicated EMT stop departure board matching StationPanel layout with stop code, LIVE status, and lines', () => {
     const html = renderToStaticMarkup(
       <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />
     );
 
+    expect(html).toContain('station-panel');
     expect(html).toContain('bus-stop-board');
     expect(html).toContain('glass-panel');
+    expect(html).toContain('data-testid="station-header-icon"');
     expect(html).toContain('EMT');
     expect(html).toContain('P-1002');
-    expect(html).toContain('LIVE');
     expect(html).toContain('Colón - Pascual i Genís');
-    expect(html).toContain('19');
-    expect(html).toContain('C1');
-    expect(html).toContain('92');
-    expect(html).toContain('Línia');
-    expect(html).toContain('Destinació');
-    expect(html).toContain('Temps');
-    expect(html).toContain('data-testid="bus-drag-handle"');
+    expect(html).toContain('station-header-line-badge');
+    expect(html).toContain('>19<');
+    expect(html).toContain('>C1<');
+    expect(html).toContain('>92<');
+    expect(html).toContain('station-arrivals-table');
+    expect(html).toContain('data-testid="station-drag-handle"');
   });
 
-  it('renders expand and close buttons', () => {
+  it('renders expand and close buttons matching StationPanel design', () => {
     const html = renderToStaticMarkup(
       <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />
     );
 
-    expect(html).toContain('aria-label="Expand bus stop panel"');
-    expect(html).toContain('aria-label="Close bus stop board"');
+    expect(html).toContain('station-panel-expand');
+    expect(html).toContain('station-panel-close');
+    expect(html).toContain('aria-label="Expand station panel"');
   });
 });
