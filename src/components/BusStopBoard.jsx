@@ -201,7 +201,7 @@ export const BusStopBoard = ({
             title={isExpanded ? 'Collapse view' : 'Expand full view'}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 34, height: 34, minWidth: 34, borderRadius: 8,
+              width: 46, height: 18, minWidth: 46, borderRadius: 4,
               background: '#D62828', color: '#FFFFFF',
               boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
               flexShrink: 0,

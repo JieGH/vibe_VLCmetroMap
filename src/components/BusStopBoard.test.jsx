@@ -48,13 +48,14 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('aria-label="Expand station panel"');
   });
 
-  it('renders EMT emblem with rounded rectangular border radius instead of circle', () => {
+  it('renders EMT emblem with logo-proportioned (about 2.5:1) rounded rectangle instead of a square or circle', () => {
     const html = renderToStaticMarkup(
       <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />
     );
 
     expect(html).toContain('data-testid="station-header-icon"');
-    expect(html).toMatch(/data-testid="station-header-icon"[^>]*border-radius:8px/);
+    expect(html).toMatch(/data-testid="station-header-icon"[^>]*width:46px;height:18px/);
+    expect(html).toMatch(/data-testid="station-header-icon"[^>]*border-radius:4px/);
     expect(html).not.toMatch(/data-testid="station-header-icon"[^>]*border-radius:50%/);
   });
 
