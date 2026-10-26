@@ -201,17 +201,17 @@ const StationPanel = ({
         {...(!landscape ? handleProps : {})}
       >
         {variant === 'A' ? (
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-              <span style={{ fontSize: '1rem', lineHeight: 1 }}>
-                {userLocation ? '📍' : 'm'}
-              </span>
+          <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flex: 1, overflow: 'hidden' }}>
+            <span style={{ fontSize: '1.05rem', lineHeight: 1, flexShrink: 0 }}>
+              {userLocation ? '📍' : 'm'}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, flex: 1, overflow: 'hidden' }}>
               <h2
                 onClick={() => setIsExpanded((v) => !v)}
                 title={isExpanded ? 'Collapse view' : 'Expand full view'}
                 style={{
-                  fontSize: '1.08rem',
-                  fontWeight: 800,
+                  fontSize: '1rem',
+                  fontWeight: 700,
                   lineHeight: 1.2,
                   letterSpacing: '-.01em',
                   margin: 0,
@@ -226,70 +226,14 @@ const StationPanel = ({
               </h2>
               <span
                 style={{
-                  fontSize: '0.64rem',
-                  fontWeight: 700,
-                  background: 'rgba(255, 255, 255, 0.08)',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
                   color: 'var(--text-secondary)',
-                  padding: '2px 7px',
-                  borderRadius: 999,
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                5 min walk
-              </span>
-            </div>
-
-            <div
-              className="station-header-meta"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: '0.72rem',
-                color: 'var(--text-secondary)',
-                fontWeight: 600,
-                flexWrap: 'nowrap',
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-              }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: '50%',
-                    background: '#E2001A',
-                    color: '#ffffff',
-                    fontSize: '0.54rem',
-                    fontWeight: 900,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: 1,
-                  }}
-                >
-                  m
-                </span>
-                <span>{1 + nearbyMetro.length} {1 + nearbyMetro.length === 1 ? 'Metro station' : 'Metro stations'}</span>
-              </span>
-              <span style={{ opacity: 0.4 }}>·</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span
-                  style={{
-                    fontSize: '0.52rem',
-                    fontWeight: 900,
-                    background: '#D62828',
-                    color: '#ffffff',
-                    padding: '1px 3px',
-                    borderRadius: 2,
-                    letterSpacing: '0.04em',
-                    lineHeight: 1,
-                  }}
-                >
-                  EMT
-                </span>
-                <span>{feeders.length} {feeders.length === 1 ? 'bus stop' : 'bus stops'}</span>
+                · 5 min walk
               </span>
             </div>
           </div>

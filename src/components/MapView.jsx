@@ -38,7 +38,7 @@ import {
   createFeederStopMarker,
   createBusStopNodeMarker,
 } from '../utils/busMapLayers';
-import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders } from '../data/emtData';
+import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders, getAllBusStops } from '../data/emtData';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -1368,13 +1368,15 @@ const MapView = ({
     const basePadding = panelAwarePadding(map, { hasPanel: true });
     const targetZoom = calculateFocusZoom(map.getZoom());
 
-    map.easeTo({
-      center: coordinates,
-      zoom: targetZoom,
-      padding: basePadding,
-      duration: CAMERA_EASE_MS,
-      essential: true,
-    });
+    if (!userLocationRef.current?.isMapClick) {
+      map.easeTo({
+        center: coordinates,
+        zoom: targetZoom,
+        padding: basePadding,
+        duration: CAMERA_EASE_MS,
+        essential: true,
+      });
+    }
 
     return () => {
       marker.remove();
@@ -1401,15 +1403,12 @@ const MapView = ({
         justify-content: center;
         cursor: pointer;
         z-index: 35;
+        font-size: 26px;
+        line-height: 1;
+        user-select: none;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
       `;
-      wrapper.innerHTML = `
-        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; font: 800 10px system-ui; background: rgba(15, 23, 42, 0.95); color: #38BDF8; border: 1.5px solid #0EA5E9; padding: 2px 7px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none;">
-          <span>📍</span>
-          <span>Ping</span>
-        </div>
-        <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(14, 165, 233, 0.25); border: 1.5px solid #0EA5E9; box-sizing: border-box;"></div>
-        <div style="width: 14px; height: 14px; border-radius: 50%; background: #0EA5E9; border: 2.5px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.5); box-sizing: border-box; z-index: 2;"></div>
-      `;
+      wrapper.innerHTML = `<span>📍</span>`;
     } else {
       wrapper.style.cssText = `
         position: relative;
@@ -1419,16 +1418,12 @@ const MapView = ({
         z-index: 35;
       `;
       wrapper.innerHTML = `
-        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px; font: 800 10px system-ui; background: rgba(15, 23, 42, 0.95); color: #60A5FA; border: 1.5px solid #3B82F6; padding: 2px 7px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); white-space: nowrap; pointer-events: none;">
-          <span>🛰️</span>
-          <span>GPS</span>
-        </div>
         <div class="user-location-accuracy" style="display:none;"></div>
         <div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>
       `;
     }
 
-    const marker = new Marker({ element: wrapper, anchor: 'center' })
+    const marker = new Marker({ element: wrapper, anchor: isPing ? 'bottom' : 'center' })
       .setLngLat(userLocation.coordinates)
       .addTo(map);
 
@@ -1500,26 +1495,13 @@ const MapView = ({
     }
     lastFramedFetchedAtRef.current = userLocation.fetchedAt;
 
-    const padding = panelAwarePadding(map, { hasPanel: Boolean(userLocation.nearestStation) });
+    const padding = panelAwarePadding(map, { hasPanel: true });
+    const targetZoom = Math.max(map.getZoom(), STATION_FOCUS_ZOOM);
 
-    if (!userLocation.nearestStation) {
-      // No Station worth naming — too rough a fix, or genuinely nothing near.
-      // Being located is still useful, so the camera still goes there.
-      map.easeTo({
-        center: userLocation.coordinates,
-        zoom: Math.max(map.getZoom(), USER_ONLY_ZOOM),
-        padding,
-        duration: CAMERA_EASE_MS,
-        essential: true,
-      });
-      return;
-    }
-
-    const bounds = new LngLatBounds(userLocation.coordinates, userLocation.coordinates);
-    bounds.extend(snappedCoordinates(userLocation.nearestStation));
-    map.fitBounds(bounds, {
+    map.easeTo({
+      center: userLocation.coordinates,
+      zoom: targetZoom,
       padding,
-      maxZoom: USER_FRAME_MAX_ZOOM,
       duration: CAMERA_EASE_MS,
       essential: true,
     });
@@ -1546,25 +1528,39 @@ const MapView = ({
       ensureBusLayers(map, theme);
       clearBusMarkers();
 
-      // VARIANT A: Multimodal Hub Feeder
+      // VARIANT A: Multimodal Hub Feeder with Persistent EMT Bus Stops
       if (variant === 'A') {
         setBusRoutesData(map, []);
 
+        // 1. Persistent EMT bus stops across the map (square EMT markers)
+        const allStops = getAllBusStops();
+        allStops.forEach((stop) => {
+          const marker = createFeederStopMarker(map, stop, () => {
+            if (drawnStationsRef.current && drawnStationsRef.current.length > 0) {
+              const nearest = nearestFeature(drawnStationsRef.current, stop.coordinates);
+              if (nearest) {
+                selectStRef.current(nearest.feature, {
+                  userLocation: {
+                    coordinates: stop.coordinates,
+                    accuracy: 15,
+                    isMapClick: true,
+                    status: 'located',
+                    fetchedAt: Date.now(),
+                  }
+                });
+              }
+            }
+            if (onSelectBusStop) onSelectBusStop(stop);
+          });
+          busMarkersRef.current.push(marker);
+        });
+
+        // 2. When a station/ping is focused, draw the 5-min walk radius circle + dashed feeder walk links
         if (selectedStation) {
           const coords = snappedCoordinates(selectedStation);
           const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;
           const feeders = getStationBusFeeders(selectedStation.properties.name, centerCoords);
-
-          // 1. Draw 10-minute walk radius circle + dashed feeder walk links
           setFeederWalkLinks(map, centerCoords, feeders);
-
-          // 2. Add satellite feeder bus stop markers
-          feeders.forEach((feeder) => {
-            const marker = createFeederStopMarker(map, feeder, (stop) => {
-              if (onSelectBusStop) onSelectBusStop(stop);
-            });
-            busMarkersRef.current.push(marker);
-          });
         } else {
           setFeederWalkLinks(map, null, []);
         }

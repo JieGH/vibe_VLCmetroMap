@@ -3,15 +3,14 @@
 import React from 'react';
 import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
-import { Radio } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 export const CompactMetroSection = ({
   arrivals = [],
   stationName,
   theme = 'dark',
-  unheardLabel,
-  isLive,
+  _unheardLabel,
+  _isLive,
   _walkMetres,
   _walkMin,
   nearbyMetro = [],
@@ -73,22 +72,6 @@ export const CompactMetroSection = ({
             m
           </span>
           <span>{stationName || 'Metro'}</span>
-        </span>
-        <span
-          style={{
-            fontSize: '0.68rem',
-            fontWeight: 700,
-            color: isLive ? '#4caf50' : '#ffa726',
-            background: isLive ? 'rgba(76, 175, 80, 0.14)' : 'rgba(255, 167, 38, 0.14)',
-            padding: '2px 6px',
-            borderRadius: 4,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <Radio size={9} />
-          {unheardLabel || 'Live'}
         </span>
       </div>
 

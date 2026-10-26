@@ -8,7 +8,6 @@ import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
 import HubChips from './components/HubChips';
 import WalkBanner from './components/WalkBanner';
-import { COMMON_STOPS } from './utils/commonStops';
 import WelcomeScreen from './components/WelcomeScreen';
 import { AppDownloadSheet } from './components/AppDownloadBanner';
 import { isIosDevice } from './utils/appDownload';
@@ -34,7 +33,6 @@ import { Sun, Moon, MessageSquare } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
-import PrototypeSwitcher from './components/PrototypeSwitcher';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import BusBadge from './components/BusBadge';
@@ -875,15 +873,12 @@ function App() {
                 );
               })}
             </div>
-          ) : (
+          ) : activeLineFilter.length > 0 ? (
             <HubChips
-              hubs={COMMON_STOPS}
               activeLines={activeLineFilter}
-              selectedName={selectedStation?.properties?.name ?? null}
-              onHub={handleSelectStation}
               onClearLine={handleSelectLine}
             />
-          )}
+          ) : null}
         </div>
       )}
 
@@ -985,17 +980,6 @@ function App() {
           }}
         />
       )}
-
-      {/* Floating Prototype Switcher Docked Bottom-Center */}
-      <PrototypeSwitcher
-        currentVariant={variant}
-        onSelectVariant={(v) => {
-          setVariant(v);
-          setActiveBusLine(null);
-          setSelectedBusStop(null);
-        }}
-      />
-
 
       {rationale && (
         <LocationRationale

@@ -242,44 +242,43 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
 };
 
 /**
- * Creates a satellite feeder bus stop marker on the map for Variant A.
+ * Creates a persistent EMT bus stop marker on the map: a square with EMT text inside.
  */
 export const createFeederStopMarker = (map, stop, onSelect) => {
   const el = document.createElement('div');
-  el.className = 'feeder-stop-marker';
+  el.className = 'emt-stop-marker';
   el.style.cssText = `
-    width: 26px;
-    height: 26px;
-    min-width: 26px;
-    min-height: 26px;
-    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #1a202c;
-    border: 2px solid #D62828;
-    box-shadow: 0 3px 10px rgba(214, 40, 40, 0.45);
+    background: #D62828;
     color: #ffffff;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
     cursor: pointer;
-    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+    transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
     user-select: none;
-    z-index: 28;
+    z-index: 26;
     box-sizing: border-box;
   `;
 
-  const walkInfo = stop.walkMin !== undefined ? ` · ${stop.walkMin} min walk` : '';
-  el.title = `Parada ${stop.stopCode || ''} · ${stop.stopName || 'EMT Stop'}${walkInfo} • Click to view in tab`;
-  el.innerHTML = `
-    <span style="font-size:8.5px;font-weight:900;letter-spacing:-0.03em;color:#ffffff;line-height:1;">${stop.stopCode || ''}</span>
-  `;
+  el.title = `Parada ${stop.stopCode || stop.code || ''} · ${stop.stopName || stop.name || 'EMT Stop'}`;
+  el.innerHTML = `<span style="transform: translateY(-0.5px); line-height: 1;">EMT</span>`;
 
   el.addEventListener('mouseenter', () => {
     el.style.transform = 'scale(1.25)';
-    el.style.boxShadow = '0 4px 14px rgba(214, 40, 40, 0.7)';
   });
   el.addEventListener('mouseleave', () => {
     el.style.transform = 'scale(1.0)';
-    el.style.boxShadow = '0 3px 10px rgba(214, 40, 40, 0.45)';
   });
   if (onSelect) {
     el.addEventListener('click', (e) => {
@@ -299,38 +298,5 @@ export const createFeederStopMarker = (map, stop, onSelect) => {
  * Creates a generic bus stop marker for Variant B & C bus network browsing.
  */
 export const createBusStopNodeMarker = (map, stop, onSelect) => {
-  const el = document.createElement('div');
-  el.className = 'bus-network-stop-node';
-  el.style.cssText = `
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #D62828;
-    border: 2px solid #ffffff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    cursor: pointer;
-    transition: transform 0.15s ease;
-    z-index: 22;
-  `;
-
-  el.title = `Parada ${stop.code || stop.stopCode || ''} · ${stop.name || stop.stopName || 'EMT Stop'}`;
-
-  el.addEventListener('mouseenter', () => {
-    el.style.transform = 'scale(1.5)';
-  });
-  el.addEventListener('mouseleave', () => {
-    el.style.transform = 'scale(1.0)';
-  });
-  if (onSelect) {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      onSelect(stop);
-    });
-  }
-
-  const marker = new Marker({ element: el, anchor: 'center' })
-    .setLngLat(stop.coordinates)
-    .addTo(map);
-
-  return marker;
+  return createFeederStopMarker(map, stop, onSelect);
 };

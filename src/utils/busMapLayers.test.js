@@ -27,7 +27,7 @@ describe('busMapLayers marker creators', () => {
     delete globalThis.document;
   });
 
-  it('creates feeder bus stop marker as a circle', () => {
+  it('creates feeder bus stop marker as a square with EMT text', () => {
     const mockMap = { isStyleLoaded: () => true };
     const stop = {
       stopCode: '1002',
@@ -39,14 +39,13 @@ describe('busMapLayers marker creators', () => {
     const marker = createFeederStopMarker(mockMap, stop, () => {});
     const el = marker.getElement();
 
-    expect(el.className).toBe('feeder-stop-marker');
-    expect(el.style.cssText).toContain('border-radius: 50%');
-    expect(el.innerHTML).toContain('1002');
-    expect(el.title).toContain('2 min walk');
-    expect(el.title).not.toMatch(/\d+m\b/);
+    expect(el.className).toBe('emt-stop-marker');
+    expect(el.style.cssText).toContain('border-radius: 4px');
+    expect(el.innerHTML).toContain('EMT');
+    expect(el.title).toContain('1002');
   });
 
-  it('creates bus stop node marker as a circle', () => {
+  it('creates bus stop node marker as a square with EMT text', () => {
     const mockMap = { isStyleLoaded: () => true };
     const stop = {
       code: '1004',
@@ -57,7 +56,8 @@ describe('busMapLayers marker creators', () => {
     const marker = createBusStopNodeMarker(mockMap, stop, () => {});
     const el = marker.getElement();
 
-    expect(el.className).toBe('bus-network-stop-node');
-    expect(el.style.cssText).toContain('border-radius: 50%');
+    expect(el.className).toBe('emt-stop-marker');
+    expect(el.style.cssText).toContain('border-radius: 4px');
+    expect(el.innerHTML).toContain('EMT');
   });
 });

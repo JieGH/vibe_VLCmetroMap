@@ -258,9 +258,8 @@ describe('StationPanel component', () => {
     expect(gpsHtml).toMatch(/Where you(&#x27;|')re at/);
     expect(gpsHtml).not.toContain('GPS Location');
     expect(gpsHtml).toContain('5 min walk');
-    expect(gpsHtml).toContain('Metro station');
-    expect(gpsHtml).toContain('bus stop');
-    expect(gpsHtml).toContain('EMT');
+    // Removed redundant "X metro stations, Y bus stops" meta line
+    expect(gpsHtml).not.toContain('station-header-meta');
 
     // Multimodal tabs: All on far left, then Metro, then Bus
     expect(gpsHtml).toContain('>All<');
