@@ -150,6 +150,17 @@ textarea {
   z-index: 1;
 }
 
+/* Text Size (#103): map markers follow --font-scale (1 at the default size, so no change there).
+   zoom is applied to the inner visual, never to the MapLibre-positioned marker element, and it
+   scales layout so the centre/bottom anchors keep every marker on its coordinate. */
+.metro-station-badge,
+.emt-stop-badge,
+.live-bus-pill,
+.station-floating-chart,
+.bus-floating-chart {
+  zoom: var(--font-scale, 1);
+}
+
 /* Ambient translucency: when user has not placed a pin, all station markers show 50% translucent */
 .map-container:not([data-has-pin="true"]) .metro-station-badge,
 .map-container:not([data-has-pin="true"]) .emt-stop-badge {

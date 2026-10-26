@@ -193,10 +193,15 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
  * Creates a DOM Marker for a live AVL bus vehicle.
  */
 export const createLiveBusMarker = (map, bus, onSelect) => {
+  // Outer element is positioned by MapLibre; the pill inside carries the visuals so
+  // the Text Size zoom (.live-bus-pill in index.css) never touches the map transform.
   const el = document.createElement('div');
   el.className = 'live-bus-marker';
-  el.style.cssText = `
-    display: inline-flex;
+  const pill = document.createElement('div');
+  pill.className = 'live-bus-pill';
+  el.style.cssText = 'z-index: 25;';
+  pill.style.cssText = `
+    display: flex;
     align-items: center;
     gap: 3px;
     padding: 2px 5px;
@@ -211,21 +216,20 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
     transform-origin: center center;
     transition: transform 0.15s ease;
     user-select: none;
-    z-index: 25;
   `;
 
   el.title = `${bus.line} (${bus.destination}) • ${bus.speedKmh} km/h • Next: ${bus.nextStop}`;
-  el.innerHTML = `
+  pill.innerHTML = `
     <span style="font-size:8px;font-weight:900;background:#ffffff;color:#D62828;padding:1px 2px;border-radius:2px;line-height:1">EMT</span>
     <span>${bus.line}</span>
     <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#4CAF50;box-shadow:0 0 5px #4CAF50"></span>
   `;
 
   el.addEventListener('mouseenter', () => {
-    el.style.transform = 'scale(1.2)';
+    pill.style.transform = 'scale(1.2)';
   });
   el.addEventListener('mouseleave', () => {
-    el.style.transform = 'scale(1.0)';
+    pill.style.transform = 'scale(1.0)';
   });
   if (onSelect) {
     el.addEventListener('click', (e) => {
@@ -233,6 +237,8 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
       onSelect(bus);
     });
   }
+
+  el.appendChild(pill);
 
   const marker = new Marker({ element: el, anchor: 'center' })
     .setLngLat(bus.coordinates)

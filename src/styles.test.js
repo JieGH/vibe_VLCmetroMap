@@ -119,6 +119,29 @@ describe('Font size scaling and menu controls', () => {
   });
 });
 
+describe('Map markers follow the Text Size setting (#103)', () => {
+  const ruleFor = (selector) => {
+    const re = /([^{}]+)\{([^}]*)\}/g;
+    let m;
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    while ((m = re.exec(bare))) {
+      const sels = m[1].split(',').map((x) => x.trim());
+      if (sels.includes(selector) && m[2].includes('zoom')) return m[2];
+    }
+    return '';
+  };
+
+  it.each([
+    '.metro-station-badge',
+    '.emt-stop-badge',
+    '.live-bus-pill',
+    '.station-floating-chart',
+    '.bus-floating-chart',
+  ])('scales %s by --font-scale (1 at default, so default is unchanged)', (selector) => {
+    expect(ruleFor(selector)).toContain('zoom: var(--font-scale, 1)');
+  });
+});
+
 describe('Welcome screen splash styles and animation timings', () => {
   it('defines fixed full-screen splash overlay at z-index 10000', () => {
     const splashMatch = css.match(/\.welcome-screen\s*\{([^}]*)\}/)?.[1] || '';

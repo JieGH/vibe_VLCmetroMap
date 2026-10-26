@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createFeederStopMarker, createBusStopNodeMarker } from './busMapLayers';
+import { createFeederStopMarker, createBusStopNodeMarker, createLiveBusMarker } from './busMapLayers';
 
 vi.mock('maplibre-gl', () => ({
   Marker: vi.fn(function ({ element }) {
@@ -75,5 +75,19 @@ describe('busMapLayers marker creators', () => {
 
     expect(el.className).toBe('emt-stop-marker');
     expect(el.style.cssText).toContain('z-index: 50');
+  });
+
+  it('wraps the live bus pill so Text Size scaling never touches the map-positioned marker element', () => {
+    const mockMap = { isStyleLoaded: () => true };
+    const bus = { line: '7', destination: 'X', speedKmh: 10, nextStop: 'Y', coordinates: [-0.375, 39.469] };
+
+    const marker = createLiveBusMarker(mockMap, bus, () => {});
+    const el = marker.getElement();
+
+    expect(el.className).toBe('live-bus-marker');
+    expect(el.appendChild).toHaveBeenCalledTimes(1);
+    const pill = el.appendChild.mock.calls[0][0];
+    expect(pill.className).toBe('live-bus-pill');
+    expect(pill.style.cssText).toContain('font: 800 11px/1 system-ui');
   });
 });
