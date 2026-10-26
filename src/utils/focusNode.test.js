@@ -113,4 +113,15 @@ describe('renderBusStopHighlight', () => {
     expect(twoLineHtml).toContain('display:flex');
     expect(twoLineHtml).not.toContain('grid-template-columns');
   });
+
+  it('enlarges bubble and line numbers when isSelected is true', () => {
+    const defaultHtml = renderBusStopHighlight(busStop, 'dark', false);
+    expect(defaultHtml).toContain('font:900 8px');
+    expect(defaultHtml).toContain('padding:3px 5px');
+
+    const selectedHtml = renderBusStopHighlight(busStop, 'dark', true);
+    expect(selectedHtml).toContain('font:900 12px');
+    expect(selectedHtml).toContain('padding:5px 8px');
+    expect(selectedHtml).toContain('is-selected');
+  });
 });

@@ -5,7 +5,7 @@
 // Docked right in landscape and bottom in portrait. Right, because on a held
 // tablet that is where a thumb rests; bottom in portrait, because on a phone it
 // is the only place a thumb reaches at all.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { X, Radio, Database, CheckCircle2, Clock, Maximize2, Minimize2 } from 'lucide-react';
 import arrivalStore, { CACHE_TTL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
@@ -14,7 +14,7 @@ import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
-import { getStationBusFeeders } from '../data/emtData';
+import { getStationBusFeeders, getAllBusStops } from '../data/emtData';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 import { getDistance, nearbyFeatures } from '../utils/geoUtils';
@@ -52,14 +52,14 @@ const StationPanel = ({
   station,
   theme,
   onClose,
-  variant = 'default',
+  _variant = 'default',
   onSelectFeederStop,
   onSelectStation,
   userLocation,
   isPin,
 }) => {
   const { t } = useTranslation();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(Date.now);
   const landscape = useIsLandscape();
   const [activeTab, setActiveTab] = useState('split');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -70,9 +70,7 @@ const StationPanel = ({
         station?.isPin ||
         station?.properties?.isPin ||
         station?.properties?.name === 'Map Ping' ||
-        station?.properties?.name === "Where you're at" ||
-        userLocation?.isMapClick ||
-        (variant === 'A' && Boolean(userLocation))
+        station?.properties?.name === "Where you're at"
       );
 
   const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
@@ -86,6 +84,33 @@ const StationPanel = ({
     return () => clearInterval(id);
   }, []);
 
+  const userCoords = userLocation?.coordinates;
+  const stationCoords = station?.geometry?.coordinates;
+  const anchorCoords = userCoords || stationCoords;
+  const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
+  const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
+
+  // Other Metro stations within 5-minute walk radius (~500m) of this station/anchor:
+  const nearbyMetro = useMemo(() => {
+    if (!anchorCoords) return [];
+    const stationName = station?.properties?.name;
+    return nearbyFeatures(allMetroStations, anchorCoords, 500)
+      .filter((m) => m.feature.properties.name !== stationName)
+      .slice(0, 8);
+  }, [anchorCoords, station?.properties?.name]);
+
+  const nearbyMetroWithFocus = useMemo(() => {
+    return nearbyMetro.map((m) => {
+      const mFocus = getStationFocus(m.feature.properties, now);
+      return {
+        ...m,
+        focus: mFocus,
+        arrivals: mFocus.arrivals || [],
+        lines: m.feature.properties.lines || mFocus.servedLines || [],
+      };
+    });
+  }, [nearbyMetro, now]);
+
   // getStationFocus only ever reads arrivalStore's cache — it has to, since it
   // also runs inside MapView's floating node every second and must not fire a
   // network request from there. Something has to be the one place that
@@ -94,17 +119,22 @@ const StationPanel = ({
   // fetched" forever, however live its real trains are. That's this effect.
   useEffect(() => {
     if (!station) return undefined;
-    arrivalStore.getStationArrivals(station.properties);
-    // Just past the memory pause, not on it: the tap's fetch lands ~0.5s
-    // after the click, so a 60s poll found the entry 59.5s old, skipped the
-    // request, and an open panel only refreshed every 120s
-    // (docs/research/marker-drift.md).
-    const id = setInterval(
-      () => arrivalStore.getStationArrivals(station.properties),
-      CACHE_TTL_MS + 1000
-    );
+    const fetchArrivals = () => {
+      if (station.properties) {
+        arrivalStore.getStationArrivals(station.properties);
+      }
+      if (nearbyMetro && nearbyMetro.length > 0) {
+        nearbyMetro.forEach((m) => {
+          if (m.feature?.properties) {
+            arrivalStore.getStationArrivals(m.feature.properties);
+          }
+        });
+      }
+    };
+    fetchArrivals();
+    const id = setInterval(fetchArrivals, CACHE_TTL_MS + 1000);
     return () => clearInterval(id);
-  }, [station]);
+  }, [station, nearbyMetro]);
 
   useEffect(() => {
     if (!station) return undefined;
@@ -131,29 +161,217 @@ const StationPanel = ({
       : t('stationPanel.minAgo', { min: Math.round(focus.secondsUnheard / 60) });
 
   const stationLines = focus.servedLines || [];
-  const userCoords = userLocation?.coordinates;
-  const stationCoords = station.geometry?.coordinates;
-  const anchorCoords = userCoords || stationCoords;
-  const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
-  const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
-
-  // Other Metro stations within 5-minute walk radius (~400m) of this station/anchor:
-  const nearbyMetro = anchorCoords ? nearbyFeatures(allMetroStations, anchorCoords, 400)
-    .filter((m) => m.feature.properties.name !== focus.name)
-    .slice(0, 4) : [];
 
   const rawFeeders = getStationBusFeeders(focus.name, stationCoords);
-  const feeders = rawFeeders.map((f) => {
-    if (!anchorCoords || !f.coordinates) return f;
-    const dist = Math.round(getDistance(anchorCoords, f.coordinates));
-    const mins = walkingMinutes(dist);
-    return { ...f, walkMetres: dist, walkMin: mins };
-  }).filter((f) => !anchorCoords || f.walkMin <= 5); // 5 minutes walk radius
+  const feeders = anchorCoords
+    ? (() => {
+        const allStops = getAllBusStops() || [];
+        const nearbyReal = allStops
+          .map((stop) => {
+            const dist = Math.round(getDistance(anchorCoords, stop.coordinates));
+            const mins = walkingMinutes(dist);
+            return {
+              stopCode: String(stop.stopCode || stop.code || ''),
+              stopName: stop.stopName || stop.name || 'Parada EMT',
+              walkMetres: dist,
+              walkMin: mins,
+              bearingDegrees: 90,
+              coordinates: stop.coordinates,
+              lines: (stop.lines && stop.lines.length > 0 ? stop.lines : ['19', 'C1']).map((l) => ({
+                line: String(typeof l === 'object' && l !== null ? (l.line || l.id) : l),
+                destination: typeof l === 'object' && l?.destination ? l.destination : 'Centre / Platja',
+                dueSeconds: typeof l === 'object' && l?.dueSeconds ? l.dueSeconds : 180,
+                isLive: true,
+                vehicleId: `EMT-${stop.stopCode || '1000'}`,
+              })),
+            };
+          })
+          .filter((f) => f.walkMetres <= 500 || f.walkMin <= 6)
+          .sort((a, b) => a.walkMetres - b.walkMetres);
+
+        if (nearbyReal.length > 0) return nearbyReal;
+        return rawFeeders.map((f) => {
+          if (!f.coordinates) return f;
+          const dist = Math.round(getDistance(anchorCoords, f.coordinates));
+          const mins = walkingMinutes(dist);
+          return { ...f, walkMetres: dist, walkMin: mins };
+        }).filter((f) => f.walkMin <= 6);
+      })()
+    : rawFeeders;
 
   const _totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
-  const metroStopsCount = focus.name === 'Map Ping' ? nearbyMetro.length : (1 + nearbyMetro.length);
+  const metroStopsCount = (focus.name === 'Map Ping' || focus.name === "Where you're at") ? nearbyMetro.length : (1 + nearbyMetro.length);
   const busStopsCount = feeders.length;
   const allStopsCount = metroStopsCount + busStopsCount;
+  const isMultimodal = Boolean(isPinPlace);
+
+  const renderMultimodalTabs = (isHeaderRow = false) => (
+    <nav
+      className="station-multimodal-tabs"
+      aria-label="Multimodal arrivals navigation"
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        overflowX: 'auto',
+        scrollbarWidth: 'none',
+        minWidth: 0,
+        ...(isHeaderRow
+          ? { flex: 1 }
+          : { padding: '8px 14px', borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.12)' }),
+      }}
+    >
+      {/* Tab 1: All */}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'split'}
+        onClick={() => setActiveTab('split')}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="All transit departures (Trains and Bus side-by-side)"
+        style={{
+          padding: '6px 13px',
+          borderRadius: 9,
+          border: 'none',
+          background: activeTab === 'split' ? '#37474F' : 'var(--bg-hover)',
+          color: activeTab === 'split' ? '#80D8FF' : '#ffffff',
+          fontWeight: 800,
+          fontSize: '.84rem',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          boxShadow: activeTab === 'split' ? '0 2px 6px rgba(55,71,79,0.35)' : 'none',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <span>All</span>
+        <span
+          style={{
+            fontSize: '.72rem',
+            opacity: 0.9,
+            background: 'rgba(0,0,0,0.28)',
+            padding: '1.5px 6px',
+            borderRadius: 5,
+          }}
+        >
+          {allStopsCount}
+        </span>
+      </button>
+
+      {/* Tab 2: Trains */}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'metro'}
+        onClick={() => setActiveTab('metro')}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="Trains departures only"
+        style={{
+          padding: '6px 13px',
+          borderRadius: 9,
+          border: 'none',
+          background: activeTab === 'metro' ? '#E2001A' : 'var(--bg-hover)',
+          color: '#ffffff',
+          fontWeight: 800,
+          fontSize: '.84rem',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          boxShadow: activeTab === 'metro' ? '0 2px 6px rgba(226,0,26,0.35)' : 'none',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <span
+          style={{
+            width: 16,
+            height: 16,
+            borderRadius: '50%',
+            background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
+            color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
+            fontSize: '0.66rem',
+            fontWeight: 900,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
+            fontFamily: "system-ui, -apple-system, sans-serif",
+          }}
+        >
+          m
+        </span>
+        <span>Trains</span>
+        <span
+          style={{
+            fontSize: '.72rem',
+            opacity: 0.9,
+            background: 'rgba(0,0,0,0.28)',
+            padding: '1.5px 6px',
+            borderRadius: 5,
+          }}
+        >
+          {metroStopsCount}
+        </span>
+      </button>
+
+      {/* Tab 3: Bus */}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'bus'}
+        onClick={() => setActiveTab('bus')}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="EMT Bus departures only"
+        style={{
+          padding: '6px 13px',
+          borderRadius: 9,
+          border: 'none',
+          background: activeTab === 'bus' ? '#D62828' : 'var(--bg-hover)',
+          color: '#ffffff',
+          fontWeight: 800,
+          fontSize: '.84rem',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          boxShadow: activeTab === 'bus' ? '0 2px 6px rgba(214,40,40,0.35)' : 'none',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.58rem',
+            fontWeight: 900,
+            background: '#D62828',
+            color: '#ffffff',
+            padding: '1.5px 4px',
+            borderRadius: 3,
+            letterSpacing: '0.04em',
+            lineHeight: 1,
+          }}
+        >
+          EMT
+        </span>
+        <span>Bus</span>
+        <span
+          style={{
+            fontSize: '.72rem',
+            opacity: 0.9,
+            background: 'rgba(0,0,0,0.28)',
+            padding: '1.5px 6px',
+            borderRadius: 5,
+          }}
+        >
+          {busStopsCount}
+        </span>
+      </button>
+    </nav>
+  );
 
   return (
     <>
@@ -180,15 +398,19 @@ const StationPanel = ({
               height: isExpanded ? 'calc(100vh - 100px)' : 'auto',
               width: isExpanded
                 ? 'min(820px, 68vw)'
-                : (isPinPlace && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
+                : (isMultimodal && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
               transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }
           : {
               left: 12,
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'min(58vh, calc(100vh - 120px))',
-              height: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'auto',
+              maxHeight: isExpanded
+                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
+                : 'min(58vh, calc(100vh - 120px))',
+              height: isExpanded
+                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
+                : 'auto',
               transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }),
         ...dragStyle,
@@ -206,58 +428,16 @@ const StationPanel = ({
         </div>
       )}
 
-      {/* Header: station name, line icons underneath, station icon on the left, and live status */}
+      {/* Header: when isPinPlace, tabs + actions in a single compact row; otherwise station name & lines + actions */}
       <header
         className="station-panel-header"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, padding: !landscape ? '2px 16px 12px' : '12px 16px 12px', borderBottom: '1px solid var(--border-color)',
         }}
-        {...(!landscape ? handleProps : {})}
       >
         {isPinPlace ? (
-          <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flex: 1, overflow: 'hidden' }}>
-            <span style={{ fontSize: '1.05rem', lineHeight: 1, flexShrink: 0 }}>
-              {userLocation ? '📍' : 'm'}
-            </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, flex: 1, overflow: 'hidden' }}>
-              <h2
-                onClick={() => setIsExpanded((v) => !v)}
-                title={isExpanded ? 'Collapse view' : 'Expand full view'}
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  letterSpacing: '-.01em',
-                  margin: 0,
-                  color: 'var(--text-primary)',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  wordBreak: 'break-word',
-                  cursor: 'pointer',
-                }}
-              >
-                {userLocation?.isMapClick ? 'Map Ping' : userLocation ? "Where you're at" : 'Nearby Transit'}
-              </h2>
-              <span
-                title="5 min walk"
-                style={{
-                  fontSize: '0.74rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3,
-                }}
-              >
-                · 🚶 5 min
-              </span>
-            </div>
-          </div>
+          renderMultimodalTabs(true)
         ) : (
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}>
             <div
@@ -403,8 +583,8 @@ const StationPanel = ({
               minWidth: 32,
               borderRadius: '50%',
               border: 'none',
-              background: isExpanded ? 'rgba(255,255,255,0.18)' : 'var(--bg-hover)',
-              color: 'var(--text-primary)',
+              background: isExpanded ? 'rgba(255, 209, 0, 0.22)' : 'var(--bg-hover)',
+              color: isExpanded ? '#FFD100' : 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -431,176 +611,8 @@ const StationPanel = ({
         </div>
       </header>
 
-      {/* Multimodal Hub Tabs when a Pin is placed */}
-      {isPinPlace && (
-        <nav
-          className="station-multimodal-tabs"
-          aria-label="Multimodal arrivals navigation"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 6,
-            padding: '6px 12px',
-            borderBottom: '1px solid var(--border-color)',
-            background: 'rgba(0,0,0,0.12)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', flex: 1 }}>
-            {/* Tab 1: All (Split View showing both Metro & Bus side-by-side) */}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'split'}
-              onClick={() => setActiveTab('split')}
-              title="All transit departures (Metro and Bus side-by-side)"
-              style={{
-                padding: '4px 10px',
-                borderRadius: 8,
-                border: 'none',
-                background: activeTab === 'split' ? '#37474F' : 'var(--bg-hover)',
-                color: activeTab === 'split' ? '#80D8FF' : '#ffffff',
-                fontWeight: 700,
-                fontSize: '.75rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                boxShadow: activeTab === 'split' ? '0 2px 6px rgba(55,71,79,0.35)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>All</span>
-              <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-                {allStopsCount}
-              </span>
-            </button>
-
-            {/* Tab 2: Metro */}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'metro'}
-              onClick={() => setActiveTab('metro')}
-              title="Metro departures only"
-              style={{
-                padding: '4px 10px',
-                borderRadius: 8,
-                border: 'none',
-                background: activeTab === 'metro' ? '#E2001A' : 'var(--bg-hover)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '.75rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                boxShadow: activeTab === 'metro' ? '0 2px 6px rgba(226,0,26,0.35)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
-                  color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
-                  fontSize: '0.58rem',
-                  fontWeight: 900,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  lineHeight: 1,
-                }}
-              >
-                m
-              </span>
-              <span>Metro</span>
-              <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-                {metroStopsCount}
-              </span>
-            </button>
-
-            {/* Tab 3: Bus */}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'bus'}
-              onClick={() => setActiveTab('bus')}
-              title="EMT Bus departures only"
-              style={{
-                padding: '4px 10px',
-                borderRadius: 8,
-                border: 'none',
-                background: activeTab === 'bus' ? '#1565C0' : 'var(--bg-hover)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '.75rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                boxShadow: activeTab === 'bus' ? '0 2px 6px rgba(21,101,192,0.35)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.54rem',
-                  fontWeight: 900,
-                  background: '#D62828',
-                  color: '#ffffff',
-                  padding: '1px 3px',
-                  borderRadius: 2,
-                  letterSpacing: '0.04em',
-                  lineHeight: 1,
-                }}
-              >
-                EMT
-              </span>
-              <span>Bus</span>
-              <span style={{ fontSize: '.68rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4 }}>
-                {busStopsCount}
-              </span>
-            </button>
-          </div>
-
-          {/* Quick Expand More / Collapse Action */}
-          <button
-            type="button"
-            onClick={() => setIsExpanded((v) => !v)}
-            title={isExpanded ? 'Collapse card' : 'Expand more departures'}
-            aria-label={isExpanded ? 'Collapse card' : 'Expand more departures'}
-            style={{
-              padding: '3px 8px',
-              borderRadius: 8,
-              border: '1px solid var(--border-color, rgba(255,255,255,0.15))',
-              background: isExpanded ? 'rgba(255, 209, 0, 0.18)' : 'var(--bg-hover)',
-              color: isExpanded ? '#FFD100' : 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '.72rem',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              flexShrink: 0,
-              marginLeft: 'auto',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {isExpanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-            <span>{isExpanded ? 'Collapse' : 'Expand more'}</span>
-          </button>
-        </nav>
-      )}
-
       {/* Body Container */}
-      {isPinPlace ? (
+      {isMultimodal ? (
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           {focus.fetchError && (
             <div role="status" style={{
@@ -644,9 +656,10 @@ const StationPanel = ({
                   isLive={focus.isLive}
                   walkMetres={metroWalkMeters}
                   walkMin={metroWalkMin}
-                  nearbyMetro={nearbyMetro}
+                  nearbyMetro={nearbyMetroWithFocus}
                   showDistance={false}
                   onSelectStation={onSelectStation}
+                  isPinMode={isMultimodal}
                 />
               </div>
 
@@ -691,9 +704,10 @@ const StationPanel = ({
                   isLive={focus.isLive}
                   walkMetres={metroWalkMeters}
                   walkMin={metroWalkMin}
-                  nearbyMetro={nearbyMetro}
+                  nearbyMetro={nearbyMetroWithFocus}
                   showDistance={true}
                   onSelectStation={onSelectStation}
+                  isPinMode={isMultimodal}
                 />
               </div>
 

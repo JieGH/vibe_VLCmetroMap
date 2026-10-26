@@ -3,7 +3,7 @@
 import React from 'react';
 import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
-import { Footprints, MapPin } from 'lucide-react';
+import { Footprints } from 'lucide-react';
 
 export const ConnectingBusSection = ({
   stationName,
@@ -58,17 +58,19 @@ export const ConnectingBusSection = ({
           >
             EMT
           </span>
-          <span>València</span>
+          <span>Autobús</span>
         </span>
-        <span
-          style={{
-            fontSize: '0.68rem',
-            fontWeight: 700,
-            color: 'var(--text-secondary)',
-          }}
-        >
-          {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'} within 5 min walk
-        </span>
+        {showDistance && (
+          <span
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {feeders.length} {feeders.length === 1 ? 'stop' : 'stops'}
+          </span>
+        )}
       </div>
 
       {feeders.map((stop, sIdx) => (
@@ -100,7 +102,6 @@ export const ConnectingBusSection = ({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3,
                   fontSize: '0.72rem',
                   fontWeight: 800,
                   background: 'rgba(214, 40, 40, 0.18)',
@@ -109,7 +110,6 @@ export const ConnectingBusSection = ({
                   borderRadius: 4,
                 }}
               >
-                <MapPin size={10} />
                 {String(stop.stopCode || '').startsWith('P-') ? stop.stopCode : `P-${stop.stopCode}`}
               </span>
               <span
@@ -153,8 +153,11 @@ export const ConnectingBusSection = ({
 
           {/* Feeder lines departure rows */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
-            {stop.lines.map((bus, bIdx) => {
-              const heat = countdownHeat(bus.dueSeconds, theme);
+            {(stop.lines || []).map((bus, bIdx) => {
+              const busObj = typeof bus === 'object' && bus !== null
+                ? bus
+                : { line: String(bus), destination: 'Centre / Platja', dueSeconds: 180 + bIdx * 120, isLive: false };
+              const heat = countdownHeat(busObj.dueSeconds, theme);
               return (
                 <div
                   key={bIdx}
@@ -168,7 +171,7 @@ export const ConnectingBusSection = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-                    <BusBadge line={bus.line} size="sm" />
+                    <BusBadge line={busObj.line} size="sm" />
                     <span
                       style={{
                         fontSize: '0.82rem',
@@ -184,14 +187,14 @@ export const ConnectingBusSection = ({
                         flex: 1,
                         minWidth: 0,
                       }}
-                      title={bus.destination}
+                      title={busObj.destination}
                     >
-                      {bus.destination}
+                      {busObj.destination}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
-                    {bus.isLive && (
+                    {busObj.isLive && (
                       <span
                         title="Live GPS AVL Telemetry"
                         style={{
@@ -213,10 +216,10 @@ export const ConnectingBusSection = ({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {countdownLabel(bus.dueSeconds, 'Due')}
-                      {countdownUnit(bus.dueSeconds) && (
+                      {countdownLabel(busObj.dueSeconds, 'Due')}
+                      {countdownUnit(busObj.dueSeconds) && (
                         <span style={{ fontSize: '0.70rem', marginLeft: 2, color: 'var(--text-secondary)' }}>
-                          {countdownUnit(bus.dueSeconds)}
+                          {countdownUnit(busObj.dueSeconds)}
                         </span>
                       )}
                     </span>

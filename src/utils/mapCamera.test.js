@@ -17,7 +17,7 @@ describe('mapCamera', () => {
     it('defines expected default zoom and center', () => {
       expect(DEFAULT_MAP_ZOOM).toBe(12.3);
       expect(DEFAULT_MAP_CENTER).toEqual([-0.3763, 39.4699]);
-      expect(STATION_FOCUS_ZOOM).toBe(14.6);
+      expect(STATION_FOCUS_ZOOM).toBe(15.0);
       expect(ZERO_PADDING).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
     });
   });
@@ -25,7 +25,7 @@ describe('mapCamera', () => {
   describe('calculateFocusZoom', () => {
     it('eases in to STATION_FOCUS_ZOOM if current zoom is lower (e.g. default overview)', () => {
       const zoom = calculateFocusZoom(12.3);
-      expect(zoom).toBe(14.6);
+      expect(zoom).toBe(15.0);
     });
 
     it('preserves higher zoom if already zoomed in further than STATION_FOCUS_ZOOM', () => {

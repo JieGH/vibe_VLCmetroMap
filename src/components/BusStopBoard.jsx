@@ -63,15 +63,21 @@ export const BusStopBoard = ({
   const displayName = stop.name || stop.stopName || 'Carrer de Colón';
   const rawCode = String(stop.code || stop.stopCode || '1002');
   const stopCode = rawCode.startsWith('P-') ? rawCode : `P-${rawCode}`;
-  const stopLines = Array.isArray(stop.lines) ? stop.lines : [];
+  const stopLines = Array.isArray(stop.lines)
+    ? stop.lines.map((l) => (typeof l === 'object' && l !== null ? String(l.line || l.id || '') : String(l))).filter(Boolean)
+    : [];
 
-  // Mock real-time departures if not directly provided
-  const arrivals = stop.arrivals || [
-    { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
-    { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
-    { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
-    { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
-  ];
+  // If stop.lines contains real arrival objects from feeder transfers, use them directly
+  const arrivals = (Array.isArray(stop.arrivals) && stop.arrivals.length > 0)
+    ? stop.arrivals
+    : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
+      ? stop.lines
+      : [
+          { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
+          { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
+          { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
+          { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
+        ];
 
   return (
     <aside
@@ -98,8 +104,12 @@ export const BusStopBoard = ({
               left: 12,
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'min(58vh, calc(100vh - 120px))',
-              height: isExpanded ? 'min(92vh, calc(100vh - 48px))' : 'auto',
+              maxHeight: isExpanded
+                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
+                : 'min(58vh, calc(100vh - 120px))',
+              height: isExpanded
+                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
+                : 'auto',
               transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }),
         ...dragStyle,
@@ -135,7 +145,7 @@ export const BusStopBoard = ({
             title={isExpanded ? 'Collapse view' : 'Expand full view'}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 34, height: 34, minWidth: 34, borderRadius: '50%',
+              width: 34, height: 34, minWidth: 34, borderRadius: 8,
               background: '#D62828', color: '#FFFFFF',
               boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
               flexShrink: 0,
@@ -144,7 +154,7 @@ export const BusStopBoard = ({
           >
             <span
               style={{
-                fontSize: '0.62rem',
+                fontSize: '0.70rem',
                 fontWeight: 900,
                 letterSpacing: '0.04em',
                 lineHeight: 1,
@@ -204,7 +214,7 @@ export const BusStopBoard = ({
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
-                    background: '#1565C0', color: '#fff',
+                    background: '#D62828', color: '#fff',
                     fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
                   }}
                 >
@@ -263,8 +273,8 @@ export const BusStopBoard = ({
               minWidth: 32,
               borderRadius: '50%',
               border: 'none',
-              background: isExpanded ? 'rgba(255,255,255,0.18)' : 'var(--bg-hover)',
-              color: 'var(--text-primary)',
+              background: isExpanded ? 'rgba(255, 209, 0, 0.22)' : 'var(--bg-hover)',
+              color: isExpanded ? '#FFD100' : 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -334,7 +344,7 @@ export const BusStopBoard = ({
                       style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
-                        background: '#1565C0', color: '#fff',
+                        background: '#D62828', color: '#fff',
                         fontSize: '.86rem', fontWeight: 900,
                       }}
                     >

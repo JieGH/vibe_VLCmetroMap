@@ -85,44 +85,60 @@ export const renderStationHighlight = (properties, theme) => {
 };
 
 /**
- * Renders the compact HTML marker for a selected EMT Bus Stop.
- * Displays only available bus line badges in consistent EMT red.
- * Omits transport logo and stop ID to save maximum space and avoid clustering overlap.
+ * Renders the compact HTML marker for a selected or surrounding EMT Bus Stop.
+ * Displays available bus line badges in consistent EMT red.
+ * When isSelected is true (user clicked this bus stop), the bubble and line numbers expand bigger.
  *
  * @param {{ stopCode?: string|number, stopName?: string, name?: string, lines?: (string|number)[] }} stop
  * @param {'light'|'dark'} theme
+ * @param {boolean} [isSelected=false]
  * @returns {string} HTML string
  */
-export const renderBusStopHighlight = (stop, theme) => {
+export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
-  const border = theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)';
+  const border = isSelected
+    ? (theme === 'light' ? '#D62828' : 'rgba(255,255,255,0.7)')
+    : (theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)');
   const lines = stop?.lines || [];
   const displayLines = lines.slice(0, 6);
   const isMultiColumn = displayLines.length > 2;
 
+  const fontStyle = isSelected ? 'font:900 12px/1.1 system-ui;' : 'font:900 8px/1 system-ui;';
+  const badgePadding = isSelected ? 'padding:2.5px 5.5px;' : 'padding:1.5px 3.5px;';
+  const badgeRadius = isSelected ? 'border-radius:3.5px;' : 'border-radius:2.5px;';
+  const badgeGap = isSelected ? '3.5px' : '2.5px';
+  const bubblePadding = isSelected ? 'padding:5px 8px;' : 'padding:3px 5px;';
+  const bubbleRadius = isSelected ? 'border-radius:8px;' : 'border-radius:6px;';
+  const borderWidth = isSelected ? '2px' : '1.5px';
+  const shadow = isSelected ? 'box-shadow:0 4px 16px rgba(0,0,0,.5);' : 'box-shadow:0 3px 12px rgba(0,0,0,.4);';
+
   // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
-  const lineBadges = displayLines.map((l) => (
-    `<span style="font:900 8px/1 system-ui;padding:1.5px 3.5px;border-radius:2.5px;background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;text-align:center;">${escapeHtml(l)}</span>`
-  )).join('');
+  const lineBadges = displayLines.map((l) => {
+    const lineId = typeof l === 'object' && l !== null ? (l.line || l.id || '') : l;
+    return `<span style="${fontStyle}${badgePadding}${badgeRadius}background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;text-align:center;">${escapeHtml(lineId)}</span>`;
+  }).join('');
 
   const containerStyle = isMultiColumn
-    ? 'display:grid;grid-template-columns:repeat(2, auto);gap:2.5px;align-items:center;justify-content:center;'
-    : 'display:flex;gap:2.5px;align-items:center;justify-content:center;';
+    ? `display:grid;grid-template-columns:repeat(2, auto);gap:${badgeGap};align-items:center;justify-content:center;`
+    : `display:flex;gap:${badgeGap};align-items:center;justify-content:center;`;
 
+  const fallbackFont = isSelected ? 'font:800 11.5px/1.1 system-ui;' : 'font:800 8.5px/1 system-ui;';
   const content = lineBadges
     ? `<div style="${containerStyle}">${lineBadges}</div>`
-    : `<span style="font:800 8.5px/1 system-ui;color:${text};">Bus</span>`;
+    : `<span style="${fallbackFont}color:${text};">Bus</span>`;
+
+  const caretBorder = isSelected ? '5px' : '4px';
 
   return `
-    <div class="bus-floating-chart" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+    <div class="bus-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <!-- Compact bubble: line badges only (transport logo & stop ID omitted to save space) -->
-      <div style="display:flex;align-items:center;justify-content:center;padding:3px 5px;border-radius:6px;background:${panel};border:1.5px solid ${border};box-shadow:0 3px 12px rgba(0,0,0,.4);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;${bubblePadding}${bubbleRadius}background:${panel};border:${borderWidth} solid ${border};${shadow}white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         ${content}
       </div>
 
       <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${panel};margin-top:-1px;"></div>
+      <div style="width:0;height:0;border-left:${caretBorder} solid transparent;border-right:${caretBorder} solid transparent;border-top:${caretBorder} solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 

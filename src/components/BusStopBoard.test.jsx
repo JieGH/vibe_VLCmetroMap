@@ -47,4 +47,31 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('station-panel-close');
     expect(html).toContain('aria-label="Expand station panel"');
   });
+
+  it('renders EMT emblem with rounded rectangular border radius instead of circle', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />
+    );
+
+    expect(html).toContain('data-testid="station-header-icon"');
+    expect(html).toMatch(/data-testid="station-header-icon"[^>]*border-radius:8px/);
+    expect(html).not.toMatch(/data-testid="station-header-icon"[^>]*border-radius:50%/);
+  });
+
+  it('renders safely when stop.lines contains arrival objects from feeder transfers', () => {
+    const feederStop = {
+      stopCode: '1002',
+      stopName: 'Carrer de Xàtiva - Estació del Nord',
+      lines: [
+        { line: '19', destination: 'La Malva-rosa', dueSeconds: 110 },
+        { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240 },
+      ],
+      coordinates: [-0.3772, 39.4672],
+    };
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={feederStop} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('>19<');
+    expect(html).toContain('>C1<');
+  });
 });

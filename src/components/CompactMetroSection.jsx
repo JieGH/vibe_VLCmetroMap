@@ -17,9 +17,336 @@ export const CompactMetroSection = ({
   nearbyMetro = [],
   showDistance = true,
   onSelectStation,
+  isPinMode = false,
 }) => {
   const { t } = useTranslation();
 
+  const isPin = Boolean(
+    isPinMode ||
+    stationName === 'Map Ping' ||
+    stationName === "Where you're at"
+  );
+
+  // When in Pin mode (multimodal transit hub from placed pin or GPS location):
+  if (isPin) {
+    if (!nearbyMetro || nearbyMetro.length === 0) {
+      return (
+        <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: '0.85rem', margin: 0 }}>
+            {t('stationPanel.noNearbyMetro') || 'No Metro stations found within walking distance.'}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="compact-metro-section" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '2px 4px 6px',
+            borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span
+              style={{
+                width: 15,
+                height: 15,
+                borderRadius: '50%',
+                background: '#E2001A',
+                color: '#ffffff',
+                fontSize: '0.60rem',
+                fontWeight: 900,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1,
+              }}
+            >
+              m
+            </span>
+            <span>Trains</span>
+          </span>
+          {showDistance && (
+            <span
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              {nearbyMetro.length} {nearbyMetro.length === 1 ? 'station' : 'stations'}
+            </span>
+          )}
+        </div>
+
+        {/* Nearby Metro Stations List */}
+        {nearbyMetro.map((m, sIdx) => {
+          const stName = m.feature?.properties?.name || m.name || 'Metro';
+          const stLines = m.lines || m.feature?.properties?.lines || [];
+          const stArrivals = m.arrivals || [];
+          const walkMin = m.walkMin || (m.distance ? Math.max(1, Math.round(m.distance / 80)) : 3);
+
+          return (
+            <div
+              key={stName || sIdx}
+              style={{
+                background: 'var(--bg-hover, rgba(255, 255, 255, 0.04))',
+                borderRadius: 10,
+                padding: '8px 10px',
+                border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}
+            >
+              {/* Station Card Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: onSelectStation ? 'pointer' : 'default',
+                }}
+                onClick={() => onSelectStation && onSelectStation(m.feature)}
+                title={`Focus ${stName} on map`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                  <span
+                    style={{
+                      width: 15,
+                      height: 15,
+                      borderRadius: '50%',
+                      background: '#E2001A',
+                      color: '#ffffff',
+                      fontSize: '0.60rem',
+                      fontWeight: 900,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    m
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      lineHeight: 1.25,
+                      wordBreak: 'break-word',
+                      whiteSpace: 'normal',
+                      color: 'var(--text-primary)',
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                    title={stName}
+                  >
+                    {stName}
+                  </span>
+                  <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                    {stLines.map((l, lIdx) => {
+                      const lineId = typeof l === 'object' && l !== null ? (l.line || l.id || '') : l;
+                      return (
+                        <span
+                          key={lineId || lIdx}
+                          style={{
+                            minWidth: 16,
+                            height: 16,
+                            borderRadius: 3,
+                            background: lineColor(lineId),
+                            color: '#000000',
+                            fontSize: '0.60rem',
+                            fontWeight: 900,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 2px',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {lineId}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                {showDistance && (
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      marginLeft: 6,
+                    }}
+                  >
+                    <Footprints size={11} />
+                    {walkMin} min
+                  </span>
+                )}
+              </div>
+
+              {/* Departures for this station */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
+                {stArrivals.length > 0 ? (
+                  stArrivals.slice(0, 3).map((arr, aIdx) => {
+                    const heat = countdownHeat(arr.seconds, theme);
+                    const bg = lineColor(arr.line);
+                    const isArriving = arr.seconds <= 30;
+
+                    return (
+                      <div
+                        key={aIdx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '3px 4px',
+                          borderRadius: 6,
+                          background: 'rgba(0, 0, 0, 0.14)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                          <span
+                            style={{
+                              minWidth: 18,
+                              height: 18,
+                              borderRadius: 4,
+                              background: bg,
+                              color: '#000000',
+                              fontSize: '0.66rem',
+                              fontWeight: 900,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0 3px',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {arr.line}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.80rem',
+                              fontWeight: 600,
+                              color: 'var(--text-primary)',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              lineHeight: 1.2,
+                              wordBreak: 'break-word',
+                              whiteSpace: 'normal',
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                            title={arr.destination}
+                          >
+                            {arr.destination}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: 6 }}>
+                          {arr.isLive && (
+                            <span
+                              title="Live FGV Telemetry"
+                              style={{
+                                width: 5,
+                                height: 5,
+                                borderRadius: '50%',
+                                background: '#4CAF50',
+                                display: 'inline-block',
+                                boxShadow: '0 0 5px #4CAF50',
+                              }}
+                            />
+                          )}
+                          {isArriving ? (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                fontSize: '0.86rem',
+                                fontWeight: 800,
+                                fontVariantNumeric: 'tabular-nums',
+                                color: heat,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <span
+                                className="station-arriving-dot pulse"
+                                style={{
+                                  width: 5,
+                                  height: 5,
+                                  borderRadius: '50%',
+                                  background: heat,
+                                  display: 'inline-block',
+                                  boxShadow: `0 0 5px ${heat}`,
+                                }}
+                              />
+                              {countdownLabel(arr.seconds, t('common.due'))}
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '0.86rem',
+                                fontWeight: 800,
+                                fontVariantNumeric: 'tabular-nums',
+                                color: heat,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {countdownLabel(arr.seconds, t('common.due'))}
+                              {countdownUnit(arr.seconds) && (
+                                <span style={{ fontSize: '0.68rem', marginLeft: 2, color: 'var(--text-secondary)' }}>
+                                  {t(`common.${countdownUnit(arr.seconds)}`)}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', padding: '2px 4px' }}>
+                    {stLines.length > 0 ? `Lines ${stLines.map(l => typeof l === 'object' && l !== null ? (l.line || l.id) : l).join(', ')} · Check station board` : 'Regular schedule active'}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Non-pin mode (individual Metro station selected):
   if (!arrivals || arrivals.length === 0) {
     return (
       <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -191,7 +518,7 @@ export const CompactMetroSection = ({
         );
       })}
 
-      {/* Nearby Metro Stations within 10-minute walk radius */}
+      {/* Nearby Metro Stations within 5-minute walk radius */}
       {nearbyMetro && nearbyMetro.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
           <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -199,10 +526,12 @@ export const CompactMetroSection = ({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {nearbyMetro.map((m) => {
-              const lines = m.feature.properties.lines || [];
+              const lines = m.lines || m.feature?.properties?.lines || [];
+              const stName = m.feature?.properties?.name || m.name;
+              const walkMin = m.walkMin || (m.distance ? Math.max(1, Math.round(m.distance / 80)) : 3);
               return (
                 <div
-                  key={m.feature.properties.name}
+                  key={stName}
                   onClick={() => onSelectStation && onSelectStation(m.feature)}
                   style={{
                     display: 'flex',
@@ -215,7 +544,7 @@ export const CompactMetroSection = ({
                     border: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))',
                     transition: 'background 0.15s ease',
                   }}
-                  title={`Switch to ${m.feature.properties.name} (${m.walkMin} min walk)`}
+                  title={`Switch to ${stName} (${walkMin} min walk)`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <span
@@ -251,9 +580,9 @@ export const CompactMetroSection = ({
                         flex: 1,
                         minWidth: 0,
                       }}
-                      title={m.feature.properties.name}
+                      title={stName}
                     >
-                      {m.feature.properties.name}
+                      {stName}
                     </span>
                     <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                       {lines.map((l) => (
@@ -292,7 +621,7 @@ export const CompactMetroSection = ({
                       }}
                     >
                       <Footprints size={11} />
-                      {m.walkMin} min
+                      {walkMin} min
                     </span>
                   )}
                 </div>

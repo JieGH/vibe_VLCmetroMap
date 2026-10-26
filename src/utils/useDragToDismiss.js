@@ -83,7 +83,12 @@ export const isEditableElement = (el) => {
  */
 export const shouldIgnoreDragStart = (target, activeElement) => {
   if (isEditableElement(activeElement)) return true;
-  if (target?.isContentEditable || target?.closest?.('input, textarea, [contenteditable]')) return true;
+  if (
+    target?.isContentEditable ||
+    target?.closest?.('input, textarea, button, a, select, [role="button"], [role="tab"], [contenteditable]')
+  ) {
+    return true;
+  }
   return false;
 };
 

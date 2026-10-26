@@ -1002,9 +1002,7 @@ function App() {
             selectedStation?.isPin ||
             selectedStation?.properties?.isPin ||
             selectedStation?.properties?.name === 'Map Ping' ||
-            selectedStation?.properties?.name === "Where you're at" ||
-            userLocation?.isMapClick ||
-            (variant === 'A' && userLocation?.status === 'located')
+            selectedStation?.properties?.name === "Where you're at"
           )}
         />
       )}

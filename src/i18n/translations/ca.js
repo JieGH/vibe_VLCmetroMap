@@ -102,6 +102,7 @@ export default {
     noLiveTrains: 'No hi ha trens en directe arribant prompte.',
     nothingFurther: 'No hi ha més arribades previstes per ara.',
     laterArrivalsCaption: 'Pròximes arribades a {{station}}',
+    noNearbyMetro: 'No hi ha estacions de metro a poca distància a peu.',
     line: 'Línia',
     towards: 'Direcció',
     due: 'Arriba',

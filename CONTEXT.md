@@ -149,3 +149,38 @@ _Avoid_: Manual Android copy
 **Test & Sync Protocol**:
 The required completion protocol whenever an agent finishes changes: run tests, execute an **iOS Sync** via `npm run build`, and declare `test done` to the user. The user then launches or updates the native app on their physical phone using Xcode's Run (Play) button.
 _Avoid_: Incomplete handoff, unsynced iOS build
+
+### Multimodal Network & Bus Integration (EMT)
+
+**EMT Bus Stop**:
+A municipal surface transit stop in EMT València's 1,155-stop network, distinct from a Metrovalencia rail Station. Identified by a unique numeric `stopId` / `parada`.
+_Avoid_: Metro station, rail stop, depot
+
+**EMT SAE Feed**:
+The open real-time arrival estimation service operated by EMT València (`getSAE`), returning XML predictions of incoming buses per stop. Requires a browser `User-Agent` header; CLI user-agents receive decoy errors. See ADR-0011.
+_Avoid_: FGV feed, metro API, timetable scraper
+
+**On-Demand Bus Fetching**:
+Fetching live bus predictions strictly upon direct user selection of a bus stop, station feeder, or pin drop within range, rather than continuously polling the city's 1,155 stops. Protects the device battery and network rate budget.
+_Avoid_: Network sync, bus polling, bulk sync
+
+**Train-First Asynchronous Loading**:
+The UX pattern where high-confidence train arrivals render with zero latency (from client Arrival Memory), followed by an asynchronous background fetch for connecting EMT bus arrivals, which pop in seamlessly when ready.
+_Avoid_: Synchronous blocking wait, all-or-nothing render
+
+**Spawn Radius (5-min Walk)**:
+The 375-metre spatial threshold around a dropped pin or User Location within which multimodal transit stops spawn into the "Where you're at" sheet.
+_Avoid_: Buffer zone, catchment area, 1km radius
+
+**Bus GPS Stream**:
+Municipal ArcGIS MapServer Layer 384 (`Seguimiento_EMT`) broadcasting live coordinates for all active buses in the city in a single periodic query (~130ms). Buses are positioned directly from this fix rather than walked along timetables.
+_Avoid_: Bus timetable walk, GTFS bus estimate
+
+### Workspace & Repository Heritage
+
+**Variant A Prototype**:
+The calibrated multimodal UX developed and fine-tuned by the user at commit `465201e` on branch `prototype/bus-roadmap` in repository `/Users/peterab/Documents/GitHub/vib_bus_prototype` (viewable at `http://localhost:5174/?variant=A`). Benchmark design for dedicated bus stop boards, 2-column stacked map bubbles, yellow selected station rim, and clean Metro-only station panels. Agents must never unilaterally redesign or discard this fine-tuned layout.
+_Avoid_: Redesigned variant, experimental UI, tabbed metro sheet
+
+**Production Repo**:
+The primary repository at `/Users/peterab/Documents/GitHub/vib_metroValencia` on branch `main`. Contains the shipping Metrovalencia application. Independent from the prototype worktree.

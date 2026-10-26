@@ -242,7 +242,7 @@ describe('StationPanel component', () => {
     expect(html).not.toContain('<footer');
   });
 
-  it("renders Variant A as a multimodal 5-minute walk transit hub with Where you're at/Ping header", () => {
+  it("renders Variant A as a streamlined multimodal transit hub with promoted tabs, <> expand button and close button", () => {
     // 1. With GPS user location
     const gpsHtml = renderToStaticMarkup(
       <StationPanel
@@ -251,32 +251,35 @@ describe('StationPanel component', () => {
         variant="A"
         onClose={() => {}}
         userLocation={{ coordinates: [-0.377, 39.467] }}
+        isPin={true}
       />
     );
 
-    // Title reflects user location origin ("Where you're at") and 5 min walk radius
-    expect(gpsHtml).toMatch(/Where you(&#x27;|')re at/);
+    // Redundant "Where you're at" row is removed to reduce card height
+    expect(gpsHtml).not.toMatch(/Where you(&#x27;|')re at/);
     expect(gpsHtml).not.toContain('GPS Location');
-    expect(gpsHtml).toContain('5 min walk');
-    // Removed redundant "X metro stations, Y bus stops" meta line
+    expect(gpsHtml).not.toContain('5 min walk');
+    expect(gpsHtml).toContain('Autobús');
+    expect(gpsHtml).toContain('Trains');
     expect(gpsHtml).not.toContain('station-header-meta');
 
-    // Multimodal tabs: All on far left, then Metro, then Bus
+    // Multimodal tabs promoted to top bar: All on far left, then Trains, then Bus
     expect(gpsHtml).toContain('>All<');
-    expect(gpsHtml).toContain('>Metro<');
+    expect(gpsHtml).toContain('>Trains<');
     expect(gpsHtml).toContain('>Bus<');
     expect(gpsHtml).not.toContain('Dual Split');
 
     const idxAll = gpsHtml.indexOf('>All<');
-    const idxMetro = gpsHtml.indexOf('>Metro<');
+    const idxTrains = gpsHtml.indexOf('>Trains<');
     const idxBus = gpsHtml.indexOf('>Bus<');
     expect(idxAll).toBeGreaterThan(-1);
-    expect(idxMetro).toBeGreaterThan(idxAll);
-    expect(idxBus).toBeGreaterThan(idxMetro);
+    expect(idxTrains).toBeGreaterThan(idxAll);
+    expect(idxBus).toBeGreaterThan(idxTrains);
 
-    // Maximize / Minimize icon button in header
+    // Expand toggle is a compact visual Maximize/Minimize button integrated next to the close button
     expect(gpsHtml).toContain('station-panel-expand');
-    expect(gpsHtml).toContain('Maximize / Expand full departures');
+    expect(gpsHtml).toContain('lucide-maximize-2');
+    expect(gpsHtml).toContain('station-panel-close');
 
     // In split view, stop walk distances and foot icons are hidden to preserve UI space
     expect(gpsHtml).not.toContain('lucide-footprints');
@@ -289,9 +292,40 @@ describe('StationPanel component', () => {
         variant="A"
         onClose={() => {}}
         userLocation={{ coordinates: [-0.377, 39.467], isMapClick: true }}
+        isPin={true}
       />
     );
-    expect(pingHtml).toContain('Map Ping');
-    expect(pingHtml).toContain('5 min walk');
+    expect(pingHtml).not.toContain('Map Ping');
+    expect(pingHtml).not.toContain('5 min walk');
+    expect(pingHtml).toContain('Autobús');
+    expect(pingHtml).toContain('station-panel-expand');
+    expect(pingHtml).toContain('station-panel-close');
+  });
+
+  it("renders an individual metro station with only departures and no double side view or bus tabs", () => {
+    const html = renderToStaticMarkup(
+      <StationPanel
+        station={sampleStation}
+        theme="dark"
+        variant="A"
+        onClose={() => {}}
+        userLocation={{ coordinates: [-0.377, 39.467] }}
+      />
+    );
+
+    // Shows station header with name and lines
+    expect(html).toContain('Xàtiva');
+    expect(html).toContain('station-header-meta');
+    expect(html).toContain('station-header-icon');
+    expect(html).toContain('station-panel-expand');
+    expect(html).toContain('station-panel-close');
+
+    // Shows only metro arrivals table
+    expect(html).toContain('station-arrivals-table');
+
+    // Does NOT render multimodal tabs or autobus column
+    expect(html).not.toContain('station-multimodal-tabs');
+    expect(html).not.toContain('multimodal-dual-scroll-container');
+    expect(html).not.toContain('Autobús');
   });
 });

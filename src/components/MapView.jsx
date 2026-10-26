@@ -362,8 +362,10 @@ const initBasemapPromise = (typeof window !== 'undefined')
 // somewhere that has not snapped it — userLocation's Nearest Station, say —
 // still has to be drawn and framed at the same place as its own dot.
 const snappedCoordinates = (station) => {
-  const snapped = station && snappedByName.get(station.properties.name);
-  return snapped ? snapped.geometry.coordinates : station.geometry.coordinates;
+  if (!station) return [DEFAULT_MAP_CENTER[0], DEFAULT_MAP_CENTER[1]];
+  const name = station.properties?.name;
+  const snapped = name ? snappedByName.get(name) : null;
+  return snapped?.geometry?.coordinates || station.geometry?.coordinates || [DEFAULT_MAP_CENTER[0], DEFAULT_MAP_CENTER[1]];
 };
 
 const cartoApiKey = import.meta.env.VITE_CARTO_API_KEY;
@@ -608,7 +610,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   const container = map?.getContainer();
   const containerRect = container ? container.getBoundingClientRect() : undefined;
   const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
-  const panel = document.querySelector('.station-panel');
+  const panel = document.querySelector('.station-panel, .bus-stop-board');
   const isPanelPresent = hasPanel ?? Boolean(panel);
 
   let panelRect;
@@ -790,13 +792,15 @@ const MapView = ({
   const updateTrainCount = (liveVehicles) => {
     if (!trainCountRef.current) return;
     const lang = languageRef.current;
-    if (liveVehicles.length > 0) {
+    if (liveVehicles && liveVehicles.length > 0) {
       const pinned = liveVehicles.filter(v => v.sightingCount > 1).length;
       trainCountRef.current.textContent = pinned > 0
         ? translate(lang, 'mapView.trainCountPinned', { count: liveVehicles.length, pinned })
         : translate(lang, 'mapView.trainCountLive', { count: liveVehicles.length });
+      trainCountRef.current.style.display = '';
     } else {
       trainCountRef.current.textContent = translate(lang, 'mapView.trainCountNone');
+      trainCountRef.current.style.display = 'none';
     }
   };
 
@@ -901,6 +905,66 @@ const MapView = ({
     }
   };
 
+  // ── Relevant Vehicle Filter ────────────────────────────────────────────────
+  // Only show running trains when:
+  // 1. A line filter is active (shows trains on that line)
+  // 2. A station is chosen (shows trains on lines serving that station)
+  // 3. A pin location is placed (shows trains on lines serving stations near the pin)
+  // If nothing is chosen, no running trains are shown on startup/overview.
+  const getRelevantVehicles = (vehicles) => {
+    const activeFilter = filterRef.current;
+    const hasLineFilter = Array.isArray(activeFilter) && activeFilter.length > 0;
+    const selected = selectedStationRef.current;
+    const userLoc = userLocationRef.current;
+
+    const isPin = Boolean(
+      selected?.isPin ||
+      selected?.properties?.isPin ||
+      selected?.properties?.name === 'Map Ping' ||
+      selected?.properties?.name === "Where you're at" ||
+      userLoc?.isMapClick
+    );
+    const hasStation = Boolean(selected && !isPin);
+
+    if (!hasLineFilter && !hasStation && !isPin) {
+      return [];
+    }
+
+    return vehicles.filter((v) => {
+      const vLine = String(v.line);
+
+      // 1. Line filter: train must match the chosen line
+      if (hasLineFilter && !activeFilter.map(String).includes(vLine)) {
+        return false;
+      }
+
+      // 2. Station focus: train must be on a line serving this station
+      if (hasStation) {
+        const stationLines = (selected.properties?.lines || []).map(String);
+        if (stationLines.length > 0 && !stationLines.includes(vLine)) {
+          return false;
+        }
+      }
+
+      // 3. Pin focus: train must serve a station near the pin location
+      if (isPin) {
+        const pinCoords = userLoc?.coordinates || selected?.geometry?.coordinates;
+        if (pinCoords) {
+          const nearby = (drawnStationsRef.current || stationFeatures).filter((st) => {
+            const coords = snappedCoordinates(st);
+            return coords && getDistance(pinCoords, coords) <= 800;
+          });
+          const nearbyLines = new Set(nearby.flatMap((st) => (st.properties?.lines || []).map(String)));
+          if (nearbyLines.size > 0 && !nearbyLines.has(vLine)) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  };
+
   // ── Initialize vehicle animation loop ──────────────────────────────────────
   // Runs on display V-Sync (native requestAnimationFrame), matching 60Hz and 120Hz
   // ProMotion screens with delta-time vehicle interpolation and zero cadence judder.
@@ -908,14 +972,10 @@ const MapView = ({
     stopAnimation();
     clearVehicleMarkers();
 
-    const activeFilter = filterRef.current;
     // Live vehicles only: no timetable/headway guesses are ever drawn.
     const liveNow = (now) => trainPositionEngine.getLiveVehiclesFromMemory(now)
       .map((v) => trainPositionEngine.smoothVehicle(v, now));
-    let visible = liveNow(Date.now());
-    if (Array.isArray(activeFilter) && activeFilter.length > 0) {
-      visible = visible.filter(v => activeFilter.includes(String(v.line)));
-    }
+    let visible = getRelevantVehicles(liveNow(Date.now()));
 
     const createVehicleMarker = (v) => {
       const color = lineColorMap[v.line] || '#ffffff';
@@ -972,11 +1032,8 @@ const MapView = ({
       for (const id of trainPositionEngine.renderState.keys()) {
         if (!alive.has(id)) trainPositionEngine.renderState.delete(id);
       }
-      updateTrainCount(currentVehicles);
-      let currentVisible = currentVehicles;
-      if (Array.isArray(filterRef.current) && filterRef.current.length > 0) {
-        currentVisible = currentVisible.filter(v => filterRef.current.includes(String(v.line)));
-      }
+      let currentVisible = getRelevantVehicles(currentVehicles);
+      updateTrainCount(currentVisible);
       const visibleIds = new Set(currentVisible.map(v => v.id));
 
       markerMapRef.current.forEach(({ marker }, id) => {
@@ -1026,59 +1083,63 @@ const MapView = ({
 
   const applyLineFilter = (map, filter) => {
     const apply = () => {
-      if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
-        let expr = null;
-        if (Array.isArray(filter) && filter.length > 0) {
-          expr = ['any', ...filter.map(f => ['==', ['get', 'line'], f])];
-        } else if (filter && typeof filter === 'string') {
-          expr = ['==', ['get', 'line'], filter];
-        }
-        map.setFilter('metro-fill', expr);
-        map.setFilter('metro-casing', expr);
+      try {
+        if (!map || !map.isStyleLoaded() || !map.style) return;
+        if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
+          let expr = null;
+          if (Array.isArray(filter) && filter.length > 0) {
+            expr = ['any', ...filter.map(f => ['==', ['get', 'line'], f])];
+          } else if (filter && typeof filter === 'string') {
+            expr = ['==', ['get', 'line'], filter];
+          }
+          map.setFilter('metro-fill', expr);
+          map.setFilter('metro-casing', expr);
 
-        // Compute side-by-side offsets when multiple lines are visible.
-        // If no filter, reset offsets to 0.
-        const allLines = lineFeatures.map(l => String(l.properties.line));
-        const visible = Array.isArray(filter) && filter.length > 0 ? filter.map(String) : allLines;
-        const n = visible.length;
-        const spacing = (lineRenderConfig && Number.isFinite(lineRenderConfig.offsetSpacing)) ? lineRenderConfig.offsetSpacing : 6; // pixels
-        const offsets = {};
-        // Group visible lines by an approximate geometry key so identical/shared
-        // geometries are not offset apart (they represent the same track).
-        const geomKey = (id) => {
-          const feat = lineFeatures.find(l => String(l.properties.line) === String(id));
-          if (!feat || !feat.geometry || !feat.geometry.coordinates) return id;
-          return feat.geometry.coordinates.map(c => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join('|');
-        };
-        const groups = {};
-        visible.forEach(id => {
-          const key = geomKey(id);
-          groups[key] = groups[key] || [];
-          groups[key].push(String(id));
-        });
-        // Standalone lines (like Line 4 running on its own dedicated tracks) MUST have offset 0
-        // to prevent twisting, miter spikes, or self-intersecting loops on corners.
-        // Only lines sharing the exact same track corridor receive a subtle side-by-side offset.
-        for (const feat of lineFeatures) {
-          offsets[String(feat.properties.line)] = 0;
-        }
-        for (const key of Object.keys(groups)) {
-          const group = groups[key];
-          if (group.length > 1) {
-            for (let i = 0; i < group.length; i++) {
-              const id = group[i];
-              offsets[id] = (i - (group.length - 1) / 2) * Math.min(spacing, 4);
+          // Compute side-by-side offsets when multiple lines are visible.
+          // If no filter, reset offsets to 0.
+          const allLines = lineFeatures.map(l => String(l.properties.line));
+          const visible = Array.isArray(filter) && filter.length > 0 ? filter.map(String) : allLines;
+          const spacing = (lineRenderConfig && Number.isFinite(lineRenderConfig.offsetSpacing)) ? lineRenderConfig.offsetSpacing : 6; // pixels
+          const offsets = {};
+          // Group visible lines by an approximate geometry key so identical/shared
+          // geometries are not offset apart (they represent the same track).
+          const geomKey = (id) => {
+            const feat = lineFeatures.find(l => String(l.properties.line) === String(id));
+            if (!feat || !feat.geometry || !feat.geometry.coordinates) return id;
+            return feat.geometry.coordinates.map(c => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join('|');
+          };
+          const groups = {};
+          visible.forEach(id => {
+            const key = geomKey(id);
+            groups[key] = groups[key] || [];
+            groups[key].push(String(id));
+          });
+          // Standalone lines (like Line 4 running on its own dedicated tracks) MUST have offset 0
+          // to prevent twisting, miter spikes, or self-intersecting loops on corners.
+          // Only lines sharing the exact same track corridor receive a subtle side-by-side offset.
+          for (const feat of lineFeatures) {
+            offsets[String(feat.properties.line)] = 0;
+          }
+          for (const key of Object.keys(groups)) {
+            const group = groups[key];
+            if (group.length > 1) {
+              for (let i = 0; i < group.length; i++) {
+                const id = group[i];
+                offsets[id] = (i - (group.length - 1) / 2) * Math.min(spacing, 4);
+              }
             }
           }
+          // apply offsets to features
+          for (const feat of lineFeatures) {
+            const id = String(feat.properties.line);
+            feat.properties.offset = offsets[id] || 0;
+          }
+          // update source data so `line-offset` picks up new offsets
+          const src = map.getSource('metro-lines');
+          if (src && typeof src.setData === 'function') src.setData({ type: 'FeatureCollection', features: [...lineFeatures, ...returnLegFeatures] });
         }
-        // apply offsets to features
-        for (const feat of lineFeatures) {
-          const id = String(feat.properties.line);
-          feat.properties.offset = offsets[id] || 0;
-        }
-        // update source data so `line-offset` picks up new offsets
-        const src = map.getSource('metro-lines');
-        if (src && typeof src.setData === 'function') src.setData({ type: 'FeatureCollection', features: [...lineFeatures, ...returnLegFeatures] });
+      } catch (err) {
+        console.warn('applyLineFilter suppressed error during style transition:', err);
       }
     };
     if (map.isStyleLoaded()) apply();
@@ -1093,9 +1154,14 @@ const MapView = ({
   // two can never fight over the same Line.
   const applyLineDim = (map, selectedStation) => {
     const apply = () => {
-      if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
-        map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(selectedStation, 1, 0.35));
-        map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(selectedStation, 0.35, 0.15));
+      try {
+        if (!map || !map.isStyleLoaded() || !map.style) return;
+        if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
+          map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(selectedStation, 1, 0.35));
+          map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(selectedStation, 0.35, 0.15));
+        }
+      } catch (err) {
+        console.warn('applyLineDim suppressed error during style transition:', err);
       }
     };
     if (map.isStyleLoaded()) apply();
@@ -1221,15 +1287,6 @@ const MapView = ({
         }
       });
 
-      // Boot arrivals early in the background while the splash screen covers initial load.
-      let bootedArrivals = false;
-      const startArrivalSync = () => {
-        if (bootedArrivals) return;
-        bootedArrivals = true;
-        arrivalStore.bootNetwork();
-      };
-      const bootTimer = setTimeout(startArrivalSync, 100);
-
       map.on('style.load', () => {
         // In dev, StrictMode double-mounts this effect, so a stale map from the
         // first mount can still be sitting on a pending style.load when the
@@ -1237,8 +1294,6 @@ const MapView = ({
         // across instances, so letting a stale callback through would clear the
         // live map's markers and re-attach them to the removed one.
         if (mapRef.current !== map) return;
-        startArrivalSync();
-        clearTimeout(bootTimer);
         if (onReadyRef.current) {
           const notifyReady = onReadyRef.current;
           onReadyRef.current = null; // first style.load only; theme swaps reload the style
@@ -1252,22 +1307,28 @@ const MapView = ({
         ensureBusLayers(map, themeRef.current);
       });
 
-      // Predictions age out after about 18 minutes, so without a repeat sweep the
-      // whole network quietly decays into simulated trains. Stations still inside
-      // their memory pause cost nothing, so this is cheaper than it looks.
-      const syncIfVisible = () => {
-        if (typeof document !== 'undefined' && document.hidden) return;
-        arrivalStore.syncNetwork();
-      };
-      const syncTimer = setInterval(syncIfVisible, NETWORK_SYNC_INTERVAL_MS);
-      document.addEventListener('visibilitychange', syncIfVisible);
+      map.on('webglcontextlost', (e) => {
+        console.warn('MapLibre WebGL context lost; preventing default to permit restoration.');
+        if (e.originalEvent && typeof e.originalEvent.preventDefault === 'function') {
+          e.originalEvent.preventDefault();
+        }
+      });
+
+      map.on('webglcontextrestored', () => {
+        console.info('MapLibre WebGL context restored; re-synchronizing layer state.');
+        if (mapRef.current !== map) return;
+        initStationMarkers(map);
+        initVehicleLoop(map);
+        markersReadyRef.current = true;
+        applyLineFilter(map, filterRef.current);
+        applyLineDim(map, selectedStationRef.current);
+        ensureBusLayers(map, themeRef.current);
+      });
+
       const stopTracker = startTrainTracker();
 
       teardown = () => {
-        clearTimeout(bootTimer);
-        clearInterval(syncTimer);
         stopTracker();
-        document.removeEventListener('visibilitychange', syncIfVisible);
         stopAnimation();
         clearVehicleMarkers();
         clearStationMarkers();
@@ -1277,6 +1338,13 @@ const MapView = ({
         map.remove();
         mapRef.current = null;
       };
+    }).catch((err) => {
+      console.warn('initBasemapPromise error handled:', err);
+      if (onReadyRef.current) {
+        const notifyReady = onReadyRef.current;
+        onReadyRef.current = null;
+        notifyReady();
+      }
     });
 
     return () => {
@@ -1289,21 +1357,12 @@ const MapView = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    // The map is constructed with the style matching the initial `theme`, so
-    // this effect's mount-time run has nothing to do — and calling setStyle
-    // before that initial style has loaded triggers a second style.load cycle
-    // (and a "Style is not done loading" console warning) that only widens
-    // the StrictMode double-mount race above. A theme flip that lands in that
-    // narrow pre-load window is silently missed, which is an acceptable trade
-    // for removing the race.
-    if (!map.isStyleLoaded()) return;
-    // diff:false because the two vector styles differ by more than paint: each
-    // flavour names its own sprite file, and MapLibre's style diffing cannot
-    // express a sprite change. Left to diff, a flip repainted some of the 56
-    // basemap layers and not others, landing on a light ground wearing dark
-    // labels. A full reload costs one re-read of the archive header and is the
-    // only way to be sure the whole basemap changed.
-    map.setStyle(styleFor(theme), { diff: false });
+    if (!map.isStyleLoaded() || !map.style) return;
+    try {
+      map.setStyle(styleFor(theme), { diff: false });
+    } catch (err) {
+      console.warn('map.setStyle suppressed error during style transition:', err);
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -1320,6 +1379,15 @@ const MapView = ({
     const now = Array.isArray(activeLineFilter) ? activeLineFilter.map(String) : [];
     const added = now.filter((l) => !prevFilterRef.current.includes(l));
     prevFilterRef.current = now;
+    if (now.length > 0) {
+      // Fetch arrivals for key stations on the selected line
+      const lineStations = (drawnStationsRef.current || stationFeatures).filter((st) =>
+        (st.properties?.lines || []).some((l) => now.includes(String(l)))
+      );
+      lineStations.slice(0, 5).forEach((st) => {
+        if (st.properties) arrivalStore.getStationArrivals(st.properties);
+      });
+    }
     if (added.length > 0) {
       const onLine = stationFeatures.filter((st) => (st.properties.lines || []).some((l) => now.includes(String(l))));
       if (onLine.length > 1) {
@@ -1380,7 +1448,7 @@ const MapView = ({
     }
 
     if (!selectedStation) {
-      if (prevStationRef.current) {
+      if (prevStationRef.current && !selectedBusStop) {
         prevStationRef.current = null;
         closingZoomRef.current = true;
         map.once('moveend', () => { closingZoomRef.current = false; });
@@ -1391,6 +1459,8 @@ const MapView = ({
           duration: CAMERA_EASE_MS,
           essential: true,
         });
+      } else {
+        prevStationRef.current = null;
       }
       return undefined;
     }
@@ -1407,13 +1477,38 @@ const MapView = ({
 
     const coordinates = snappedCoordinates(selectedStation);
 
+    // Fetch arrivals for the selected station / pin location and surrounding stations
+    if (isPinTarget) {
+      const pinCoords = userLocationRef.current?.coordinates || coordinates;
+      if (pinCoords) {
+        const nearby = (drawnStationsRef.current || stationFeatures).filter((st) => {
+          const coords = snappedCoordinates(st);
+          return coords && getDistance(pinCoords, coords) <= 800;
+        });
+        nearby.slice(0, 4).forEach((st) => {
+          if (st.properties) arrivalStore.getStationArrivals(st.properties);
+        });
+      }
+    } else if (selectedStation.properties) {
+      arrivalStore.getStationArrivals(selectedStation.properties);
+      const nearby = (drawnStationsRef.current || stationFeatures).filter((st) => {
+        if (st.properties?.name === selectedStation.properties?.name) return false;
+        const coords = snappedCoordinates(st);
+        return coords && getDistance(coordinates, coords) <= 800;
+      });
+      nearby.slice(0, 3).forEach((st) => {
+        if (st.properties) arrivalStore.getStationArrivals(st.properties);
+      });
+    }
+
+    let marker = null;
     if (!isPinTarget) {
       const element = document.createElement('div');
       element.className = 'station-focus-node';
       // A visual anchor only — no countdowns to tick, so it's rendered once per
       // selection rather than on an interval. Arrivals live in the Station panel.
       element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current);
-      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
+      marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
         .setLngLat(coordinates)
         .addTo(map);
       focusMarkerRef.current = marker;
@@ -1430,33 +1525,29 @@ const MapView = ({
       userLocationRef.current?.status === 'located'
     );
 
-    if (isPinMode && userLocationRef.current?.coordinates) {
-      map.easeTo({
-        center: userLocationRef.current.coordinates,
-        zoom: Math.max(map.getZoom(), 15.2),
-        padding: basePadding,
-        duration: CAMERA_EASE_MS,
-        essential: true,
-      });
-    } else {
-      map.easeTo({
-        center: coordinates,
-        zoom: targetZoom,
-        padding: basePadding,
-        duration: CAMERA_EASE_MS,
-        essential: true,
-      });
-    }
+    const focusCoords = (isPinMode && userLocationRef.current?.coordinates)
+      ? userLocationRef.current.coordinates
+      : coordinates;
+
+    map.easeTo({
+      center: focusCoords,
+      zoom: targetZoom,
+      padding: basePadding,
+      duration: CAMERA_EASE_MS,
+      essential: true,
+    });
 
     return () => {
-      marker.remove();
+      if (marker) {
+        marker.remove();
+      }
       if (focusMarkerRef.current === marker) focusMarkerRef.current = null;
     };
-  }, [selectedStation]);
+  }, [selectedStation, selectedBusStop]);
 
   // ── Bus Stop in focus ───────────────────────────────────────────────────────
   // Clicking an EMT bus stop anchors a compact marker (EMT badge + shortened name + lines)
-  // and smoothly centers the visible map on the stop.
+  // and smoothly centers the visible map on the stop matching metro/pin movement.
   const prevBusStopRef = useRef(null);
 
   useEffect(() => {
@@ -1469,7 +1560,18 @@ const MapView = ({
     }
 
     if (!selectedBusStop) {
-      if (prevBusStopRef.current) {
+      if (prevBusStopRef.current && !selectedStation) {
+        prevBusStopRef.current = null;
+        closingZoomRef.current = true;
+        map.once('moveend', () => { closingZoomRef.current = false; });
+        map.easeTo({
+          center: map.getCenter(),
+          padding: ZERO_PADDING,
+          zoom: zoomOutTarget(map.getZoom()),
+          duration: CAMERA_EASE_MS,
+          essential: true,
+        });
+      } else {
         prevBusStopRef.current = null;
       }
       return undefined;
@@ -1480,20 +1582,22 @@ const MapView = ({
       focusMarkerRef.current = null;
     }
 
+    closingZoomRef.current = false;
     prevBusStopRef.current = selectedBusStop;
     const coordinates = selectedBusStop.coordinates;
     if (!coordinates || !Array.isArray(coordinates)) return undefined;
 
+    let marker = null;
     const element = document.createElement('div');
     element.className = 'bus-focus-node';
-    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current);
-    const marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
+    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true);
+    marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
       .setLngLat(coordinates)
       .addTo(map);
     busFocusMarkerRef.current = marker;
 
     const basePadding = panelAwarePadding(map, { hasPanel: true });
-    const targetZoom = Math.max(map.getZoom(), 15.5);
+    const targetZoom = calculateFocusZoom(map.getZoom());
 
     map.easeTo({
       center: coordinates,
@@ -1504,10 +1608,12 @@ const MapView = ({
     });
 
     return () => {
-      marker.remove();
+      if (marker) {
+        marker.remove();
+      }
       if (busFocusMarkerRef.current === marker) busFocusMarkerRef.current = null;
     };
-  }, [selectedBusStop]);
+  }, [selectedBusStop, selectedStation]);
 
   // ── Highlight yellow rim around chosen station or bus stop ─────────────────
   useEffect(() => {

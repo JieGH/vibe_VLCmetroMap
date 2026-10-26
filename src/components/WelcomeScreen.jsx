@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
-import { isAndroid } from '../utils/platform';
 import AppBadge from './AppBadge';
 import {
   WELCOME_MIN_HOLD_MS,
@@ -46,14 +45,23 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
 
   useEffect(() => { scheduleRef.current?.setReady(ready); }, [ready]);
 
-  // Android: a tap anywhere skips the splash straight to the map.
+  // Guaranteed failsafe: the splash screen must never lock the UI or freeze on screen.
+  useEffect(() => {
+    const failsafe = setTimeout(() => {
+      setHidden(true);
+      markWelcomeSeen();
+      if (onCompleteRef.current) onCompleteRef.current();
+    }, 2000);
+    return () => clearTimeout(failsafe);
+  }, []);
+
+  // A tap anywhere skips the splash straight to the map.
   const skip = () => {
     scheduleRef.current?.cancel();
     setHidden(true);
     markWelcomeSeen();
     if (onCompleteRef.current) onCompleteRef.current();
   };
-  const skippable = isAndroid();
 
   if (hidden) return null;
 
@@ -63,7 +71,7 @@ const WelcomeScreen = ({ ready = false, onComplete }) => {
       role="status"
       aria-label="Xarxa"
       data-testid="welcome-screen"
-      onClick={skippable ? skip : undefined}
+      onClick={skip}
       style={fading ? { transitionDelay: `${fadeDelay}ms` } : undefined}
     >
       <div className="welcome-screen-content">
