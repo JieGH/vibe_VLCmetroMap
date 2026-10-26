@@ -85,6 +85,7 @@ export default {
     placeholder: 'Busca una estació o línia...',
     ariaLabel: 'Busca estacions i línies',
     clearTitle: 'Esborra la cerca',
+    closeTitle: 'Tanca la cerca',
     lines: 'Línies',
     stations: 'Estacions',
     stationLines: 'Línies: {{lines}}',

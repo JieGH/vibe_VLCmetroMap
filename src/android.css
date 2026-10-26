@@ -159,7 +159,8 @@ html.android .top-bar-container {
   transition: none !important;
 }
 
-html.android .top-bar-container .sidebar-toggle-btn {
+html.android .top-bar-container .sidebar-toggle-btn,
+html.android .top-bar-container .search-toggle-btn {
   display: flex !important;
   width: 48px;
   height: 48px;
@@ -173,6 +174,7 @@ html.android .top-bar-container .sidebar-toggle-btn {
 }
 
 html.android .top-bar-container .sidebar-toggle-btn svg,
+html.android .top-bar-container .search-toggle-btn svg,
 html.android .search-bar-container > button svg,
 html.android .search-bar-clear svg {
   width: 24px;

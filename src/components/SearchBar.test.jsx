@@ -32,4 +32,20 @@ describe('SearchBar component', () => {
     expect(html).toContain('role="combobox"');
     expect(html).toContain('aria-controls="search-bar-listbox"');
   });
+
+  it('renders popular stations suggestions when opened with autoFocus', () => {
+    const html = renderToStaticMarkup(
+      <SearchBar
+        autoFocus
+        onSelectStation={() => {}}
+        onSelectLine={() => {}}
+        activeLineFilter={[]}
+        selectedStation={null}
+      />
+    );
+
+    expect(html).toContain('search-suggest');
+    expect(html).toContain('Xàtiva');
+    expect(html).toContain('search-suggest-lines');
+  });
 });

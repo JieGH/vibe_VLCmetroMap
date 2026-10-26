@@ -89,6 +89,7 @@ export default {
     placeholder: 'Search for a station or line...',
     ariaLabel: 'Search stations and lines',
     clearTitle: 'Clear search',
+    closeTitle: 'Close search',
     lines: 'Lines',
     stations: 'Stations',
     stationLines: 'Lines: {{lines}}',

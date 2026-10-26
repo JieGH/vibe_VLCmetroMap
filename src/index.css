@@ -324,7 +324,7 @@ textarea {
   top: calc(20px + env(safe-area-inset-top, 0px));
   z-index: 40; /* Above station-panel (z-index 30) */
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 10px;
   touch-action: none;
 }
@@ -347,10 +347,11 @@ textarea {
   }
 }
 
-.sidebar-toggle-btn {
-  /* As tall as the search bar beside it (the row stretches both) and 52px wide, so it is a square of that height. */
-  align-self: stretch;
+.sidebar-toggle-btn,
+.search-toggle-btn {
+  /* 52px square matching the design system standard */
   width: 52px;
+  height: 52px;
   min-width: 52px;
   border-radius: var(--radius);
   border: 1px solid var(--border-color);
@@ -365,19 +366,27 @@ textarea {
   flex-shrink: 0;
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
 }
 
-.sidebar-toggle-btn:hover {
+.sidebar-toggle-btn:hover,
+.search-toggle-btn:hover {
   background: var(--bg-hover);
 }
 
-.sidebar-toggle-btn:active {
+.sidebar-toggle-btn:active,
+.search-toggle-btn:active {
   transform: scale(0.96);
 }
 
+.search-toggle-btn.active {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
 .search-bar-container {
-  width: 420px;
+  width: 100%;
+  max-width: 580px;
   flex: 1;
   min-width: 0;
   min-height: 52px;
@@ -388,6 +397,73 @@ textarea {
 .search-bar-results {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Search Overlay Modal */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-left: 12px;
+  padding-right: 12px;
+  pointer-events: auto;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.search-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.search-overlay .search-bar-container {
+  position: relative;
+  z-index: 101;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  animation: slideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-close-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.search-close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 
@@ -1305,6 +1381,15 @@ button:active {
 
   /* Same height as the search bar beside it (the bar row stretches both), square, so the two line up exactly. */
   .sidebar-toggle-btn {
+    width: 52px;
+    height: auto;
+    align-self: stretch;
+    min-width: 52px;
+    flex-shrink: 0;
+    display: flex;
+  }
+
+  .search-toggle-btn {
     width: 52px;
     height: auto;
     align-self: stretch;

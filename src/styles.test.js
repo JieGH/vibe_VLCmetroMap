@@ -41,6 +41,12 @@ describe('Top bar CSS layout stability', () => {
     expect(rule).toContain('flex-shrink: 0');
     expect(css).toMatch(/\.search-bar-container\s*\{[^}]*min-height: 52px/);
   });
+
+  it('styles magnifier search button with matching 52px dimensions and glass overlay', () => {
+    expect(css).toMatch(/\.search-toggle-btn/);
+    expect(css).toMatch(/\.search-overlay\s*\{[^}]*position:\s*fixed/);
+    expect(css).toMatch(/\.search-backdrop\s*\{[^}]*position:\s*absolute/);
+  });
 });
 
 describe('Global text selection prevention', () => {

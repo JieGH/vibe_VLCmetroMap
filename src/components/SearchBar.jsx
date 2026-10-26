@@ -21,14 +21,29 @@ const onColor = (hex) => {
 const stations = gtfsData.features.filter(f => f.geometry.type === 'Point');
 const lines    = metroData.features.filter(f => f.geometry.type === 'LineString');
 
-const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedStation, onSelectBusLine, variant = 'A' }) => {
+const SearchBar = ({
+  onSelectStation,
+  onSelectLine,
+  activeLineFilter,
+  selectedStation,
+  onSelectBusLine,
+  autoFocus = false,
+  onClose,
+}) => {
   const { t } = useTranslation();
   const [query,       setQuery]       = useState('');
-  const [isOpen,      setIsOpen]      = useState(false);
+  const [isOpen,      setIsOpen]      = useState(Boolean(autoFocus));
   const [highlighted, setHighlighted] = useState(-1);
   const dropdownRef = useRef(null);
   const inputRef    = useRef(null);
   const [suggestStyle, setSuggestStyle] = useState({});
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+      setIsOpen(true);
+    }
+  }, [autoFocus]);
 
   // Filtered results with Valencian accent-insensitive fuzzy search
   const filteredLines = query.trim()
@@ -54,7 +69,7 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
   useEffect(() => {
     if (!isOpen || query.trim() || !dropdownRef.current) return;
     const rect = dropdownRef.current.getBoundingClientRect();
-    const width = Math.min(380, window.innerWidth - 24);
+    const width = Math.min(540, window.innerWidth - 24);
     const left = Math.min(Math.max(rect.left, 12), window.innerWidth - 12 - width) - rect.left;
     setSuggestStyle({ width, right: 'auto', left });
   }, [isOpen, query]);
@@ -105,7 +120,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
       window.scrollTo(0, 0);
       document.body.scrollTop = 0;
     }
-  }, [onSelectStation]);
+    if (onClose) onClose();
+  }, [onSelectStation, onClose]);
 
   const handleSelectLine = useCallback((line) => {
     onSelectLine(line.properties.line);
@@ -117,7 +133,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
       window.scrollTo(0, 0);
       document.body.scrollTop = 0;
     }
-  }, [onSelectLine, t]);
+    if (onClose) onClose();
+  }, [onSelectLine, t, onClose]);
 
   const handleSelectBusLine = useCallback((busLine) => {
     if (onSelectBusLine) onSelectBusLine(busLine);
@@ -129,7 +146,8 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
       window.scrollTo(0, 0);
       document.body.scrollTop = 0;
     }
-  }, [onSelectBusLine]);
+    if (onClose) onClose();
+  }, [onSelectBusLine, onClose]);
 
   const handleClear = () => {
     setQuery('');
@@ -150,17 +168,14 @@ const SearchBar = ({ onSelectStation, onSelectLine, activeLineFilter, selectedSt
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      if (isOpen) {
-        setIsOpen(false);
-        setHighlighted(-1);
-        inputRef.current?.blur();
-        if (typeof window !== 'undefined') {
-          window.scrollTo(0, 0);
-          document.body.scrollTop = 0;
-        }
-      } else if (query) {
-        handleClear();
+      setIsOpen(false);
+      setHighlighted(-1);
+      inputRef.current?.blur();
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
       }
+      if (onClose) onClose();
       return;
     }
     if (!isOpen || allItems.length === 0) {

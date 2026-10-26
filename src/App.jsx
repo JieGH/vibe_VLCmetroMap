@@ -16,7 +16,6 @@ import { isIosDevice } from './utils/appDownload';
 import FeedbackModal from './components/FeedbackModal';
 import WhatsNewModal from './components/WhatsNewModal';
 import { markWhatsNewSeen } from './utils/whatsNew';
-import LanguageToggle from './components/LanguageToggle';
 import MovedNotice from './components/MovedNotice';
 import { locate, watchLocation } from './services/userLocation';
 import { createAutoLocator } from './services/autoLocate';
@@ -31,7 +30,7 @@ import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
-import { Sun, Moon, MessageSquare } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
@@ -78,6 +77,7 @@ function App() {
   const [selectedBusStop, setSelectedBusStop] = useState(null);
   const [activeMode, setActiveMode] = useState('bus'); // In Variant C, bus mode is default so differences are tactile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
@@ -202,8 +202,6 @@ function App() {
     setThemeMode(mode);
     if (mode !== 'system') applyTheme(mode);
   };
-
-  const toggleTheme = () => handleSelectTheme(theme === 'dark' ? 'light' : 'dark');
 
   // Station click — opens the multimodal hub card with walking metrics
   const handleSelectStation = (station, options = {}) => {
@@ -505,6 +503,7 @@ function App() {
   const backStateRef = useRef({});
   backStateRef.current = {
     rationale,
+    searchOpen: isSearchOpen,
     feedbackOpen: isFeedbackOpen,
     whatsNewOpen: isWhatsNewOpen,
     downloadOpen: isAppDownloadOpen,
@@ -523,7 +522,7 @@ function App() {
       const st = backStateRef.current;
       const active = document.activeElement;
       const searchFocused = Boolean(
-        active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+        st.searchOpen || (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA'))
       );
       switch (resolveBackAction({ ...st, rationaleOpen: Boolean(st.rationale), searchFocused })) {
         case 'decline-rationale': st.rationale.resolve(false); setRationale(null); break;
@@ -533,7 +532,7 @@ function App() {
         case 'close-about': setIsAboutOpen(false); break;
         case 'dismiss-welcome': setShowWelcome(false); break;
         case 'exit-dashboard': selectModeRef.current('map'); break;
-        case 'close-search': active.blur(); break;
+        case 'close-search': active?.blur?.(); setIsSearchOpen(false); break;
         case 'close-sidebar': setIsSidebarOpen(false); break;
         case 'close-station': setSelectedStation(null); break;
         case 'clear-filter': setActiveLineFilter([]); break;
@@ -639,7 +638,7 @@ function App() {
         onSelectTheme={handleSelectTheme}
       />
 
-      {/* Top Navigation Bar: Sidebar Toggle Button + Search Bar & Quick Actions */}
+      {/* Top Navigation Bar: Sidebar Toggle Button + Search Toggle Button */}
       <div className={`top-bar-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
         <button
           onClick={handleToggleSidebar}
@@ -649,162 +648,167 @@ function App() {
         >
           <AppBadge size={40} bare />
         </button>
-        <div
-          className="search-bar-container glass-panel"
-          style={{ padding: '8px 14px', display: 'flex', gap: '10px', alignItems: 'center' }}
+        <button
+          type="button"
+          onClick={() => setIsSearchOpen((prev) => !prev)}
+          className={`search-toggle-btn glass-panel ${isSearchOpen ? 'active' : ''}`}
+          title={t('searchBar.ariaLabel')}
+          aria-label={t('searchBar.ariaLabel')}
+          aria-expanded={isSearchOpen}
         >
-          {variant === 'C' && (
-            <div
-              className="dual-lens-mode-control"
-              role="tablist"
-              aria-label="Transit Mode Selector"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 2,
-                padding: '2px 4px',
-                background: 'rgba(0,0,0,0.18)',
-                borderRadius: 999,
-                border: '1px solid var(--border-color)',
-                flexShrink: 0,
-              }}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMode === 'metro'}
-                onClick={() => setActiveMode('metro')}
+          <Search size={22} />
+        </button>
+      </div>
+
+      {/* Search Overlay Modal */}
+      {isSearchOpen && (
+        <div className="search-overlay" role="dialog" aria-modal="true" aria-label={t('searchBar.ariaLabel')}>
+          <div className="search-backdrop" onClick={() => setIsSearchOpen(false)} />
+          <div
+            className="search-bar-container glass-panel"
+            style={{ padding: '8px 14px', display: 'flex', gap: '10px', alignItems: 'center' }}
+          >
+            {variant === 'C' && (
+              <div
+                className="dual-lens-mode-control"
+                role="tablist"
+                aria-label="Transit Mode Selector"
                 style={{
-                  padding: '3px 8px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: activeMode === 'metro' ? '#E2001A' : 'transparent',
-                  color: activeMode === 'metro' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 700,
-                  fontSize: '0.74rem',
-                  cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3,
+                  gap: 2,
+                  padding: '2px 4px',
+                  background: 'rgba(0,0,0,0.18)',
+                  borderRadius: 999,
+                  border: '1px solid var(--border-color)',
+                  flexShrink: 0,
                 }}
               >
-                <span
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMode === 'metro'}
+                  onClick={() => setActiveMode('metro')}
                   style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: '50%',
-                    background: activeMode === 'metro' ? '#ffffff' : '#E2001A',
-                    color: activeMode === 'metro' ? '#E2001A' : '#ffffff',
-                    fontSize: '0.58rem',
-                    fontWeight: 900,
+                    padding: '3px 8px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: activeMode === 'metro' ? '#E2001A' : 'transparent',
+                    color: activeMode === 'metro' ? '#ffffff' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: 1,
+                    gap: 3,
                   }}
                 >
-                  m
-                </span>
-                <span>Metro</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMode === 'bus'}
-                onClick={() => setActiveMode('bus')}
-                style={{
-                  padding: '3px 8px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: activeMode === 'bus' ? '#D62828' : 'transparent',
-                  color: activeMode === 'bus' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 700,
-                  fontSize: '0.74rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <span
+                  <span
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: '50%',
+                      background: activeMode === 'metro' ? '#ffffff' : '#E2001A',
+                      color: activeMode === 'metro' ? '#E2001A' : '#ffffff',
+                      fontSize: '0.58rem',
+                      fontWeight: 900,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: 1,
+                    }}
+                  >
+                    m
+                  </span>
+                  <span>Metro</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMode === 'bus'}
+                  onClick={() => setActiveMode('bus')}
                   style={{
-                    fontSize: '0.54rem',
-                    fontWeight: 900,
-                    background: activeMode === 'bus' ? '#ffffff' : '#D62828',
-                    color: activeMode === 'bus' ? '#D62828' : '#ffffff',
-                    padding: '1px 3px',
-                    borderRadius: 2,
-                    letterSpacing: '0.04em',
-                    lineHeight: 1,
+                    padding: '3px 8px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: activeMode === 'bus' ? '#D62828' : 'transparent',
+                    color: activeMode === 'bus' ? '#ffffff' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
-                  EMT
-                </span>
-                <span>Bus</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMode === 'all'}
-                onClick={() => setActiveMode('all')}
-                style={{
-                  padding: '3px 8px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: activeMode === 'all' ? '#1565C0' : 'transparent',
-                  color: activeMode === 'all' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 700,
-                  fontSize: '0.74rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3,
-                }}
-              >
-                <span>✨</span>
-                <span>All</span>
-              </button>
-            </div>
-          )}
-          <SearchBar
-            onSelectStation={handleSelectStation}
-            onSelectLine={handleSelectLine}
-            activeLineFilter={activeLineFilter}
-            selectedStation={selectedStation}
-            onSelectBusLine={handleSelectBusLine}
-            variant={variant}
-          />
-          <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', flexShrink: 0 }} />
-          <LanguageToggle className="topbar-icon-btn" />
-          <button
-            onClick={toggleTheme}
-            className="topbar-icon-btn"
-            title={theme === 'dark' ? t('app.switchToLightTheme') : t('app.switchToDarkTheme')}
-            aria-label={theme === 'dark' ? t('app.switchToLightTheme') : t('app.switchToDarkTheme')}
-          >
-            {theme === 'dark'
-              ? <Sun size={18} color="#FFD100" />
-              : <Moon size={18} color="#004D99" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsFeedbackOpen(true)}
-            className="topbar-icon-btn feedback-trigger-btn"
-            title={t('feedback.buttonTitle')}
-            aria-label={t('feedback.buttonTitle')}
-            aria-haspopup="dialog"
-          >
-            <MessageSquare size={18} />
-          </button>
+                  <span
+                    style={{
+                      fontSize: '0.54rem',
+                      fontWeight: 900,
+                      background: activeMode === 'bus' ? '#ffffff' : '#D62828',
+                      color: activeMode === 'bus' ? '#D62828' : '#ffffff',
+                      padding: '1px 3px',
+                      borderRadius: 2,
+                      letterSpacing: '0.04em',
+                      lineHeight: 1,
+                    }}
+                  >
+                    EMT
+                  </span>
+                  <span>Bus</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMode === 'all'}
+                  onClick={() => setActiveMode('all')}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: activeMode === 'all' ? '#1565C0' : 'transparent',
+                    color: activeMode === 'all' ? '#ffffff' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                >
+                  <span>✨</span>
+                  <span>All</span>
+                </button>
+              </div>
+            )}
+            <SearchBar
+              autoFocus
+              onSelectStation={handleSelectStation}
+              onSelectLine={handleSelectLine}
+              activeLineFilter={activeLineFilter}
+              selectedStation={selectedStation}
+              onSelectBusLine={handleSelectBusLine}
+              onClose={() => setIsSearchOpen(false)}
+            />
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(false)}
+              className="search-close-btn"
+              title={t('searchBar.closeTitle') || 'Close search'}
+              aria-label={t('searchBar.closeTitle') || 'Close search'}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
 
       {/* On a retired address (Netlify, workers.dev): ask the visitor to move to xarxa.net */}
       {!showWelcome && <MovedNotice />}
 
       {/* One dismissible chip per active Line filter (or bus trunks in prototype B/C) */}
-      {!searchFocused && (variant === 'B' || (variant === 'C' && activeMode === 'bus') || activeLineFilter.length > 0) && (
+      {!isSearchOpen && !searchFocused && (variant === 'B' || (variant === 'C' && activeMode === 'bus') || activeLineFilter.length > 0) && (
         <div className={`hub-chips-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
           {variant === 'B' ? (
             <div
