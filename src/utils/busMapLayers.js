@@ -179,7 +179,8 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
       },
       geometry: {
         type: 'LineString',
-        coordinates: [stationCoords, feeder.coordinates]
+        // End at the drawn (display-offset) marker position; real coords stay on the feeder.
+        coordinates: [stationCoords, getStopDisplayCoordinates(feeder) || feeder.coordinates]
       }
     }));
 

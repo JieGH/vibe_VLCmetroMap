@@ -99,4 +99,35 @@ describe('buildDisplayCoordinates', () => {
     expect([...m1.entries()].sort()).toEqual([...m2.entries()].sort());
     expect(JSON.stringify(list)).toBe(snapshot);
   });
+
+  it('pushes a pair at 59 m by about 0.5 m each', () => {
+    const a = stop('1', 'X - Y', at(0, 0));
+    const b = stop('2', 'X - Y', at(0, 59));
+    const map = buildDisplayCoordinates([a, b]);
+    // at() uses a slightly different metres-per-degree, so allow a margin.
+    for (const [s, code] of [[a, '1'], [b, '2']]) {
+      const m = getDistance(s.coordinates, map.get(code));
+      expect(m).toBeGreaterThan(0.2);
+      expect(m).toBeLessThan(1);
+    }
+  });
+
+  it.each([60, 80])('a %i m pair does not move and does not block a closer pairing', (gap) => {
+    // a--(gap)--b, with c 20 m beyond b: b/c is the closer pair and must still form.
+    const a = stop('1', 'X - Y', at(0, 0));
+    const b = stop('2', 'X - Y', at(0, gap));
+    const c = stop('3', 'X - Y', at(0, gap + 20));
+    const map = buildDisplayCoordinates([a, b, c]);
+    expect(map.has('1')).toBe(false);
+    expect(map.has('2')).toBe(true);
+    expect(map.has('3')).toBe(true);
+  });
+
+  it('KNOWN LIMITATION: same-name stops on the same side are still pushed apart', () => {
+    // Pairing uses name and distance only (no heading in the data), so two
+    // same-name stops 20 m apart along one kerb are treated as a pair.
+    const a = stop('1', 'X - Y', at(0, 0));
+    const b = stop('2', 'X - Y', at(0, 20));
+    expect(buildDisplayCoordinates([a, b]).size).toBe(2);
+  });
 });

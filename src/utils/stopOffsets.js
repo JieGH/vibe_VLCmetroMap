@@ -86,10 +86,11 @@ export function buildDisplayCoordinates(stops) {
       const ca = String(a.stopCode);
       const cb = String(b.stopCode);
       if (used.has(ca) || used.has(cb)) continue;
+      const push = Math.min(MAX_OFFSET_METRES, Math.max(0, (TARGET_SEPARATION_METRES - d) / 2));
+      // A pair that would not move must not block its members from pairing.
+      if (push <= 0) continue;
       used.add(ca);
       used.add(cb);
-      const push = Math.min(MAX_OFFSET_METRES, Math.max(0, (TARGET_SEPARATION_METRES - d) / 2));
-      if (push <= 0) continue;
 
       const cosLat = Math.cos((a.coordinates[1] * Math.PI) / 180);
       const mPerLng = METRES_PER_DEG_LAT * cosLat;
