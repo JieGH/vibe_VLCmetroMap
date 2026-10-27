@@ -282,10 +282,10 @@ textarea {
    look as BusBadge so a number on the map matches the sheet. Chips wrap into rows to stay compact. */
 .emt-stop-lines {
   display: none;
-  flex-wrap: wrap;
+  /* Two columns, as many rows as the stop needs (at most 3: the cap is 6 chips, the last may be +N). */
+  grid-template-columns: repeat(2, auto);
   justify-content: center;
   gap: 2px;
-  max-width: 62px;
 }
 .emt-stop-chip {
   display: inline-flex;
@@ -320,7 +320,7 @@ textarea {
   display: none;
 }
 .map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines {
-  display: flex;
+  display: grid;
 }
 
 /* A station or stop is selected (GPS or ping mode): everything else fades. */

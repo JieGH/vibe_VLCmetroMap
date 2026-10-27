@@ -319,7 +319,7 @@ describe('EMT line numbers at street zoom (#116)', () => {
 
   it('keeps the line chips hidden until the lines stage', () => {
     expect(rule('.emt-stop-lines')).toContain('display: none');
-    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines')).toContain('display: flex');
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines')).toContain('display: grid');
   });
 
   it('hides the EMT logo in the lines stage and drops the red box', () => {
@@ -327,10 +327,10 @@ describe('EMT line numbers at street zoom (#116)', () => {
     expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines')).toContain('background: transparent');
   });
 
-  it('wraps the chips into rows so dense stops stay compact', () => {
+  it('stacks the chips in exactly two columns so dense stops stay compact', () => {
     const lines = rule('.emt-stop-lines');
-    expect(lines).toContain('flex-wrap: wrap');
-    expect(lines).toMatch(/max-width: \d+px/);
+    expect(lines).toContain('grid-template-columns: repeat(2, auto)');
+    expect(lines).not.toContain('flex-wrap');
   });
 
   it('styles chips like the BusBadge (EMT red, white bold number)', () => {
