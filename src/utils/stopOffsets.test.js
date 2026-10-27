@@ -125,13 +125,12 @@ describe('buildDisplayCoordinates', () => {
     expect(map.has('3')).toBe(true);
   });
 
-  it('pushes a 30 m pair 28 m each, up to the 86 m target and under the 30 m cap', () => {
+  it('pushes a 30 m pair to the 12 m cap each (drawn 54 m apart, short of the 86 m target)', () => {
     const a = stop('1', 'X - Y', at(0, 0));
     const b = stop('2', 'X - Y', at(0, 30));
     const map = buildDisplayCoordinates([a, b]);
-    // (86 - 30) / 2 = 28 m each, just under the 30 m cap, so the pair ends up at the 86 m target.
-    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(85);
-    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(28, 0);
+    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(53);
+    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(MAX_OFFSET_METRES, 0);
   });
 
   it('a 70 m pair is under the cap: each moves (86 - 70) / 2 = 8 m', () => {
