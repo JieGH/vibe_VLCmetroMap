@@ -18,6 +18,7 @@ import {
   panelAwarePadding as computePanelPadding,
   focusTarget,
 } from '../utils/mapCamera';
+import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
 import { probeOfflineBasemap } from '../utils/basemapProbe';
@@ -1167,10 +1168,20 @@ const MapView = ({
         // 1.2x maximum, so the default view opens with stations already at their
         // largest, easiest-to-tap size rather than the network's full extent.
         zoom: DEFAULT_MAP_ZOOM,
+        // The map never shows anything beyond the Metrovalencia region (#118): MapLibre clamps pans to the
+        // box, and the minimum zoom is the one at which this viewport still fits inside it.
+        maxBounds: MAP_REGION_BOUNDS,
+        minZoom: regionMinZoom({ width: containerRef.current.clientWidth, height: containerRef.current.clientHeight }),
         // No (i) button on the map: OpenStreetMap, Protomaps and MapLibre are credited in About & Legal.
         attributionControl: false,
         maxTileCacheZoomLevels: 5,
         fadeDuration: 0,
+      });
+
+      // A bigger or turned screen needs a higher minimum zoom to stay inside the region.
+      map.on('resize', () => {
+        const { clientWidth, clientHeight } = map.getContainer();
+        map.setMinZoom(regionMinZoom({ width: clientWidth, height: clientHeight }));
       });
 
       // `originalEvent` is set only when a hand moved the camera (drag, pinch,

@@ -20,9 +20,10 @@ const path = require('node:path');
 const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 
-// The network's own bounding box is lon -0.590..-0.326, lat 39.084..39.623.
-// Padded so panning off the end of a line does not run off the edge of the map.
-const BBOX = '-0.65,39.02,-0.25,39.68';
+// The region the app shows (#118) lives in one file, read here and by the camera limits in
+// src/utils/mapRegion.js. The network's own box is lon -0.596..-0.325, lat 39.080..39.623, and the
+// region pads it so panning off the end of a line does not run off the edge of the map.
+const BBOX = require('../src/data/map_region.json').bbox.join(',');
 
 // BASEMAP_MAXZOOM caps the archive's deepest zoom. Default 13 gives an 8.2 MB archive (down from 36 MB)
 // and MapLibre overzooms vector tiles cleanly past it without needing heavy building-level tile data.

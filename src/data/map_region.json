@@ -1,0 +1,4 @@
+{
+  "note": "The one region the app shows: the Metrovalencia network with Valencia in the middle, Llíria and Bétera to the north-west, Sagunto and Puçol to the north-east, Alberic and Alzira to the south. Read by src/utils/mapRegion.js (camera limits) and scripts/fetch_basemap.cjs (basemap extract), so the two cannot drift apart.",
+  "bbox": [-0.65, 39.02, -0.25, 39.68]
+}
