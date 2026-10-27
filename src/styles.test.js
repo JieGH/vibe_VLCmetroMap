@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, it, expect } from 'vitest';
+import { SCREEN_PRESET_THRESHOLDS } from './utils/screenPreset';
 
 const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
 const androidCss = readFileSync(resolve(__dirname, 'android.css'), 'utf-8');
@@ -15,7 +16,7 @@ describe('Top bar CSS layout stability', () => {
 
   it('scopes desktop top-bar left positioning inside min-width media query', () => {
     const desktopSection = extractMediaSection(/@media\s*\(\s*min-width:\s*769px\s*\)\s*\{([\s\S]*?)\n\}/);
-    expect(desktopSection).toContain('left: 360px');
+    expect(desktopSection).toContain('left: calc(var(--sidebar-width) + 40px)');
     expect(desktopSection).toContain('.top-bar-container.sidebar-collapsed');
     expect(desktopSection).toContain('left: 20px');
   });
@@ -359,5 +360,43 @@ describe('Squarer bus line badges (#121)', () => {
   it('does not override the bus badge geometry in android.css', () => {
     expect(androidCss).not.toMatch(/\.bus-badge/);
     expect(androidCss).not.toMatch(/\.emt-stop-chip/);
+  });
+});
+
+describe('Wide desktop sidebar (#125)', () => {
+  const wide = `(min-width: ${SCREEN_PRESET_THRESHOLDS.desktopMinWidth}px)`;
+  const block = css.match(/@media\s*\(min-width:\s*(\d+)px\)\s*\{\s*:root\s*\{([^}]*)\}/);
+
+  it('widens the sidebar at the same width as the desktop preset', () => {
+    expect(block).toBeTruthy();
+    expect(`(min-width: ${block[1]}px)`).toBe(wide);
+    const w = Number(block[2].match(/--sidebar-width:\s*(\d+)px/)[1]);
+    expect(w).toBeGreaterThanOrEqual(400);
+    expect(w).toBeLessThanOrEqual(440);
+  });
+
+  it('keeps the default (phone/tablet) width at 320px via one variable', () => {
+    expect(css).toMatch(/:root\s*\{[^}]*--sidebar-width:\s*320px/);
+    expect(css).toMatch(/\.sidebar\s*\{[^}]*width:\s*var\(--sidebar-width\)/);
+  });
+
+  it('offsets the top bar, hub chips and collapse transform by the variable', () => {
+    expect(css).toContain('left: calc(var(--sidebar-width) + 40px)');
+    expect(css).toMatch(/max-width:\s*calc\(100vw - var\(--sidebar-width\) - 60px\)/);
+    expect(css).toMatch(/\.hub-chips-container\.sidebar-open\s*\{\s*left:\s*calc\(var\(--sidebar-width\) \+ 40px\)/);
+    expect(css).toMatch(/\.sidebar\.collapsed\s*\{[^}]*translateX\(calc\(-1 \* \(var\(--sidebar-width\) \+ 40px\)\)\)/);
+  });
+
+  it('leaves the mobile sidebar rules unchanged', () => {
+    const m = css.match(/@media\s*\(max-width:\s*768px\)\s*\{([\s\S]*?)\n\}/)[1];
+    expect(m).toMatch(/\.sidebar\s*\{[^}]*width:\s*auto/);
+    expect(m).toContain('height: 70vh');
+  });
+
+  it('uses relative units for the wide spacing so Text Size S to XXL does not clip', () => {
+    const wideBlock = css.match(/@media\s*\(min-width:\s*1600px\)\s*\{\s*:root[\s\S]*?\n\}/)[0];
+    const spacing = wideBlock.match(/\.sidebar-body\s*\{([^}]*)\}/)?.[1] || '';
+    expect(spacing).toMatch(/gap:\s*[\d.]+rem/);
+    expect(wideBlock).not.toMatch(/\.sidebar\s*\{[^}]*height:\s*\d+px/);
   });
 });

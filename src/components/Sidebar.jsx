@@ -123,7 +123,8 @@ const Sidebar = ({
         </div>
 
         <div
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}
+          className="sidebar-header"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           {...(isMobile ? handleProps : {})}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -151,7 +152,7 @@ const Sidebar = ({
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="sidebar-body" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {/* Settings row: Text size, Appearance, and Language as three compact toggles */}
           <div className="sidebar-compact-row sidebar-settings-row">
             {/* Text size: a stepper showing S / M / L / XL */}

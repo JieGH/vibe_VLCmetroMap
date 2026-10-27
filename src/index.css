@@ -379,12 +379,24 @@ textarea {
   border-radius: var(--radius);
 }
 
+:root { --sidebar-width: 320px; }
+
+/* Wide desktop windows (same threshold as the desktop screen preset): a roomier menu. */
+@media (min-width: 1600px) {
+  :root { --sidebar-width: 420px; }
+  .sidebar-header { margin-bottom: 1.75rem; }
+  .sidebar-body { gap: 1.25rem; }
+}
+
+.sidebar-header { margin-bottom: 24px; }
+.sidebar-body { gap: 16px; }
+
 .sidebar {
   position: absolute;
   top: calc(20px + env(safe-area-inset-top, 0px));
   left: 20px;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  width: 320px;
+  width: var(--sidebar-width);
   z-index: 40; /* Above station-panel (z-index 30) */
   display: flex;
   flex-direction: column;
@@ -392,7 +404,7 @@ textarea {
 }
 
 .sidebar.collapsed {
-  transform: translateX(-360px);
+  transform: translateX(calc(-1 * (var(--sidebar-width) + 40px)));
   pointer-events: none;
   opacity: 0;
 }
@@ -473,8 +485,8 @@ textarea {
 
 @media (min-width: 769px) {
   .top-bar-container {
-    left: 360px; /* offset from sidebar when open */
-    max-width: calc(100vw - 380px);
+    left: calc(var(--sidebar-width) + 40px); /* offset from sidebar when open */
+    max-width: calc(100vw - var(--sidebar-width) - 60px);
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -755,7 +767,7 @@ button:active {
 }
 
 @media (min-width: 769px) {
-  .hub-chips-container.sidebar-open { left: 360px; right: auto; max-width: calc(100vw - 380px); }
+  .hub-chips-container.sidebar-open { left: calc(var(--sidebar-width) + 40px); right: auto; max-width: calc(100vw - var(--sidebar-width) - 60px); }
   .hub-chips-container.sidebar-collapsed { left: 20px; right: auto; max-width: calc(100vw - 40px); }
 }
 
