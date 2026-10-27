@@ -13,3 +13,19 @@
 # to FGV's live feed (see that file and ADR-0005). The function declares its
 # own route via `export const config = { path }`, so no redirect rule is
 # needed here.
+
+# A deploy replaces the hashed files in /assets, so the page that names them must never be served stale.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

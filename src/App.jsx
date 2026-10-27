@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 // Early preload: initiates MapView bundle fetch immediately on module evaluation
 const mapViewPromise = import('./components/MapView');
-const MapView = lazy(() => mapViewPromise);
+// A chunk that 404s after a deploy reloads once to pick up the new build; the pending promise keeps the
+// splash up meanwhile. If the reload was already tried, the error reaches the ErrorBoundary.
+const MapView = lazy(() =>
+  mapViewPromise.catch((err) => {
+    if (isChunkLoadError(err) && reloadOnceForNewBuild()) return new Promise(() => {});
+    throw err;
+  }),
+);
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import StationPanel from './components/StationPanel';
@@ -35,6 +42,7 @@ import { useTranslation } from './i18n';
 import { Search, X } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
+import { isChunkLoadError, reloadOnceForNewBuild, setupChunkErrorRecovery } from './utils/chunkReload';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
 import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
@@ -170,6 +178,7 @@ function App() {
   // Set up incident reporting and report normal human user access to Telegram
   useEffect(() => {
     setupIncidentReporting();
+    setupChunkErrorRecovery();
     const timer = setTimeout(() => {
       const initialStation = selectedStationRef.current?.properties?.name || selectedStationRef.current?.name;
       reportNormalUserVisit({ station: initialStation });
