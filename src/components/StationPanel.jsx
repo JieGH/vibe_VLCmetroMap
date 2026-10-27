@@ -304,7 +304,7 @@ const StationPanel = ({
             alignItems: 'center',
             justifyContent: 'center',
             lineHeight: 1,
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            fontFamily: 'var(--font-ui)',
           }}
         >
           m
@@ -462,7 +462,7 @@ const StationPanel = ({
                   fontSize: '1.18rem',
                   fontWeight: 900,
                   fontStyle: 'italic',
-                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  fontFamily: 'var(--font-ui)',
                   lineHeight: 1,
                   transform: 'translate(-0.5px, -0.5px)',
                   userSelect: 'none',

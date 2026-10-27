@@ -38,7 +38,7 @@ export const BusLineInspector = ({
         border: '1px solid var(--border-color, rgba(255, 255, 255, 0.18))',
         boxShadow: '0 12px 36px rgba(0,0,0,0.5)',
         color: 'var(--text-primary, #ffffff)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-ui)',
       }}
     >
       {/* Header */}

@@ -73,7 +73,7 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
       display: 'flex', flexDirection: 'column',
       padding: 'clamp(16px, 3vw, 48px)',
       paddingTop: 'calc(clamp(16px, 3vw, 48px) + env(safe-area-inset-top, 0px))',
-      fontFamily: 'Inter, system-ui, sans-serif',
+      fontFamily: 'var(--font-ui)',
     }}>
       <header style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24,

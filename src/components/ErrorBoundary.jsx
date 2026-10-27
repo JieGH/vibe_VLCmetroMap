@@ -62,7 +62,7 @@ class ErrorBoundary extends React.Component {
             padding: 24,
             backgroundColor: '#121212',
             color: '#ffffff',
-            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            fontFamily: 'var(--font-ui)',
             textAlign: 'center',
             boxSizing: 'border-box',
           }}

@@ -211,7 +211,7 @@ export const BusStopBoard = ({
                 fontWeight: 900,
                 letterSpacing: '0.04em',
                 lineHeight: 1,
-                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                fontFamily: 'var(--font-ui)',
                 userSelect: 'none',
               }}
             >
@@ -237,6 +237,7 @@ export const BusStopBoard = ({
                 style={{
                   fontSize: '0.72rem',
                   fontWeight: 800,
+                  fontVariantNumeric: 'tabular-nums',
                   background: 'rgba(214, 40, 40, 0.2)',
                   color: '#ff6369',
                   padding: '1px 5px',

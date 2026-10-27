@@ -96,7 +96,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
           borderRadius: 999,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08)',
           color: '#ffffff',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontFamily: 'var(--font-ui)',
           userSelect: 'none',
         }}
       >
@@ -256,7 +256,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
               boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
               color: 'var(--text-primary, #ffffff)',
               padding: 24,
-              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontFamily: 'var(--font-ui)',
             }}
             onClick={(e) => e.stopPropagation()}
           >

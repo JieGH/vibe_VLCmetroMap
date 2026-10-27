@@ -1,5 +1,28 @@
+/* Overpass, self-hosted (#131): one variable woff2, weights 400 to 800, cut down to Latin, Latin-1, Latin
+   Extended-A and the UI punctuation (scripts/subset_overpass.py). SIL OFL, see public/fonts/OFL.txt. */
+@font-face {
+  font-family: 'Overpass';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/Overpass-subset.woff2') format('woff2');
+}
+
+/* Arial stretched to Overpass's measured widths and vertical metrics, so the swap from fallback to Overpass
+   moves the text as little as possible. Overpass lowercase+digits average 1.032x Arial's advance; its
+   ascent/descent (0.883/0.383 em) are divided by that size-adjust. */
+@font-face {
+  font-family: 'Overpass Fallback';
+  src: local('Arial');
+  size-adjust: 103.2%;
+  ascent-override: 85.6%;
+  descent-override: 37.1%;
+  line-gap-override: 0%;
+}
+
 :root {
-  font-family: 'Inter', 'Roboto', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-ui: 'Overpass', 'Overpass Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   line-height: 1.5;
   font-weight: 400;
   
@@ -123,6 +146,14 @@ html.ui-zoomed body,
 html.ui-zoomed #root {
   height: calc(100dvh / var(--ui-zoom));
   min-height: calc(100vh / var(--ui-zoom));
+}
+
+/* Buttons and form controls ignore the inherited font unless told; the one token reaches them too. */
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
 }
 
 /* Enforce minimum 16px input size so iOS Safari never triggers automatic 5% viewport auto-zoom */
@@ -1323,7 +1354,7 @@ button:active {
   border: 1px solid var(--border-color);
   background: var(--bg-hover);
   color: var(--text-primary);
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 16px; /* 16px avoids iOS Safari auto-zooming the viewport on focus */
   line-height: 1.5;
   box-sizing: border-box;
@@ -1679,7 +1710,7 @@ button:active {
   justify-content: center;
   overflow: hidden;
   border-radius: 3.5px;
-  font: 900 12px/1 system-ui;
+  font: 900 12px/1 var(--font-ui);
   text-align: center;
 }
 
@@ -1746,7 +1777,7 @@ button:active {
   letter-spacing: -0.02em;
   color: #ffffff;
   margin: 0 0 6px 0;
-  font-family: inherit;
+  font-family: var(--font-ui);
 }
 
 .welcome-screen-subtitle {
@@ -1755,6 +1786,7 @@ button:active {
   color: #a0a0b0;
   margin: 0;
   letter-spacing: 0.01em;
+  font-family: var(--font-ui);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2026,4 +2058,13 @@ button:active {
 .sidebar-settings-row .size-stepper-value {
   flex: 1;
   min-width: 0;
+}
+
+/* Overpass has tabular figures (tnum): digits of equal width, so a countdown ticking down or a two-digit line
+   badge does not shift its neighbours. */
+.station-line-badge,
+.station-arrival-due,
+.station-arrival-num,
+.bus-badge {
+  font-variant-numeric: tabular-nums;
 }
