@@ -15,13 +15,13 @@
 import { getDistance } from './geoUtils';
 
 /** Hard cap for how far any marker is drawn from its real position. */
-export const MAX_OFFSET_METRES = 22; // was 12; +10 m so stops sit further from the road centre
+export const MAX_OFFSET_METRES = 32; // was 12; +20 m over two steps so stops sit further from the road centre
 /** Stops further apart than this are not considered a two-way pair. */
 export const PAIR_MAX_METRES = 80;
 /** Closer than this the joining line is meaningless; leave both alone. */
 export const PAIR_MIN_METRES = 2;
 /** Pairs are pushed until their drawn separation reaches this (or the cap). */
-export const TARGET_SEPARATION_METRES = 60;
+export const TARGET_SEPARATION_METRES = 80; // was 60; +10 m each side. The cap alone barely moved wider pairs
 
 // Matches geoUtils.getDistance (haversine, R = 6371 km) so the cap is exact.
 const METRES_PER_DEG_LAT = (6371000 * Math.PI) / 180;
