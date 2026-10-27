@@ -58,10 +58,12 @@ export const BusLineInspector = ({
               {line.name}
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary, #a0aec0)' }}>
-                Headway: <strong>{line.headway}</strong>
-              </span>
-              <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
+              {line.headway && (
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary, #a0aec0)' }}>
+                  Headway: <strong>{line.headway}</strong>
+                </span>
+              )}
+              {line.activeVehicles != null && (
               <span
                 style={{
                   fontSize: '0.72rem',
@@ -75,6 +77,7 @@ export const BusLineInspector = ({
                 <Radio size={11} className="pulse" />
                 {line.activeVehicles} active buses
               </span>
+              )}
             </div>
           </div>
         </div>

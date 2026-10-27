@@ -6,7 +6,7 @@ import { searchFuzzy } from '../utils/fuzzySearch';
 import { useTranslation } from '../i18n';
 import { COMMON_STOPS } from '../utils/commonStops';
 import { lineColor } from '../utils/lineColor';
-import { EMT_LINES } from '../data/emtData';
+import { getRealBusLines } from '../data/emtData';
 import BusBadge from './BusBadge';
 
 // Black or white text, whichever reads better on a line's colour.
@@ -51,7 +51,7 @@ const SearchBar = ({
     : [];
 
   const filteredBusLines = query.trim()
-    ? searchFuzzy(EMT_LINES, query, b => `${b.id} ${b.name} Bus ${b.id} EMT ${b.id} Linia ${b.id} ${b.description}`)
+    ? searchFuzzy(getRealBusLines(), query, b => `${b.id} ${b.name} Bus ${b.id} EMT ${b.id} Linia ${b.id}`)
     : [];
 
   const filteredStations = query.trim()

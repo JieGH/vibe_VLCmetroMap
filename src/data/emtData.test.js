@@ -1,65 +1,66 @@
 import { describe, it, expect } from 'vitest';
+import * as emtData from './emtData';
 import {
-  EMT_LINES,
-  STATION_BUS_TRANSFERS,
   getStationBusFeeders,
+  feederFromStop,
   getAllBusStops,
-  LIVE_BUS_TELEMETRY,
+  getRealBusLines,
 } from './emtData';
 import { WALK_RADIUS_METRES, WALK_RADIUS_MIN } from '../utils/walkRadius';
+import REAL_EMT_STOPS from './emt_stops.json';
 
-describe('EMT Prototype Data', () => {
-  it('defines primary EMT lines including C1, C2, C3, 19, 95', () => {
-    const ids = EMT_LINES.map(l => l.id);
-    expect(ids).toContain('C1');
-    expect(ids).toContain('C2');
-    expect(ids).toContain('C3');
-    expect(ids).toContain('19');
-    expect(ids).toContain('95');
+describe('EMT data (real stops only, #122)', () => {
+  it('no longer exports prototype dummy tables', () => {
+    expect(emtData.STATION_BUS_TRANSFERS).toBeUndefined();
+    expect(emtData.LIVE_BUS_TELEMETRY).toBeUndefined();
   });
 
-  it('provides route polylines and stop coordinates for each line', () => {
-    EMT_LINES.forEach(line => {
-      expect(line.coordinates.length).toBeGreaterThan(1);
-      expect(line.color).toMatch(/^#[0-9A-Fa-f]{6}$/);
-      expect(line.name).toBeTruthy();
-    });
+  it('returns zero feeders for a click 20 km from any stop (sea / countryside)', () => {
+    expect(getStationBusFeeders('Map Ping', [0.2, 39.47])).toEqual([]);
+    expect(getStationBusFeeders('Bétera', [-0.457, 39.590])).toEqual([]);
   });
 
-  it('provides feeder bus transfers for major metro interchange stations', () => {
-    const xativa = getStationBusFeeders('Xàtiva');
-    expect(xativa.length).toBeGreaterThanOrEqual(2);
-    expect(xativa[0].stopCode).toBe('1002');
-    expect(xativa[0].walkMetres).toBeLessThanOrEqual(200);
-
-    const angelGuimera = getStationBusFeeders('Àngel Guimerà');
-    expect(angelGuimera.length).toBeGreaterThanOrEqual(2);
-
-    const colon = getStationBusFeeders('Colón');
-    expect(colon.length).toBeGreaterThanOrEqual(2);
+  it('returns no feeders without coordinates or a name, and no invented default centre', () => {
+    expect(getStationBusFeeders('Xàtiva')).toEqual([]);
+    expect(getStationBusFeeders(null, [-0.3774, 39.4699])).toEqual([]);
   });
 
-  it('falls back gracefully to synthetic feeder stops for arbitrary station names', () => {
-    const generic = getStationBusFeeders('Bétera', [-0.457, 39.590]);
-    expect(generic.length).toBeGreaterThanOrEqual(1);
-    expect(generic[0].walkMetres).toBeLessThanOrEqual(200);
-  });
-
-  it('only offers real EMT stops within the 3-minute walk radius of a station', () => {
+  it('only offers real EMT stops within the walk radius, with no invented times or vehicles', () => {
     const feeders = getStationBusFeeders('Sin transbordo', [-0.3774, 39.4699]);
     expect(feeders.length).toBeGreaterThan(0);
+    const realCodes = new Set(REAL_EMT_STOPS.map((s) => String(s.stopCode)));
     feeders.forEach((f) => {
+      expect(realCodes.has(f.stopCode)).toBe(true);
+      expect(f.stopCode).not.toMatch(/^P-/);
       expect(f.walkMetres).toBeLessThanOrEqual(WALK_RADIUS_METRES);
       expect(f.walkMin).toBeLessThanOrEqual(WALK_RADIUS_MIN);
+      f.lines.forEach((l) => {
+        expect(typeof l).toBe('string');
+      });
     });
   });
 
-  it('contains live simulated telemetry for real-time fleet', () => {
-    expect(LIVE_BUS_TELEMETRY.length).toBeGreaterThan(0);
-    const bus = LIVE_BUS_TELEMETRY[0];
-    expect(bus.vehicleId).toMatch(/^EMT-\d+$/);
-    expect(bus.coordinates).toHaveLength(2);
-    expect(bus.speedKmh).toBeGreaterThan(0);
+  it('a stop with no line data yields no chips (no default 19 / C1)', () => {
+    const f = feederFromStop({ stopCode: 9999, stopName: 'Sin datos', coordinates: [-0.37, 39.47] }, 50);
+    expect(f.lines).toEqual([]);
+    const g = feederFromStop({ stopCode: 9999, stopName: 'Sin datos', lines: [], coordinates: [-0.37, 39.47] }, 50);
+    expect(g.lines).toEqual([]);
+    expect(JSON.stringify(f)).not.toMatch(/dueSeconds|vehicleId|isLive/);
+  });
+
+  it('keeps real line numbers as plain strings', () => {
+    const f = feederFromStop({ stopCode: 1, stopName: 'X', lines: ['70', 92], coordinates: [-0.37, 39.47] }, 10);
+    expect(f.lines).toEqual(['70', '92']);
+    expect(f.walkMetres).toBe(10);
+  });
+
+  it('builds searchable bus lines only from lines that exist in the EMT stop data', () => {
+    const real = new Set(REAL_EMT_STOPS.flatMap((s) => (s.lines || []).map(String)));
+    const lines = getRealBusLines();
+    expect(lines.length).toBeGreaterThan(10);
+    lines.forEach((l) => expect(real.has(l.id)).toBe(true));
+    expect(lines.find((l) => l.id === 'ZZ-FAKE')).toBeUndefined();
+    expect(new Set(lines.map((l) => l.id)).size).toBe(lines.length);
   });
 
   it('loads real EMT bus stops from official Valencia Open Data', () => {
@@ -69,7 +70,7 @@ describe('EMT Prototype Data', () => {
     expect(stop.stopCode).toBeTruthy();
     expect(stop.stopName).toBeTruthy();
     expect(stop.coordinates).toHaveLength(2);
-    expect(stop.coordinates[0]).toBeLessThan(0); // Valencia is west of prime meridian
+    expect(stop.coordinates[0]).toBeLessThan(0);
     expect(stop.coordinates[1]).toBeGreaterThan(39.0);
   });
 });

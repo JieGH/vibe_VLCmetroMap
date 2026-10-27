@@ -109,6 +109,7 @@ export default {
     noLiveTrains: 'No live trains arriving soon.',
     nothingFurther: 'Nothing further due yet.',
     noInfoShort: 'No info',
+    loadingArrivals: 'Loading arrivals…',
     laterArrivalsCaption: 'Later arrivals at {{station}}',
     noNearbyMetro: 'No Metro stations found within walking distance.',
     line: 'Line',

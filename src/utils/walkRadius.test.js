@@ -4,6 +4,7 @@ import {
   WALK_RADIUS_METRES,
   WALK_RADIUS_HYSTERESIS_METRES,
   pickWalkSet,
+  WALK_FALLBACK_MAX_METRES,
 } from './walkRadius';
 import { walkingMinutes } from './walking';
 import { getDistance } from './geoUtils';
@@ -74,5 +75,29 @@ describe('pickWalkSet', () => {
     // Never shown before: the same distance does not get in.
     const fresh = pickWalkSet([drifting, at('a', 10)], ORIGIN, opts());
     expect(fresh.items.map((r) => r.item.key)).toEqual(['a']);
+  });
+
+  it('caps the nearest-item fallback at 600 m by default (#122)', () => {
+    expect(WALK_FALLBACK_MAX_METRES).toBe(600);
+    const far = pickWalkSet([at('far', 700)], ORIGIN, opts());
+    expect(far).toEqual({ items: [], fallback: false });
+    const ok = pickWalkSet([at('mid', 550)], ORIGIN, opts());
+    expect(ok.fallback).toBe(true);
+    expect(ok.items[0].item.key).toBe('mid');
+  });
+
+  it('returns nothing for a click kilometres away', () => {
+    expect(pickWalkSet([at('x', 20000)], ORIGIN, opts())).toEqual({ items: [], fallback: false });
+  });
+
+  it('never falls back when allowFallback is false (map ping)', () => {
+    expect(pickWalkSet([at('near', 300)], ORIGIN, opts({ allowFallback: false }))).toEqual({ items: [], fallback: false });
+    const inside = pickWalkSet([at('in', 100)], ORIGIN, opts({ allowFallback: false }));
+    expect(inside.items).toHaveLength(1);
+  });
+
+  it('lets a caller lift the cap explicitly (metro keeps its fallback)', () => {
+    const r = pickWalkSet([at('far', 5000)], ORIGIN, opts({ fallbackMaxMetres: Infinity }));
+    expect(r.fallback).toBe(true);
   });
 });

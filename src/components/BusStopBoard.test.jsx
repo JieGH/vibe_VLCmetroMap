@@ -11,6 +11,26 @@ describe('BusStopBoard component', () => {
     coordinates: [-0.375, 39.469],
   };
 
+  it('first render shows a loading state and no hard-coded arrivals (#122)', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={{ stopCode: '55555', stopName: 'Parada sin datos', lines: [], coordinates: [-0.37, 39.47] }} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('data-testid="arrivals-loading"');
+    expect(html).not.toContain('station-arrivals-table');
+    expect(html).not.toContain('La Malva-rosa');
+    expect(html).not.toContain('Centre Històric');
+    expect(html).not.toContain('La Fontsanta');
+    expect(html).not.toContain('Campanar');
+  });
+
+  it('feeder stops with plain line numbers also start in the loading state', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={{ stopCode: '1002', stopName: 'Colón', lines: ['19', 'C1'], coordinates: [-0.375, 39.469] }} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('data-testid="arrivals-loading"');
+    expect(html).not.toContain('station-arrivals-table');
+  });
+
   it('renders nothing when stop is null', () => {
     const html = renderToStaticMarkup(
       <BusStopBoard stop={null} onClose={() => {}} />
@@ -36,7 +56,8 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('>19<');
     expect(html).toContain('>C1<');
     expect(html).toContain('>92<');
-    expect(html).toContain('station-arrivals-table');
+    expect(html).toContain('data-testid="arrivals-loading"');
+    expect(html).not.toContain('station-arrivals-table');
     expect(html).toContain('data-testid="station-drag-handle"');
   });
 
@@ -245,4 +266,5 @@ describe('BusStopBoard countdown formatting and states (#90)', () => {
     for (let i = 0; i < 6; i++) expect(html).toContain(`Dest${i}`);
     expect(html).not.toContain('′');
   });
+
 });

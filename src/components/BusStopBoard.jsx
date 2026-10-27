@@ -120,21 +120,15 @@ export const BusStopBoard = ({
     ? stop.lines.map((l) => (typeof l === 'object' && l !== null ? String(l.line || l.id || '') : String(l))).filter(Boolean)
     : [];
 
-  // Use live arrivals if fetched; fallback to stop.arrivals, feeder arrival objects, or default initial list
-  const arrivals = (liveArrivals !== null)
-    ? liveArrivals
-    : Array.isArray(stop.arrivals)
-      ? stop.arrivals
-      : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
-        ? stop.lines
-        : hasAttemptedFetch
-          ? []
-          : [
-              { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
-              { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
-              { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
-              { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
-            ];
+  // Real arrivals only (#122): fetched live arrivals, or arrivals handed in with
+  // the stop. Until the first fetch settles the board shows a loading state.
+  const handedIn = Array.isArray(stop.arrivals)
+    ? stop.arrivals
+    : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
+      ? stop.lines
+      : null;
+  const arrivals = (liveArrivals !== null) ? liveArrivals : (handedIn || []);
+  const isLoading = liveArrivals === null && handedIn === null && !hasAttemptedFetch;
 
   return (
     <aside
@@ -370,7 +364,20 @@ export const BusStopBoard = ({
           transition: 'max-height 0.22s ease',
         }}
       >
-        {arrivals.length === 0 ? (
+        {isLoading ? (
+          <p
+            data-testid="arrivals-loading"
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              fontSize: '.88rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+            }}
+          >
+            {t('stationPanel.loadingArrivals')}
+          </p>
+        ) : arrivals.length === 0 ? (
           <p
             data-testid="no-live-arrivals"
             style={{
@@ -381,7 +388,7 @@ export const BusStopBoard = ({
               margin: 0,
             }}
           >
-            {t('stationPanel.noLivePredictions', { station: displayName })}
+            {t('stationPanel.noInfoShort')}
           </p>
         ) : (
           <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>

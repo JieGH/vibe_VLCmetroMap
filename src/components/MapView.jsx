@@ -38,11 +38,10 @@ import {
   ensureBusLayers,
   setBusRoutesData,
   setFeederWalkLinks,
-  createLiveBusMarker,
   createFeederStopMarker,
   createBusStopNodeMarker,
 } from '../utils/busMapLayers';
-import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
+import { getRealBusLines, getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -1752,6 +1751,7 @@ const MapView = ({
       getCoords: snappedCoordinates,
       getKey: (st) => `m:${st.properties.name}`,
       keep,
+      fallbackMaxMetres: Infinity, // the metro fallback is kept as is (#122)
     }).items.map(({ item }) => item);
 
     nearbyStations.forEach((st) => {
@@ -1782,6 +1782,7 @@ const MapView = ({
       getCoords: (stop) => stop.coordinates,
       getKey: (stop) => `b:${stop.stopCode}`,
       keep,
+      allowFallback: !userLocation.isMapClick, // a map ping never spawns a far stop (#122)
     }).items.map(({ item }) => item);
 
     nearbyBusStops.forEach((stop) => {
@@ -1960,16 +1961,7 @@ const MapView = ({
             busMarkersRef.current.push(marker);
           });
 
-          // Active live AVL buses on this line
-          const lineBuses = LIVE_BUS_TELEMETRY.filter(
-            (b) => String(b.line).toLowerCase() === String(activeBusLine.id).toLowerCase()
-          );
-          lineBuses.forEach((bus) => {
-            const marker = createLiveBusMarker(map, bus, (b) => {
-              if (onSelectBusLine) onSelectBusLine(activeBusLine);
-            });
-            busMarkersRef.current.push(marker);
-          });
+          // Live vehicles: none are invented; real ones would come from ArcGIS Layer 384 (ADR-0011).
         } else {
           styled(setBusRoutesData, map, []);
         }
@@ -1980,7 +1972,7 @@ const MapView = ({
         styled(setFeederWalkLinks, map, null, []);
 
         if (activeMode === 'bus') {
-          const primaryTrunks = EMT_LINES.slice(0, 5);
+          const primaryTrunks = getRealBusLines().slice(0, 5);
           styled(setBusRoutesData, map, primaryTrunks);
 
           if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.15);
@@ -1997,15 +1989,8 @@ const MapView = ({
             });
           });
 
-          LIVE_BUS_TELEMETRY.forEach((bus) => {
-            const marker = createLiveBusMarker(map, bus, (b) => {
-              const foundLine = EMT_LINES.find((l) => l.id === b.line);
-              if (foundLine && onSelectBusLine) onSelectBusLine(foundLine);
-            });
-            busMarkersRef.current.push(marker);
-          });
         } else if (activeMode === 'all') {
-          styled(setBusRoutesData, map, EMT_LINES.slice(0, 3));
+          styled(setBusRoutesData, map, getRealBusLines().slice(0, 3));
           if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.85);
           if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
         } else {

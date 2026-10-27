@@ -39,7 +39,7 @@ import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnConte
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import BusBadge from './components/BusBadge';
-import { EMT_LINES, LIVE_BUS_TELEMETRY } from './data/emtData';
+import { getRealBusLines } from './data/emtData';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -949,7 +949,7 @@ function App() {
               >
                 EMT Trunks
               </span>
-              {EMT_LINES.map((line) => {
+              {getRealBusLines().slice(0, 12).map((line) => {
                 const isSelected = activeBusLine?.id === line.id;
                 return (
                   <button
@@ -1002,7 +1002,7 @@ function App() {
               >
                 Bus Network Trunks
               </span>
-              {EMT_LINES.slice(0, 5).map((line) => {
+              {getRealBusLines().slice(0, 5).map((line) => {
                 const isSelected = activeBusLine?.id === line.id;
                 return (
                   <button
@@ -1134,7 +1134,6 @@ function App() {
       {activeBusLine && (
         <BusLineInspector
           line={activeBusLine}
-          liveBuses={LIVE_BUS_TELEMETRY}
           onClose={() => setActiveBusLine(null)}
           onSelectStop={handleSelectBusStop}
         />
@@ -1154,7 +1153,7 @@ function App() {
             }
           }}
           onSelectLine={(lineId) => {
-            const found = EMT_LINES.find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
+            const found = getRealBusLines().find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
             if (found) handleSelectBusLine(found);
           }}
         />

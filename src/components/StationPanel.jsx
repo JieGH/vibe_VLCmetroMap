@@ -14,12 +14,12 @@ import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
-import { getStationBusFeeders, getAllBusStops } from '../data/emtData';
+import { getStationBusFeeders, getAllBusStops, feederFromStop } from '../data/emtData';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 import { getDistance, nearbyFeatures } from '../utils/geoUtils';
 import { walkingMinutes } from '../utils/walking';
-import { pickWalkSet, WALK_RADIUS_METRES, WALK_RADIUS_MIN } from '../utils/walkRadius';
+import { pickWalkSet, WALK_RADIUS_METRES } from '../utils/walkRadius';
 import gtfsData from '../data/gtfs_expanded.json';
 
 const allMetroStations = gtfsData.features.filter(f => f.geometry.type === 'Point');
@@ -186,42 +186,16 @@ const StationPanel = ({
 
   const stationLines = focus.servedLines || [];
 
-  const rawFeeders = getStationBusFeeders(focus.name, stationCoords);
+  // Real EMT stops only (#122): inside the walk radius, no nearest-stop fallback
+  // for a map ping, and never invented times, vehicles or default lines.
+  const isMapPing = Boolean(userLocation?.isMapClick) || focus.name === 'Map Ping';
   const feeders = anchorCoords
-    ? (() => {
-        // Only stops inside the walk radius (or the nearest one, if none) are built and fetched.
-        const nearbyReal = pickWalkSet(getAllBusStops(), anchorCoords, {
-          getCoords: (stop) => stop.coordinates,
-          getKey: (stop) => String(stop.stopCode || stop.code || ''),
-        }).items
-          .map(({ item: stop, distance, walkMin: mins }) => {
-            const dist = Math.round(distance);
-            return {
-              stopCode: String(stop.stopCode || stop.code || ''),
-              stopName: stop.stopName || stop.name || 'Parada EMT',
-              walkMetres: dist,
-              walkMin: mins,
-              bearingDegrees: 90,
-              coordinates: stop.coordinates,
-              lines: (stop.lines && stop.lines.length > 0 ? stop.lines : ['19', 'C1']).map((l) => ({
-                line: String(typeof l === 'object' && l !== null ? (l.line || l.id) : l),
-                destination: typeof l === 'object' && l?.destination ? l.destination : 'Centre / Platja',
-                dueSeconds: typeof l === 'object' && l?.dueSeconds ? l.dueSeconds : 180,
-                isLive: true,
-                vehicleId: `EMT-${stop.stopCode || '1000'}`,
-              })),
-            };
-          });
-
-        if (nearbyReal.length > 0) return nearbyReal;
-        return rawFeeders.map((f) => {
-          if (!f.coordinates) return f;
-          const dist = Math.round(getDistance(anchorCoords, f.coordinates));
-          const mins = walkingMinutes(dist);
-          return { ...f, walkMetres: dist, walkMin: mins };
-        }).filter((f) => f.walkMin <= WALK_RADIUS_MIN);
-      })()
-    : rawFeeders;
+    ? pickWalkSet(getAllBusStops(), anchorCoords, {
+        getCoords: (stop) => stop.coordinates,
+        getKey: (stop) => String(stop.stopCode || stop.code || ''),
+        allowFallback: !isMapPing,
+      }).items.map(({ item: stop, distance }) => feederFromStop(stop, distance))
+    : getStationBusFeeders(focus.name, stationCoords);
 
   const _totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
   const metroStopsCount = (focus.name === 'Map Ping' || focus.name === "Where you're at") ? nearbyMetro.length : (1 + nearbyMetro.length);
