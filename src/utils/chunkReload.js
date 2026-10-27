@@ -4,6 +4,9 @@
 const RELOAD_KEY = 'xarxa_chunk_reload_at';
 const RELOAD_COOLDOWN_MS = 60_000;
 
+// Set once a reload is under way, so a second chunk error from the same failure does not look like a repeat.
+let reloading = false;
+
 const CHUNK_ERROR_PATTERNS = [
   'not a valid JavaScript MIME type',
   'Failed to fetch dynamically imported module',
@@ -23,11 +26,12 @@ export function isOpaqueScriptError(message, filename) {
 }
 
 /**
- * Reloads the page once per cooldown window. Returns true when a reload was started, false when one
+ * Reloads the page once per cooldown window. Returns true when a reload is under way, false when one
  * already happened recently (so a genuinely broken deploy cannot loop).
  */
 export function reloadOnceForNewBuild() {
   if (typeof window === 'undefined') return false;
+  if (reloading) return true;
   try {
     const last = Number(window.sessionStorage.getItem(RELOAD_KEY) || 0);
     if (Date.now() - last < RELOAD_COOLDOWN_MS) return false;
@@ -36,6 +40,7 @@ export function reloadOnceForNewBuild() {
     // Storage blocked: reloading without the guard could loop, so do not reload.
     return false;
   }
+  reloading = true;
   window.location.reload();
   return true;
 }

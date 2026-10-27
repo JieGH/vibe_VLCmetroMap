@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isChunkLoadError, isOpaqueScriptError, reloadOnceForNewBuild } from './chunkReload';
+import { isChunkLoadError, isOpaqueScriptError } from './chunkReload';
 
 describe('isChunkLoadError', () => {
   it.each([
@@ -29,8 +29,11 @@ describe('isOpaqueScriptError', () => {
 describe('reloadOnceForNewBuild', () => {
   let store;
   let reload;
+  let reloadOnceForNewBuild;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules();
+    ({ reloadOnceForNewBuild } = await import('./chunkReload'));
     store = {};
     reload = vi.fn();
     vi.stubGlobal('window', {
@@ -45,15 +48,22 @@ describe('reloadOnceForNewBuild', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('reloads the first time and refuses a second reload inside the cooldown', () => {
-    expect(reloadOnceForNewBuild()).toBe(true);
+  it('refuses a reload inside the cooldown of an earlier page load', () => {
+    store.xarxa_chunk_reload_at = String(Date.now() - 5_000);
     expect(reloadOnceForNewBuild()).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('reports a reload already under way as true, so the second chunk error does not surface', () => {
+    expect(reloadOnceForNewBuild()).toBe(true);
+    expect(reloadOnceForNewBuild()).toBe(true);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('reloads again once the cooldown has passed', () => {
     store.xarxa_chunk_reload_at = String(Date.now() - 120_000);
     expect(reloadOnceForNewBuild()).toBe(true);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('does not reload when storage is unavailable', () => {
