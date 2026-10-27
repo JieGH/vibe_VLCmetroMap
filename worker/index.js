@@ -6,6 +6,7 @@
 import proxy from '../netlify/functions/metro-proxy.js';
 import feedback from '../netlify/functions/feedback.js';
 import telemetry from '../netlify/functions/telemetry.js';
+import region from '../netlify/functions/region.js';
 
 export default {
   async fetch(request, env) {
@@ -13,6 +14,7 @@ export default {
     if (pathname.startsWith('/api/metro/')) return proxy(request);
     if (pathname === '/api/feedback') return feedback(request, env);
     if (pathname === '/api/telemetry') return telemetry(request, env);
+    if (pathname === '/api/region') return region(request);
     return env.ASSETS.fetch(request);
   },
 };

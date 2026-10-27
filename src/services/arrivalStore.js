@@ -6,7 +6,7 @@ import imageLineColors from '../data/line_colors_from_image.json';
 import paradasApi from '../data/paradas_api.json';
 import liveStations from '../data/live_stations.json';
 import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
-import { recordApiFailure } from '../utils/diagnostics';
+import { recordApiFailure, recordApiSuccess } from '../utils/diagnostics';
 
 // Why an arrival list is stale or empty. The store has no access to the UI language, so `fetchError` carries
 // one of these dictionary keys and the UI shows t(fetchError).
@@ -595,6 +595,7 @@ class ArrivalStore {
             fetchError: null,
           };
           this.refusal.recordSuccess();
+          recordApiSuccess('train');
           this.memory.set(key, updatedEntry);
           this.persistToSessionStorage();
           this.notify();
