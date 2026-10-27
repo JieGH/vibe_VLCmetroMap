@@ -20,6 +20,7 @@ import { arrivalStore, ARRIVAL_ERRORS } from '../services/arrivalStore';
 const NEW_KEYS = [
   'common.all', 'common.metro', 'common.bus', 'common.accessible', 'common.trains', 'common.station', 'common.stations',
   'common.close', 'common.accessible', 'common.accessibleBus', 'common.minWalk', 'common.gitCommit',
+  'app.outsideSpainNotice',
   'app.transitModeAria', 'app.emtTrunks', 'app.busNetworkTrunks',
   'hub.whereYoureAt', 'hub.mapPing',
   'stationPanel.tabsAria', 'stationPanel.tabAllTitle', 'stationPanel.tabMetroAria', 'stationPanel.tabMetroTitle',

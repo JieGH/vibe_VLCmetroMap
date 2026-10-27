@@ -34,6 +34,7 @@ export default {
     locationHidden: 'Location hidden.',
     trainApiRefused: 'Network refused by train service. Try turning off your VPN.',
     trainApiRefusedLong: 'The train service refused this network. If you use a VPN, try turning it off.',
+    outsideSpainNotice: 'Outside Spain: train and bus times may be incorrect.',
     transitModeAria: 'Transit Mode Selector',
     emtTrunks: 'EMT Trunks',
     busNetworkTrunks: 'Bus Network Trunks',

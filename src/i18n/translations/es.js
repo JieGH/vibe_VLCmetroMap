@@ -30,6 +30,7 @@ export default {
     locationHidden: 'Ubicación ocultada.',
     trainApiRefused: 'Red rechazada por el servicio de trenes. Prueba sin VPN.',
     trainApiRefusedLong: 'El servicio de trenes ha rechazado esta red. Si usas una VPN, prueba a desactivarla.',
+    outsideSpainNotice: 'Fuera de España: los horarios de tren y autobús pueden ser incorrectos.',
     transitModeAria: 'Selector de modo de transporte',
     emtTrunks: 'EMT troncales',
     busNetworkTrunks: 'Troncales de la red de bus',
