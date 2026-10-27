@@ -353,13 +353,17 @@ describe('StationPanel component', () => {
   });
 
   it('#111: split layout trims dead space so bus cards start further left', () => {
-    expect(SPLIT_LAYOUT).toEqual({ columns: '1fr 1.25fr', gap: 3, sidePadding: 6, metroPadRight: 3, busPadLeft: 0 });
+    expect(SPLIT_LAYOUT).toEqual({ columns: '1fr 1.25fr', gap: 0, sidePadding: 6, metroPadRight: 10, busPadLeft: 10 });
+    // The divider is the metro column's borderRight: 10 px from the metro cards, 10 px to the bus
+    // cards (the same 10 px as the gap between two bus cards) = 10 + 1 + 0 + 10 = 21 (was 6 + 1 + 10 + 6 = 23).
     const deadStrip = SPLIT_LAYOUT.metroPadRight + 1 + SPLIT_LAYOUT.gap + SPLIT_LAYOUT.busPadLeft;
-    expect(deadStrip).toBeLessThanOrEqual(7); // was 6 + 1 + 10 + 6 = 23
+    expect(deadStrip).toBe(21);
     const html = renderToStaticMarkup(
       <StationPanel station={sampleStation} theme="dark" isPin onClose={() => {}} />
     );
-    expect(html).toContain('gap:3px');
+    expect(html).toContain('gap:0');
+    expect(html).toContain('padding-right:10px;border-right:1px solid');
+    expect(html).toContain('padding-left:10px');
     expect(html).toContain('padding:8px 6px');
   });
 });

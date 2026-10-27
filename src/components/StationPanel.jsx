@@ -66,8 +66,9 @@ export function multimodalSheetGeometry(_tab, isExpanded) {
   };
 }
 
-// #111: split-view horizontal spacing. Was gap 10 + side padding 10 + metro padR 6 + bus padL 6 (23px dead strip).
-export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 3, sidePadding: 6, metroPadRight: 3, busPadLeft: 0 };
+// #111: split-view horizontal spacing. Was gap 10 + side padding 10 + metro padR 6 + bus padL 6 (23px dead strip). The divider is the
+// metro column's borderRight, so 10 px padding each side matches the 10 px gap between two bus cards.
+export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 0, sidePadding: 6, metroPadRight: 10, busPadLeft: 10 };
 
 export const SPLIT_SHEET_BOTTOM = 'calc(4px + env(safe-area-inset-bottom, 0px))';
 export const EXPANDED_SHEET_HEIGHT =
@@ -644,6 +645,7 @@ const StationPanel = ({
               style={{
                 display: activeTab === 'bus' ? 'none' : 'block',
                 height: '100%',
+                minWidth: 0, // a 1fr column may shrink below its content: the cards wrap, nothing clips the sheet
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 ...(activeTab === 'split'
@@ -672,6 +674,7 @@ const StationPanel = ({
               style={{
                 display: activeTab === 'metro' ? 'none' : 'block',
                 height: '100%',
+                minWidth: 0, // a 1fr column may shrink below its content: the cards wrap, nothing clips the sheet
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 ...(activeTab === 'split' ? { paddingLeft: SPLIT_LAYOUT.busPadLeft } : { padding: '8px 12px 10px' }),
