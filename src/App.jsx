@@ -153,6 +153,17 @@ function App() {
     return arrivalStore.subscribe(computeStats);
   }, []);
 
+  // The train API refusing this network (VPN, blocked IP) after repeated
+  // evidence, #123. Dismissing hides it until a good answer clears the state and
+  // a new refusal follows.
+  const [trainRefused, setTrainRefused] = useState(() => arrivalStore.isApiRefused());
+  const [refusalDismissed, setRefusalDismissed] = useState(false);
+  useEffect(() => arrivalStore.subscribe(() => {
+    const refused = arrivalStore.isApiRefused();
+    setTrainRefused(refused);
+    if (!refused) setRefusalDismissed(false);
+  }), []);
+
   // Set up incident reporting and report normal human user access to Telegram
   useEffect(() => {
     setupIncidentReporting();
@@ -1063,6 +1074,18 @@ function App() {
           title={t('app.dismissTitle')}
         >
           {locateNotice.text}
+        </button>
+      )}
+
+      {trainRefused && !refusalDismissed && (
+        <button
+          className="locate-notice refusal-notice glass-panel"
+          role="status"
+          onClick={() => setRefusalDismissed(true)}
+          title={t('app.trainApiRefusedLong')}
+          aria-label={t('app.trainApiRefusedLong')}
+        >
+          {t('app.trainApiRefused')}
         </button>
       )}
 

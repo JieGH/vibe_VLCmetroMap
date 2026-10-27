@@ -17,6 +17,8 @@ export default {
     clearFilterTitle: 'Toca para quitar el filtro',
     dismissTitle: 'Descartar',
     locationHidden: 'Ubicación ocultada.',
+    trainApiRefused: 'Red rechazada por el servicio de trenes. Prueba sin VPN.',
+    trainApiRefusedLong: 'El servicio de trenes ha rechazado esta red. Si usas una VPN, prueba a desactivarla.',
   },
   locate: {
     idle: 'Céntrame y muéstrame mi estación más cercana',

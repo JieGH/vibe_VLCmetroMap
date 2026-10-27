@@ -17,6 +17,8 @@ export default {
     clearFilterTitle: 'Toca per a llevar el filtre',
     dismissTitle: 'Descarta',
     locationHidden: 'Ubicació ocultada.',
+    trainApiRefused: 'Xarxa rebutjada pel servei de trens. Prova sense VPN.',
+    trainApiRefusedLong: 'El servei de trens ha rebutjat esta xarxa. Si uses una VPN, prova a desactivar-la.',
   },
   locate: {
     idle: 'Centra\'m i mostra\'m l\'estació més pròxima',

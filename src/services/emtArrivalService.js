@@ -1,6 +1,9 @@
 // EMT València SAE Real-Time Bus Arrival Service
 // ADR-0011 & Issue #87: On-demand stop arrival predictions with 20s TTL caching & deduplication.
 
+import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
+import { recordApiFailure } from '../utils/diagnostics';
+
 export const EMT_CACHE_TTL_MS = 20000;
 export const EMT_TIMEOUT_MS = 4500;
 export const EMT_SAE_BASE_URL = 'https://geoportal.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php';
@@ -10,6 +13,11 @@ const emtCache = new Map();
 
 // In-flight deduplication: stopCode -> Promise<Array>
 const inFlightRequests = new Map();
+
+// Whether EMT is refusing this network, judged from repeated blocked answers
+// (HTTP 401/403/451, an HTML page, or the municipal decoy). While refused, the
+// 20 s cache still serves and requests back off. Issue #123.
+export const emtRefusal = createRefusalTracker();
 
 /**
  * Normalizes a bus stop code, stripping "P-" prefixes and whitespace.
@@ -36,6 +44,12 @@ function extractTagContent(chunk, tagName) {
   const match = chunk.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
   if (!match) return '';
   return cleanCdata(match[1]);
+}
+
+/** Files one failed EMT request with the diagnostics and the refusal tracker. */
+function noteFailure(verdict, code) {
+  recordApiFailure('bus', verdict);
+  emtRefusal.recordFailure(verdict.kind, code);
 }
 
 /**
@@ -154,6 +168,7 @@ export function parseEmtArrivalXml(xmlString, now = new Date()) {
 export function clearEmtCache() {
   emtCache.clear();
   inFlightRequests.clear();
+  emtRefusal.recordSuccess();
 }
 
 /**
@@ -205,7 +220,12 @@ export async function fetchStopArrivals(stopCode, options = {}) {
     return inFlightRequests.get(code);
   }
 
-  // 3. Initiate new fetch
+  // 3. While EMT refuses this network, probe on the backoff, not on every tap
+  if (!emtRefusal.tryAcquire({ force: forceRefresh })) {
+    return getFallbackArrivals(code);
+  }
+
+  // 4. Initiate new fetch
   const requestPromise = (async () => {
     const url = `${EMT_SAE_BASE_URL}?sec=getSAE&parada=${encodeURIComponent(code)}&adaptados=false&idioma=va`;
     const controller = new AbortController();
@@ -224,24 +244,34 @@ export async function fetchStopArrivals(stopCode, options = {}) {
         headers,
       });
 
+      const xmlText = await response.text?.().catch(() => '') ?? '';
+
       if (!response.ok) {
+        noteFailure(classifyFetchFailure({ status: response.status, body: xmlText, headers: response.headers }), code);
         return getFallbackArrivals(code);
       }
 
-      const xmlText = await response.text();
-
+      // The decoy EMT serves when it dislikes the caller counts as a refusal;
+      // so does an HTML page where XML was due.
       if (/Temporalment no disponible/i.test(xmlText)) {
+        noteFailure({ kind: 'blocked', status: response.status ?? 200 }, code);
+        return getFallbackArrivals(code);
+      }
+      if (/^\s*(<!doctype html|<html)/i.test(xmlText)) {
+        noteFailure({ kind: 'blocked', status: response.status ?? 200 }, code);
         return getFallbackArrivals(code);
       }
 
+      emtRefusal.recordSuccess();
       const arrivals = parseEmtArrivalXml(xmlText, now);
       emtCache.set(code, {
         arrivals,
         timestamp: Date.now(),
       });
       return arrivals;
-    } catch {
+    } catch (error) {
       // Graceful fallback on network timeout or abort
+      noteFailure(classifyFetchFailure({ error }), code);
       return getFallbackArrivals(code);
     } finally {
       clearTimeout(timer);

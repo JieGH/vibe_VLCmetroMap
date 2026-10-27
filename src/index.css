@@ -1020,6 +1020,16 @@ button:active {
   color: var(--text-primary);
 }
 
+/* Train API refused this network (#123): one line under the locate notice, tap to dismiss. */
+.refusal-notice {
+  top: calc(164px + env(safe-area-inset-top, 0px));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: max-content;
+  color: #ffb74d;
+}
+
 /* ── Top-bar icon buttons (language, theme, Android app) and the app sheet ── */
 
 .topbar-icon-btn {

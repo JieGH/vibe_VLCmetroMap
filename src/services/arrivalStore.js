@@ -5,6 +5,8 @@ import metroData from '../data/metro_lines.json';
 import imageLineColors from '../data/line_colors_from_image.json';
 import paradasApi from '../data/paradas_api.json';
 import liveStations from '../data/live_stations.json';
+import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
+import { recordApiFailure } from '../utils/diagnostics';
 
 // Build complete 141-station API ID map
 export const STATION_ID_MAP = {};
@@ -120,8 +122,19 @@ async function fetchPrevision(url) {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' },
       });
-      const data = response.ok ? await response.json().catch(() => null) : null;
-      return { response, data };
+      // The raw text is kept so a refusal can be told apart: a block page is
+      // HTML, not JSON (#123).
+      let bodyText = null;
+      let data = null;
+      if (typeof response.text === 'function') {
+        bodyText = await response.text().catch(() => null);
+        if (response.ok && bodyText) {
+          try { data = JSON.parse(bodyText); } catch { /* not JSON */ }
+        }
+      } else if (response.ok) {
+        data = await response.json().catch(() => null);
+      }
+      return { response, data, bodyText };
     } catch (err) {
       if (attempt >= FGV_ATTEMPTS) throw err;
     } finally {
@@ -149,6 +162,10 @@ class ArrivalStore {
     this.rateLimitedUntil = 0;
     this.isSyncingNetwork = false;
     this.lastNetworkSyncAt = 0;
+    // Whether FGV is refusing this network (VPN, blocked IP), judged from repeated
+    // evidence, and the backoff that follows. See src/utils/apiRefusal.js (#123).
+    this.refusal = createRefusalTracker();
+    this.refusal.subscribe(() => this.notify());
 
     // Hydrate from sessionStorage if available
     this.hydrateFromSessionStorage();
@@ -214,6 +231,16 @@ class ArrivalStore {
     }
   }
 
+  /** True when the train API is refusing this network; the app tells the user. */
+  isApiRefused() {
+    return this.refusal.isRefused();
+  }
+
+  /** Forgets any refusal verdict (tests, and a fresh start after a network change). */
+  resetApiRefusal() {
+    this.refusal.recordSuccess();
+  }
+
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -274,6 +301,8 @@ class ArrivalStore {
    */
   async syncNetwork() {
     if (this.isSyncingNetwork) return { fetched: 0, skipped: 0 };
+    // A refused network is knocked on by the backoff probe, not by the sweep.
+    if (!this.refusal.canAttempt()) return { fetched: 0, skipped: 0 };
     this.isSyncingNetwork = true;
 
     let fetched = 0;
@@ -447,6 +476,17 @@ class ArrivalStore {
       }
     }
 
+    // 6. Refused-network backoff: while FGV refuses this network, one probe per
+    // backoff step (30 s up to 5 min). A manual refresh always gets through.
+    if (!this.refusal.tryAcquire({ force: forceRefresh })) {
+      const message = 'Train service refused this network. Counting down from previous sync.';
+      if (entry) {
+        const projected = this.projectArrivals(entry, now);
+        return Object.assign(projected, { isFromCache: true, fetchedAt: entry.fetchedAt, fetchError: message });
+      }
+      return Object.assign([], { fetchError: message, isFromCache: false, fetchedAt: now });
+    }
+
     // Create execution promise
     const fetchPromise = (async () => {
       // Never more than MAX_CONCURRENT_REQUESTS prevision requests in flight
@@ -472,13 +512,15 @@ class ArrivalStore {
         const url = Capacitor.isNativePlatform()
           ? `${FGV_PREVISION_URL}/${stationId}`
           : `/api/metro/horarios-prevision-3/${stationId}`;
-        const { response, data } = await fetchPrevision(url);
+        const { response, data, bodyText } = await fetchPrevision(url);
 
         if (!response.ok) {
           if (response.status === 429) {
             this.rateLimitedUntil = Date.now() + 20000; // 20s backoff
           }
-          throw new Error(`HTTP ${response.status}`);
+          throw Object.assign(new Error(`HTTP ${response.status}`), {
+            verdict: classifyFetchFailure({ status: response.status, body: bodyText, headers: response.headers }),
+          });
         }
 
         if (data && Array.isArray(data.previsiones)) {
@@ -541,6 +583,7 @@ class ArrivalStore {
             arrivals: parsedArrivals,
             fetchError: null,
           };
+          this.refusal.recordSuccess();
           this.memory.set(key, updatedEntry);
           this.persistToSessionStorage();
           this.notify();
@@ -553,8 +596,17 @@ class ArrivalStore {
           });
         }
 
-        throw new Error('Malformed API payload');
-      } catch (_err) {
+        // A 2xx that is not JSON is a block page; JSON of the wrong shape is a
+        // broken feed, not a refusal.
+        throw Object.assign(new Error('Malformed API payload'), {
+          verdict: classifyFetchFailure({ status: response.status, body: bodyText, headers: response.headers })
+            ?? { kind: 'server-error', status: response.status },
+        });
+      } catch (err) {
+        const verdict = err?.verdict ?? classifyFetchFailure({ error: err });
+        recordApiFailure('train', verdict);
+        this.refusal.recordFailure(verdict.kind, key);
+
         // Resilient Fallback: If network/rate limit failed, check if we have prior memory!
         const existingEntry = this.memory.get(key);
         if (existingEntry) {

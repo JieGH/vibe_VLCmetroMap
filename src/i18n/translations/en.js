@@ -21,6 +21,8 @@ export default {
     clearFilterTitle: 'Click to clear filter',
     dismissTitle: 'Dismiss',
     locationHidden: 'Location hidden.',
+    trainApiRefused: 'Network refused by train service. Try turning off your VPN.',
+    trainApiRefusedLong: 'The train service refused this network. If you use a VPN, try turning it off.',
   },
   locate: {
     idle: 'Centre on me and show my nearest station',
