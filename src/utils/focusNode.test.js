@@ -125,3 +125,14 @@ describe('renderBusStopHighlight', () => {
     expect(selectedHtml).toContain('is-selected');
   });
 });
+
+describe('renderBusStopHighlight line badges (#121)', () => {
+  it('uses tight horizontal padding and a square minimum width', () => {
+    const sel = renderBusStopHighlight({ lines: ['99'] }, 'dark', true);
+    expect(sel).toContain('padding:2.5px 3px;');
+    expect(sel).toContain('min-width:18px;');
+    const unsel = renderBusStopHighlight({ lines: ['99'] }, 'dark', false);
+    expect(unsel).toContain('padding:1.5px 2px;');
+    expect(unsel).toContain('min-width:11px;');
+  });
+});

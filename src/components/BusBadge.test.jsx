@@ -23,4 +23,16 @@ describe('BusBadge component', () => {
     expect(html).toContain('N1');
     expect(html).not.toContain('EMT');
   });
+
+  it('is squarer (#121): min-width equals height with tight padding, per size', () => {
+    const sm = renderToStaticMarkup(<BusBadge line="99" size="sm" />);
+    expect(sm).toContain('height:18px');
+    expect(sm).toContain('min-width:18px');
+    expect(sm).toContain('padding:0 2px');
+    const md = renderToStaticMarkup(<BusBadge line="9" />);
+    expect(md).toContain('min-width:24px');
+    expect(md).toContain('padding:0 3px');
+    const lg = renderToStaticMarkup(<BusBadge line="9" size="lg" />);
+    expect(lg).toContain('min-width:30px');
+  });
 });

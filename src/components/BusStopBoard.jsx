@@ -7,6 +7,7 @@ import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdown
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
+import { busBadgeBox } from '../utils/busBadgeStyle';
 import {
   fetchStopArrivals,
   getEmtCachedArrivals,
@@ -271,7 +272,7 @@ export const BusStopBoard = ({
                   className="station-header-line-badge"
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
+                    ...busBadgeBox(20), borderRadius: 5,
                     background: '#D62828', color: '#fff',
                     fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
                   }}
@@ -415,12 +416,10 @@ export const BusStopBoard = ({
                         line={a.line}
                         className="station-line-badge"
                         style={{
-                          minWidth: 28,
-                          height: 28,
+                          ...busBadgeBox(28),
                           borderRadius: 8,
                           fontSize: '.86rem',
                           fontWeight: 900,
-                          padding: '0 6px',
                         }}
                       />
                     </td>

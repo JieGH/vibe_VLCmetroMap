@@ -1,6 +1,7 @@
 // Consistent EMT Bus Badge Component
 // Renders all EMT bus line badges with consistent official red branding.
 import React from 'react';
+import { busBadgeBox } from '../utils/busBadgeStyle';
 
 /**
  * @param {{
@@ -27,10 +28,10 @@ export const BusBadge = ({
 
   // Font and padding dimensions based on size
   const dims = {
-    sm: { height: 18, minWidth: 24, fontSize: '0.70rem', iconSize: 10, pad: '0 4.5px' },
-    md: { height: 24, minWidth: 28, fontSize: '0.80rem', iconSize: 12, pad: '0 6px' },
-    lg: { height: 30, minWidth: 36, fontSize: '0.92rem', iconSize: 14, pad: '0 8px' },
-  }[size] || { height: 24, minWidth: 28, fontSize: '0.80rem', iconSize: 12, pad: '0 6px' };
+    sm: { ...busBadgeBox(18), fontSize: '0.70rem', iconSize: 10 },
+    md: { ...busBadgeBox(24), fontSize: '0.80rem', iconSize: 12 },
+    lg: { ...busBadgeBox(30), fontSize: '0.92rem', iconSize: 14 },
+  }[size] || { ...busBadgeBox(24), fontSize: '0.80rem', iconSize: 12 };
 
   // Unified EMT red branding matching the stop marker badge on the map
   const badgeColor = '#D62828';
@@ -46,7 +47,7 @@ export const BusBadge = ({
         gap: 3,
         height: dims.height,
         minWidth: dims.minWidth,
-        padding: dims.pad,
+        padding: dims.padding,
         borderRadius: 4,
         background: badgeColor,
         color: '#ffffff',

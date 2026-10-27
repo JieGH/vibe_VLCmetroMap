@@ -106,7 +106,7 @@ export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
   const isMultiColumn = displayLines.length > 2;
 
   const fontStyle = isSelected ? 'font:900 12px/1.1 system-ui;' : 'font:900 8px/1 system-ui;';
-  const badgePadding = isSelected ? 'padding:2.5px 5.5px;' : 'padding:1.5px 3.5px;';
+  const badgePadding = isSelected ? 'padding:2.5px 3px;min-width:18px;' : 'padding:1.5px 2px;min-width:11px;';
   const badgeRadius = isSelected ? 'border-radius:3.5px;' : 'border-radius:2.5px;';
   const badgeGap = isSelected ? '3.5px' : '2.5px';
   const bubblePadding = isSelected ? 'padding:5px 8px;' : 'padding:3px 5px;';
@@ -117,7 +117,7 @@ export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
   // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
   const lineBadges = displayLines.map((l) => {
     const lineId = typeof l === 'object' && l !== null ? (l.line || l.id || '') : l;
-    return `<span style="${fontStyle}${badgePadding}${badgeRadius}background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;text-align:center;">${escapeHtml(lineId)}</span>`;
+    return `<span style="${fontStyle}${badgePadding}${badgeRadius}box-sizing:border-box;background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;text-align:center;">${escapeHtml(lineId)}</span>`;
   }).join('');
 
   const containerStyle = isMultiColumn

@@ -40,6 +40,16 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('data-testid="station-drag-handle"');
   });
 
+  it('renders the header line badges squarer (#121): min-width equals height, tight padding', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />
+    );
+    const badge = html.match(/class="station-header-line-badge"[^>]*>/)?.[0] || '';
+    expect(badge).toContain('min-width:20px');
+    expect(badge).toContain('height:20px');
+    expect(badge).toContain('padding:0 2px');
+  });
+
   it('renders expand and close buttons matching StationPanel design', () => {
     const html = renderToStaticMarkup(
       <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />

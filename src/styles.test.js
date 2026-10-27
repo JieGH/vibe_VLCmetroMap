@@ -337,3 +337,25 @@ describe('EMT line numbers at street zoom (#116)', () => {
     expect(chip).toContain('font-weight: 900');
   });
 });
+
+describe('Squarer bus line badges (#121)', () => {
+  const chip = css.match(/\.emt-stop-chip\s*\{([^}]*)\}/)?.[1] || '';
+
+  it('makes the map line chip a square minimum (min-width equals height) with tight padding', () => {
+    expect(chip).toMatch(/height:\s*14px/);
+    expect(chip).toMatch(/min-width:\s*14px/);
+    expect(chip).toMatch(/padding:\s*0 2px/);
+  });
+
+  it('keeps chip height, font size, colour and radius, and never fixes the width', () => {
+    expect(chip).toContain('font-size: 9px');
+    expect(chip).toContain('border-radius: 3px');
+    expect(chip).toContain('background: #D62828');
+    expect(chip).not.toMatch(/(^|[\s;])width:/);
+  });
+
+  it('does not override the bus badge geometry in android.css', () => {
+    expect(androidCss).not.toMatch(/\.bus-badge/);
+    expect(androidCss).not.toMatch(/\.emt-stop-chip/);
+  });
+});
