@@ -232,6 +232,14 @@ textarea {
   animation: busStopPulse 2.2s infinite ease-in-out;
 }
 
+/* The selected stop is drawn once, by its outlined highlight (.bus-focus-node) on top. The marker
+   underneath is hidden so no second copy of the line numbers shows below the highlight. */
+.map-container .emt-stop-badge.is-selected {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  animation: none;
+}
+
 /* Zoomed-out dots (#108). MapView flips data-emt-stage on the map container from one zoom check with
    hysteresis (utils/emtDotMode.js); nothing is rebuilt. Every non-selected EMT stop collapses to a solid
    red dot (8px incl. its 1px white ring). The ::after is an invisible 24px hit area that bubbles to the

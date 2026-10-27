@@ -332,6 +332,12 @@ describe('EMT line numbers at street zoom (#116)', () => {
     expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines')).toContain('background: transparent');
   });
 
+  it('hides the marker under the selected stop highlight so the stop is drawn once', () => {
+    const hidden = rule('.map-container .emt-stop-badge.is-selected');
+    expect(hidden).toContain('opacity: 0 !important');
+    expect(hidden).toContain('pointer-events: none');
+  });
+
   it('stacks the chips in exactly two columns so dense stops stay compact', () => {
     const lines = rule('.emt-stop-lines');
     expect(lines).toContain('grid-template-columns: repeat(2, auto)');
