@@ -3,7 +3,7 @@
 
 import { Marker } from 'maplibre-gl';
 import { createCircleGeoJSON } from './geoUtils';
-import { WALK_RADIUS_METRES } from './walkRadius';
+import { WALK_RADIUS_BUS_METRES } from './walkRadius';
 import { getStopDisplayCoordinates } from '../data/emtData';
 import { stopLinesMarkup } from './emtStopLines';
 import { translate, FALLBACK_LANGUAGE } from '../i18n/translate';
@@ -154,7 +154,7 @@ export const setBusRoutesData = (map, lines = []) => {
 };
 
 /**
- * Draws the walk radius circle (WALK_RADIUS_METRES) and dashed walking links to nearby bus stops.
+ * Draws the walk radius circle (WALK_RADIUS_BUS_METRES) and dashed walking links to nearby bus stops.
  */
 export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
   if (!map || !map.isStyleLoaded()) return;
@@ -169,7 +169,7 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
 
   // Draw the walk boundary circle
   if (radiusSource) {
-    radiusSource.setData(createCircleGeoJSON(stationCoords, WALK_RADIUS_METRES));
+    radiusSource.setData(createCircleGeoJSON(stationCoords, WALK_RADIUS_BUS_METRES));
   }
 
   if (source) {

@@ -6,7 +6,9 @@ import {
   getAllBusStops,
   getRealBusLines,
 } from './emtData';
-import { WALK_RADIUS_METRES, WALK_RADIUS_MIN } from '../utils/walkRadius';
+import { WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
+import { getDistance } from '../utils/geoUtils';
+import { walkingMinutes } from '../utils/walking';
 import REAL_EMT_STOPS from './emt_stops.json';
 
 describe('EMT data (real stops only, #122)', () => {
@@ -32,12 +34,26 @@ describe('EMT data (real stops only, #122)', () => {
     feeders.forEach((f) => {
       expect(realCodes.has(f.stopCode)).toBe(true);
       expect(f.stopCode).not.toMatch(/^P-/);
-      expect(f.walkMetres).toBeLessThanOrEqual(WALK_RADIUS_METRES);
-      expect(f.walkMin).toBeLessThanOrEqual(WALK_RADIUS_MIN);
+      expect(f.walkMetres).toBeLessThanOrEqual(WALK_RADIUS_BUS_METRES);
+      expect(f.walkMin).toBeLessThanOrEqual(walkingMinutes(WALK_RADIUS_BUS_METRES));
       f.lines.forEach((l) => {
         expect(typeof l).toBe('string');
       });
     });
+  });
+
+  it('uses the bus radius: a stop 270 m away is offered, one 290 m away is not', () => {
+    const stop = REAL_EMT_STOPS[0];
+    const [lng, lat] = stop.coordinates;
+    // A point due west of the stop, `metres` away by the repo's own distance function.
+    const westOf = (metres) => {
+      let x = lng - metres / 86000;
+      for (let i = 0; i < 20; i += 1) x -= (metres - getDistance([lng, lat], [x, lat])) / 86000;
+      return [x, lat];
+    };
+    const codes = (m) => getStationBusFeeders('Pin', westOf(m)).map((f) => f.stopCode);
+    expect(codes(270)).toContain(String(stop.stopCode));
+    expect(codes(290)).not.toContain(String(stop.stopCode));
   });
 
   it('a stop with no line data yields no chips (no default 19 / C1)', () => {

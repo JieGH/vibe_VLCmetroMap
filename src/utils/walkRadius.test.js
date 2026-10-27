@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  WALK_RADIUS_MIN,
-  WALK_RADIUS_METRES,
+  WALK_RADIUS_METRO_METRES,
+  WALK_RADIUS_BUS_METRES,
+  walkRadiusMinutes,
   WALK_RADIUS_HYSTERESIS_METRES,
   pickWalkSet,
   WALK_FALLBACK_MAX_METRES,
@@ -19,12 +20,16 @@ const eastOf = (metres) => {
 const at = (key, metres) => ({ key, coordinates: eastOf(metres) });
 const opts = (extra = {}) => ({ getCoords: (i) => i.coordinates, getKey: (i) => i.key, ...extra });
 
-describe('walk radius constant', () => {
-  it('is 3 minutes at the one walking speed, 225 m', () => {
-    expect(WALK_RADIUS_MIN).toBe(3);
-    expect(WALK_RADIUS_METRES).toBe(225);
-    expect(walkingMinutes(WALK_RADIUS_METRES)).toBe(WALK_RADIUS_MIN);
-    expect(walkingMinutes(WALK_RADIUS_METRES + 1)).toBe(WALK_RADIUS_MIN + 1);
+describe('walk radius constants', () => {
+  it('detects Metro stations within 320 m and EMT stops within 280 m', () => {
+    expect(WALK_RADIUS_METRO_METRES).toBe(320);
+    expect(WALK_RADIUS_BUS_METRES).toBe(280);
+  });
+
+  it('derives the displayed minutes from the distance with the one walking speed (rounded up)', () => {
+    expect(walkRadiusMinutes(WALK_RADIUS_METRO_METRES)).toBe(walkingMinutes(320));
+    expect(walkRadiusMinutes(WALK_RADIUS_METRO_METRES)).toBe(5);
+    expect(walkRadiusMinutes(WALK_RADIUS_BUS_METRES)).toBe(4);
   });
 });
 
@@ -36,10 +41,25 @@ describe('pickWalkSet', () => {
   });
 
   it('includes the boundary and excludes just past it', () => {
-    const inside = at('in', WALK_RADIUS_METRES - 1);
-    const outside = at('out', WALK_RADIUS_METRES + 5);
+    const inside = at('in', WALK_RADIUS_METRO_METRES - 1);
+    const outside = at('out', WALK_RADIUS_METRO_METRES + 5);
     const { items } = pickWalkSet([inside, outside], ORIGIN, opts());
     expect(items.map((r) => r.item.key)).toEqual(['in']);
+  });
+
+  it('metro radius: a station at 300 m is included, one at 330 m excluded', () => {
+    const { items } = pickWalkSet([at('s300', 300), at('s330', 330)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_METRO_METRES, allowFallback: false }));
+    expect(items.map((r) => r.item.key)).toEqual(['s300']);
+  });
+
+  it('bus radius: a stop at 270 m is included, one at 290 m excluded', () => {
+    const { items } = pickWalkSet([at('b270', 270), at('b290', 290)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false }));
+    expect(items.map((r) => r.item.key)).toEqual(['b270']);
+  });
+
+  it('a far ping still spawns no bus stop, even one inside the metro radius but past the bus radius', () => {
+    const r = pickWalkSet([at('b300', 300), at('b700', 700)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false }));
+    expect(r).toEqual({ items: [], fallback: false });
   });
 
   it('reports real distance and the displayed walk minutes from the same speed', () => {
@@ -67,14 +87,16 @@ describe('pickWalkSet', () => {
   });
 
   it('keeps a previously shown item until it is past radius + hysteresis (no boundary flicker)', () => {
-    const drifting = at('d', WALK_RADIUS_METRES + WALK_RADIUS_HYSTERESIS_METRES - 5);
-    const gone = at('g', WALK_RADIUS_METRES + WALK_RADIUS_HYSTERESIS_METRES + 5);
-    const keep = new Set(['d', 'g']);
-    const withKeep = pickWalkSet([drifting, gone, at('a', 10)], ORIGIN, opts({ keep }));
-    expect(withKeep.items.map((r) => r.item.key)).toEqual(['a', 'd']);
-    // Never shown before: the same distance does not get in.
-    const fresh = pickWalkSet([drifting, at('a', 10)], ORIGIN, opts());
-    expect(fresh.items.map((r) => r.item.key)).toEqual(['a']);
+    [WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES].forEach((radiusMetres) => {
+      const drifting = at('d', radiusMetres + WALK_RADIUS_HYSTERESIS_METRES - 5);
+      const gone = at('g', radiusMetres + WALK_RADIUS_HYSTERESIS_METRES + 5);
+      const keep = new Set(['d', 'g']);
+      const withKeep = pickWalkSet([drifting, gone, at('a', 10)], ORIGIN, opts({ keep, radiusMetres }));
+      expect(withKeep.items.map((r) => r.item.key)).toEqual(['a', 'd']);
+      // Never shown before: the same distance does not get in.
+      const fresh = pickWalkSet([drifting, at('a', 10)], ORIGIN, opts({ radiusMetres }));
+      expect(fresh.items.map((r) => r.item.key)).toEqual(['a']);
+    });
   });
 
   it('caps the nearest-item fallback at 600 m by default (#122)', () => {
@@ -91,7 +113,7 @@ describe('pickWalkSet', () => {
   });
 
   it('never falls back when allowFallback is false (map ping)', () => {
-    expect(pickWalkSet([at('near', 300)], ORIGIN, opts({ allowFallback: false }))).toEqual({ items: [], fallback: false });
+    expect(pickWalkSet([at('near', 400)], ORIGIN, opts({ allowFallback: false }))).toEqual({ items: [], fallback: false });
     const inside = pickWalkSet([at('in', 100)], ORIGIN, opts({ allowFallback: false }));
     expect(inside.items).toHaveLength(1);
   });

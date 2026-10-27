@@ -501,7 +501,7 @@ function App() {
 
   // Live tracking: once located, follow the viewer while the app is visible. The tracker (liveTracking.js) owns
   // cadence, gating and pausing; this wires its three outputs. Per fix: the dot only. Past ANCHOR_RECOMPUTE_M:
-  // the nearest station, the 3-minute-walk nodes and the "Where you're at" hub (all driven by `userLocation`,
+  // the nearest station, the walk-radius nodes and the "Where you're at" hub (all driven by `userLocation`,
   // whose `fetchedAt` is kept so the camera is not re-framed). No EMT request is made from here (ADR-0011).
   const walkTargetRef = useRef(null);
   walkTargetRef.current = walkTarget;

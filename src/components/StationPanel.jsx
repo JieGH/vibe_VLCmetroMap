@@ -20,7 +20,7 @@ import CompactMetroSection from './CompactMetroSection';
 import { getDistance, nearbyFeatures } from '../utils/geoUtils';
 import { walkingMinutes } from '../utils/walking';
 import { hubDisplayName } from '../utils/hubName';
-import { pickWalkSet, WALK_RADIUS_METRES } from '../utils/walkRadius';
+import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import gtfsData from '../data/gtfs_expanded.json';
 
 const allMetroStations = gtfsData.features.filter(f => f.geometry.type === 'Point');
@@ -119,7 +119,7 @@ const StationPanel = ({
   const nearbyMetro = useMemo(() => {
     if (!anchorCoords) return [];
     const stationName = station?.properties?.name;
-    return nearbyFeatures(allMetroStations, anchorCoords, WALK_RADIUS_METRES)
+    return nearbyFeatures(allMetroStations, anchorCoords, WALK_RADIUS_METRO_METRES)
       .filter((m) => m.feature.properties.name !== stationName)
       .slice(0, 8);
   }, [anchorCoords, station?.properties?.name]);
@@ -197,6 +197,7 @@ const StationPanel = ({
     ? pickWalkSet(getAllBusStops(), anchorCoords, {
         getCoords: (stop) => stop.coordinates,
         getKey: (stop) => String(stop.stopCode || stop.code || ''),
+        radiusMetres: WALK_RADIUS_BUS_METRES,
         allowFallback: !isMapPing,
       }).items.map(({ item: stop, distance }) => feederFromStop(stop, distance))
     : getStationBusFeeders(focus.name, stationCoords);

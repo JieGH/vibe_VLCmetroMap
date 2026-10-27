@@ -1,7 +1,7 @@
 // EMT València bus data: real stops from the official open data only.
 
 import { getDistance } from '../utils/geoUtils';
-import { WALK_RADIUS_METRES } from '../utils/walkRadius';
+import { WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import { walkingMinutes } from '../utils/walking';
 import REAL_EMT_STOPS from './emt_stops.json';
 import { buildDisplayCoordinates, displayCoordinatesFor } from '../utils/stopOffsets';
@@ -38,7 +38,7 @@ export const getStationBusFeeders = (stationName, stationCoords) => {
   if (!stationName || !Array.isArray(stationCoords)) return [];
   return REAL_EMT_STOPS
     .map((stop) => ({ stop, dist: getDistance(stationCoords, stop.coordinates) }))
-    .filter((item) => item.dist <= WALK_RADIUS_METRES)
+    .filter((item) => item.dist <= WALK_RADIUS_BUS_METRES)
     .sort((a, b) => a.dist - b.dist)
     .slice(0, 4)
     .map(({ stop, dist }) => feederFromStop(stop, dist));

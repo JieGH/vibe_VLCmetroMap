@@ -5,7 +5,7 @@ import { Footprints } from 'lucide-react';
 import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
-import { WALK_RADIUS_MIN } from '../utils/walkRadius';
+import { WALK_RADIUS_METRO_METRES, walkRadiusMinutes } from '../utils/walkRadius';
 import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 
 export const CompactMetroSection = ({
@@ -525,7 +525,7 @@ export const CompactMetroSection = ({
       {nearbyMetro && nearbyMetro.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
           <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {t('stationPanel.alsoWithinWalk', { min: WALK_RADIUS_MIN })}
+            {t('stationPanel.alsoWithinWalk', { min: walkRadiusMinutes(WALK_RADIUS_METRO_METRES) })}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {nearbyMetro.map((m) => {

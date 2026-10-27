@@ -169,7 +169,7 @@ The UX pattern where high-confidence train arrivals render with zero latency (fr
 _Avoid_: Synchronous blocking wait, all-or-nothing render
 
 **Spawn Radius (3-min Walk)**:
-The 225-metre (3 minutes at 1.25 m/s) spatial threshold around a dropped pin or User Location within which multimodal transit stops spawn into the "Where you're at" sheet.
+The spatial threshold (Metro stations within 320 m, EMT bus stops within 280 m) around a dropped pin or User Location within which multimodal transit stops spawn into the "Where you're at" sheet.
 _Avoid_: Buffer zone, catchment area, 1km radius
 
 **Bus GPS Stream**:

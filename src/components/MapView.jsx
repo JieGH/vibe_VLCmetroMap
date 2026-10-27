@@ -32,7 +32,7 @@ import trainPositionEngine from '../services/trainPositionEngine';
 import { hasMapSelection, fadesAllVehicles } from '../utils/selectionFocus';
 import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
-import { pickWalkSet } from '../utils/walkRadius';
+import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import returnTrackData from '../data/return_tracks.json';
 import { emtStage, EMT_MARKER_MIN_ZOOM } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
@@ -1244,7 +1244,7 @@ const MapView = ({
 
         // Multimodal Walk Radius click on the map:
         // When zoomed in (zoom >= 12.5), clicking any point explores all transit
-        // (Metro stations and EMT bus stops) within the walk radius (3 minutes, see walkRadius.js).
+        // (Metro stations and EMT bus stops) within the walk radius (metro 320 m, bus 280 m, see walkRadius.js).
         if (currentZoom >= 12.5) {
           const nearestToPing = drawnStationsRef.current && drawnStationsRef.current.length > 0
             ? nearestFeature(drawnStationsRef.current, [lng, lat])
@@ -1790,6 +1790,7 @@ const MapView = ({
       getCoords: snappedCoordinates,
       getKey: (st) => `m:${st.properties.name}`,
       keep,
+      radiusMetres: WALK_RADIUS_METRO_METRES,
       fallbackMaxMetres: Infinity, // the metro fallback is kept as is (#122)
     }).items.map(({ item }) => item);
 
@@ -1802,6 +1803,7 @@ const MapView = ({
       getCoords: (stop) => stop.coordinates,
       getKey: (stop) => `b:${stop.stopCode}`,
       keep,
+      radiusMetres: WALK_RADIUS_BUS_METRES,
       allowFallback: !userLocation.isMapClick, // a map ping never spawns a far stop (#122)
     }).items.map(({ item }) => item);
 

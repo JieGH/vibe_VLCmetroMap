@@ -8,7 +8,7 @@ Accepted. Implements #104. Builds on [ADR-0004](0004-geolocation-comes-from-the-
 
 ## Context
 
-Locating gave a single snapshot. Walking with the app open left the blue dot, the nearby stops and the "Where you're at" hub frozen. A continuous high-accuracy GPS watch is the most expensive thing a map app can do to a battery, and the repeated recomputation (nearby stops, 3-minute-walk nodes, hub) plus re-renders cost more on top.
+Locating gave a single snapshot. Walking with the app open left the blue dot, the nearby stops and the "Where you're at" hub frozen. A continuous high-accuracy GPS watch is the most expensive thing a map app can do to a battery, and the repeated recomputation (nearby stops, walk-radius nodes, hub) plus re-renders cost more on top.
 
 ## Decision
 
@@ -18,7 +18,7 @@ Locating gave a single snapshot. Walking with the app open left the blue dot, th
 - **Cadence.** Moving: one fix per 4 s, `enableHighAccuracy: true` (a ~6 m step at walking pace). After 30 s without movement: one per 20 s, `enableHighAccuracy: false` (GPS chip off). Any movement returns to the fast mode.
 - **Distance gate.** A fix within 10 m of the last reported one (widened to half the accuracy, capped at 25 m, for noisy fixes) is jitter and is dropped; fixes worse than `MAX_USABLE_ACCURACY_M` are rejected.
 - **Idle stop.** After 10 minutes without movement the watch ends in a quiet, resumable `resting` state; the dot fades as it already does for stale fixes and pressing locate resumes.
-- **Two tiers of update.** Per fix: only the user marker moves, via a small publish/subscribe channel straight to MapView, so the app does not re-render. After the viewer is 45 m from the last anchor: the nearest station, the 3-minute-walk nodes (225 m radius, with a 20 m hysteresis so nodes do not flicker at the edge) and the hub's data are recomputed through the normal `userLocation` state. The camera is not re-framed (`fetchedAt` is kept).
+- **Two tiers of update.** Per fix: only the user marker moves, via a small publish/subscribe channel straight to MapView, so the app does not re-render. After the viewer is 45 m from the last anchor: the nearest station, the walk-radius nodes (Metro 320 m, EMT 280 m, with a 20 m hysteresis so nodes do not flicker at the edge) and the hub's data are recomputed through the normal `userLocation` state. The camera is not re-framed (`fetchedAt` is kept).
 - **Camera.** While following, the camera eases to the dot only when it drifts more than 60 px from the middle, at the current zoom (#94). A manual pan or choosing a station/bus stop (#95) ends following; the locate button recentres and re-follows.
 - **When it starts.** After any successful locate, including the launch-time auto-locate (a frozen dot is worse than a tracked one); the 10-minute idle stop bounds the cost. Pressing locate while tracking does not stop it: it recentres, re-follows and re-seeds. Stopping is hold-to-hide, closing the hub or dismissing GPS mode.
 - **Hub refresh.** Past the 45 m anchor the "Where you're at" hub is rebuilt in place (same `buildGpsHub` as the first locate) only while the hub itself is showing; MapView skips its focus easing for such a refresh. A stop opened from the hub keeps its return context, and `resolveReturn` rebuilds the hub from the latest fix on return (#105).
