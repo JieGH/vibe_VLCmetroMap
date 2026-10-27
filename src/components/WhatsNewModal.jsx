@@ -28,6 +28,10 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
   if (!isOpen) return null;
 
   const features = [
+    { title: t('whatsNew.itemZoomTitle'), desc: t('whatsNew.itemZoomDesc') },
+    { title: t('whatsNew.itemNearTitle'), desc: t('whatsNew.itemNearDesc') },
+    { title: t('whatsNew.itemBigTitle'), desc: t('whatsNew.itemBigDesc') },
+    { title: t('whatsNew.itemNetTitle'), desc: t('whatsNew.itemNetDesc') },
     { title: t('whatsNew.itemBusTitle'), desc: t('whatsNew.itemBusDesc') },
     { title: t('whatsNew.itemSplitTitle'), desc: t('whatsNew.itemSplitDesc') },
     { title: t('whatsNew.itemFollowTitle'), desc: t('whatsNew.itemFollowDesc') },

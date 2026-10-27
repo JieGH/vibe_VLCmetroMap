@@ -25,11 +25,11 @@
 - **Nearest station in one tap**, with walk time (location never leaves your phone)
 - **Live countdowns** for any station
 - **City buses too**: live EMT València arrivals at any stop, loaded when you tap it
-- **Metro and bus side by side**: drop a pin or find yourself and see the nearby trains and buses in one view, a few soonest departures per stop
+- **Metro and bus side by side**: drop a pin or find yourself and see the nearby trains (within 320 m) and buses (within 280 m) in one view, a few soonest departures per stop
 - **Follows you as you walk**: while the app is open your position keeps updating, kept gentle on the battery (nothing runs in the background)
-- **Clearer bus stops**: stops for each direction are drawn apart, and shrink to small dots when you zoom out
+- **Clearer bus stops**: stops for each direction are drawn apart, and shrink to small dots when you zoom out, and show the EMT logo and line numbers as you zoom in
 - **Follow one line** or search any stop
-- **Light, dark or auto**, bigger text that scales the map markers too
+- **Light, dark or auto**, bigger text (up to XXL) that scales the map markers too; on a wide desktop window the sidebar opens by default, wider, with Large text
 - **Departures board** for a spare screen: [?mode=dashboard](https://xarxa.net/?mode=dashboard)
 - **3 languages**: English, Español, Valencià
 - **Poor connection OK**: the map is stored with the app
