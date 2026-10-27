@@ -1620,6 +1620,35 @@ button:active {
   pointer-events: none;
 }
 
+/* Line chips inside the chosen stop's box: one fixed size at every map zoom (they follow Text Size via
+   the .bus-floating-chart / .station-floating-chart zoom above), 1 column for 1 line, otherwise 2.
+   An odd last chip spans both columns and is centred, so there is never an empty cell. */
+.focus-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--focus-cols, 1), 26px);
+  gap: 3.5px;
+  justify-content: center;
+  align-items: center;
+}
+
+.focus-chip {
+  box-sizing: border-box;
+  width: 26px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 3.5px;
+  font: 900 12px/1 system-ui;
+  text-align: center;
+}
+
+.focus-chip-last-odd {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
 /* ── Welcome / Splash Screen ─────────────────────────────────────────────── */
 
 .welcome-screen {

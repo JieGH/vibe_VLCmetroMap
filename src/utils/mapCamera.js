@@ -70,94 +70,101 @@ export const calculateUnfocusCamera = ({
  */
 export const zoomOutTarget = (currentZoom) => currentZoom;
 
-export const PORTRAIT_FOCUS_CLEARANCE_PX = 80;
+/** Gap kept between the usable map area and the screen edges. */
+export const FOCUS_EDGE_PX = 12;
+/** Gap kept between the usable map area and the sheet (or side panel). */
+export const SHEET_GAP_PX = 8;
+/** The usable area never gets thinner than this, whatever the sheet height. */
+export const MIN_USABLE_APERTURE_PX = 120;
+/** Padding changes under this many px are measurement noise, not a resize. */
+export const PADDING_NOISE_PX = 2;
 
 /**
- * Computes viewport padding so the station centers in the visible area of the map
- * rather than hidden behind the search bar, bottom sheet, or side panel.
+ * Where a sheet rests, from layout offsets rather than the drawn rect, so an in-flight
+ * slide-up/slide-in transform cannot skew it. Falls back to the drawn rect.
  *
- * Adds vertical clearance in portrait so the station dot and its arrival popup bubble
- * float comfortably above the floating timetable card without overlap.
+ * @param {object} [args]
+ * @param {{ top: number, left: number }} [args.rect] - the sheet's getBoundingClientRect()
+ * @param {{ top: number, left: number }} [args.offsetParentRect] - its offset parent's rect
+ * @param {number} [args.offsetTop]
+ * @param {number} [args.offsetLeft]
+ * @returns {{ top: number, left: number } | undefined} viewport coordinates
+ */
+export const restingSheetRect = ({ rect, offsetParentRect, offsetTop, offsetLeft } = {}) => {
+  if (offsetParentRect && Number.isFinite(offsetTop) && Number.isFinite(offsetLeft)) {
+    return { top: offsetParentRect.top + offsetTop, left: offsetParentRect.left + offsetLeft };
+  }
+  return rect ? { top: rect.top, left: rect.left } : undefined;
+};
+
+/**
+ * THE rule for where a selected stop is centred: the usable rectangle of the map, from
+ * measured values. It sits below the search bar and above the bottom sheet (portrait) or
+ * left of the side panel (landscape). Padding is derived from it so MapLibre centres the
+ * stop at exactly the rectangle's centre.
  *
  * @param {object} [options]
  * @param {boolean} [options.isLandscape]
- * @param {DOMRect | { top: number, right: number, bottom: number, left: number }} [options.containerRect]
- * @param {DOMRect | { top?: number, right?: number, bottom?: number, left?: number }} [options.searchBarRect]
- * @param {DOMRect | { top?: number, right?: number, bottom?: number, left?: number }} [options.panelRect]
- * @param {number} [options.panelHeight] - Explicit layout height of the station panel, immune to in-flight CSS transforms.
- * @param {number} [options.panelWidth] - Explicit layout width of the station panel.
- * @param {boolean} [options.hasPanel] - Whether a panel is present or expected.
+ * @param {{ top: number, right: number, bottom: number, left: number }} [options.containerRect] - map container, viewport coordinates
+ * @param {{ bottom?: number }} [options.searchBarRect]
+ * @param {{ top?: number, left?: number }} [options.sheetRect] - where the sheet rests (restingSheetRect)
+ * @param {boolean} [options.hasPanel] - a sheet is shown or about to be, even if not measurable yet
  * @param {number} [options.viewportWidth]
  * @param {number} [options.viewportHeight]
- * @param {number} [options.portraitClearance] - Additional vertical clearance (px) above the bottom panel.
- * @returns {{ top: number, right: number, bottom: number, left: number }}
+ * @returns {{ rect: { left: number, top: number, right: number, bottom: number }, padding: { top: number, right: number, bottom: number, left: number }, centre: { x: number, y: number } }}
+ *   rect and centre are in container pixels
  */
-export const panelAwarePadding = ({
+export const usableArea = ({
   isLandscape = typeof window !== 'undefined' ? window.innerWidth >= LANDSCAPE_BREAKPOINT_PX : false,
   containerRect,
   searchBarRect,
-  panelRect,
-  panelHeight: explicitPanelHeight,
-  panelWidth: explicitPanelWidth,
-  hasPanel = Boolean(panelRect || explicitPanelHeight != null || explicitPanelWidth != null),
+  sheetRect,
+  hasPanel = Boolean(sheetRect),
   viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024,
   viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768,
-  portraitClearance = hasPanel ? PORTRAIT_FOCUS_CLEARANCE_PX : 0,
 } = {}) => {
   const containerTop = containerRect ? containerRect.top : 0;
-  const containerRight = containerRect ? containerRect.right : viewportWidth;
-  const containerBottom = containerRect ? containerRect.bottom : viewportHeight;
-  const containerHeight = containerBottom - containerTop;
+  const containerLeft = containerRect ? containerRect.left : 0;
+  const width = containerRect ? containerRect.right - containerLeft : viewportWidth;
+  const height = containerRect ? containerRect.bottom - containerTop : viewportHeight;
 
-  const topPadding =
-    (searchBarRect && Number.isFinite(searchBarRect.bottom) ? searchBarRect.bottom - containerTop : 84) + 12;
+  const top = (searchBarRect && Number.isFinite(searchBarRect.bottom) ? searchBarRect.bottom - containerTop : 84) + 12;
+  let left = FOCUS_EDGE_PX;
+  let right = width - FOCUS_EDGE_PX;
+  let bottom = height - FOCUS_EDGE_PX;
 
-  if (isLandscape) {
-    let panelWidth = 0;
-    if (hasPanel) {
-      const measuredPanelWidth =
-        panelRect && Number.isFinite(panelRect.left) ? containerRight - panelRect.left : null;
-      panelWidth = Math.max(
-        explicitPanelWidth ?? 0,
-        measuredPanelWidth ?? (explicitPanelWidth != null ? 0 : Math.min(380, viewportWidth * 0.34))
-      );
-    }
-
-    return {
-      top: topPadding,
-      right: Math.round(hasPanel ? panelWidth + 16 : 40),
-      bottom: 40,
-      left: 40,
-    };
+  if (hasPanel && isLandscape) {
+    // A sheet that cannot be measured yet is estimated, then corrected once it can.
+    const sheetLeft = sheetRect && Number.isFinite(sheetRect.left) ? sheetRect.left - containerLeft : width - Math.min(380, viewportWidth * 0.34);
+    right = Math.max(left + MIN_USABLE_APERTURE_PX, Math.round(sheetLeft - SHEET_GAP_PX));
+  } else if (hasPanel) {
+    const sheetTop = sheetRect && Number.isFinite(sheetRect.top) ? sheetRect.top - containerTop : height - viewportHeight * 0.45;
+    bottom = Math.max(top + MIN_USABLE_APERTURE_PX, Math.round(sheetTop - SHEET_GAP_PX));
   }
-
-  // Portrait mode:
-  let bottomPadding = 40;
-  if (hasPanel) {
-    const measuredPanelHeight =
-      panelRect && Number.isFinite(panelRect.top) && containerBottom > panelRect.top
-        ? containerBottom - panelRect.top
-        : null;
-
-    // Use the maximum of layout height and measured height to ensure in-flight CSS transforms
-    // (e.g. translateY slide-up) do not under-report resting panel height.
-    const panelHeight = Math.max(
-      explicitPanelHeight ?? 0,
-      measuredPanelHeight ?? (explicitPanelHeight != null ? 0 : viewportHeight * 0.45)
-    );
-
-    const rawBottom = panelHeight + portraitClearance;
-    // Guard against viewport over-constraining on small screens, preserving minimum map aperture
-    const maxAllowedBottom = Math.max(80, containerHeight - topPadding - 120);
-    bottomPadding = Math.round(Math.min(rawBottom, maxAllowedBottom));
-  }
+  bottom = Math.min(bottom, height - FOCUS_EDGE_PX);
+  right = Math.min(right, width - FOCUS_EDGE_PX);
 
   return {
-    top: topPadding,
-    right: 24,
-    bottom: bottomPadding,
-    left: 24,
+    rect: { left, top, right, bottom },
+    padding: { top, right: width - right, bottom: height - bottom, left },
+    centre: { x: (left + right) / 2, y: (top + bottom) / 2 },
   };
+};
+
+/** Camera padding that centres a target in the usable area (see usableArea). */
+export const panelAwarePadding = (options) => usableArea(options).padding;
+
+/** True when two paddings agree on every side to within measurement noise. */
+export const samePadding = (a, b, tolerance = PADDING_NOISE_PX) =>
+  Boolean(a && b) && ['top', 'right', 'bottom', 'left'].every((side) => Math.abs(a[side] - b[side]) <= tolerance);
+
+/**
+ * The sheet or window changed size while a stop stays selected: ease the same target to the
+ * new usable centre. Zoom is left alone (#94). Callers only call this when the padding really
+ * changed (samePadding), and camera moves never resize the sheet, so it cannot loop.
+ */
+export const recentreOnResize = (map, center, padding, { duration = CAMERA_EASE_MS } = {}) => {
+  map.easeTo({ center, padding, duration, essential: true });
 };
 
 /** A target within this many screen pixels of the usable-space centre counts as already centred (#95). */
@@ -195,35 +202,13 @@ export const needsRecentre = (currentScreenPoint, targetCentre, tolerancePx = RE
  * @param {{ x: number, y: number }} args.screenPoint - Target's current screen position
  * @param {{ width: number, height: number }} args.size
  * @param {{ top: number, right: number, bottom: number, left: number }} args.padding
- * @param {{ top: number, right: number, bottom: number, left: number }} [args.currentPadding] - padding the camera carries now
  * @param {number} args.currentZoom
  * @param {number} args.targetZoom
  * @returns {boolean} true when the camera must ease
  */
-export const shouldEaseToTarget = ({ screenPoint, size, padding, currentPadding, currentZoom, targetZoom }) => {
-  const centred = !needsRecentre(screenPoint, usableCentre(size, padding)) || keepUnderShorterSheet({ screenPoint, size, padding, currentPadding });
+export const shouldEaseToTarget = ({ screenPoint, size, padding, currentZoom, targetZoom }) => {
+  const centred = !needsRecentre(screenPoint, usableCentre(size, padding));
   return !centred || Math.abs(currentZoom - targetZoom) > ZOOM_EPSILON;
-};
-
-/** A re-measured sheet may be up to this many px shorter/narrower on a side and the target is kept. */
-export const SHEET_REMEASURE_SLACK_PX = 6;
-/** Largest distance (px) a kept target may sit from the new usable centre. A 48 px shorter sheet shifts it 24 px. */
-export const MAX_KEPT_OFFSET_PX = 40;
-
-/**
- * Rule: sheet got shorter or equal => keep; sheet got taller => always ease.
- * The target is kept only when it is centred under the padding the camera still
- * carries, NO side of the new padding exceeds the carried one (beyond 6 px, so the
- * sheet cannot newly cover it, portrait or landscape), and it sits within 40 px of the new centre.
- */
-const keepUnderShorterSheet = ({ screenPoint, size, padding, currentPadding }) => {
-  if (!currentPadding) return false;
-  const notTaller = ['top', 'right', 'bottom', 'left'].every(
-    (side) => padding[side] <= currentPadding[side] + SHEET_REMEASURE_SLACK_PX
-  );
-  if (!notTaller) return false;
-  if (needsRecentre(screenPoint, usableCentre(size, currentPadding))) return false;
-  return !needsRecentre(screenPoint, usableCentre(size, padding), MAX_KEPT_OFFSET_PX);
 };
 
 /** Closing a sheet never moves the camera (#95): no options, no call. */
@@ -248,7 +233,6 @@ export const focusTarget = (map, center, padding, { minZoom, duration = CAMERA_E
     screenPoint: map.project(center),
     size: { width: container.clientWidth, height: container.clientHeight },
     padding,
-    currentPadding: map.getPadding ? map.getPadding() : undefined,
     currentZoom,
     targetZoom,
   });

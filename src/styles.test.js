@@ -411,3 +411,34 @@ describe('Wide desktop sidebar (#125)', () => {
     expect(wideBlock).not.toMatch(/\.sidebar\s*\{[^}]*height:\s*\d+px/);
   });
 });
+
+describe('Chosen-stop highlight chips (one layout at every zoom)', () => {
+  const rule = (selector) => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+  };
+
+  it('uses a grid whose column count comes from --focus-cols', () => {
+    const grid = rule('.focus-chip-grid');
+    expect(grid).toContain('display: grid');
+    expect(grid).toMatch(/grid-template-columns:\s*repeat\(var\(--focus-cols,\s*1\),\s*26px\)/);
+    expect(grid).toContain('justify-content: center');
+  });
+
+  it('gives every chip one fixed size, never a zoom-dependent one', () => {
+    const chip = rule('.focus-chip');
+    expect(chip).toContain('width: 26px');
+    expect(chip).toContain('height: 20px');
+    expect(chip).not.toMatch(/\bvw\b|\bem\b|%/);
+  });
+
+  it('centres an odd last chip across both columns', () => {
+    const last = rule('.focus-chip-last-odd');
+    expect(last).toContain('grid-column: 1 / -1');
+    expect(last).toContain('justify-self: center');
+  });
+
+  it('follows Text Size like the other chip boxes', () => {
+    expect(css).toMatch(/\.bus-floating-chart\s*\{\s*zoom:\s*var\(--font-scale, 1\)/);
+  });
+});

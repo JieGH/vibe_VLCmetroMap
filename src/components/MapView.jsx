@@ -17,6 +17,9 @@ import {
   fitBoundsOptions,
   panelAwarePadding as computePanelPadding,
   focusTarget,
+  restingSheetRect,
+  samePadding,
+  recentreOnResize,
 } from '../utils/mapCamera';
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
@@ -574,33 +577,29 @@ const userFixOpacity = (ageMs) => {
 const metresPerPixel = (latitude, zoom) =>
   (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
 
+// Measures the real sheet and the search bar, then asks the pure usableArea rule (mapCamera) for the
+// padding that centres a selected stop in what is left. The sheet's resting position comes from its
+// layout offsets, so the slide-in animation cannot skew it.
 const panelAwarePadding = (map, { hasPanel } = {}) => {
   const container = map?.getContainer();
   const containerRect = container ? container.getBoundingClientRect() : undefined;
   const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
   const panel = document.querySelector('.station-panel, .bus-stop-board');
-  const isPanelPresent = hasPanel ?? Boolean(panel);
 
-  let panelRect;
-  let panelHeight;
-  let panelWidth;
-
-  if (panel) {
-    panelRect = panel.getBoundingClientRect();
-    // offsetHeight and offsetWidth reflect resting layout dimensions,
-    // immune to in-flight CSS transforms (e.g. translateY slide-up).
-    // Adding 16px accounts for floating card margins.
-    panelHeight = (panel.offsetHeight || 0) + 16;
-    panelWidth = (panel.offsetWidth || 0) + 16;
-  }
+  const sheetRect = panel
+    ? restingSheetRect({
+        rect: panel.getBoundingClientRect(),
+        offsetParentRect: panel.offsetParent?.getBoundingClientRect(),
+        offsetTop: panel.offsetTop,
+        offsetLeft: panel.offsetLeft,
+      })
+    : undefined;
 
   return computePanelPadding({
     containerRect,
     searchBarRect,
-    panelRect,
-    panelHeight,
-    panelWidth,
-    hasPanel: isPanelPresent,
+    sheetRect,
+    hasPanel: hasPanel ?? Boolean(panel),
   });
 };
 
@@ -651,6 +650,10 @@ const MapView = ({
   useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
   const onSelectBusStopRef = useRef(onSelectBusStop);
   useEffect(() => { onSelectBusStopRef.current = onSelectBusStop; }, [onSelectBusStop]);
+  // What the camera is centring on and the padding it was centred under, so a resized sheet or window
+  // can re-centre the same target (see the usable-area effect below).
+  const focusCoordsRef  = useRef(null);
+  const focusPaddingRef = useRef(null);
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
   const userLocationRef = useRef(userLocation);
   useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
@@ -1501,8 +1504,10 @@ const MapView = ({
       ? userLocationRef.current.coordinates
       : coordinates;
 
+    focusCoordsRef.current = focusCoords;
+    focusPaddingRef.current = panelAwarePadding(map, { hasPanel: true });
     if (!isHubRefresh) {
-      focusTarget(map, focusCoords, panelAwarePadding(map, { hasPanel: true }));
+      focusTarget(map, focusCoords, focusPaddingRef.current);
     }
 
     return () => {
@@ -1553,7 +1558,9 @@ const MapView = ({
 
     // Centre the drawn marker (#106 display offset), not the real stop coordinate,
     // so the marker the rider sees is what ends up in the middle.
-    focusTarget(map, getStopDisplayCoordinates(selectedBusStop) || coordinates, panelAwarePadding(map, { hasPanel: true }));
+    focusCoordsRef.current = getStopDisplayCoordinates(selectedBusStop) || coordinates;
+    focusPaddingRef.current = panelAwarePadding(map, { hasPanel: true });
+    focusTarget(map, focusCoordsRef.current, focusPaddingRef.current);
 
     return () => {
       if (marker) {
@@ -1562,6 +1569,41 @@ const MapView = ({
       if (busFocusMarkerRef.current === marker) busFocusMarkerRef.current = null;
     };
   }, [selectedBusStop, selectedStation]);
+
+  // ── Keep the selection centred in the usable map area ───────────────────────
+  // The sheet grows after its first paint (arrivals load, expand toggles) and the window can be
+  // resized, so the padding measured at selection goes stale. Watch the sheet and the map, and
+  // when the usable area really changes ease the same target to its new centre. Zoom is kept (#94)
+  // and nothing happens when the padding is unchanged, so the ease started by selection is not
+  // restarted and the camera cannot loop (moving it never resizes the sheet). Closing the sheet
+  // removes the observer and moves nothing (#95).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || (!selectedBusStop && !selectedStation) || typeof ResizeObserver === 'undefined') return undefined;
+
+    let frame = 0;
+    const recentre = () => {
+      frame = 0;
+      const coords = focusCoordsRef.current;
+      if (!coords) return;
+      const padding = panelAwarePadding(map, { hasPanel: true });
+      if (samePadding(padding, focusPaddingRef.current)) return;
+      focusPaddingRef.current = padding;
+      recentreOnResize(map, coords, padding);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(recentre);
+    };
+
+    const observer = new ResizeObserver(schedule);
+    const panel = document.querySelector('.station-panel, .bus-stop-board');
+    if (panel) observer.observe(panel);
+    observer.observe(map.getContainer());
+    return () => {
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [selectedStation, selectedBusStop]);
 
   // ── Highlight active chosen station or bus stop ─────────────────
   const updateStopHighlights = () => {

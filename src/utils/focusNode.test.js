@@ -3,6 +3,8 @@ import {
   shortenStopName,
   renderStationHighlight,
   renderBusStopHighlight,
+  chipGridLayout,
+  highlightChips,
 } from './focusNode';
 
 describe('shortenStopName', () => {
@@ -103,37 +105,76 @@ describe('renderBusStopHighlight', () => {
     expect(html).not.toContain('opacity:0.25');
   });
 
-  it('stacks bus line badges in a 2-column grid layout when more than 2 lines are present', () => {
-    const multiLineStop = { stopCode: '1024', lines: ['19', 'C1', '92'] };
-    const html = renderBusStopHighlight(multiLineStop, 'dark');
-    expect(html).toContain('grid-template-columns:repeat(2, auto)');
-
-    const twoLineStop = { stopCode: '1025', lines: ['19', 'C1'] };
-    const twoLineHtml = renderBusStopHighlight(twoLineStop, 'dark');
-    expect(twoLineHtml).toContain('display:flex');
-    expect(twoLineHtml).not.toContain('grid-template-columns');
+  it('lays line chips out by the one grid rule (see chipGridLayout)', () => {
+    const one = renderBusStopHighlight({ stopCode: '1', lines: ['19'] }, 'dark', true);
+    expect(one).toContain('--focus-cols:1');
+    const two = renderBusStopHighlight({ stopCode: '2', lines: ['19', 'C1'] }, 'dark', true);
+    expect(two).toContain('--focus-cols:2');
+    expect(two).not.toContain('focus-chip-last-odd');
+    const three = renderBusStopHighlight({ stopCode: '3', lines: ['19', 'C1', '92'] }, 'dark', true);
+    expect(three).toContain('--focus-cols:2');
+    expect(three.match(/focus-chip-last-odd/g)).toHaveLength(1);
   });
 
-  it('enlarges bubble and line numbers when isSelected is true', () => {
-    const defaultHtml = renderBusStopHighlight(busStop, 'dark', false);
-    expect(defaultHtml).toContain('font:900 8px');
-    expect(defaultHtml).toContain('padding:3px 5px');
-
-    const selectedHtml = renderBusStopHighlight(busStop, 'dark', true);
-    expect(selectedHtml).toContain('font:900 12px');
-    expect(selectedHtml).toContain('padding:5px 8px');
-    expect(selectedHtml).toContain('is-selected');
+  it('draws the same box whether or not the stop is flagged selected (one layout)', () => {
+    const selected = renderBusStopHighlight(busStop, 'dark', true);
+    expect(selected).toContain('is-selected');
+    expect(selected).toContain('border:2px solid rgba(255,255,255,0.7)');
+    expect(selected).toContain('class="focus-chip-grid"');
   });
 });
 
-describe('renderBusStopHighlight line badges (#121)', () => {
-  it('uses tight horizontal padding and a square minimum width', () => {
-    const sel = renderBusStopHighlight({ lines: ['99'] }, 'dark', true);
-    expect(sel).toContain('padding:2.5px 3px;');
-    expect(sel).toContain('min-width:18px;');
-    const unsel = renderBusStopHighlight({ lines: ['99'] }, 'dark', false);
-    expect(unsel).toContain('padding:1.5px 2px;');
-    expect(unsel).toContain('min-width:11px;');
+describe('highlightChips and chipGridLayout (one layout for 1..8 lines)', () => {
+  const lines = (n) => Array.from({ length: n }, (_, i) => String(i + 1));
+
+  it('caps at 6 chips with the +N rule of emtStopLines', () => {
+    expect(highlightChips(lines(6)).map((c) => c.label)).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(highlightChips(lines(7)).map((c) => c.label)).toEqual(['1', '2', '3', '4', '5', '+2']);
+    expect(highlightChips(lines(8)).map((c) => c.label)).toEqual(['1', '2', '3', '4', '5', '+3']);
+    expect(highlightChips(lines(8))[5].isMore).toBe(true);
+  });
+
+  it('accepts line objects and sorts numerically', () => {
+    expect(highlightChips([{ line: '31' }, { id: '9' }]).map((c) => c.label)).toEqual(['9', '31']);
+  });
+
+  it.each([
+    [0, 1, 0, -1],
+    [1, 1, 1, -1],
+    [2, 2, 1, -1],
+    [3, 2, 2, 2],
+    [4, 2, 2, -1],
+    [5, 2, 3, 4],
+    [6, 2, 3, -1],
+  ])('%i chips: %i column(s), %i row(s), centred last index %i', (count, columns, rows, lastOddIndex) => {
+    expect(chipGridLayout(count)).toEqual({ columns, rows, lastOddIndex });
+  });
+
+  it('never leaves an empty grid cell for 1..8 lines', () => {
+    for (let n = 1; n <= 8; n += 1) {
+      const count = highlightChips(lines(n)).length;
+      const { columns, rows, lastOddIndex } = chipGridLayout(count);
+      // Either every row is full, or the single odd chip is the last one and spans both columns.
+      if (columns === 1) expect(lastOddIndex).toBe(-1);
+      else if (count % 2 === 1) expect(lastOddIndex).toBe(count - 1);
+      else expect(lastOddIndex).toBe(-1);
+      expect(rows).toBe(Math.ceil(count / columns));
+    }
+  });
+
+  it('renders at most 6 chips for 8 lines, the last one the +N chip', () => {
+    const html = renderBusStopHighlight({ lines: lines(8) }, 'dark', true);
+    expect(html.match(/class="focus-chip[" ]/g)).toHaveLength(6);
+    expect(html).toContain('+3</span>');
+  });
+});
+
+describe('renderStationHighlight uses the same chip grid', () => {
+  it('draws metro line chips as focus-chips in the same grid', () => {
+    const html = renderStationHighlight({ name: 'Xàtiva', lines: ['3', '5', '9'] }, 'dark', true);
+    expect(html).toContain('class="focus-chip-grid"');
+    expect(html).toContain('--focus-cols:2');
+    expect(html.match(/focus-chip-last-odd/g)).toHaveLength(1);
   });
 });
 

@@ -87,14 +87,15 @@ describe('idempotent centring (#95)', () => {
     expect(run(SIZE, P(400), P(584))).toEqual({ r: true, calls: 1 });
     expect(run(SIZE, P(400), P(500))).toEqual({ r: true, calls: 1 });
   });
-  it('portrait: shorter sheet keeps only when the centre shifts <= 40 px', () => {
-    expect(run(SIZE, P(500), P(400)).r).toBe(true); // centre moves 50 px > 40
-    expect(run(SIZE, P(448), P(400))).toEqual({ r: false, calls: 0 }); // 24 px
+  it('portrait: a shorter sheet re-centres too, the centre is always the true one', () => {
+    expect(run(SIZE, P(500), P(400)).r).toBe(true);
+    expect(run(SIZE, P(448), P(400))).toEqual({ r: true, calls: 1 });
+    expect(run(SIZE, P(400), P(398))).toEqual({ r: false, calls: 0 }); // 1 px: within tolerance
   });
-  it('landscape: wider side sheet eases, narrower keeps within slack', () => {
+  it('landscape: a wider or narrower side sheet re-centres', () => {
     const land = { width: 900, height: 420 };
     expect(run(land, L(300), L(420)).r).toBe(true);
-    expect(run(land, L(340), L(300)).r).toBe(false);
+    expect(run(land, L(340), L(300)).r).toBe(true);
   });
 
   it('dismiss makes no camera options and a close step records no calls', () => {
