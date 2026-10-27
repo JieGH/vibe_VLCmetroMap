@@ -29,6 +29,7 @@ import { initialTheme, watchSystemTheme } from './utils/systemTheme';
 import { openAppSettings } from './services/openSettings';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
+import { getWindowScreenPreset, getInitialSidebarOpen, getPresetFontSize } from './utils/screenPreset';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
 import { Search, X } from 'lucide-react';
@@ -80,7 +81,9 @@ function App() {
   const selectedBusStopRef = useRef(null);
   selectedBusStopRef.current = selectedBusStop;
   const [activeMode, setActiveMode] = useState('bus'); // In Variant C, bus mode is default so differences are tactile
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
+    getInitialSidebarOpen(getWindowScreenPreset(), { isNative: Capacitor.isNativePlatform() }),
+  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -225,7 +228,11 @@ function App() {
     return true;
   };
 
-  const [fontSize, setFontSize] = useState(getStoredFontSize);
+  const [fontSize, setFontSize] = useState(() =>
+    getStoredFontSize(
+      getPresetFontSize(getWindowScreenPreset(), { isNative: Capacitor.isNativePlatform() }),
+    ),
+  );
   useEffect(() => {
     applyFontSize(fontSize);
   }, [fontSize]);

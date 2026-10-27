@@ -150,4 +150,17 @@ describe('fontSize utility', () => {
     expect(() => applyFontSize('large')).not.toThrow();
     expect(() => setStoredFontSize('large')).not.toThrow();
   });
+
+  describe('first-launch fallback', () => {
+    it('uses the supplied fallback when nothing is saved', () => {
+      expect(getStoredFontSize('large')).toBe('large');
+    });
+    it('never overrides a saved size', () => {
+      mockStorage.setItem(FONT_SIZE_STORAGE_KEY, 'small');
+      expect(getStoredFontSize('large')).toBe('small');
+    });
+    it('ignores an invalid fallback', () => {
+      expect(getStoredFontSize('bogus')).toBe(DEFAULT_FONT_SIZE);
+    });
+  });
 });
