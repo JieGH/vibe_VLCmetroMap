@@ -140,14 +140,21 @@ describe('buildDisplayCoordinates', () => {
     expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(8, 0);
   });
 
-  it('a stop with a per-stop cap override is drawn at most that far; its partner keeps the normal push', () => {
-    // 1613 is limited to 10 m; 1168 is its real partner 15 m away.
-    expect(STOP_OFFSET_CAP_OVERRIDES['1613']).toBe(10);
+  it('a stop with a per-stop cap override is drawn at most that far; an unlisted partner keeps the normal push', () => {
+    expect(STOP_OFFSET_CAP_OVERRIDES['1168']).toBe(1);
+    expect(STOP_OFFSET_CAP_OVERRIDES['1613']).toBe(1);
+    // Both Comissaria stops are limited to 1 m.
     const a = stop('1168', 'X - Y', at(0, 0));
     const b = stop('1613', 'X - Y', at(0, 15));
-    const map = buildDisplayCoordinates([a, b]);
-    expect(getDistance(b.coordinates, map.get('1613'))).toBeCloseTo(10, 0);
-    expect(getDistance(a.coordinates, map.get('1168'))).toBeCloseTo(MAX_OFFSET_METRES, 0);
+    const both = buildDisplayCoordinates([a, b]);
+    expect(getDistance(a.coordinates, both.get('1168'))).toBeCloseTo(1, 0);
+    expect(getDistance(b.coordinates, both.get('1613'))).toBeCloseTo(1, 0);
+    // A listed stop next to an unlisted partner: only the listed one is held back.
+    const c = stop('9001', 'X - Y', at(0, 0));
+    const d = stop('1613', 'X - Y', at(0, 15));
+    const mixed = buildDisplayCoordinates([c, d]);
+    expect(getDistance(d.coordinates, mixed.get('1613'))).toBeCloseTo(1, 0);
+    expect(getDistance(c.coordinates, mixed.get('9001'))).toBeCloseTo(MAX_OFFSET_METRES, 0);
   });
 
   it('KNOWN LIMITATION: same-name stops on the same side are still pushed apart', () => {

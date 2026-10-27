@@ -25,10 +25,11 @@ export const TARGET_SEPARATION_METRES = 86; // was 60; +13 m each side. The cap 
 
 /**
  * Stops that must be drawn closer to their real position than the general cap, found in the field.
- * Only the listed stop is limited; its partner keeps the normal push.
+ * Only a listed stop is limited; a partner that is not listed keeps the normal push.
  */
 export const STOP_OFFSET_CAP_OVERRIDES = {
-  '1613': 10, // Comissaria Policia Local Marítim (front): drawn 25 m out, too far from the road
+  '1168': 1, // Comissaria Policia Local Marítim: drawn 25 m out, too far from the road
+  '1613': 1, // Comissaria Policia Local Marítim (front): same
 };
 
 // Matches geoUtils.getDistance (haversine, R = 6371 km) so the cap is exact.
