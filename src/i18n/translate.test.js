@@ -51,3 +51,23 @@ describe('translate', () => {
     expect(translate('ca', 'sidebar.textSize')).toBe('Mida del text');
   });
 });
+
+describe('split-view wording (#97, #98)', () => {
+  it('short due label is distinct from the detail label in every language', () => {
+    expect(translate('es', 'common.dueShort')).toBe('Llega');
+    expect(translate('es', 'common.due')).toBe('Llegando');
+    for (const l of SUPPORTED_LANGUAGES) {
+      expect(translate(l, 'common.dueShort')).not.toBe('common.dueShort');
+      expect(translate(l, 'common.dueShort').length).toBeLessThan(translate(l, 'common.due').length);
+    }
+  });
+
+  it('short no-data label is a localized single line for every language', () => {
+    expect(translate('es', 'stationPanel.noInfoShort')).toBe('Sin información');
+    for (const l of SUPPORTED_LANGUAGES) {
+      const v = translate(l, 'stationPanel.noInfoShort');
+      expect(v).not.toContain('noInfoShort');
+      expect(v).not.toContain('\n');
+    }
+  });
+});

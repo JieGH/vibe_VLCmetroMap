@@ -226,4 +226,23 @@ describe('BusStopBoard countdown formatting and states (#90)', () => {
     );
     expect(html).toContain('data-testid="no-live-arrivals"');
   });
+
+  it('#96: the detail view lists every arrival (no 3-row split-view cap) with the full min/Arriving wording', () => {
+    const stop = {
+      stopCode: 'P-2206',
+      stopName: 'Plaça d\'Amèrica',
+      lines: ['1'],
+      arrivals: Array.from({ length: 6 }, (_, i) => ({
+        line: '1',
+        destination: `Dest${i}`,
+        dueSeconds: 120 + i * 60,
+        minutes: 2 + i,
+        isLive: true,
+      })),
+      coordinates: [-0.3772, 39.4672],
+    };
+    const html = renderToStaticMarkup(<BusStopBoard stop={stop} theme="dark" onClose={() => {}} />);
+    for (let i = 0; i < 6; i++) expect(html).toContain(`Dest${i}`);
+    expect(html).not.toContain('′');
+  });
 });
