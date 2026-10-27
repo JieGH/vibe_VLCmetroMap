@@ -182,3 +182,48 @@ describe('BusStopBoard component', () => {
     expect(html).not.toContain('station-arrivals-table');
   });
 });
+
+describe('BusStopBoard countdown formatting and states (#90)', () => {
+  const board = (arrivals) =>
+    renderToStaticMarkup(
+      <BusStopBoard
+        stop={{ stopCode: '2261', stopName: 'Xàtiva', lines: ['6'], arrivals }}
+        theme="dark"
+        onClose={() => {}}
+      />
+    );
+  const row = (over) => ({ line: '6', destination: 'Torrefiel', dueSeconds: 300, isLive: true, wheelchair: false, ...over });
+
+  it('shows whole minutes for 2 and 15 minute arrivals', () => {
+    const html = board([row({ dueSeconds: 120 }), row({ dueSeconds: 900, destination: 'Far' })]);
+    expect(html).toContain('>2<');
+    expect(html).toContain('>15<');
+    expect(html).toContain('>min<');
+  });
+
+  it('shows seconds between the due threshold and one minute', () => {
+    const html = board([row({ dueSeconds: 45 })]);
+    expect(html).toContain('>45<');
+    expect(html).toContain('>s<');
+  });
+
+  it('shows the due dot (no unit) for Pròxim-style 30 s arrivals and pulses only when live', () => {
+    const live = board([row({ dueSeconds: 30, isDue: true })]);
+    expect(live).toContain('station-arriving-dot pulse');
+    expect(live).not.toContain('>min<');
+    const sched = board([row({ dueSeconds: 30, isLive: false })]);
+    expect(sched).toContain('station-arriving-dot ');
+    expect(sched).not.toContain('station-arriving-dot pulse');
+  });
+
+  it('omits the accessible icon for non-wheelchair buses', () => {
+    expect(board([row({})])).not.toContain('aria-label="Accessible"');
+  });
+
+  it('renders the empty state, not a table, when arrivals are missing from the stop', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={{ stopCode: '1', stopName: 'S', lines: [], arrivals: [] }} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('data-testid="no-live-arrivals"');
+  });
+});
