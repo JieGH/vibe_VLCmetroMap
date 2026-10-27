@@ -7,10 +7,10 @@
 export const EMT_DOT_ENTER_ZOOM = 14.4;
 /** Zoomed back in past this (zoom >= 14.6) the EMT logo returns. The 0.2 band stops flapping at ~14.5. */
 export const EMT_DOT_EXIT_ZOOM = 14.6;
-/** Zoomed in past this (zoom >= 16.5) the logo gives way to the line numbers. */
-export const EMT_LINES_ENTER_ZOOM = 16.5;
-/** Zoomed back out past this (zoom < 16.3) the line numbers give way to the logo. */
-export const EMT_LINES_EXIT_ZOOM = 16.3;
+/** Zoomed in past this (zoom >= 15.4) the logo gives way to the line numbers. Raised from 16.5 so the numbers show sooner. */
+export const EMT_LINES_ENTER_ZOOM = 15.4;
+/** Zoomed back out past this (zoom < 15.2) the line numbers give way to the logo. */
+export const EMT_LINES_EXIT_ZOOM = 15.2;
 
 /**
  * @param {number} zoom current map zoom

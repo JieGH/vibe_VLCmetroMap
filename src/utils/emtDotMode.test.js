@@ -35,10 +35,10 @@ describe('emtStage', () => {
       expect(stage).toBe('dot');
     }
     stage = 'logo';
-    for (const z of [16.4, 16.45, 16.49]) stage = emtStage(z, stage);
+    for (const z of [15.3, 15.35, 15.39]) stage = emtStage(z, stage);
     expect(stage).toBe('logo');
-    stage = emtStage(16.5, stage);
-    for (const z of [16.4, 16.31, 16.45]) {
+    stage = emtStage(15.4, stage);
+    for (const z of [15.3, 15.21, 15.35]) {
       stage = emtStage(z, stage);
       expect(stage).toBe('lines');
     }
@@ -47,7 +47,7 @@ describe('emtStage', () => {
   it('handles jumps across several thresholds at once', () => {
     expect(emtStage(18, 'dot')).toBe('lines');
     expect(emtStage(13, 'lines')).toBe('dot');
-    expect(emtStage(15.5, 'lines')).toBe('logo');
+    expect(emtStage(15.1, 'lines')).toBe('logo');
   });
 
   it('keeps a real gap between each pair of thresholds', () => {

@@ -142,9 +142,11 @@ describe('Map markers follow the Text Size setting (#103)', () => {
     return '';
   };
 
+  it.each(['.metro-station-badge', '.emt-stop-badge'])('draws %s 15% bigger than the Text Size scale', (selector) => {
+    expect(ruleFor(selector)).toContain('zoom: calc(var(--font-scale, 1) * 1.15)');
+  });
+
   it.each([
-    '.metro-station-badge',
-    '.emt-stop-badge',
     '.live-bus-pill',
     '.station-floating-chart',
     '.bus-floating-chart',
