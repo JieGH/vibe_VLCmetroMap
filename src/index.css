@@ -232,12 +232,20 @@ textarea {
   animation: busStopPulse 2.2s infinite ease-in-out;
 }
 
-/* The selected stop is drawn once, by its outlined highlight (.bus-focus-node) on top. The marker
+/* The selected stop is drawn once, by its outlined highlight (.bus-focus-node / .station-focus-node) on top. The marker
    underneath is hidden so no second copy of the line numbers shows below the highlight. */
-.map-container .emt-stop-badge.is-selected {
+.map-container .emt-stop-badge.is-selected,
+.map-container .metro-station-badge.is-selected {
   opacity: 0 !important;
   pointer-events: none !important;
   animation: none;
+}
+
+/* Pin and GPS view: the unchosen stops in the walk radius are simply magnified in place. `scale` composes
+   with the zoom-driven inline transform, so there is no outline, pulse or offset. */
+.metro-station-badge.is-nearby:not(.is-selected),
+.emt-stop-badge.is-nearby:not(.is-selected) {
+  scale: 1.2;
 }
 
 /* Zoomed-out dots (#108). MapView flips data-emt-stage on the map container from one zoom check with
@@ -339,12 +347,6 @@ textarea {
 .map-container[data-has-selection="true"] .metro-station-badge:not(.is-selected),
 .map-container[data-has-selection="true"] .emt-stop-badge:not(.is-selected) {
   opacity: 0.35;
-}
-
-.map-container[data-has-selection="true"] .spawned-station-node,
-.map-container[data-has-selection="true"] .spawned-bus-node {
-  opacity: 0.45;
-  transition: opacity 0.2s ease;
 }
 
 /* Grouped chip boxes (nearby stations / EMT stops with several line chips) fade like the badges (#114).
@@ -1616,18 +1618,6 @@ button:active {
 .bus-focus-node {
   z-index: 1200;
   pointer-events: none;
-}
-
-/* Walk-radius spawns sit below the selected focus node so the pick is always
-   the topmost symbol (metro, bus, ping). */
-.spawned-station-node,
-.spawned-bus-node {
-  z-index: 1150;
-}
-
-.station-focus-node:not(.spawned-station-node),
-.bus-focus-node:not(.spawned-bus-node) {
-  z-index: 1300;
 }
 
 /* ── Welcome / Splash Screen ─────────────────────────────────────────────── */

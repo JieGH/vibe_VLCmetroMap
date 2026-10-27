@@ -136,3 +136,12 @@ describe('renderBusStopHighlight line badges (#121)', () => {
     expect(unsel).toContain('min-width:11px;');
   });
 });
+
+describe('chosen-stop highlight has no caret (anchored on the stop, no offset)', () => {
+  it('renders no pointing caret for a station or a bus stop', () => {
+    const station = renderStationHighlight({ name: 'Xàtiva', lines: ['3'] }, 'light', true);
+    const bus = renderBusStopHighlight({ stopCode: '1', lines: ['9'] }, 'light', true);
+    expect(station).not.toContain('border-top');
+    expect(bus).not.toContain('border-top');
+  });
+});

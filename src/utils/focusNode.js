@@ -79,9 +79,6 @@ export const renderStationHighlight = (properties, theme, isSelected = false) =>
         <!-- Row 2: Metro Line Badges -->
         ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:75px;">${lineBadges}</div>` : ''}
       </div>
-
-      <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 
@@ -137,9 +134,6 @@ export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
       <div style="display:flex;align-items:center;justify-content:center;${bubblePadding}${bubbleRadius}background:${panel};border:${borderWidth} solid ${border};${shadow}white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         ${content}
       </div>
-
-      <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:${caretBorder} solid transparent;border-right:${caretBorder} solid transparent;border-top:${caretBorder} solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 

@@ -646,7 +646,7 @@ const MapView = ({
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const busFocusMarkerRef = useRef(null); // the expanded node for the Bus Stop in focus
   const spawnedKeysRef = useRef(new Set()); // keys shown by the last spawn, for the radius hysteresis
-  const spawnedTransitMarkersRef = useRef([]); // transit nodes spawned for the walk radius on pin selection
+  const nearbyKeysRef = useRef(new Set()); // m:/b: keys of the walk-radius stops whose base markers are magnified
   const selectedBusStopRef = useRef(selectedBusStop);
   useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
   const onSelectBusStopRef = useRef(onSelectBusStop);
@@ -705,11 +705,6 @@ const MapView = ({
     stMarkersRef.current = [];
     stInnerElemsRef.current = [];
     stRanksRef.current = null;
-  };
-
-  const clearSpawnedTransitMarkers = () => {
-    spawnedTransitMarkersRef.current.forEach(m => m.remove());
-    spawnedTransitMarkersRef.current = [];
   };
 
   // Apply zoom-based scale directly to all known marker DOM elements. `curve` is
@@ -824,6 +819,7 @@ const MapView = ({
 
       const inner = document.createElement('div');
       inner.className = isSelectedStation ? 'metro-station-badge is-selected' : 'metro-station-badge';
+      if (nearbyKeysRef.current.has(`m:${st.properties.name}`)) inner.classList.add('is-nearby');
       if (typeof inner.setAttribute === 'function') {
         inner.setAttribute('data-station-name', st.properties.name);
       }
@@ -1487,7 +1483,7 @@ const MapView = ({
       // A visual anchor only — no countdowns to tick, so it's rendered once per
       // selection rather than on an interval. Arrivals live in the Station panel.
       element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current, true);
-      marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
+      marker = new Marker({ element, anchor: 'center', offset: [0, 0] })
         .setLngLat(coordinates)
         .addTo(map);
       focusMarkerRef.current = marker;
@@ -1550,7 +1546,7 @@ const MapView = ({
     const element = document.createElement('div');
     element.className = 'bus-focus-node';
     element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true);
-    marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
+    marker = new Marker({ element, anchor: 'center', offset: [0, 0] })
       .setLngLat(getStopDisplayCoordinates(selectedBusStop) || coordinates)
       .addTo(map);
     busFocusMarkerRef.current = marker;
@@ -1578,6 +1574,7 @@ const MapView = ({
 
     container.querySelectorAll('.metro-station-badge').forEach((el) => {
       const match = Boolean(selectedMetroName && el.getAttribute('data-station-name') === selectedMetroName);
+      el.classList.toggle('is-nearby', nearbyKeysRef.current.has(`m:${el.getAttribute('data-station-name')}`));
       if (match) {
         el.classList.add('is-selected');
         if (el.parentElement?.parentElement) {
@@ -1597,6 +1594,7 @@ const MapView = ({
 
     container.querySelectorAll('.emt-stop-badge').forEach((el) => {
       const match = Boolean(selectedStopCode && el.getAttribute('data-stop-code') === selectedStopCode);
+      el.classList.toggle('is-nearby', nearbyKeysRef.current.has(`b:${el.getAttribute('data-stop-code')}`));
       if (match) {
         el.classList.add('is-selected');
         if (el.parentElement?.parentElement) {
@@ -1725,12 +1723,10 @@ const MapView = ({
     };
   }, [userLocation]);
 
-  // ── Spawn walk-radius surrounding transit popups when pin is selected ───────
+  // ── Magnify the walk-radius stops in place when a pin or GPS fix is the focus ───────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return undefined;
-
-    clearSpawnedTransitMarkers();
 
     const isPingOrGps = Boolean(
       userLocation?.isMapClick ||
@@ -1738,11 +1734,12 @@ const MapView = ({
     );
     if (!isPingOrGps || !userLocation?.coordinates) {
       spawnedKeysRef.current = new Set();
+      nearbyKeysRef.current = new Set();
+      updateStopHighlights();
       return undefined;
     }
 
     const pinCoords = userLocation.coordinates;
-    const currentTheme = themeRef.current;
     const keep = spawnedKeysRef.current;
     const shown = new Set();
 
@@ -1754,26 +1751,7 @@ const MapView = ({
       fallbackMaxMetres: Infinity, // the metro fallback is kept as is (#122)
     }).items.map(({ item }) => item);
 
-    nearbyStations.forEach((st) => {
-      shown.add(`m:${st.properties.name}`);
-      const coords = snappedCoordinates(st);
-      const isSelected = selectedStation?.properties?.name === st.properties.name;
-      if (isSelected && focusMarkerRef.current) return;
-
-      const element = document.createElement('div');
-      element.className = 'station-focus-node spawned-station-node';
-      element.innerHTML = renderStationHighlight(st.properties, currentTheme);
-      element.onclick = (e) => {
-        e.stopPropagation();
-        selectStRef.current(st);
-      };
-
-      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
-        .setLngLat(coords)
-        .addTo(map);
-
-      spawnedTransitMarkersRef.current.push(marker);
-    });
+    nearbyStations.forEach((st) => shown.add(`m:${st.properties.name}`));
 
     // 2. Surrounding EMT Bus Stops
     const allBusStops = getAllBusStops();
@@ -1785,33 +1763,12 @@ const MapView = ({
       allowFallback: !userLocation.isMapClick, // a map ping never spawns a far stop (#122)
     }).items.map(({ item }) => item);
 
-    nearbyBusStops.forEach((stop) => {
-      shown.add(`b:${stop.stopCode}`);
-      const isSelected = String(selectedBusStopRef.current?.stopCode) === String(stop.stopCode);
-      if (isSelected && busFocusMarkerRef.current) return;
-
-      const element = document.createElement('div');
-      element.className = 'bus-focus-node spawned-bus-node';
-      element.innerHTML = renderBusStopHighlight(stop, currentTheme);
-      element.onclick = (e) => {
-        e.stopPropagation();
-        if (onSelectBusStopRef.current) {
-          onSelectBusStopRef.current(stop);
-        }
-      };
-
-      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
-        .setLngLat(getStopDisplayCoordinates(stop))
-        .addTo(map);
-
-      spawnedTransitMarkersRef.current.push(marker);
-    });
+    nearbyBusStops.forEach((stop) => shown.add(`b:${stop.stopCode}`));
 
     spawnedKeysRef.current = shown;
-
-    return () => {
-      clearSpawnedTransitMarkers();
-    };
+    // The base markers just get magnified (CSS .is-nearby); the chosen one is hidden under its highlight.
+    nearbyKeysRef.current = shown;
+    updateStopHighlights();
   }, [userLocation, selectedStation, selectedBusStop]);
 
   // ── Framing the viewer against their Nearest Station ───────────────────────

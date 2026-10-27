@@ -333,7 +333,8 @@ describe('EMT line numbers at street zoom (#116)', () => {
   });
 
   it('hides the marker under the selected stop highlight so the stop is drawn once', () => {
-    const hidden = rule('.map-container .emt-stop-badge.is-selected');
+    expect(css).toContain('.map-container .emt-stop-badge.is-selected,\n.map-container .metro-station-badge.is-selected {');
+    const hidden = rule('.map-container .metro-station-badge.is-selected');
     expect(hidden).toContain('opacity: 0 !important');
     expect(hidden).toContain('pointer-events: none');
   });

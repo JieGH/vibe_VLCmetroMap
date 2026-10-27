@@ -44,11 +44,9 @@ describe('selected marker is the topmost symbol (#99)', () => {
     expect(mapView).toMatch(/isSelectedStation \? '50' : '27'/);
   });
 
-  it('the selected focus node (1300) is above the spawned nodes (1150) and the plain focus node (1200)', () => {
-    expect(z('.station-focus-node:not(.spawned-station-node)')).toBe(1300);
-    expect(z('.bus-focus-node:not(.spawned-bus-node)')).toBe(1300);
+  it('the chosen focus node sits above every marker and vehicle (1200)', () => {
     expect(z('.station-focus-node')).toBe(1200);
-    expect(z('.spawned-station-node')).toBe(1150);
+    expect(z('.bus-focus-node')).toBe(1200);
   });
 
   it('fade applies to everything else at 0.35-0.45 and is scoped to data-has-selection only', () => {
@@ -77,5 +75,42 @@ describe('stop display offsets are display-only (#106)', () => {
     }
     expect(moved).toBeGreaterThan(0);
     expect(JSON.stringify(stops.slice(0, 50).map((s) => s.coordinates))).toBe(before);
+  });
+});
+
+describe('nearby stops are magnified in place, not outlined (pin and GPS view)', () => {
+  it('magnifies the base markers 1.2x with the independent scale property, no outline, pulse or offset', () => {
+    for (const sel of ['.metro-station-badge.is-nearby:not(.is-selected)', '.emt-stop-badge.is-nearby:not(.is-selected)']) {
+      const rule = bodyOf(sel);
+      expect(rule).toMatch(/(^|[\s;])scale:\s*1\.2\b/);
+      expect(rule).not.toMatch(/outline|animation|margin|top:|translate/);
+    }
+  });
+
+  it('no longer spawns separate outlined bubbles', () => {
+    expect(mapView).not.toContain('spawned-station-node');
+    expect(mapView).not.toContain('spawned-bus-node');
+    expect(css).not.toContain('spawned-');
+  });
+
+  it('marks the walk set on the base markers and keeps the hysteresis set', () => {
+    expect(mapView).toContain("classList.toggle('is-nearby'");
+    expect(mapView).toContain('nearbyKeysRef');
+    expect(mapView).toContain('spawnedKeysRef.current = shown');
+  });
+});
+
+describe('chosen stop outline is anchored on the stop, no offset', () => {
+  it('both chosen highlights use a centred marker with no offset', () => {
+    expect(mapView).not.toMatch(/anchor: 'bottom'/);
+    expect(mapView).not.toMatch(/offset: \[0, -(6|10)\]/);
+    expect(mapView.match(/anchor: 'center', offset: \[0, 0\]/g)?.length).toBe(2);
+  });
+
+  it('hides the metro badge under the chosen highlight like the EMT one', () => {
+    const rule = bodyOf('.map-container .metro-station-badge.is-selected');
+    expect(rule).toMatch(/opacity:\s*0\s*!important/);
+    expect(rule).toMatch(/pointer-events:\s*none/);
+    expect(rule).toMatch(/animation:\s*none/);
   });
 });
