@@ -15,7 +15,7 @@
 import { getDistance } from './geoUtils';
 
 /** Hard cap for how far any marker is drawn from its real position. */
-export const MAX_OFFSET_METRES = 25; // was 12; stops sit further from the road centre, but 35 m put some in the block
+export const MAX_OFFSET_METRES = 30; // was 12; stops sit further from the road centre, but 35 m put some in the block
 /** Stops further apart than this are not considered a two-way pair. */
 export const PAIR_MAX_METRES = 80;
 /** Closer than this the joining line is meaningless; leave both alone. */
