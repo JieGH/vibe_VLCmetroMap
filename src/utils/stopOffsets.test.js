@@ -124,12 +124,19 @@ describe('buildDisplayCoordinates', () => {
     expect(map.has('3')).toBe(true);
   });
 
-  it('pushes a 30 m pair 13 m further each than the old 60 m target did (drawn 86 m apart)', () => {
+  it('pushes a 30 m pair to the 25 m cap each (drawn 80 m apart, short of the 86 m target)', () => {
     const a = stop('1', 'X - Y', at(0, 0));
     const b = stop('2', 'X - Y', at(0, 30));
     const map = buildDisplayCoordinates([a, b]);
-    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(85);
-    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(28, 0);
+    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(79);
+    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(MAX_OFFSET_METRES, 0);
+  });
+
+  it('a 70 m pair is under the cap: each moves (86 - 70) / 2 = 8 m', () => {
+    const a = stop('1', 'X - Y', at(0, 0));
+    const b = stop('2', 'X - Y', at(0, 70));
+    const map = buildDisplayCoordinates([a, b]);
+    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(8, 0);
   });
 
   it('KNOWN LIMITATION: same-name stops on the same side are still pushed apart', () => {
