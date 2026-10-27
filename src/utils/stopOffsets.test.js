@@ -101,15 +101,15 @@ describe('buildDisplayCoordinates', () => {
     expect(JSON.stringify(list)).toBe(snapshot);
   });
 
-  it('pushes a pair at 79 m by about 0.5 m each', () => {
+  it('pushes a pair at 79 m by about 3.5 m each (target 86 m)', () => {
     const a = stop('1', 'X - Y', at(0, 0));
     const b = stop('2', 'X - Y', at(0, 79));
     const map = buildDisplayCoordinates([a, b]);
     // at() uses a slightly different metres-per-degree, so allow a margin.
     for (const [s, code] of [[a, '1'], [b, '2']]) {
       const m = getDistance(s.coordinates, map.get(code));
-      expect(m).toBeGreaterThan(0.2);
-      expect(m).toBeLessThan(1);
+      expect(m).toBeGreaterThan(3);
+      expect(m).toBeLessThan(4);
     }
   });
 
@@ -124,12 +124,12 @@ describe('buildDisplayCoordinates', () => {
     expect(map.has('3')).toBe(true);
   });
 
-  it('pushes a 30 m pair 10 m further each than the old 60 m target did (drawn 80 m apart)', () => {
+  it('pushes a 30 m pair 13 m further each than the old 60 m target did (drawn 86 m apart)', () => {
     const a = stop('1', 'X - Y', at(0, 0));
     const b = stop('2', 'X - Y', at(0, 30));
     const map = buildDisplayCoordinates([a, b]);
-    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(79);
-    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(25, 0);
+    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(85);
+    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(28, 0);
   });
 
   it('KNOWN LIMITATION: same-name stops on the same side are still pushed apart', () => {

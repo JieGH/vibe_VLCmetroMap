@@ -60,7 +60,7 @@ describe('selected marker is the topmost symbol (#99)', () => {
 });
 
 describe('stop display offsets are display-only (#106)', () => {
-  it('keeps real coordinates on the stop objects and never moves a drawn stop beyond 32 m', () => {
+  it('keeps real coordinates on the stop objects and never moves a drawn stop beyond 35 m', () => {
     const stops = getAllBusStops();
     const before = JSON.stringify(stops.slice(0, 50).map((s) => s.coordinates));
     let moved = 0;
@@ -70,7 +70,7 @@ describe('stop display offsets are display-only (#106)', () => {
       const dx = (lng - rl) * 111320 * Math.cos((rt * Math.PI) / 180);
       const dy = (lat - rt) * 110540;
       const d = Math.hypot(dx, dy);
-      expect(d).toBeLessThanOrEqual(32.5);
+      expect(d).toBeLessThanOrEqual(35.5);
       if (d > 0.01) moved += 1;
     }
     expect(moved).toBeGreaterThan(0);
