@@ -4,6 +4,7 @@
 import { Marker } from 'maplibre-gl';
 import { createCircleGeoJSON } from './geoUtils';
 import { getStopDisplayCoordinates } from '../data/emtData';
+import { stopLinesMarkup } from './emtStopLines';
 
 const ROUTE_SOURCE_ID = 'bus-routes-source';
 const ROUTE_CASING_LAYER = 'bus-routes-casing';
@@ -288,7 +289,10 @@ export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) 
     box-sizing: border-box;
     transition: transform 0.12s ease-out;
   `;
-  inner.innerHTML = `<span style="transform: translateY(-0.5px); line-height: 1;">EMT</span>`;
+  // The logo shows mid-zoom; the line chips (hidden until the street-zoom stage) replace it (#116).
+  const linesHtml = stopLinesMarkup(stop.lines);
+  if (linesHtml) inner.className += ' has-lines';
+  inner.innerHTML = `<span class="emt-stop-logo" style="transform: translateY(-0.5px); line-height: 1;">EMT</span>${linesHtml}`;
   wrapper.appendChild(inner);
 
   wrapper.title = `Parada ${stop.stopCode || stop.code || ''} · ${stop.stopName || stop.name || 'EMT Stop'}`;

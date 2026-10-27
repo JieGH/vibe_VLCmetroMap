@@ -220,11 +220,11 @@ textarea {
   animation: busStopPulse 2.2s infinite ease-in-out;
 }
 
-/* Zoomed-out dots (#108). MapView flips data-emt-dots on the map container from one zoom check with
+/* Zoomed-out dots (#108). MapView flips data-emt-stage on the map container from one zoom check with
    hysteresis (utils/emtDotMode.js); nothing is rebuilt. Every non-selected EMT stop collapses to a solid
    red dot (8px incl. its 1px white ring). The ::after is an invisible 24px hit area that bubbles to the
    marker's own click handler. The selected stop and metro stations are untouched. */
-.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) {
+.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected) {
   position: relative;
   width: 8px;
   height: 8px;
@@ -234,11 +234,11 @@ textarea {
   letter-spacing: 0 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
 }
-.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) > span {
+.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected) > span {
   display: none;
 }
-.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected)::after,
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected)::after {
+.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected)::after,
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected)::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -248,15 +248,15 @@ textarea {
   transform: translate(-50%, -50%);
 }
 /* Spawned / nearby stop labels (line chips + caret) become the same dot. */
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) {
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected) {
   position: relative;
   width: 8px;
   height: 8px;
 }
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) > * {
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected) > * {
   display: none !important;
 }
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected)::before {
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected)::before {
   content: '';
   display: block;
   width: 8px;
@@ -266,6 +266,53 @@ textarea {
   background: #D62828;
   border: 1px solid rgba(255, 255, 255, 0.95);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Street zoom (#116): the EMT logo gives way to the stop's own line numbers (emt_stops.json, no network).
+   Chips are always in the markup and stay hidden until data-emt-stage="lines"; the red box drops away so
+   the chips are the marker. Stops without line data (no .has-lines) keep the logo. Same red/white
+   look as BusBadge so a number on the map matches the sheet. Chips wrap into rows to stay compact. */
+.emt-stop-lines {
+  display: none;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  max-width: 62px;
+}
+.emt-stop-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 14px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  background: #D62828;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.emt-stop-chip-more {
+  background: #ffffff;
+  color: #D62828;
+  border-color: #D62828;
+}
+.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines > .emt-stop-logo {
+  display: none;
+}
+.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines {
+  display: flex;
 }
 
 /* A station or stop is selected (GPS or ping mode): everything else fades. */

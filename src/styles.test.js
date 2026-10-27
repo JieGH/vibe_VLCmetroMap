@@ -245,8 +245,8 @@ describe('EMT zoomed-out dots and tight label (#108)', () => {
     return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
   };
 
-  it('turns non-selected EMT badges into 8px round dots under data-emt-dots', () => {
-    const dot = rule('.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected)');
+  it('turns non-selected EMT badges into 8px round dots under data-emt-stage="dot"', () => {
+    const dot = rule('.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected)');
     expect(dot).toContain('width: 8px');
     expect(dot).toContain('height: 8px');
     expect(dot).toContain('border-radius: 50%');
@@ -254,8 +254,8 @@ describe('EMT zoomed-out dots and tight label (#108)', () => {
   });
 
   it('hides the EMT text and the spawned line chips in dot mode', () => {
-    expect(rule('.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) > span')).toContain('display: none');
-    expect(rule('.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) > *')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected) > span')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected) > *')).toContain('display: none');
   });
 
   it('keeps a 24px invisible hit area on dots', () => {
@@ -290,5 +290,39 @@ describe('Fade everything else, incl. chip boxes and trains (#114)', () => {
 
   it('never fades the selected chart', () => {
     expect(css).not.toMatch(/data-has-selection="true"\]\s+\.(bus|station)-floating-chart\s*[,{]/);
+  });
+});
+
+describe('EMT line numbers at street zoom (#116)', () => {
+  const rule = (selector) => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+  };
+
+  it('is driven by one container attribute, no data-emt-dots left', () => {
+    expect(css).toContain('data-emt-stage="dot"');
+    expect(css).not.toContain('data-emt-dots');
+  });
+
+  it('keeps the line chips hidden until the lines stage', () => {
+    expect(rule('.emt-stop-lines')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines')).toContain('display: flex');
+  });
+
+  it('hides the EMT logo in the lines stage and drops the red box', () => {
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines > .emt-stop-logo')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines')).toContain('background: transparent');
+  });
+
+  it('wraps the chips into rows so dense stops stay compact', () => {
+    const lines = rule('.emt-stop-lines');
+    expect(lines).toContain('flex-wrap: wrap');
+    expect(lines).toMatch(/max-width: \d+px/);
+  });
+
+  it('styles chips like the BusBadge (EMT red, white bold number)', () => {
+    const chip = rule('.emt-stop-chip');
+    expect(chip).toContain('#D62828');
+    expect(chip).toContain('font-weight: 900');
   });
 });
