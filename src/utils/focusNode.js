@@ -6,6 +6,7 @@
 // React's tree.
 import { lineColor } from './lineColor';
 import { capStopLines } from './emtStopLines';
+import { translate, FALLBACK_LANGUAGE } from '../i18n/translate';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
@@ -132,7 +133,7 @@ export const renderStationHighlight = (properties, theme, isSelected = false) =>
  * @param {boolean} [isSelected=false]
  * @returns {string} HTML string
  */
-export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
+export const renderBusStopHighlight = (stop, theme, isSelected = false, lang = FALLBACK_LANGUAGE) => {
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
   // One look for the chosen stop's box at every zoom and line count: white outline, fixed chips.
@@ -142,7 +143,7 @@ export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
   // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
   const content = chips.length
     ? chipGridMarkup(chips, (chip) => `background:${chip.isMore ? '#8f1d1d' : '#D62828'};color:#ffffff;`)
-    : `<span style="font:800 11.5px/1.1 system-ui;color:${text};">Bus</span>`;
+    : `<span style="font:800 11.5px/1.1 system-ui;color:${text};">${translate(lang, 'common.bus')}</span>`;
 
   return `
     <div class="bus-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">

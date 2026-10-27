@@ -1550,7 +1550,7 @@ const MapView = ({
     let marker = null;
     const element = document.createElement('div');
     element.className = 'bus-focus-node';
-    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true);
+    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true, languageRef.current);
     marker = new Marker({ element, anchor: 'center', offset: [0, 0] })
       .setLngLat(getStopDisplayCoordinates(selectedBusStop) || coordinates)
       .addTo(map);
@@ -1911,7 +1911,7 @@ const MapView = ({
             const isSelected = Boolean(selectedCode && stopCode === selectedCode);
             const marker = createFeederStopMarker(map, stop, () => {
               if (onSelectBusStop) onSelectBusStop(stop);
-            }, isSelected);
+            }, isSelected, languageRef.current);
             busMarkersRef.current.push(marker);
           });
         }
@@ -1956,7 +1956,7 @@ const MapView = ({
             const isSelected = Boolean(selectedCode && stopCode === selectedCode);
             const marker = createBusStopNodeMarker(map, st, (stop) => {
               if (onSelectBusStop) onSelectBusStop(stop);
-            }, isSelected);
+            }, isSelected, languageRef.current);
             busMarkersRef.current.push(marker);
           });
 
@@ -1983,7 +1983,7 @@ const MapView = ({
               const isSelected = Boolean(selectedCode && stopCode === selectedCode);
               const marker = createBusStopNodeMarker(map, st, (stop) => {
                 if (onSelectBusStop) onSelectBusStop(stop);
-              }, isSelected);
+              }, isSelected, languageRef.current);
               busMarkersRef.current.push(marker);
             });
           });

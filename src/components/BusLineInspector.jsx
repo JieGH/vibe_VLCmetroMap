@@ -3,6 +3,7 @@
 import React from 'react';
 import BusBadge from './BusBadge';
 import { X, Radio, MapPin, ArrowRight } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 export const BusLineInspector = ({
   line,
@@ -10,6 +11,7 @@ export const BusLineInspector = ({
   onClose,
   onSelectStop
 }) => {
+  const { t } = useTranslation();
   if (!line) return null;
 
   const relevantBuses = liveBuses.filter(
@@ -60,7 +62,7 @@ export const BusLineInspector = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
               {line.headway && (
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary, #a0aec0)' }}>
-                  Headway: <strong>{line.headway}</strong>
+                  {t('bus.headway', { value: '' })}<strong>{line.headway}</strong>
                 </span>
               )}
               {line.activeVehicles != null && (
@@ -75,7 +77,7 @@ export const BusLineInspector = ({
                 }}
               >
                 <Radio size={11} className="pulse" />
-                {line.activeVehicles} active buses
+                {t('bus.activeBuses', { count: line.activeVehicles })}
               </span>
               )}
             </div>
@@ -85,7 +87,7 @@ export const BusLineInspector = ({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Dismiss bus line ribbon"
+          aria-label={t('bus.dismissRibbon')}
           style={{
             width: 30,
             height: 30,
@@ -107,7 +109,7 @@ export const BusLineInspector = ({
       {relevantBuses.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ fontSize: '0.70rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-            Live Tracking on Ribbon ({relevantBuses.length} vehicles)
+            {t('bus.liveTracking', { count: relevantBuses.length })}
           </div>
           <div
             style={{
@@ -139,7 +141,7 @@ export const BusLineInspector = ({
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>· {bus.speedKmh} km/h</span>
                   </div>
                   <div style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', marginTop: 1 }}>
-                    Next: {bus.nextStop} ({Math.round(bus.secondsToNext / 60)} min)
+                    {t('bus.nextStopEta', { stop: bus.nextStop, min: Math.round(bus.secondsToNext / 60) })}
                   </div>
                 </div>
               </div>
@@ -152,7 +154,7 @@ export const BusLineInspector = ({
       {line.stops && line.stops.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ fontSize: '0.70rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-            Stops Chain on Route
+            {t('bus.stopsOnRoute')}
           </div>
           <div
             style={{

@@ -1,5 +1,6 @@
 import React from 'react';
 import { reportIncident } from '../utils/telemetry';
+import { translate, getStoredLanguage } from '../i18n';
 
 /**
  * Top-level React Error Boundary.
@@ -43,6 +44,9 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      // This boundary sits outside the I18nProvider (so it still works if the provider itself throws), so it
+      // reads the saved language directly.
+      const t = (key) => translate(getStoredLanguage(), key);
       return (
         <div
           role="alert"
@@ -83,10 +87,10 @@ class ErrorBoundary extends React.Component {
           </div>
 
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
-            Ha ocorregut un error imprevist
+            {t('errorBoundary.title')}
           </h2>
           <p style={{ fontSize: '0.90rem', color: '#a0a0b0', maxWidth: 360, margin: '0 0 20px 0', lineHeight: 1.4 }}>
-            Something went wrong. Tap below to reload the network map and resume your journey.
+            {t('errorBoundary.body')}
           </p>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -106,7 +110,7 @@ class ErrorBoundary extends React.Component {
                 transition: 'transform 0.1s ease',
               }}
             >
-              Reiniciar aplicació / Reload
+              {t('errorBoundary.reload')}
             </button>
             <button
               type="button"
@@ -122,7 +126,7 @@ class ErrorBoundary extends React.Component {
                 cursor: 'pointer',
               }}
             >
-              Reintentar / Retry
+              {t('errorBoundary.retry')}
             </button>
           </div>
 

@@ -59,7 +59,7 @@ describe('ConnectingBusSection component', () => {
 
     expect(html).toContain('connecting-bus-feeder-section');
     expect(html).toContain('EMT');
-    expect(html).toContain('Autobús');
+    expect(html).toContain('>Bus<');
     expect(html).toContain('2 stops');
 
     expect(html).toContain('P-2261');

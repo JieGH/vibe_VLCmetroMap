@@ -19,7 +19,7 @@ export const feederFromStop = (stop, distance) => {
   const dist = Math.round(distance);
   return {
     stopCode: String(stop.stopCode || stop.code || ''),
-    stopName: stop.stopName || stop.name || 'Parada EMT',
+    stopName: stop.stopName || stop.name || '',
     walkMetres: dist,
     walkMin: walkingMinutes(dist),
     bearingDegrees: 90,

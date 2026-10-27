@@ -805,7 +805,7 @@ function App() {
               <div
                 className="dual-lens-mode-control"
                 role="tablist"
-                aria-label="Transit Mode Selector"
+                aria-label={t('app.transitModeAria')}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -853,7 +853,7 @@ function App() {
                   >
                     m
                   </span>
-                  <span>Metro</span>
+                  <span>{t('common.metro')}</span>
                 </button>
                 <button
                   type="button"
@@ -888,7 +888,7 @@ function App() {
                   >
                     EMT
                   </span>
-                  <span>Bus</span>
+                  <span>{t('common.bus')}</span>
                 </button>
                 <button
                   type="button"
@@ -910,7 +910,7 @@ function App() {
                   }}
                 >
                   <span>✨</span>
-                  <span>All</span>
+                  <span>{t('common.all')}</span>
                 </button>
               </div>
             )}
@@ -927,8 +927,8 @@ function App() {
               type="button"
               onClick={() => setIsSearchOpen(false)}
               className="search-close-btn"
-              title={t('searchBar.closeTitle') || 'Close search'}
-              aria-label={t('searchBar.closeTitle') || 'Close search'}
+              title={t('searchBar.closeTitle')}
+              aria-label={t('searchBar.closeTitle')}
             >
               <X size={20} />
             </button>
@@ -965,7 +965,7 @@ function App() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                EMT Trunks
+                {t('app.emtTrunks')}
               </span>
               {getRealBusLines().slice(0, 12).map((line) => {
                 const isSelected = activeBusLine?.id === line.id;
@@ -1018,7 +1018,7 @@ function App() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Bus Network Trunks
+                {t('app.busNetworkTrunks')}
               </span>
               {getRealBusLines().slice(0, 5).map((line) => {
                 const isSelected = activeBusLine?.id === line.id;

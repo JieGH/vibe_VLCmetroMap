@@ -114,7 +114,7 @@ export const BusStopBoard = ({
 
   if (!stop) return null;
 
-  const displayName = stop.name || stop.stopName || 'Parada';
+  const displayName = stop.name || stop.stopName || t('bus.stopFallback');
   const stopCode = cleanCode ? `P-${cleanCode}` : '';
   const stopLines = Array.isArray(stop.lines)
     ? stop.lines.map((l) => (typeof l === 'object' && l !== null ? String(l.line || l.id || '') : String(l))).filter(Boolean)
@@ -133,7 +133,7 @@ export const BusStopBoard = ({
   return (
     <aside
       className="glass-panel station-panel bus-stop-board"
-      aria-label={`Bus stop ${displayName}`}
+      aria-label={t('bus.stopAria', { name: displayName })}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
@@ -193,9 +193,9 @@ export const BusStopBoard = ({
             // 35x18 (#108: hugs the letters, same breathing room as the map label in busMapLayers.js).
             className="bus-stop-header-emblem"
             data-testid="station-header-icon"
-            aria-label="Toggle expand station panel"
+            aria-label={t('stationPanel.toggleExpandAria')}
             onClick={() => setIsExpanded((v) => !v)}
-            title={isExpanded ? 'Collapse view' : 'Expand full view'}
+            title={isExpanded ? t('stationPanel.collapseView') : t('stationPanel.expandView')}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 35, height: 18, minWidth: 35, borderRadius: 4,
@@ -318,8 +318,8 @@ export const BusStopBoard = ({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-expand"
-            aria-label={isExpanded ? 'Collapse station panel' : 'Expand station panel'}
-            title={isExpanded ? 'Minimize / Collapse view' : 'Maximize / Expand full departures'}
+            aria-label={isExpanded ? t('stationPanel.collapsePanelAria') : t('stationPanel.expandPanelAria')}
+            title={isExpanded ? t('stationPanel.minimizeTitle') : t('stationPanel.maximizeTitle')}
             style={{
               width: 32,
               height: 32,
@@ -447,8 +447,8 @@ export const BusStopBoard = ({
                         {a.wheelchair && (
                           <Accessibility
                             size={14}
-                            aria-label="Accessible"
-                            title="Accessible bus"
+                            aria-label={t('common.accessible')}
+                            title={t('common.accessibleBus')}
                             style={{
                               color: 'var(--text-secondary)',
                               opacity: 0.8,

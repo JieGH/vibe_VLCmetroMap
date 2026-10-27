@@ -19,6 +19,7 @@ import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 import { getDistance, nearbyFeatures } from '../utils/geoUtils';
 import { walkingMinutes } from '../utils/walking';
+import { hubDisplayName } from '../utils/hubName';
 import { pickWalkSet, WALK_RADIUS_METRES } from '../utils/walkRadius';
 import gtfsData from '../data/gtfs_expanded.json';
 
@@ -178,6 +179,9 @@ const StationPanel = ({
   if (!station) return null;
 
   const focus = getStationFocus(station.properties, now);
+  const shownName = hubDisplayName(focus.name, t);
+  // The arrival store reports why a list is stale as a dictionary key; show it in the viewer's language.
+  const fetchErrorText = focus.fetchError && focus.fetchError.startsWith('arrivals.errors.') ? t(focus.fetchError) : focus.fetchError;
   const unheardLabel = focus.secondsUnheard === null
     ? t('stationPanel.neverFetched')
     : focus.secondsUnheard < 60
@@ -206,7 +210,7 @@ const StationPanel = ({
   const renderMultimodalTabs = (isHeaderRow = false) => (
     <nav
       className="station-multimodal-tabs"
-      aria-label="Multimodal arrivals navigation"
+      aria-label={t('stationPanel.tabsAria')}
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         display: 'flex',
@@ -227,7 +231,7 @@ const StationPanel = ({
         aria-selected={activeTab === 'split'}
         onClick={() => setActiveTab('split')}
         onPointerDown={(e) => e.stopPropagation()}
-        title="All transit departures (Trains and Bus side-by-side)"
+        title={t('stationPanel.tabAllTitle')}
         style={{
           padding: '6px 13px',
           borderRadius: 9,
@@ -245,7 +249,7 @@ const StationPanel = ({
           transition: 'all 0.15s ease',
         }}
       >
-        <span>All</span>
+        <span>{t('common.all')}</span>
         <span
           style={{
             fontSize: '.72rem',
@@ -263,11 +267,11 @@ const StationPanel = ({
       <button
         type="button"
         role="tab"
-        aria-label="Metro train departures"
+        aria-label={t('stationPanel.tabMetroAria')}
         aria-selected={activeTab === 'metro'}
         onClick={() => setActiveTab('metro')}
         onPointerDown={(e) => e.stopPropagation()}
-        title="Trains departures only"
+        title={t('stationPanel.tabMetroTitle')}
         style={{
           padding: '6px 13px',
           borderRadius: 9,
@@ -320,11 +324,11 @@ const StationPanel = ({
       <button
         type="button"
         role="tab"
-        aria-label="EMT bus departures"
+        aria-label={t('stationPanel.tabBusAria')}
         aria-selected={activeTab === 'bus'}
         onClick={() => setActiveTab('bus')}
         onPointerDown={(e) => e.stopPropagation()}
-        title="EMT Bus departures only"
+        title={t('stationPanel.tabBusTitle')}
         style={{
           padding: '6px 13px',
           borderRadius: 9,
@@ -375,7 +379,7 @@ const StationPanel = ({
     <>
       <aside
         className="glass-panel station-panel"
-        aria-label={focus.name}
+        aria-label={shownName}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
@@ -439,9 +443,9 @@ const StationPanel = ({
             <div
               className="station-header-icon"
               data-testid="station-header-icon"
-              aria-label="Toggle expand station panel"
+              aria-label={t('stationPanel.toggleExpandAria')}
               onClick={() => setIsExpanded((v) => !v)}
-              title={isExpanded ? 'Collapse view' : 'Expand full view'}
+              title={isExpanded ? t('stationPanel.collapseView') : t('stationPanel.expandView')}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, minWidth: 34, borderRadius: '50%',
@@ -478,11 +482,11 @@ const StationPanel = ({
                   wordBreak: 'break-word',
                   minWidth: 0, margin: 0,
                 }}>
-                  {focus.name}
+                  {shownName}
                 </h2>
                 {metroWalkMin !== undefined && (
                   <span
-                    title={`${metroWalkMin} min walk`}
+                    title={t('common.minWalk', { min: metroWalkMin })}
                     style={{
                       fontSize: '0.74rem',
                       fontWeight: 700,
@@ -571,8 +575,8 @@ const StationPanel = ({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-expand"
-            aria-label={isExpanded ? 'Collapse station panel' : 'Expand station panel'}
-            title={isExpanded ? 'Minimize / Collapse view' : 'Maximize / Expand full departures'}
+            aria-label={isExpanded ? t('stationPanel.collapsePanelAria') : t('stationPanel.expandPanelAria')}
+            title={isExpanded ? t('stationPanel.minimizeTitle') : t('stationPanel.maximizeTitle')}
             style={{
               width: 32,
               height: 32,
@@ -615,7 +619,7 @@ const StationPanel = ({
               margin: '6px 10px', padding: '6px 10px', borderRadius: 8,
               background: 'rgba(255,152,0,.14)', color: '#ffb74d', fontSize: '.72rem', lineHeight: 1.35,
             }}>
-              {focus.fetchError}
+              {fetchErrorText}
             </div>
           )}
 
@@ -701,7 +705,7 @@ const StationPanel = ({
               margin: '8px 0', padding: '8px 10px', borderRadius: 8,
               background: 'rgba(255,152,0,.14)', color: '#ffb74d', fontSize: '.72rem', lineHeight: 1.35,
             }}>
-              {focus.fetchError}
+              {fetchErrorText}
             </div>
           )}
 
@@ -711,7 +715,7 @@ const StationPanel = ({
             </p>
           ) : (
             <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
-              <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
+              <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: shownName })}</caption>
               <thead>
                 <tr style={{
                   fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',

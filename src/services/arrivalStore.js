@@ -8,6 +8,17 @@ import liveStations from '../data/live_stations.json';
 import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
 import { recordApiFailure } from '../utils/diagnostics';
 
+// Why an arrival list is stale or empty. The store has no access to the UI language, so `fetchError` carries
+// one of these dictionary keys and the UI shows t(fetchError).
+export const ARRIVAL_ERRORS = {
+  refreshedRecently: 'arrivals.errors.refreshedRecently',
+  noEndpoint: 'arrivals.errors.noEndpoint',
+  rateLimited: 'arrivals.errors.rateLimited',
+  networkRefused: 'arrivals.errors.networkRefused',
+  updateFailed: 'arrivals.errors.updateFailed',
+  unavailable: 'arrivals.errors.unavailable',
+};
+
 // Build complete 141-station API ID map
 export const STATION_ID_MAP = {};
 if (Array.isArray(paradasApi)) {
@@ -446,14 +457,14 @@ class ArrivalStore {
       return Object.assign(projected, {
         isFromCache: true,
         fetchedAt: entry.fetchedAt,
-        fetchError: 'Refreshed recently. Showing countdown from memory.',
+        fetchError: ARRIVAL_ERRORS.refreshedRecently,
       });
     }
 
     // 3. If no API endpoint exists for this station, return empty with notice
     if (!stationId) {
       return Object.assign([], {
-        fetchError: 'N/A — this station has no live prediction endpoint.',
+        fetchError: ARRIVAL_ERRORS.noEndpoint,
         isFromCache: false,
         fetchedAt: now,
       });
@@ -471,7 +482,7 @@ class ArrivalStore {
         return Object.assign(projected, {
           isFromCache: true,
           fetchedAt: entry.fetchedAt,
-          fetchError: 'Live rate limit active. Counting down from previous sync.',
+          fetchError: ARRIVAL_ERRORS.rateLimited,
         });
       }
     }
@@ -479,7 +490,7 @@ class ArrivalStore {
     // 6. Refused-network backoff: while FGV refuses this network, one probe per
     // backoff step (30 s up to 5 min). A manual refresh always gets through.
     if (!this.refusal.tryAcquire({ force: forceRefresh })) {
-      const message = 'Train service refused this network. Counting down from previous sync.';
+      const message = ARRIVAL_ERRORS.networkRefused;
       if (entry) {
         const projected = this.projectArrivals(entry, now);
         return Object.assign(projected, { isFromCache: true, fetchedAt: entry.fetchedAt, fetchError: message });
@@ -615,14 +626,14 @@ class ArrivalStore {
             return Object.assign(projected, {
               isFromCache: true,
               fetchedAt: existingEntry.fetchedAt,
-              fetchError: 'Live update failed. Showing countdown from earlier sync.',
+              fetchError: ARRIVAL_ERRORS.updateFailed,
             });
           }
         }
 
         // No prior memory
         return Object.assign([], {
-          fetchError: 'Live predictions are currently unavailable.',
+          fetchError: ARRIVAL_ERRORS.unavailable,
           isFromCache: false,
           fetchedAt: Date.now(),
         });

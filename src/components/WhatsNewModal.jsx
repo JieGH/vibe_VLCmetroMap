@@ -110,7 +110,7 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="whats-new-close-icon-btn"
             style={{
               background: 'transparent',

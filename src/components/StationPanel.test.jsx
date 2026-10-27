@@ -259,7 +259,7 @@ describe('StationPanel component', () => {
     expect(gpsHtml).not.toMatch(/Where you(&#x27;|')re at/);
     expect(gpsHtml).not.toContain('GPS Location');
     expect(gpsHtml).not.toContain('5 min walk');
-    expect(gpsHtml).toContain('Autobús');
+    expect(gpsHtml).toContain('>Bus<');
     expect(gpsHtml).toContain('Trains');
     expect(gpsHtml).not.toContain('station-header-meta');
 
@@ -298,7 +298,7 @@ describe('StationPanel component', () => {
     );
     expect(pingHtml).not.toContain('Map Ping');
     expect(pingHtml).not.toContain('5 min walk');
-    expect(pingHtml).toContain('Autobús');
+    expect(pingHtml).toContain('>Bus<');
     expect(pingHtml).toContain('station-panel-expand');
     expect(pingHtml).toContain('station-panel-close');
   });
@@ -327,7 +327,7 @@ describe('StationPanel component', () => {
     // Does NOT render multimodal tabs or autobus column
     expect(html).not.toContain('station-multimodal-tabs');
     expect(html).not.toContain('multimodal-dual-scroll-container');
-    expect(html).not.toContain('Autobús');
+    expect(html).not.toContain('>Bus<');
   });
 
   it('sizes the expanded portrait sheet to clear the top bar using both safe-area insets', () => {
@@ -335,7 +335,7 @@ describe('StationPanel component', () => {
     expect(EXPANDED_SHEET_HEIGHT).toContain('env(safe-area-inset-bottom');
   });
 
-  it('split view weights Autobús wider than Trains and sits lower while collapsed', () => {
+  it('split view weights the Bus column wider than Trains and sits lower while collapsed', () => {
     const html = renderToStaticMarkup(
       <StationPanel station={sampleStation} theme="dark" isPin onClose={() => {}} />
     );

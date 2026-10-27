@@ -109,7 +109,7 @@ export const ConnectingBusSection = ({
   if (!feeders || feeders.length === 0) {
     return (
       <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        <p style={{ fontSize: '0.85rem', margin: 0 }}>No EMT bus stops found within walking distance.</p>
+        <p style={{ fontSize: '0.85rem', margin: 0 }}>{t('bus.noStops')}</p>
       </div>
     );
   }
@@ -143,7 +143,7 @@ export const ConnectingBusSection = ({
           >
             EMT
           </span>
-          <span>Autobús</span>
+          <span>{t('bus.heading')}</span>
         </span>
         {showDistance && (
           <span
@@ -182,7 +182,7 @@ export const ConnectingBusSection = ({
             key={stop.stopCode || sIdx}
             data-testid="feeder-card"
             onClick={() => onSelectFeederStop && onSelectFeederStop(stop)}
-            title="Open this street bus stop"
+            title={t('bus.openStop')}
             style={{
               cursor: onSelectFeederStop ? 'pointer' : 'default',
               background: 'var(--bg-hover, rgba(255, 255, 255, 0.04))',
@@ -239,9 +239,9 @@ export const ConnectingBusSection = ({
                     flex: 1,
                     minWidth: 0,
                   }}
-                  title={stop.stopName}
+                  title={stop.stopName || t('bus.stopFallback')}
                 >
-                  {stop.stopName}
+                  {stop.stopName || t('bus.stopFallback')}
                 </span>
               </div>
               {showDistance && (
@@ -322,7 +322,7 @@ export const ConnectingBusSection = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
                         {busObj.isLive && !compact && (
                           <span
-                            title="Live GPS AVL Telemetry"
+                            title={t('bus.liveGpsTelemetry')}
                             style={{
                               width: 6,
                               height: 6,

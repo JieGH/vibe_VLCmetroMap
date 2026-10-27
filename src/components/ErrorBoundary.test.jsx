@@ -23,8 +23,9 @@ describe('ErrorBoundary component', () => {
     const html = renderToStaticMarkup(rendered);
 
     expect(html).toContain('role="alert"');
-    expect(html).toContain('Ha ocorregut un error imprevist');
-    expect(html).toContain('Reiniciar aplicació');
+    // Outside the I18nProvider, so it reads the saved language: Spanish when nothing is saved yet.
+    expect(html).toContain('Ha ocurrido un error inesperado');
+    expect(html).toContain('Reiniciar la app');
     expect(html).toContain('Reintentar');
   });
 
