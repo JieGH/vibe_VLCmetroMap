@@ -3,14 +3,14 @@
 // single attribute on the map container (data-emt-stage = dot | logo | lines); CSS does the rest,
 // so no marker is rebuilt on a zoom frame.
 
-/** Zoomed out past this (zoom < 14.4) the badges become dots. */
-export const EMT_DOT_ENTER_ZOOM = 14.4;
-/** Zoomed back in past this (zoom >= 14.6) the EMT logo returns. The 0.2 band stops flapping at ~14.5. */
-export const EMT_DOT_EXIT_ZOOM = 14.6;
-/** Zoomed in past this (zoom >= 15.4) the logo gives way to the line numbers. Raised from 16.5 so the numbers show sooner. */
-export const EMT_LINES_ENTER_ZOOM = 15.4;
-/** Zoomed back out past this (zoom < 15.2) the line numbers give way to the logo. */
-export const EMT_LINES_EXIT_ZOOM = 15.2;
+/** Zoomed out past this (zoom < 13.9) the badges become dots. Lowered from 14.4 so the EMT logo shows sooner. */
+export const EMT_DOT_ENTER_ZOOM = 13.9;
+/** Zoomed back in past this (zoom >= 14.1) the EMT logo returns. The 0.2 band stops flapping at ~14. */
+export const EMT_DOT_EXIT_ZOOM = 14.1;
+/** Zoomed in past this (zoom >= 15.0) the logo gives way to the line numbers. Lowered from 16.5 so the numbers show sooner. */
+export const EMT_LINES_ENTER_ZOOM = 15.0;
+/** Zoomed back out past this (zoom < 14.8) the line numbers give way to the logo. */
+export const EMT_LINES_EXIT_ZOOM = 14.8;
 
 /**
  * @param {number} zoom current map zoom

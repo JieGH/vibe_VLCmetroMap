@@ -4,7 +4,7 @@ import { emtStage, EMT_DOT_ENTER_ZOOM, EMT_DOT_EXIT_ZOOM, EMT_LINES_ENTER_ZOOM, 
 describe('emtStage', () => {
   it('picks the stage from zoom when nothing was shown before', () => {
     expect(emtStage(12.5, 'logo')).toBe('dot');
-    expect(emtStage(15, 'logo')).toBe('logo');
+    expect(emtStage(14.5, 'logo')).toBe('logo');
     expect(emtStage(17.5, 'logo')).toBe('lines');
   });
 
@@ -24,21 +24,21 @@ describe('emtStage', () => {
 
   it('does not flap inside either hysteresis band', () => {
     let stage = 'logo';
-    for (const z of [14.5, 14.41, 14.55]) {
+    for (const z of [14.0, 13.91, 14.05]) {
       stage = emtStage(z, stage);
       expect(stage).toBe('logo');
     }
-    stage = emtStage(14.39, stage);
+    stage = emtStage(13.89, stage);
     expect(stage).toBe('dot');
-    for (const z of [14.45, 14.5, 14.59, 14.45]) {
+    for (const z of [13.95, 14.0, 14.09, 13.95]) {
       stage = emtStage(z, stage);
       expect(stage).toBe('dot');
     }
     stage = 'logo';
-    for (const z of [15.3, 15.35, 15.39]) stage = emtStage(z, stage);
+    for (const z of [14.9, 14.95, 14.99]) stage = emtStage(z, stage);
     expect(stage).toBe('logo');
-    stage = emtStage(15.4, stage);
-    for (const z of [15.3, 15.21, 15.35]) {
+    stage = emtStage(15.0, stage);
+    for (const z of [14.9, 14.81, 14.95]) {
       stage = emtStage(z, stage);
       expect(stage).toBe('lines');
     }
@@ -47,7 +47,7 @@ describe('emtStage', () => {
   it('handles jumps across several thresholds at once', () => {
     expect(emtStage(18, 'dot')).toBe('lines');
     expect(emtStage(13, 'lines')).toBe('dot');
-    expect(emtStage(15.1, 'lines')).toBe('logo');
+    expect(emtStage(14.7, 'lines')).toBe('logo');
   });
 
   it('keeps a real gap between each pair of thresholds', () => {
