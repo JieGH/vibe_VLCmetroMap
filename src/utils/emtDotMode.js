@@ -3,6 +3,8 @@
 // single attribute on the map container (data-emt-stage = dot | logo | lines); CSS does the rest,
 // so no marker is rebuilt on a zoom frame.
 
+/** EMT stop markers exist from this zoom up, so the map opens (default zoom 12.3) already showing the dots. */
+export const EMT_MARKER_MIN_ZOOM = 12;
 /** Zoomed out past this (zoom < 13.9) the badges become dots. Lowered from 14.4 so the EMT logo shows sooner. */
 export const EMT_DOT_ENTER_ZOOM = 13.9;
 /** Zoomed back in past this (zoom >= 14.1) the EMT logo returns. The 0.2 band stops flapping at ~14. */

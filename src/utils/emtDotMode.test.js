@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { emtStage, EMT_DOT_ENTER_ZOOM, EMT_DOT_EXIT_ZOOM, EMT_LINES_ENTER_ZOOM, EMT_LINES_EXIT_ZOOM } from './emtDotMode';
+import { DEFAULT_MAP_ZOOM } from './mapCamera';
+import { emtStage, EMT_MARKER_MIN_ZOOM, EMT_DOT_ENTER_ZOOM, EMT_DOT_EXIT_ZOOM, EMT_LINES_ENTER_ZOOM, EMT_LINES_EXIT_ZOOM } from './emtDotMode';
 
 describe('emtStage', () => {
+  it('builds EMT markers from below the opening zoom, and shows them as dots there', () => {
+    expect(EMT_MARKER_MIN_ZOOM).toBeLessThanOrEqual(DEFAULT_MAP_ZOOM);
+    expect(emtStage(DEFAULT_MAP_ZOOM, 'logo')).toBe('dot');
+  });
+
   it('picks the stage from zoom when nothing was shown before', () => {
     expect(emtStage(12.5, 'logo')).toBe('dot');
     expect(emtStage(14.5, 'logo')).toBe('logo');

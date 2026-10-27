@@ -143,8 +143,12 @@ describe('Map markers follow the Text Size setting (#103)', () => {
     return '';
   };
 
-  it.each(['.metro-station-badge', '.emt-stop-badge'])('draws %s 15% bigger than the Text Size scale', (selector) => {
-    expect(ruleFor(selector)).toContain('zoom: calc(var(--font-scale, 1) * 1.15)');
+  it('draws EMT stop markers 15% bigger than the Text Size scale', () => {
+    expect(ruleFor('.emt-stop-badge')).toContain('zoom: calc(var(--font-scale, 1) * 1.15)');
+  });
+
+  it('draws metro station markers 10% smaller than that (1.15 * 0.9)', () => {
+    expect(ruleFor('.metro-station-badge')).toContain('zoom: calc(var(--font-scale, 1) * 1.035)');
   });
 
   it.each([

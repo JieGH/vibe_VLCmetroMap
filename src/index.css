@@ -163,10 +163,14 @@ textarea {
   zoom: var(--font-scale, 1);
 }
 
-/* Metro and EMT stop markers are drawn 15% bigger than the Text Size scale alone (field test: too small). */
-.metro-station-badge,
+/* EMT stop markers are drawn 15% bigger than the Text Size scale alone (field test: too small). */
 .emt-stop-badge {
   zoom: calc(var(--font-scale, 1) * 1.15);
+}
+
+/* Metro station markers: that 15% minus 10% (1.15 * 0.9 = 1.035). */
+.metro-station-badge {
+  zoom: calc(var(--font-scale, 1) * 1.035);
 }
 
 /* Ambient translucency: when user has not placed a pin, all station markers show 50% translucent */

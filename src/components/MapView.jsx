@@ -31,7 +31,7 @@ import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNo
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import { pickWalkSet } from '../utils/walkRadius';
 import returnTrackData from '../data/return_tracks.json';
-import { emtStage } from '../utils/emtDotMode';
+import { emtStage, EMT_MARKER_MIN_ZOOM } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 import {
@@ -1880,8 +1880,8 @@ const MapView = ({
         const allStops = getAllBusStops();
         const currentZoom = map.getZoom();
 
-        // Gated to zoom >= 12.5 and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
-        if (currentZoom >= 12.5) {
+        // Gated to EMT_MARKER_MIN_ZOOM (below the opening zoom, so the dots show on open) and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
+        if (currentZoom >= EMT_MARKER_MIN_ZOOM) {
           const bounds = map.getBounds();
           const lngSpan = bounds.getEast() - bounds.getWest();
           const latSpan = bounds.getNorth() - bounds.getSouth();
