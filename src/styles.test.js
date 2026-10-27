@@ -160,6 +160,27 @@ describe('Map markers follow the Text Size setting (#103)', () => {
   });
 });
 
+describe('Map stays clickable under overlays (stops and pings)', () => {
+  const rule = (selector) => {
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const re = /([^{}]+)\{([^{}]*)\}/g;
+    let m;
+    while ((m = re.exec(bare))) {
+      if (m[1].split(',').map((x) => x.trim()).includes(selector)) return m[2];
+    }
+    return '';
+  };
+
+  it('the top bar container lets taps through; only its children take them', () => {
+    expect(rule('.top-bar-container')).toContain('pointer-events: none');
+    expect(rule('.top-bar-container > *')).toContain('pointer-events: auto');
+  });
+
+  it('the sidebar backdrop does not catch map clicks on a wide desktop window', () => {
+    expect(css).toMatch(/@media \(min-width: 1600px\) \{\s*\.sidebar-backdrop\.active \{ pointer-events: none; \}/);
+  });
+});
+
 describe('Welcome screen splash styles and animation timings', () => {
   it('defines fixed full-screen splash overlay at z-index 10000', () => {
     const splashMatch = css.match(/\.welcome-screen\s*\{([^}]*)\}/)?.[1] || '';

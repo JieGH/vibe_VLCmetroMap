@@ -441,6 +441,12 @@ textarea {
   pointer-events: auto;
 }
 
+/* On a wide desktop window the sidebar opens by default and is docked beside the map (#124, #125), so it must not
+   swallow the first click on the map: the backdrop only closes the sidebar on narrower windows. */
+@media (min-width: 1600px) {
+  .sidebar-backdrop.active { pointer-events: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar-backdrop {
     transition: none;
@@ -495,7 +501,11 @@ textarea {
   align-items: center;
   gap: 10px;
   touch-action: none;
+  /* On phones this container spans the whole top strip; only its buttons take taps, so a stop or a ping under the
+     empty part of the strip stays clickable. */
+  pointer-events: none;
 }
+.top-bar-container > * { pointer-events: auto; }
 
 @media (min-width: 769px) {
   .top-bar-container {
