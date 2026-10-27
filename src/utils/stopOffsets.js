@@ -23,6 +23,14 @@ export const PAIR_MIN_METRES = 2;
 /** Pairs are pushed until their drawn separation reaches this (or the cap). */
 export const TARGET_SEPARATION_METRES = 86; // was 60; +13 m each side. The cap alone barely moved wider pairs
 
+/**
+ * Stops that must be drawn closer to their real position than the general cap, found in the field.
+ * Only the listed stop is limited; its partner keeps the normal push.
+ */
+export const STOP_OFFSET_CAP_OVERRIDES = {
+  '1613': 10, // Comissaria Policia Local Marítim (front): drawn 25 m out, too far from the road
+};
+
 // Matches geoUtils.getDistance (haversine, R = 6371 km) so the cap is exact.
 const METRES_PER_DEG_LAT = (6371000 * Math.PI) / 180;
 
@@ -100,13 +108,15 @@ export function buildDisplayCoordinates(stops) {
       if (len === 0) continue;
       const ux = dx / len;
       const uy = dy / len;
+      const pushA = Math.min(push, STOP_OFFSET_CAP_OVERRIDES[ca] ?? push);
+      const pushB = Math.min(push, STOP_OFFSET_CAP_OVERRIDES[cb] ?? push);
       result.set(ca, [
-        a.coordinates[0] - (ux * push) / mPerLng,
-        a.coordinates[1] - (uy * push) / METRES_PER_DEG_LAT,
+        a.coordinates[0] - (ux * pushA) / mPerLng,
+        a.coordinates[1] - (uy * pushA) / METRES_PER_DEG_LAT,
       ]);
       result.set(cb, [
-        b.coordinates[0] + (ux * push) / mPerLng,
-        b.coordinates[1] + (uy * push) / METRES_PER_DEG_LAT,
+        b.coordinates[0] + (ux * pushB) / mPerLng,
+        b.coordinates[1] + (uy * pushB) / METRES_PER_DEG_LAT,
       ]);
     }
   }
