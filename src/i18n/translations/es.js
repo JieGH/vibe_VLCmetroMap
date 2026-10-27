@@ -31,6 +31,8 @@ export default {
     trainApiRefused: 'Red rechazada por el servicio de trenes. Prueba sin VPN.',
     trainApiRefusedLong: 'El servicio de trenes ha rechazado esta red. Si usas una VPN, prueba a desactivarla.',
     outsideSpainNotice: 'Fuera de España: los horarios de tren y autobús pueden ser incorrectos.',
+    noLiveOutsideNotice: 'Problema de red: es posible que el proveedor de transporte no pueda acceder a tu conexión, o que el proveedor esté caído. Inténtalo de nuevo más tarde.',
+    noLiveProviderNotice: 'Los horarios en directo no cargan. Puede que el proveedor de transporte esté caído o no acepte esta conexión. Inténtalo de nuevo en un momento.',
     transitModeAria: 'Selector de modo de transporte',
     emtTrunks: 'EMT troncales',
     busNetworkTrunks: 'Troncales de la red de bus',

@@ -43,7 +43,8 @@ import { Search, X } from 'lucide-react';
 import AppBadge from './components/AppBadge';
 import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { isChunkLoadError, reloadOnceForNewBuild, setupChunkErrorRecovery } from './utils/chunkReload';
-import { startRegionCheck, useOutsideSpain } from './services/regionCheck';
+import { startRegionCheck } from './services/regionCheck';
+import { useNetworkNotice } from './services/useNetworkNotice';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
 import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
@@ -170,7 +171,8 @@ function App() {
   // a new refusal follows.
   const [trainRefused, setTrainRefused] = useState(() => arrivalStore.isApiRefused());
   const [refusalDismissed, setRefusalDismissed] = useState(false);
-  const outsideSpain = useOutsideSpain();
+  const networkNotice = useNetworkNotice();
+  const networkNoticeText = networkNotice ? t(`app.${networkNotice}Notice`) : '';
   const [regionDismissed, setRegionDismissed] = useState(false);
   useEffect(() => { startRegionCheck(); }, []);
   useEffect(() => arrivalStore.subscribe(() => {
@@ -1097,15 +1099,15 @@ function App() {
         </button>
       )}
 
-      {outsideSpain && !regionDismissed && (
+      {networkNotice && !regionDismissed && (
         <button
-          className="region-notice"
+          className={`region-notice ${networkNotice === 'outsideSpain' ? '' : 'region-notice-network'}`}
           role="status"
           onClick={() => setRegionDismissed(true)}
           title={t('app.dismissTitle')}
-          aria-label={t('app.outsideSpainNotice')}
+          aria-label={networkNoticeText}
         >
-          {t('app.outsideSpainNotice')}
+          {networkNoticeText}
         </button>
       )}
 

@@ -4,9 +4,34 @@ import { Capacitor } from '@capacitor/core';
 // (403)" rather than "fetch failed" (#123). Class, status and time only: never
 // the address, the URL or anything about the user.
 const lastApiFailure = { train: null, bus: null };
+// Failures since the last good answer, and when that answer came: the header's service status reads these.
+const failuresInARow = { train: 0, bus: 0 };
+const lastApiSuccessAt = { train: null, bus: null };
+const listeners = new Set();
+const emit = () => listeners.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
 
 export function recordApiFailure(api, { kind, status }) {
   lastApiFailure[api] = { kind, status: status ?? null, at: new Date().toISOString() };
+  failuresInARow[api] += 1;
+  emit();
+}
+
+export function recordApiSuccess(api) {
+  const hadTrouble = failuresInARow[api] > 0;
+  failuresInARow[api] = 0;
+  lastApiSuccessAt[api] = new Date().toISOString();
+  if (hadTrouble) emit();
+}
+
+export function subscribeApiStatus(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Per API: the last failure, how many failures in a row since the last good answer, and when that answer came. */
+export function getApiHealth() {
+  const one = (api) => ({ lastFailure: lastApiFailure[api], failuresInARow: failuresInARow[api], lastSuccessAt: lastApiSuccessAt[api] });
+  return { train: one('train'), bus: one('bus') };
 }
 
 export function getApiDiagnostics() {
