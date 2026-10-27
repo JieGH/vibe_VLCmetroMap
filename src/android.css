@@ -223,8 +223,8 @@ html.android .search-bar-icon {
 html.android .search-bar-input {
   padding: 0 4px;
   font-family: var(--md-font);
-  font-size: 16px !important;
-  line-height: 24px;
+  font-size: calc(16px * var(--font-scale, 1)) !important;
+  line-height: calc(24px * var(--font-scale, 1));
   color: var(--md-on-surface) !important;
 }
 
@@ -247,8 +247,8 @@ html.android .search-bar-results {
 
 html.android .search-bar-results > div > div[style*='uppercase'] {
   padding: 8px 16px !important;
-  font-size: 12px !important;
-  line-height: 16px;
+  font-size: calc(12px * var(--font-scale, 1)) !important;
+  line-height: calc(16px * var(--font-scale, 1));
   font-weight: 500;
   letter-spacing: 0.5px !important;
 }
@@ -266,22 +266,22 @@ html.android .search-bar-option[aria-selected='true'] {
 
 html.android .search-bar-option span,
 html.android .search-bar-option > div:not(:first-child) > div:first-child {
-  font-size: 16px !important;
-  line-height: 24px;
+  font-size: calc(16px * var(--font-scale, 1)) !important;
+  line-height: calc(24px * var(--font-scale, 1));
   font-weight: 400 !important;
   color: var(--md-on-surface);
 }
 
 html.android .search-bar-option > div:not(:first-child) > div + div {
-  font-size: 14px !important;
-  line-height: 20px;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
+  line-height: calc(20px * var(--font-scale, 1));
   color: var(--md-on-surface-variant);
 }
 
 html.android .search-bar-option > div:first-child:not(:only-child) {
   width: 32px !important;
   height: 32px !important;
-  font-size: 14px !important;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
 }
 
 html.android .search-bar-option > svg {
@@ -309,8 +309,8 @@ html.android .hub-chips {
 
 html.android .hub-chip {
   font-family: var(--md-font);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--font-scale, 1));
+  line-height: calc(20px * var(--font-scale, 1));
   font-weight: 600;
   border: none;
   border-radius: 16px;
@@ -330,8 +330,8 @@ html.android .locate-notice {
   transform: none;
   animation: md-chip-in var(--md-dur) var(--md-ease);
   font-family: var(--md-font);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--font-scale, 1));
+  line-height: calc(20px * var(--font-scale, 1));
   font-weight: 500;
   box-shadow: var(--md-elev-1);
 }
@@ -426,8 +426,8 @@ html.android .station-panel[data-landscape='true'] .station-panel-header {
 }
 
 html.android .station-panel-header h2 {
-  font-size: 22px !important;
-  line-height: 28px !important;
+  font-size: calc(22px * var(--font-scale, 1)) !important;
+  line-height: calc(28px * var(--font-scale, 1)) !important;
   font-weight: 500 !important;
   letter-spacing: 0 !important;
 }
@@ -480,7 +480,7 @@ html.android .station-panel-body {
 }
 
 html.android .station-arrivals-table thead tr {
-  font-size: 13px !important;
+  font-size: calc(13px * var(--font-scale, 1)) !important;
   letter-spacing: 0.5px !important;
   background: var(--md-surface-container-low) !important;
 }
@@ -497,17 +497,17 @@ html.android .station-line-badge {
   min-width: 32px !important;
   height: 32px !important;
   border-radius: 16px !important;
-  font-size: 15px !important;
+  font-size: calc(15px * var(--font-scale, 1)) !important;
 }
 
 html.android .station-arrival-row td > div:first-child {
-  font-size: 19px !important;
-  line-height: 24px;
+  font-size: calc(19px * var(--font-scale, 1)) !important;
+  line-height: calc(24px * var(--font-scale, 1));
   font-weight: 500 !important;
 }
 
 html.android .station-arrival-due {
-  font-size: 19px !important;
+  font-size: calc(19px * var(--font-scale, 1)) !important;
 }
 
 html.android .station-panel footer {
@@ -521,8 +521,8 @@ html.android .station-panel-recentre {
   border-radius: var(--md-shape-pill) !important;
   background: var(--md-secondary-container) !important;
   color: var(--md-on-secondary-container) !important;
-  font-size: 14px !important;
-  line-height: 20px;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
+  line-height: calc(20px * var(--font-scale, 1));
   font-weight: 500 !important;
   letter-spacing: 0.1px;
 }
@@ -564,8 +564,8 @@ html.android .sidebar .sheet-drag-handle-wrap {
 }
 
 html.android .sidebar h1 {
-  font-size: 22px;
-  line-height: 28px;
+  font-size: calc(22px * var(--font-scale, 1));
+  line-height: calc(28px * var(--font-scale, 1));
   font-weight: 500;
   letter-spacing: 0;
 }
@@ -590,8 +590,8 @@ html.android .sidebar-close-btn svg {
 
 html.android .sidebar h2 {
   padding: 0 16px;
-  font-size: 14px !important;
-  line-height: 20px;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
+  line-height: calc(20px * var(--font-scale, 1));
   font-weight: 500;
   letter-spacing: 0.1px !important;
   text-transform: none !important;
@@ -655,8 +655,8 @@ html.android .sidebar-about-btn {
   border-radius: 28px !important;
   background: transparent !important;
   color: var(--md-on-surface-variant) !important;
-  font-size: 14px !important;
-  line-height: 20px;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
+  line-height: calc(20px * var(--font-scale, 1));
   font-weight: 500 !important;
   letter-spacing: 0.1px;
 }
@@ -705,8 +705,8 @@ html.android .about-modal-header > div:first-child > div:first-child {
 }
 
 html.android .about-modal-header h2 {
-  font-size: 22px !important;
-  line-height: 28px;
+  font-size: calc(22px * var(--font-scale, 1)) !important;
+  line-height: calc(28px * var(--font-scale, 1));
   font-weight: 400 !important;
   letter-spacing: 0 !important;
 }
@@ -730,8 +730,8 @@ html.android .about-modal-close svg {
 
 html.android .about-modal-body {
   padding: 16px calc(16px + var(--md-inset-right)) 16px calc(16px + var(--md-inset-left)) !important;
-  font-size: 14px !important;
-  line-height: 20px !important;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
+  line-height: calc(20px * var(--font-scale, 1)) !important;
 }
 
 html.android .about-modal-body > section[style],
@@ -752,7 +752,7 @@ html.android .about-modal-footer button {
   border-radius: var(--md-shape-pill) !important;
   background: var(--md-primary) !important;
   color: var(--md-on-primary) !important;
-  font-size: 14px !important;
+  font-size: calc(14px * var(--font-scale, 1)) !important;
   font-weight: 500 !important;
   letter-spacing: 0.1px;
 }

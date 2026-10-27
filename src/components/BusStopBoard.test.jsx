@@ -11,6 +11,26 @@ describe('BusStopBoard component', () => {
     coordinates: [-0.375, 39.469],
   };
 
+  it('first render shows a loading state and no hard-coded arrivals (#122)', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={{ stopCode: '55555', stopName: 'Parada sin datos', lines: [], coordinates: [-0.37, 39.47] }} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('data-testid="arrivals-loading"');
+    expect(html).not.toContain('station-arrivals-table');
+    expect(html).not.toContain('La Malva-rosa');
+    expect(html).not.toContain('Centre Històric');
+    expect(html).not.toContain('La Fontsanta');
+    expect(html).not.toContain('Campanar');
+  });
+
+  it('feeder stops with plain line numbers also start in the loading state', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={{ stopCode: '1002', stopName: 'Colón', lines: ['19', 'C1'], coordinates: [-0.375, 39.469] }} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('data-testid="arrivals-loading"');
+    expect(html).not.toContain('station-arrivals-table');
+  });
+
   it('renders nothing when stop is null', () => {
     const html = renderToStaticMarkup(
       <BusStopBoard stop={null} onClose={() => {}} />
@@ -36,8 +56,19 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('>19<');
     expect(html).toContain('>C1<');
     expect(html).toContain('>92<');
-    expect(html).toContain('station-arrivals-table');
+    expect(html).toContain('data-testid="arrivals-loading"');
+    expect(html).not.toContain('station-arrivals-table');
     expect(html).toContain('data-testid="station-drag-handle"');
+  });
+
+  it('renders the header line badges squarer (#121): min-width equals height, tight padding', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={sampleStop} theme="dark" onClose={() => {}} />
+    );
+    const badge = html.match(/class="station-header-line-badge"[^>]*>/)?.[0] || '';
+    expect(badge).toContain('min-width:20px');
+    expect(badge).toContain('height:20px');
+    expect(badge).toContain('padding:0 2px');
   });
 
   it('renders expand and close buttons matching StationPanel design', () => {
@@ -171,4 +202,69 @@ describe('BusStopBoard component', () => {
     expect(html).toContain('data-testid="no-live-arrivals"');
     expect(html).not.toContain('station-arrivals-table');
   });
+});
+
+describe('BusStopBoard countdown formatting and states (#90)', () => {
+  const board = (arrivals) =>
+    renderToStaticMarkup(
+      <BusStopBoard
+        stop={{ stopCode: '2261', stopName: 'Xàtiva', lines: ['6'], arrivals }}
+        theme="dark"
+        onClose={() => {}}
+      />
+    );
+  const row = (over) => ({ line: '6', destination: 'Torrefiel', dueSeconds: 300, isLive: true, wheelchair: false, ...over });
+
+  it('shows whole minutes for 2 and 15 minute arrivals', () => {
+    const html = board([row({ dueSeconds: 120 }), row({ dueSeconds: 900, destination: 'Far' })]);
+    expect(html).toContain('>2<');
+    expect(html).toContain('>15<');
+    expect(html).toContain('>min<');
+  });
+
+  it('shows seconds between the due threshold and one minute', () => {
+    const html = board([row({ dueSeconds: 45 })]);
+    expect(html).toContain('>45<');
+    expect(html).toContain('>s<');
+  });
+
+  it('shows the due dot (no unit) for Pròxim-style 30 s arrivals and pulses only when live', () => {
+    const live = board([row({ dueSeconds: 30, isDue: true })]);
+    expect(live).toContain('station-arriving-dot pulse');
+    expect(live).not.toContain('>min<');
+    const sched = board([row({ dueSeconds: 30, isLive: false })]);
+    expect(sched).toContain('station-arriving-dot ');
+    expect(sched).not.toContain('station-arriving-dot pulse');
+  });
+
+  it('omits the accessible icon for non-wheelchair buses', () => {
+    expect(board([row({})])).not.toContain('aria-label="Accessible"');
+  });
+
+  it('renders the empty state, not a table, when arrivals are missing from the stop', () => {
+    const html = renderToStaticMarkup(
+      <BusStopBoard stop={{ stopCode: '1', stopName: 'S', lines: [], arrivals: [] }} theme="dark" onClose={() => {}} />
+    );
+    expect(html).toContain('data-testid="no-live-arrivals"');
+  });
+
+  it('#96: the detail view lists every arrival (no 3-row split-view cap) with the full min/Arriving wording', () => {
+    const stop = {
+      stopCode: 'P-2206',
+      stopName: 'Plaça d\'Amèrica',
+      lines: ['1'],
+      arrivals: Array.from({ length: 6 }, (_, i) => ({
+        line: '1',
+        destination: `Dest${i}`,
+        dueSeconds: 120 + i * 60,
+        minutes: 2 + i,
+        isLive: true,
+      })),
+      coordinates: [-0.3772, 39.4672],
+    };
+    const html = renderToStaticMarkup(<BusStopBoard stop={stop} theme="dark" onClose={() => {}} />);
+    for (let i = 0; i < 6; i++) expect(html).toContain(`Dest${i}`);
+    expect(html).not.toContain('′');
+  });
+
 });

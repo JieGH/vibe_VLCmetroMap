@@ -17,7 +17,11 @@ import {
   fitBoundsOptions,
   panelAwarePadding as computePanelPadding,
   focusTarget,
+  restingSheetRect,
+  samePadding,
+  recentreOnResize,
 } from '../utils/mapCamera';
+import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
 import { probeOfflineBasemap } from '../utils/basemapProbe';
@@ -28,19 +32,19 @@ import trainPositionEngine from '../services/trainPositionEngine';
 import { hasMapSelection, fadesAllVehicles } from '../utils/selectionFocus';
 import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
+import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import returnTrackData from '../data/return_tracks.json';
-import { emtDotMode } from '../utils/emtDotMode';
+import { emtStage, EMT_MARKER_MIN_ZOOM } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
 import {
   ensureBusLayers,
   setBusRoutesData,
   setFeederWalkLinks,
-  createLiveBusMarker,
   createFeederStopMarker,
   createBusStopNodeMarker,
 } from '../utils/busMapLayers';
-import { EMT_LINES, LIVE_BUS_TELEMETRY, getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
+import { getRealBusLines, getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -573,33 +577,29 @@ const userFixOpacity = (ageMs) => {
 const metresPerPixel = (latitude, zoom) =>
   (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom);
 
+// Measures the real sheet and the search bar, then asks the pure usableArea rule (mapCamera) for the
+// padding that centres a selected stop in what is left. The sheet's resting position comes from its
+// layout offsets, so the slide-in animation cannot skew it.
 const panelAwarePadding = (map, { hasPanel } = {}) => {
   const container = map?.getContainer();
   const containerRect = container ? container.getBoundingClientRect() : undefined;
   const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
   const panel = document.querySelector('.station-panel, .bus-stop-board');
-  const isPanelPresent = hasPanel ?? Boolean(panel);
 
-  let panelRect;
-  let panelHeight;
-  let panelWidth;
-
-  if (panel) {
-    panelRect = panel.getBoundingClientRect();
-    // offsetHeight and offsetWidth reflect resting layout dimensions,
-    // immune to in-flight CSS transforms (e.g. translateY slide-up).
-    // Adding 16px accounts for floating card margins.
-    panelHeight = (panel.offsetHeight || 0) + 16;
-    panelWidth = (panel.offsetWidth || 0) + 16;
-  }
+  const sheetRect = panel
+    ? restingSheetRect({
+        rect: panel.getBoundingClientRect(),
+        offsetParentRect: panel.offsetParent?.getBoundingClientRect(),
+        offsetTop: panel.offsetTop,
+        offsetLeft: panel.offsetLeft,
+      })
+    : undefined;
 
   return computePanelPadding({
     containerRect,
     searchBarRect,
-    panelRect,
-    panelHeight,
-    panelWidth,
-    hasPanel: isPanelPresent,
+    sheetRect,
+    hasPanel: hasPanel ?? Boolean(panel),
   });
 };
 
@@ -644,11 +644,16 @@ const MapView = ({
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const busFocusMarkerRef = useRef(null); // the expanded node for the Bus Stop in focus
-  const spawnedTransitMarkersRef = useRef([]); // transit nodes spawned for 5-min walk radius on pin selection
+  const spawnedKeysRef = useRef(new Set()); // keys shown by the last spawn, for the radius hysteresis
+  const nearbyKeysRef = useRef(new Set()); // m:/b: keys of the walk-radius stops whose base markers are magnified
   const selectedBusStopRef = useRef(selectedBusStop);
   useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
   const onSelectBusStopRef = useRef(onSelectBusStop);
   useEffect(() => { onSelectBusStopRef.current = onSelectBusStop; }, [onSelectBusStop]);
+  // What the camera is centring on and the padding it was centred under, so a resized sheet or window
+  // can re-centre the same target (see the usable-area effect below).
+  const focusCoordsRef  = useRef(null);
+  const focusPaddingRef = useRef(null);
   const prevStationRef  = useRef(null); // previous selectedStation to detect un-focus transitions
   const userLocationRef = useRef(userLocation);
   useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
@@ -703,11 +708,6 @@ const MapView = ({
     stMarkersRef.current = [];
     stInnerElemsRef.current = [];
     stRanksRef.current = null;
-  };
-
-  const clearSpawnedTransitMarkers = () => {
-    spawnedTransitMarkersRef.current.forEach(m => m.remove());
-    spawnedTransitMarkersRef.current = [];
   };
 
   // Apply zoom-based scale directly to all known marker DOM elements. `curve` is
@@ -822,6 +822,7 @@ const MapView = ({
 
       const inner = document.createElement('div');
       inner.className = isSelectedStation ? 'metro-station-badge is-selected' : 'metro-station-badge';
+      if (nearbyKeysRef.current.has(`m:${st.properties.name}`)) inner.classList.add('is-nearby');
       if (typeof inner.setAttribute === 'function') {
         inner.setAttribute('data-station-name', st.properties.name);
       }
@@ -1167,10 +1168,20 @@ const MapView = ({
         // 1.2x maximum, so the default view opens with stations already at their
         // largest, easiest-to-tap size rather than the network's full extent.
         zoom: DEFAULT_MAP_ZOOM,
+        // The map never shows anything beyond the Metrovalencia region (#118): MapLibre clamps pans to the
+        // box, and the minimum zoom is the one at which this viewport still fits inside it.
+        maxBounds: MAP_REGION_BOUNDS,
+        minZoom: regionMinZoom({ width: containerRef.current.clientWidth, height: containerRef.current.clientHeight }),
         // No (i) button on the map: OpenStreetMap, Protomaps and MapLibre are credited in About & Legal.
         attributionControl: false,
         maxTileCacheZoomLevels: 5,
         fadeDuration: 0,
+      });
+
+      // A bigger or turned screen needs a higher minimum zoom to stay inside the region.
+      map.on('resize', () => {
+        const { clientWidth, clientHeight } = map.getContainer();
+        map.setMinZoom(regionMinZoom({ width: clientWidth, height: clientHeight }));
       });
 
       // `originalEvent` is set only when a hand moved the camera (drag, pinch,
@@ -1197,11 +1208,11 @@ const MapView = ({
         const zoom = map.getZoom();
         zoomValueRef.current = zoom;
         applyMarkerScale(zoomCurve(zoom), zoom);
-        // EMT stops collapse to dots when zoomed out (#108): one attribute, hysteresis in emtDotMode.
+        // EMT stops go dot -> logo -> line numbers with zoom (#108, #116): one attribute, hysteresis in emtStage.
         const el = containerRef.current;
         if (el) {
-          const dots = emtDotMode(zoom, el.dataset.emtDots === 'true');
-          if (el.dataset.emtDots !== String(dots)) el.dataset.emtDots = String(dots);
+          const stage = emtStage(zoom, el.dataset.emtStage);
+          if (el.dataset.emtStage !== stage) el.dataset.emtStage = stage;
         }
       };
       map.on('zoom', updateZoomScale);
@@ -1231,11 +1242,11 @@ const MapView = ({
           return;
         }
 
-        // Multimodal 5-Minute Walk Radius click on the map:
+        // Multimodal Walk Radius click on the map:
         // When zoomed in (zoom >= 12.5), clicking any point explores all transit
-        // (Metro stations and EMT bus stops) within a 5-minute walk (~420m).
+        // (Metro stations and EMT bus stops) within the walk radius (metro 320 m, bus 280 m, see walkRadius.js).
         if (currentZoom >= 12.5) {
-          const nearestWithin5Min = drawnStationsRef.current && drawnStationsRef.current.length > 0
+          const nearestToPing = drawnStationsRef.current && drawnStationsRef.current.length > 0
             ? nearestFeature(drawnStationsRef.current, [lng, lat])
             : null;
           const targetStation = {
@@ -1254,7 +1265,7 @@ const MapView = ({
               accuracy: 15,
               isMapClick: true,
               status: 'located',
-              nearestStation: nearestWithin5Min?.feature || null,
+              nearestStation: nearestToPing?.feature || null,
               fetchedAt: Date.now(),
             }
           });
@@ -1475,7 +1486,7 @@ const MapView = ({
       // A visual anchor only — no countdowns to tick, so it's rendered once per
       // selection rather than on an interval. Arrivals live in the Station panel.
       element.innerHTML = renderStationHighlight(selectedStation.properties, themeRef.current, true);
-      marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
+      marker = new Marker({ element, anchor: 'center', offset: [0, 0] })
         .setLngLat(coordinates)
         .addTo(map);
       focusMarkerRef.current = marker;
@@ -1493,8 +1504,10 @@ const MapView = ({
       ? userLocationRef.current.coordinates
       : coordinates;
 
+    focusCoordsRef.current = focusCoords;
+    focusPaddingRef.current = panelAwarePadding(map, { hasPanel: true });
     if (!isHubRefresh) {
-      focusTarget(map, focusCoords, panelAwarePadding(map, { hasPanel: true }));
+      focusTarget(map, focusCoords, focusPaddingRef.current);
     }
 
     return () => {
@@ -1537,15 +1550,17 @@ const MapView = ({
     let marker = null;
     const element = document.createElement('div');
     element.className = 'bus-focus-node';
-    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true);
-    marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
+    element.innerHTML = renderBusStopHighlight(selectedBusStop, themeRef.current, true, languageRef.current);
+    marker = new Marker({ element, anchor: 'center', offset: [0, 0] })
       .setLngLat(getStopDisplayCoordinates(selectedBusStop) || coordinates)
       .addTo(map);
     busFocusMarkerRef.current = marker;
 
     // Centre the drawn marker (#106 display offset), not the real stop coordinate,
     // so the marker the rider sees is what ends up in the middle.
-    focusTarget(map, getStopDisplayCoordinates(selectedBusStop) || coordinates, panelAwarePadding(map, { hasPanel: true }));
+    focusCoordsRef.current = getStopDisplayCoordinates(selectedBusStop) || coordinates;
+    focusPaddingRef.current = panelAwarePadding(map, { hasPanel: true });
+    focusTarget(map, focusCoordsRef.current, focusPaddingRef.current);
 
     return () => {
       if (marker) {
@@ -1554,6 +1569,41 @@ const MapView = ({
       if (busFocusMarkerRef.current === marker) busFocusMarkerRef.current = null;
     };
   }, [selectedBusStop, selectedStation]);
+
+  // ── Keep the selection centred in the usable map area ───────────────────────
+  // The sheet grows after its first paint (arrivals load, expand toggles) and the window can be
+  // resized, so the padding measured at selection goes stale. Watch the sheet and the map, and
+  // when the usable area really changes ease the same target to its new centre. Zoom is kept (#94)
+  // and nothing happens when the padding is unchanged, so the ease started by selection is not
+  // restarted and the camera cannot loop (moving it never resizes the sheet). Closing the sheet
+  // removes the observer and moves nothing (#95).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || (!selectedBusStop && !selectedStation) || typeof ResizeObserver === 'undefined') return undefined;
+
+    let frame = 0;
+    const recentre = () => {
+      frame = 0;
+      const coords = focusCoordsRef.current;
+      if (!coords) return;
+      const padding = panelAwarePadding(map, { hasPanel: true });
+      if (samePadding(padding, focusPaddingRef.current)) return;
+      focusPaddingRef.current = padding;
+      recentreOnResize(map, coords, padding);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(recentre);
+    };
+
+    const observer = new ResizeObserver(schedule);
+    const panel = document.querySelector('.station-panel, .bus-stop-board');
+    if (panel) observer.observe(panel);
+    observer.observe(map.getContainer());
+    return () => {
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [selectedStation, selectedBusStop]);
 
   // ── Highlight active chosen station or bus stop ─────────────────
   const updateStopHighlights = () => {
@@ -1566,6 +1616,7 @@ const MapView = ({
 
     container.querySelectorAll('.metro-station-badge').forEach((el) => {
       const match = Boolean(selectedMetroName && el.getAttribute('data-station-name') === selectedMetroName);
+      el.classList.toggle('is-nearby', nearbyKeysRef.current.has(`m:${el.getAttribute('data-station-name')}`));
       if (match) {
         el.classList.add('is-selected');
         if (el.parentElement?.parentElement) {
@@ -1585,6 +1636,7 @@ const MapView = ({
 
     container.querySelectorAll('.emt-stop-badge').forEach((el) => {
       const match = Boolean(selectedStopCode && el.getAttribute('data-stop-code') === selectedStopCode);
+      el.classList.toggle('is-nearby', nearbyKeysRef.current.has(`b:${el.getAttribute('data-stop-code')}`));
       if (match) {
         el.classList.add('is-selected');
         if (el.parentElement?.parentElement) {
@@ -1713,80 +1765,54 @@ const MapView = ({
     };
   }, [userLocation]);
 
-  // ── Spawn 5-minute walk surrounding transit popups when pin is selected ───────
+  // ── Magnify the walk-radius stops in place when a pin or GPS fix is the focus ───────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return undefined;
-
-    clearSpawnedTransitMarkers();
 
     const isPingOrGps = Boolean(
       userLocation?.isMapClick ||
       (userLocation?.status === 'located' && userLocation?.coordinates && (selectedStation?.isPin || !selectedStation))
     );
-    if (!isPingOrGps || !userLocation?.coordinates) return undefined;
+    if (!isPingOrGps || !userLocation?.coordinates) {
+      spawnedKeysRef.current = new Set();
+      nearbyKeysRef.current = new Set();
+      updateStopHighlights();
+      return undefined;
+    }
 
     const pinCoords = userLocation.coordinates;
-    const MAX_WALK_METRES = 375; // 5-minute walk radius (1.25 m/s * 300s = 375m)
-    const currentTheme = themeRef.current;
+    const keep = spawnedKeysRef.current;
+    const shown = new Set();
 
-    // 1. Surrounding Metro Stations
-    const nearbyStations = (drawnStationsRef.current || []).filter((st) => {
-      const coords = snappedCoordinates(st);
-      return getDistance(pinCoords, coords) <= MAX_WALK_METRES;
-    });
+    // 1. Surrounding Metro Stations within the walk radius (nearest one if none)
+    const nearbyStations = pickWalkSet(drawnStationsRef.current, pinCoords, {
+      getCoords: snappedCoordinates,
+      getKey: (st) => `m:${st.properties.name}`,
+      keep,
+      radiusMetres: WALK_RADIUS_METRO_METRES,
+      fallbackMaxMetres: Infinity, // the metro fallback is kept as is (#122)
+    }).items.map(({ item }) => item);
 
-    nearbyStations.forEach((st) => {
-      const coords = snappedCoordinates(st);
-      const isSelected = selectedStation?.properties?.name === st.properties.name;
-      if (isSelected && focusMarkerRef.current) return;
-
-      const element = document.createElement('div');
-      element.className = 'station-focus-node spawned-station-node';
-      element.innerHTML = renderStationHighlight(st.properties, currentTheme);
-      element.onclick = (e) => {
-        e.stopPropagation();
-        selectStRef.current(st);
-      };
-
-      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -6] })
-        .setLngLat(coords)
-        .addTo(map);
-
-      spawnedTransitMarkersRef.current.push(marker);
-    });
+    nearbyStations.forEach((st) => shown.add(`m:${st.properties.name}`));
 
     // 2. Surrounding EMT Bus Stops
     const allBusStops = getAllBusStops();
-    const nearbyBusStops = (allBusStops || []).filter((stop) => {
-      if (!stop.coordinates || !Array.isArray(stop.coordinates)) return false;
-      return getDistance(pinCoords, stop.coordinates) <= MAX_WALK_METRES;
-    });
+    // Distance is to the stop's real coordinate; the marker is drawn at its display offset.
+    const nearbyBusStops = pickWalkSet(allBusStops, pinCoords, {
+      getCoords: (stop) => stop.coordinates,
+      getKey: (stop) => `b:${stop.stopCode}`,
+      keep,
+      radiusMetres: WALK_RADIUS_BUS_METRES,
+      allowFallback: !userLocation.isMapClick, // a map ping never spawns a far stop (#122)
+    }).items.map(({ item }) => item);
 
-    nearbyBusStops.forEach((stop) => {
-      const isSelected = String(selectedBusStopRef.current?.stopCode) === String(stop.stopCode);
-      if (isSelected && busFocusMarkerRef.current) return;
+    nearbyBusStops.forEach((stop) => shown.add(`b:${stop.stopCode}`));
 
-      const element = document.createElement('div');
-      element.className = 'bus-focus-node spawned-bus-node';
-      element.innerHTML = renderBusStopHighlight(stop, currentTheme);
-      element.onclick = (e) => {
-        e.stopPropagation();
-        if (onSelectBusStopRef.current) {
-          onSelectBusStopRef.current(stop);
-        }
-      };
-
-      const marker = new Marker({ element, anchor: 'bottom', offset: [0, -10] })
-        .setLngLat(getStopDisplayCoordinates(stop))
-        .addTo(map);
-
-      spawnedTransitMarkersRef.current.push(marker);
-    });
-
-    return () => {
-      clearSpawnedTransitMarkers();
-    };
+    spawnedKeysRef.current = shown;
+    // The base markers just get magnified (CSS .is-nearby); the chosen one is hidden under its highlight.
+    nearbyKeysRef.current = shown;
+    updateStopHighlights();
   }, [userLocation, selectedStation, selectedBusStop]);
 
   // ── Framing the viewer against their Nearest Station ───────────────────────
@@ -1855,8 +1881,8 @@ const MapView = ({
         const allStops = getAllBusStops();
         const currentZoom = map.getZoom();
 
-        // Gated to zoom >= 12.5 and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
-        if (currentZoom >= 12.5) {
+        // Gated to EMT_MARKER_MIN_ZOOM (below the opening zoom, so the dots show on open) and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
+        if (currentZoom >= EMT_MARKER_MIN_ZOOM) {
           const bounds = map.getBounds();
           const lngSpan = bounds.getEast() - bounds.getWest();
           const latSpan = bounds.getNorth() - bounds.getSouth();
@@ -1887,12 +1913,12 @@ const MapView = ({
             const isSelected = Boolean(selectedCode && stopCode === selectedCode);
             const marker = createFeederStopMarker(map, stop, () => {
               if (onSelectBusStop) onSelectBusStop(stop);
-            }, isSelected);
+            }, isSelected, languageRef.current);
             busMarkersRef.current.push(marker);
           });
         }
 
-        // 2. When a station/ping is focused, draw the 5-min walk radius circle + dashed feeder walk links
+        // 2. When a station/ping is focused, draw the walk radius circle + dashed feeder walk links
         if (selectedStation) {
           const coords = snappedCoordinates(selectedStation);
           const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;
@@ -1932,20 +1958,11 @@ const MapView = ({
             const isSelected = Boolean(selectedCode && stopCode === selectedCode);
             const marker = createBusStopNodeMarker(map, st, (stop) => {
               if (onSelectBusStop) onSelectBusStop(stop);
-            }, isSelected);
+            }, isSelected, languageRef.current);
             busMarkersRef.current.push(marker);
           });
 
-          // Active live AVL buses on this line
-          const lineBuses = LIVE_BUS_TELEMETRY.filter(
-            (b) => String(b.line).toLowerCase() === String(activeBusLine.id).toLowerCase()
-          );
-          lineBuses.forEach((bus) => {
-            const marker = createLiveBusMarker(map, bus, (b) => {
-              if (onSelectBusLine) onSelectBusLine(activeBusLine);
-            });
-            busMarkersRef.current.push(marker);
-          });
+          // Live vehicles: none are invented; real ones would come from ArcGIS Layer 384 (ADR-0011).
         } else {
           styled(setBusRoutesData, map, []);
         }
@@ -1956,7 +1973,7 @@ const MapView = ({
         styled(setFeederWalkLinks, map, null, []);
 
         if (activeMode === 'bus') {
-          const primaryTrunks = EMT_LINES.slice(0, 5);
+          const primaryTrunks = getRealBusLines().slice(0, 5);
           styled(setBusRoutesData, map, primaryTrunks);
 
           if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.15);
@@ -1968,20 +1985,13 @@ const MapView = ({
               const isSelected = Boolean(selectedCode && stopCode === selectedCode);
               const marker = createBusStopNodeMarker(map, st, (stop) => {
                 if (onSelectBusStop) onSelectBusStop(stop);
-              }, isSelected);
+              }, isSelected, languageRef.current);
               busMarkersRef.current.push(marker);
             });
           });
 
-          LIVE_BUS_TELEMETRY.forEach((bus) => {
-            const marker = createLiveBusMarker(map, bus, (b) => {
-              const foundLine = EMT_LINES.find((l) => l.id === b.line);
-              if (foundLine && onSelectBusLine) onSelectBusLine(foundLine);
-            });
-            busMarkersRef.current.push(marker);
-          });
         } else if (activeMode === 'all') {
-          styled(setBusRoutesData, map, EMT_LINES.slice(0, 3));
+          styled(setBusRoutesData, map, getRealBusLines().slice(0, 3));
           if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.85);
           if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
         } else {

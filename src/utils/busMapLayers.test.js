@@ -97,3 +97,27 @@ describe('busMapLayers marker creators', () => {
     expect(pill.style.cssText).toContain('font: 800 11px/1 system-ui');
   });
 });
+
+describe('EMT stop marker line chips (#116)', () => {
+  beforeEach(() => {
+    globalThis.document = {
+      createElement: () => ({ style: {}, className: '', title: '', innerHTML: '', addEventListener: vi.fn(), appendChild: vi.fn(), setAttribute: vi.fn(), getAttribute: vi.fn() }),
+    };
+  });
+  afterEach(() => { delete globalThis.document; });
+
+  const badgeFor = (stop) => createFeederStopMarker({ isStyleLoaded: () => true }, stop, () => {}).getElement().appendChild.mock.calls[0][0];
+
+  it('keeps the EMT logo and adds the stop line chips, sorted, in the same badge', () => {
+    const badge = badgeFor({ stopCode: '1', coordinates: [-0.375, 39.469], lines: ['81', '31'] });
+    expect(badge.innerHTML).toContain('emt-stop-logo');
+    expect(badge.innerHTML.indexOf('>31<')).toBeLessThan(badge.innerHTML.indexOf('>81<'));
+    expect(badge.className).toContain('has-lines');
+  });
+
+  it('a stop without line data keeps the logo only', () => {
+    const badge = badgeFor({ stopCode: '2', coordinates: [-0.375, 39.469] });
+    expect(badge.className).not.toContain('has-lines');
+    expect(badge.innerHTML).not.toContain('emt-stop-lines');
+  });
+});

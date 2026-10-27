@@ -6,7 +6,7 @@ import { searchFuzzy } from '../utils/fuzzySearch';
 import { useTranslation } from '../i18n';
 import { COMMON_STOPS } from '../utils/commonStops';
 import { lineColor } from '../utils/lineColor';
-import { EMT_LINES } from '../data/emtData';
+import { getRealBusLines } from '../data/emtData';
 import BusBadge from './BusBadge';
 
 // Black or white text, whichever reads better on a line's colour.
@@ -51,7 +51,7 @@ const SearchBar = ({
     : [];
 
   const filteredBusLines = query.trim()
-    ? searchFuzzy(EMT_LINES, query, b => `${b.id} ${b.name} Bus ${b.id} EMT ${b.id} Linia ${b.id} ${b.description}`)
+    ? searchFuzzy(getRealBusLines(), query, b => `${b.id} ${b.name} Bus ${b.id} EMT ${b.id} Linia ${b.id}`)
     : [];
 
   const filteredStations = query.trim()
@@ -138,7 +138,7 @@ const SearchBar = ({
 
   const handleSelectBusLine = useCallback((busLine) => {
     if (onSelectBusLine) onSelectBusLine(busLine);
-    setQuery(`Bus ${busLine.id} · ${busLine.name}`);
+    setQuery(t('bus.searchQuery', { line: busLine.id, name: busLine.name }));
     setIsOpen(false);
     setHighlighted(-1);
     inputRef.current?.blur();
@@ -372,7 +372,7 @@ const SearchBar = ({
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#ff6369', fontWeight: 800 }}>
                 <span style={{ fontSize: '0.54rem', fontWeight: 900, background: '#D62828', color: '#fff', padding: '1px 3px', borderRadius: 2 }}>EMT</span>
-                <span>València Bus Lines</span>
+                <span>{t('bus.valenciaLines')}</span>
               </div>
               {filteredBusLines.map((bus) => {
                 const idx = itemIdx++;
@@ -402,7 +402,7 @@ const SearchBar = ({
                         {bus.name}
                       </div>
                       <div style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>
-                        Headway: {bus.headway} · {bus.activeVehicles} active buses
+                        {t('bus.headway', { value: bus.headway })} · {t('bus.activeBuses', { count: bus.activeVehicles })}
                       </div>
                     </div>
                   </div>

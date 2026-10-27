@@ -3,75 +3,34 @@
 // Complies with .agents/skills/prototype/UI.md specification.
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Info, X } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
-export const VARIANTS = [
-  {
-    key: 'A',
-    label: 'A: Location Multimodal Hub',
-    shortLabel: 'Location Hub',
-    concept: 'Concept 3: Location-First Multimodal Transit Hub',
-    subtitle: 'Locate user & find nearest Metro + EMT stops within ~5 min walk',
-    rationale:
-      'Location-first architecture. Rather than dominating as a single-mode rail app, pressing Locate finds all available transportation—both Metro stations and EMT bus stops—within a 5-minute walking radius (~400m). Independent scrolling Metro and EMT lists provide fast, compact access to live departures.',
-    pros: [
-      'Zero map clutter: preserves the clean, high-contrast rail spine',
-      'Location-first multimodal transit: shows nearby Metro and EMT departures within 5 min walk',
-      'All / Split view: two independent scrolling columns for Metro and Bus side-by-side',
-      'Authentic badges: crisp "m" and "EMT" emblem badges, no emojis'
-    ],
-    cons: [
-      'Focuses on immediate walking proximity rather than network-wide line tracing'
-    ],
-    question: 'Does the 5-minute walking radius with independent split scrolling feel faster than switching screens?'
-  },
-  {
-    key: 'B',
-    label: 'B: Line-on-Demand Canvas',
-    shortLabel: 'Line on Demand',
-    concept: 'Concept 1: Line-on-Demand Multimodal Canvas',
-    subtitle: 'Search bus lines (C1, 19, 95) & inspect live moving buses along route ribbon',
-    rationale:
-      'Map-first architecture. Bus routes are hidden by default to prevent "rainbow spaghetti." Searching a bus line in SearchBar or clicking a bus chip illuminates that line’s full route ribbon with casing and animates live active AVL buses moving along the corridor.',
-    pros: [
-      'Completely eliminates bus polyline clutter while retaining 120 FPS fluidity',
-      'Live bus vehicles track in real-time along the route with heading & speed',
-      'Inspect any bus route or stop directly from the SearchBar or quick pills',
-      'Docked bottom Inspector Card shows active fleet count & headway'
-    ],
-    cons: [
-      'Requires an initial search or tap to reveal a bus route'
-    ],
-    question: 'Does on-demand ribbon rendering provide superior cognitive clarity over pre-rendering the full 60-line bus web?'
-  },
-  {
-    key: 'C',
-    label: 'C: Dual-Lens Mode Switcher',
-    shortLabel: 'Dual-Lens Switcher',
-    concept: 'Concept 4: Dual-Lens Mode Switcher',
-    subtitle: 'Tactile [Metro | Bus | All] mode control in header',
-    rationale:
-      'Provides an explicit tactile mode switcher in the top bar. In Bus Mode, the map transforms into an EMT bus network: circular trunks (C1, C2, C3) and primary arterials (19, 95) become prominent lines, and tapping any bus stop opens a dedicated Bus Stop Departure Board.',
-    pros: [
-      'Uncompromising domain optimization: each mode gets bespoke styling',
-      'Circular lines (C1, C2, C3) and key trunks highlighted prominently',
-      'Dedicated Bus Stop Board shows real-time countdowns for bus stops',
-      '"All" mode overlays both systems for unified geographic exploration'
-    ],
-    cons: [
-      'Mode switcher introduces manual cognitive toggling'
-    ],
-    question: 'Do local commuters prefer distinct modal lenses, or do they expect all transit modes merged simultaneously?'
-  }
-];
+// The variants are identified by key only; every word they show lives in the dictionaries (prototype.<key>.*).
+export const VARIANTS = [{ key: 'A' }, { key: 'B' }, { key: 'C' }];
+
+const PRO_KEYS = ['pro1', 'pro2', 'pro3', 'pro4'];
+
+const describeVariant = (key, t) => ({
+  key,
+  label: t(`prototype.${key}.label`),
+  shortLabel: t(`prototype.${key}.shortLabel`),
+  concept: t(`prototype.${key}.concept`),
+  subtitle: t(`prototype.${key}.subtitle`),
+  rationale: t(`prototype.${key}.rationale`),
+  pros: PRO_KEYS.map((p) => t(`prototype.${key}.${p}`)),
+  cons: [t(`prototype.${key}.con1`)],
+  question: t(`prototype.${key}.question`),
+});
 
 export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => {
+  const { t } = useTranslation();
   const [showInfo, setShowInfo] = useState(false);
 
   const currentIndex = Math.max(
     0,
     VARIANTS.findIndex(v => v.key.toUpperCase() === String(currentVariant).toUpperCase())
   );
-  const current = VARIANTS[currentIndex] || VARIANTS[0];
+  const current = describeVariant((VARIANTS[currentIndex] || VARIANTS[0]).key, t);
 
   const changeVariant = useCallback((targetKey) => {
     if (onSelectVariant) {
@@ -118,7 +77,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
     <>
       {/* Floating Bottom Bar Docked Above Safe Area */}
       <nav
-        aria-label="Prototype Variant Switcher"
+        aria-label={t('prototype.switcherAria')}
         className="prototype-switcher-dock"
         style={{
           position: 'fixed',
@@ -145,8 +104,8 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
         <button
           type="button"
           onClick={handlePrev}
-          title="Previous variant (← key)"
-          aria-label="Previous variant"
+          title={t('prototype.prevTitle')}
+          aria-label={t('prototype.prevAria')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -176,7 +135,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
             cursor: 'pointer',
           }}
           onClick={() => setShowInfo(true)}
-          title="Click to view design rationale & research notes"
+          title={t('prototype.infoTrigger')}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span
@@ -208,11 +167,11 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
                 fontWeight: 700,
               }}
             >
-              PROTOTYPE
+              {t('prototype.badge')}
             </span>
           </div>
           <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.65)', marginTop: 1 }}>
-            {currentIndex + 1} of {VARIANTS.length} · Use ← / → keys
+            {t('prototype.counter', { index: currentIndex + 1, total: VARIANTS.length })}
           </span>
         </div>
 
@@ -220,8 +179,8 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
         <button
           type="button"
           onClick={handleNext}
-          title="Next variant (→ key)"
-          aria-label="Next variant"
+          title={t('prototype.nextTitle')}
+          aria-label={t('prototype.nextAria')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -245,8 +204,8 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
         <button
           type="button"
           onClick={() => setShowInfo(!showInfo)}
-          title="Inspect Design Rationale"
-          aria-label="Inspect Design Rationale"
+          title={t('prototype.inspect')}
+          aria-label={t('prototype.inspect')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -271,7 +230,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Prototype Design Rationale"
+          aria-label={t('prototype.rationaleAria')}
           style={{
             position: 'fixed',
             inset: 0,
@@ -315,7 +274,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
                       fontWeight: 800,
                     }}
                   >
-                    VARIANT {current.key}
+                    {t('prototype.variantUpper', { key: current.key })}
                   </span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #a0aec0)' }}>
                     {current.concept}
@@ -379,8 +338,8 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
                       gap: 2,
                     }}
                   >
-                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Variant {v.key}</span>
-                    <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>{v.shortLabel}</span>
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{t('prototype.variant', { key: v.key })}</span>
+                    <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>{t(`prototype.${v.key}.shortLabel`)}</span>
                   </button>
                 );
               })}
@@ -389,7 +348,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
             {/* Design Rationale */}
             <div style={{ marginBottom: 16 }}>
               <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary, #a0aec0)', marginBottom: 6 }}>
-                Design Architecture & Philosophy
+                {t('prototype.rationaleHeading')}
               </h4>
               <p style={{ fontSize: '0.92rem', lineHeight: 1.55 }}>
                 {current.rationale}
@@ -407,7 +366,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
                 }}
               >
                 <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4caf50', textTransform: 'uppercase', marginBottom: 6 }}>
-                  Key Strengths (Pros)
+                  {t('prototype.prosHeading')}
                 </div>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.84rem', lineHeight: 1.5 }}>
                   {current.pros.map((p, i) => (
@@ -425,7 +384,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
                 }}
               >
                 <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#ff9800', textTransform: 'uppercase', marginBottom: 6 }}>
-                  Trade-off & Consideration (Cons)
+                  {t('prototype.consHeading')}
                 </div>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.84rem', lineHeight: 1.5 }}>
                   {current.cons.map((c, i) => (
@@ -446,7 +405,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
               }}
             >
               <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2196f3', textTransform: 'uppercase', marginBottom: 4 }}>
-                Research Question This Answers (Section 6)
+                {t('prototype.questionHeading')}
               </div>
               <p style={{ margin: 0, fontSize: '0.86rem', fontStyle: 'italic', lineHeight: 1.45 }}>
                 "{current.question}"
@@ -469,7 +428,7 @@ export const PrototypeSwitcher = ({ currentVariant = 'A', onSelectVariant }) => 
                   cursor: 'pointer',
                 }}
               >
-                Close Rationale
+                {t('prototype.closeRationale')}
               </button>
             </div>
           </div>

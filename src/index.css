@@ -52,6 +52,10 @@
   --font-scale: 1.3;
 }
 
+[data-font-size='xxlarge'] {
+  --font-scale: 1.5;
+}
+
 html {
   font-size: calc(16px * var(--font-scale, 1));
 }
@@ -153,12 +157,20 @@ textarea {
 /* Text Size (#103): map markers follow --font-scale (1 at the default size, so no change there).
    zoom is applied to the inner visual, never to the MapLibre-positioned marker element, and it
    scales layout so the centre/bottom anchors keep every marker on its coordinate. */
-.metro-station-badge,
-.emt-stop-badge,
 .live-bus-pill,
 .station-floating-chart,
 .bus-floating-chart {
   zoom: var(--font-scale, 1);
+}
+
+/* EMT stop markers are drawn 15% bigger than the Text Size scale alone (field test: too small). */
+.emt-stop-badge {
+  zoom: calc(var(--font-scale, 1) * 1.15);
+}
+
+/* Metro station markers: that 15% minus 10% (1.15 * 0.9 = 1.035). */
+.metro-station-badge {
+  zoom: calc(var(--font-scale, 1) * 1.035);
 }
 
 /* Ambient translucency: when user has not placed a pin, all station markers show 50% translucent */
@@ -220,11 +232,27 @@ textarea {
   animation: busStopPulse 2.2s infinite ease-in-out;
 }
 
-/* Zoomed-out dots (#108). MapView flips data-emt-dots on the map container from one zoom check with
+/* The selected stop is drawn once, by its outlined highlight (.bus-focus-node / .station-focus-node) on top. The marker
+   underneath is hidden so no second copy of the line numbers shows below the highlight. */
+.map-container .emt-stop-badge.is-selected,
+.map-container .metro-station-badge.is-selected {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  animation: none;
+}
+
+/* Pin and GPS view: the unchosen stops in the walk radius are simply magnified in place. `scale` composes
+   with the zoom-driven inline transform, so there is no outline, pulse or offset. */
+.metro-station-badge.is-nearby:not(.is-selected),
+.emt-stop-badge.is-nearby:not(.is-selected) {
+  scale: 1.2;
+}
+
+/* Zoomed-out dots (#108). MapView flips data-emt-stage on the map container from one zoom check with
    hysteresis (utils/emtDotMode.js); nothing is rebuilt. Every non-selected EMT stop collapses to a solid
    red dot (8px incl. its 1px white ring). The ::after is an invisible 24px hit area that bubbles to the
    marker's own click handler. The selected stop and metro stations are untouched. */
-.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) {
+.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected) {
   position: relative;
   width: 8px;
   height: 8px;
@@ -234,11 +262,11 @@ textarea {
   letter-spacing: 0 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
 }
-.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) > span {
+.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected) > span {
   display: none;
 }
-.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected)::after,
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected)::after {
+.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected)::after,
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected)::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -248,15 +276,15 @@ textarea {
   transform: translate(-50%, -50%);
 }
 /* Spawned / nearby stop labels (line chips + caret) become the same dot. */
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) {
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected) {
   position: relative;
   width: 8px;
   height: 8px;
 }
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) > * {
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected) > * {
   display: none !important;
 }
-.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected)::before {
+.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected)::before {
   content: '';
   display: block;
   width: 8px;
@@ -268,16 +296,57 @@ textarea {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
+/* Street zoom (#116): the EMT logo gives way to the stop's own line numbers (emt_stops.json, no network).
+   Chips are always in the markup and stay hidden until data-emt-stage="lines"; the red box drops away so
+   the chips are the marker. Stops without line data (no .has-lines) keep the logo. Same red/white
+   look as BusBadge so a number on the map matches the sheet. Chips wrap into rows to stay compact. */
+.emt-stop-lines {
+  display: none;
+  /* Two columns, as many rows as the stop needs (at most 3: the cap is 6 chips, the last may be +N). */
+  grid-template-columns: repeat(2, auto);
+  justify-content: center;
+  gap: 2px;
+}
+.emt-stop-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 2px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  background: #D62828;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.emt-stop-chip-more {
+  background: #ffffff;
+  color: #D62828;
+  border-color: #D62828;
+}
+.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines > .emt-stop-logo {
+  display: none;
+}
+.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines {
+  display: grid;
+}
+
 /* A station or stop is selected (GPS or ping mode): everything else fades. */
 .map-container[data-has-selection="true"] .metro-station-badge:not(.is-selected),
 .map-container[data-has-selection="true"] .emt-stop-badge:not(.is-selected) {
   opacity: 0.35;
-}
-
-.map-container[data-has-selection="true"] .spawned-station-node,
-.map-container[data-has-selection="true"] .spawned-bus-node {
-  opacity: 0.45;
-  transition: opacity 0.2s ease;
 }
 
 /* Grouped chip boxes (nearby stations / EMT stops with several line chips) fade like the badges (#114).
@@ -324,12 +393,24 @@ textarea {
   border-radius: var(--radius);
 }
 
+:root { --sidebar-width: 320px; }
+
+/* Wide desktop windows (same threshold as the desktop screen preset): a roomier menu. */
+@media (min-width: 1600px) {
+  :root { --sidebar-width: 420px; }
+  .sidebar-header { margin-bottom: 1.75rem; }
+  .sidebar-body { gap: 1.25rem; }
+}
+
+.sidebar-header { margin-bottom: 24px; }
+.sidebar-body { gap: 16px; }
+
 .sidebar {
   position: absolute;
   top: calc(20px + env(safe-area-inset-top, 0px));
   left: 20px;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  width: 320px;
+  width: var(--sidebar-width);
   z-index: 40; /* Above station-panel (z-index 30) */
   display: flex;
   flex-direction: column;
@@ -337,7 +418,7 @@ textarea {
 }
 
 .sidebar.collapsed {
-  transform: translateX(-360px);
+  transform: translateX(calc(-1 * (var(--sidebar-width) + 40px)));
   pointer-events: none;
   opacity: 0;
 }
@@ -358,6 +439,12 @@ textarea {
 .sidebar-backdrop.active {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* On a wide desktop window the sidebar opens by default and is docked beside the map (#124, #125), so it must not
+   swallow the first click on the map: the backdrop only closes the sidebar on narrower windows. */
+@media (min-width: 1600px) {
+  .sidebar-backdrop.active { pointer-events: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -414,12 +501,16 @@ textarea {
   align-items: center;
   gap: 10px;
   touch-action: none;
+  /* On phones this container spans the whole top strip; only its buttons take taps, so a stop or a ping under the
+     empty part of the strip stays clickable. */
+  pointer-events: none;
 }
+.top-bar-container > * { pointer-events: auto; }
 
 @media (min-width: 769px) {
   .top-bar-container {
-    left: 360px; /* offset from sidebar when open */
-    max-width: calc(100vw - 380px);
+    left: calc(var(--sidebar-width) + 40px); /* offset from sidebar when open */
+    max-width: calc(100vw - var(--sidebar-width) - 60px);
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -700,7 +791,7 @@ button:active {
 }
 
 @media (min-width: 769px) {
-  .hub-chips-container.sidebar-open { left: 360px; right: auto; max-width: calc(100vw - 380px); }
+  .hub-chips-container.sidebar-open { left: calc(var(--sidebar-width) + 40px); right: auto; max-width: calc(100vw - var(--sidebar-width) - 60px); }
   .hub-chips-container.sidebar-collapsed { left: 20px; right: auto; max-width: calc(100vw - 40px); }
 }
 
@@ -963,6 +1054,16 @@ button:active {
   border: none;
   cursor: pointer;
   color: var(--text-primary);
+}
+
+/* Train API refused this network (#123): one line under the locate notice, tap to dismiss. */
+.refusal-notice {
+  top: calc(164px + env(safe-area-inset-top, 0px));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: max-content;
+  color: #ffb74d;
 }
 
 /* ── Top-bar icon buttons (language, theme, Android app) and the app sheet ── */
@@ -1529,16 +1630,33 @@ button:active {
   pointer-events: none;
 }
 
-/* Walk-radius spawns sit below the selected focus node so the pick is always
-   the topmost symbol (metro, bus, ping). */
-.spawned-station-node,
-.spawned-bus-node {
-  z-index: 1150;
+/* Line chips inside the chosen stop's box: one fixed size at every map zoom (they follow Text Size via
+   the .bus-floating-chart / .station-floating-chart zoom above), 1 column for 1 line, otherwise 2.
+   An odd last chip spans both columns and is centred, so there is never an empty cell. */
+.focus-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--focus-cols, 1), 26px);
+  gap: 3.5px;
+  justify-content: center;
+  align-items: center;
 }
 
-.station-focus-node:not(.spawned-station-node),
-.bus-focus-node:not(.spawned-bus-node) {
-  z-index: 1300;
+.focus-chip {
+  box-sizing: border-box;
+  width: 26px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 3.5px;
+  font: 900 12px/1 system-ui;
+  text-align: center;
+}
+
+.focus-chip-last-odd {
+  grid-column: 1 / -1;
+  justify-self: center;
 }
 
 /* ── Welcome / Splash Screen ─────────────────────────────────────────────── */

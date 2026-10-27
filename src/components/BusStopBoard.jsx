@@ -7,6 +7,7 @@ import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdown
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
+import { busBadgeBox } from '../utils/busBadgeStyle';
 import {
   fetchStopArrivals,
   getEmtCachedArrivals,
@@ -113,32 +114,26 @@ export const BusStopBoard = ({
 
   if (!stop) return null;
 
-  const displayName = stop.name || stop.stopName || 'Parada';
+  const displayName = stop.name || stop.stopName || t('bus.stopFallback');
   const stopCode = cleanCode ? `P-${cleanCode}` : '';
   const stopLines = Array.isArray(stop.lines)
     ? stop.lines.map((l) => (typeof l === 'object' && l !== null ? String(l.line || l.id || '') : String(l))).filter(Boolean)
     : [];
 
-  // Use live arrivals if fetched; fallback to stop.arrivals, feeder arrival objects, or default initial list
-  const arrivals = (liveArrivals !== null)
-    ? liveArrivals
-    : Array.isArray(stop.arrivals)
-      ? stop.arrivals
-      : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
-        ? stop.lines
-        : hasAttemptedFetch
-          ? []
-          : [
-              { line: '19', destination: 'La Malva-rosa', dueSeconds: 90, isLive: true },
-              { line: 'C1', destination: 'Centre Històric (Loop)', dueSeconds: 240, isLive: true },
-              { line: '70', destination: 'La Fontsanta', dueSeconds: 420, isLive: true },
-              { line: '92', destination: 'Campanar', dueSeconds: 610, isLive: false },
-            ];
+  // Real arrivals only (#122): fetched live arrivals, or arrivals handed in with
+  // the stop. Until the first fetch settles the board shows a loading state.
+  const handedIn = Array.isArray(stop.arrivals)
+    ? stop.arrivals
+    : (Array.isArray(stop.lines) && stop.lines.length > 0 && typeof stop.lines[0] === 'object' && stop.lines[0] !== null && 'destination' in stop.lines[0])
+      ? stop.lines
+      : null;
+  const arrivals = (liveArrivals !== null) ? liveArrivals : (handedIn || []);
+  const isLoading = liveArrivals === null && handedIn === null && !hasAttemptedFetch;
 
   return (
     <aside
       className="glass-panel station-panel bus-stop-board"
-      aria-label={`Bus stop ${displayName}`}
+      aria-label={t('bus.stopAria', { name: displayName })}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
@@ -198,9 +193,9 @@ export const BusStopBoard = ({
             // 35x18 (#108: hugs the letters, same breathing room as the map label in busMapLayers.js).
             className="bus-stop-header-emblem"
             data-testid="station-header-icon"
-            aria-label="Toggle expand station panel"
+            aria-label={t('stationPanel.toggleExpandAria')}
             onClick={() => setIsExpanded((v) => !v)}
-            title={isExpanded ? 'Collapse view' : 'Expand full view'}
+            title={isExpanded ? t('stationPanel.collapseView') : t('stationPanel.expandView')}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 35, height: 18, minWidth: 35, borderRadius: 4,
@@ -271,7 +266,7 @@ export const BusStopBoard = ({
                   className="station-header-line-badge"
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
+                    ...busBadgeBox(20), borderRadius: 5,
                     background: '#D62828', color: '#fff',
                     fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
                   }}
@@ -323,8 +318,8 @@ export const BusStopBoard = ({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-expand"
-            aria-label={isExpanded ? 'Collapse station panel' : 'Expand station panel'}
-            title={isExpanded ? 'Minimize / Collapse view' : 'Maximize / Expand full departures'}
+            aria-label={isExpanded ? t('stationPanel.collapsePanelAria') : t('stationPanel.expandPanelAria')}
+            title={isExpanded ? t('stationPanel.minimizeTitle') : t('stationPanel.maximizeTitle')}
             style={{
               width: 32,
               height: 32,
@@ -369,7 +364,20 @@ export const BusStopBoard = ({
           transition: 'max-height 0.22s ease',
         }}
       >
-        {arrivals.length === 0 ? (
+        {isLoading ? (
+          <p
+            data-testid="arrivals-loading"
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              fontSize: '.88rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+            }}
+          >
+            {t('stationPanel.loadingArrivals')}
+          </p>
+        ) : arrivals.length === 0 ? (
           <p
             data-testid="no-live-arrivals"
             style={{
@@ -380,7 +388,7 @@ export const BusStopBoard = ({
               margin: 0,
             }}
           >
-            {t('stationPanel.noLivePredictions', { station: displayName })}
+            {t('stationPanel.noInfoShort')}
           </p>
         ) : (
           <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
@@ -415,12 +423,10 @@ export const BusStopBoard = ({
                         line={a.line}
                         className="station-line-badge"
                         style={{
-                          minWidth: 28,
-                          height: 28,
+                          ...busBadgeBox(28),
                           borderRadius: 8,
                           fontSize: '.86rem',
                           fontWeight: 900,
-                          padding: '0 6px',
                         }}
                       />
                     </td>
@@ -441,8 +447,8 @@ export const BusStopBoard = ({
                         {a.wheelchair && (
                           <Accessibility
                             size={14}
-                            aria-label="Accessible"
-                            title="Accessible bus"
+                            aria-label={t('common.accessible')}
+                            title={t('common.accessibleBus')}
                             style={{
                               color: 'var(--text-secondary)',
                               opacity: 0.8,

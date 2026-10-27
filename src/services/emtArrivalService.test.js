@@ -10,7 +10,9 @@ import {
   EMT_CACHE_TTL_MS,
   EMT_TIMEOUT_MS,
   EMT_SAE_BASE_URL,
+  emtRefusal,
 } from './emtArrivalService';
+import { getApiDiagnostics } from '../utils/diagnostics';
 
 describe('EMT Arrival Service (ADR-0011 / Issue #87)', () => {
   beforeEach(() => {
@@ -426,6 +428,37 @@ describe('EMT Arrival Service (ADR-0011 / Issue #87)', () => {
       });
 
       expect(result).toEqual(initial);
+    });
+  });
+  describe('refusal detection (#123)', () => {
+    const xmlOk = '<estimacion><parada_linea><bus><linea>9</linea><destino>X</destino><minutos>3 min.</minutos></bus></parada_linea></estimacion>';
+    const decoy = { ok: true, status: 200, text: async () => '<estimacion><error>Temporalment no disponible</error></estimacion>' };
+    const html403 = { ok: false, status: 403, text: async () => '<html>denied</html>' };
+
+    it('records a decoy answer as blocked', async () => {
+      await fetchStopArrivals('2261', { fetchFn: vi.fn().mockResolvedValue(decoy) });
+      expect(getApiDiagnostics().bus).toMatchObject({ kind: 'blocked' });
+    });
+
+    it('stops sending once two stops are refused, and a success clears it', async () => {
+      const fetchFn = vi.fn().mockResolvedValue(html403);
+      await fetchStopArrivals('1', { fetchFn });
+      await fetchStopArrivals('2', { fetchFn });
+      expect(emtRefusal.isRefused()).toBe(true);
+      await fetchStopArrivals('3', { fetchFn });
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+
+      const ok = vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => xmlOk });
+      await fetchStopArrivals('3', { fetchFn: ok, forceRefresh: true });
+      expect(emtRefusal.isRefused()).toBe(false);
+    });
+
+    it('does not count a timeout', async () => {
+      const fetchFn = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+      await fetchStopArrivals('1', { fetchFn });
+      await fetchStopArrivals('2', { fetchFn });
+      expect(emtRefusal.isRefused()).toBe(false);
+      expect(getApiDiagnostics().bus).toMatchObject({ kind: 'unreachable' });
     });
   });
 });

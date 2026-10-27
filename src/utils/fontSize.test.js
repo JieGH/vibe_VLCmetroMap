@@ -7,6 +7,7 @@ import {
   getStoredFontSize,
   setStoredFontSize,
   applyFontSize,
+  isValidFontSize,
 } from './fontSize';
 
 class MockLocalStorage {
@@ -63,7 +64,7 @@ describe('fontSize utility', () => {
   });
 
   it('defines valid font size options and configurations', () => {
-    expect(FONT_SIZES).toEqual(['small', 'default', 'large', 'xlarge']);
+    expect(FONT_SIZES).toEqual(['small', 'default', 'large', 'xlarge', 'xxlarge']);
     expect(DEFAULT_FONT_SIZE).toBe('default');
     expect(FONT_SIZE_STORAGE_KEY).toBe('metro_valencia_font_size');
 
@@ -71,6 +72,25 @@ describe('fontSize utility', () => {
     expect(FONT_SIZE_CONFIG.default.scale).toBe(1.0);
     expect(FONT_SIZE_CONFIG.large.scale).toBe(1.15);
     expect(FONT_SIZE_CONFIG.xlarge.scale).toBe(1.3);
+    expect(FONT_SIZE_CONFIG.xxlarge.scale).toBe(1.5);
+    expect(FONT_SIZE_CONFIG.xxlarge.shortLabel).toBe('XXL');
+    expect(FONT_SIZE_CONFIG.xxlarge.label).toBe('XX-Large');
+  });
+
+  it('keeps previously saved sizes valid and accepts xxlarge', () => {
+    ['small', 'default', 'large', 'xlarge', 'xxlarge'].forEach((size) => {
+      expect(isValidFontSize(size)).toBe(true);
+      mockStorage.setItem(FONT_SIZE_STORAGE_KEY, size);
+      expect(getStoredFontSize()).toBe(size);
+    });
+    expect(isValidFontSize('xxxlarge')).toBe(false);
+  });
+
+  it('persists and applies xxlarge', () => {
+    expect(setStoredFontSize('xxlarge')).toBe('xxlarge');
+    expect(mockStorage.getItem(FONT_SIZE_STORAGE_KEY)).toBe('xxlarge');
+    expect(global.document.documentElement.getAttribute('data-font-size')).toBe('xxlarge');
+    expect(global.document.documentElement.style.getPropertyValue('--font-scale')).toBe('1.5');
   });
 
   it('returns default font size when localStorage is empty', () => {
@@ -129,5 +149,18 @@ describe('fontSize utility', () => {
     expect(getStoredFontSize()).toBe('default');
     expect(() => applyFontSize('large')).not.toThrow();
     expect(() => setStoredFontSize('large')).not.toThrow();
+  });
+
+  describe('first-launch fallback', () => {
+    it('uses the supplied fallback when nothing is saved', () => {
+      expect(getStoredFontSize('large')).toBe('large');
+    });
+    it('never overrides a saved size', () => {
+      mockStorage.setItem(FONT_SIZE_STORAGE_KEY, 'small');
+      expect(getStoredFontSize('large')).toBe('small');
+    });
+    it('ignores an invalid fallback', () => {
+      expect(getStoredFontSize('bogus')).toBe(DEFAULT_FONT_SIZE);
+    });
   });
 });

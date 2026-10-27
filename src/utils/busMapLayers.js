@@ -3,7 +3,10 @@
 
 import { Marker } from 'maplibre-gl';
 import { createCircleGeoJSON } from './geoUtils';
+import { WALK_RADIUS_BUS_METRES } from './walkRadius';
 import { getStopDisplayCoordinates } from '../data/emtData';
+import { stopLinesMarkup } from './emtStopLines';
+import { translate, FALLBACK_LANGUAGE } from '../i18n/translate';
 
 const ROUTE_SOURCE_ID = 'bus-routes-source';
 const ROUTE_CASING_LAYER = 'bus-routes-casing';
@@ -90,7 +93,7 @@ export const ensureBusLayers = (map, theme = 'dark') => {
     });
   }
 
-  // 3. Multimodal 10-Minute Walk Radius Circle (Variant A)
+  // 3. Multimodal Walk Radius Circle (Variant A)
   if (!map.getSource(WALK_RADIUS_SOURCE_ID)) {
     map.addSource(WALK_RADIUS_SOURCE_ID, {
       type: 'geojson',
@@ -151,7 +154,7 @@ export const setBusRoutesData = (map, lines = []) => {
 };
 
 /**
- * Draws the 10-minute walk radius circle (~800m) and dashed walking links to nearby bus stops.
+ * Draws the walk radius circle (WALK_RADIUS_BUS_METRES) and dashed walking links to nearby bus stops.
  */
 export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
   if (!map || !map.isStyleLoaded()) return;
@@ -164,9 +167,9 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
     return;
   }
 
-  // Draw 5-minute walk boundary circle (~400m)
+  // Draw the walk boundary circle
   if (radiusSource) {
-    radiusSource.setData(createCircleGeoJSON(stationCoords, 400));
+    radiusSource.setData(createCircleGeoJSON(stationCoords, WALK_RADIUS_BUS_METRES));
   }
 
   if (source) {
@@ -194,7 +197,7 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
 /**
  * Creates a DOM Marker for a live AVL bus vehicle.
  */
-export const createLiveBusMarker = (map, bus, onSelect) => {
+export const createLiveBusMarker = (map, bus, onSelect, lang = FALLBACK_LANGUAGE) => {
   // Outer element is positioned by MapLibre; the pill inside carries the visuals so
   // the Text Size zoom (.live-bus-pill in index.css) never touches the map transform.
   const el = document.createElement('div');
@@ -220,7 +223,7 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
     user-select: none;
   `;
 
-  el.title = `${bus.line} (${bus.destination}) • ${bus.speedKmh} km/h • Next: ${bus.nextStop}`;
+  el.title = `${bus.line} (${bus.destination}) • ${bus.speedKmh} km/h • ${translate(lang, 'bus.nextStop', { stop: bus.nextStop })}`;
   pill.innerHTML = `
     <span style="font-size:8px;font-weight:900;background:#ffffff;color:#D62828;padding:1px 2px;border-radius:2px;line-height:1">EMT</span>
     <span>${bus.line}</span>
@@ -253,7 +256,7 @@ export const createLiveBusMarker = (map, bus, onSelect) => {
  * Creates a persistent EMT bus stop marker on the map: a compact rectangular badge wrapping the three-letter EMT text.
  * The outer marker element contains no transition on transform, eliminating any jelly/lag during map navigation.
  */
-export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) => {
+export const createFeederStopMarker = (map, stop, onSelect, isSelected = false, lang = FALLBACK_LANGUAGE) => {
   const wrapper = document.createElement('div');
   wrapper.className = 'emt-stop-marker';
   wrapper.style.cssText = `
@@ -288,10 +291,16 @@ export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) 
     box-sizing: border-box;
     transition: transform 0.12s ease-out;
   `;
-  inner.innerHTML = `<span style="transform: translateY(-0.5px); line-height: 1;">EMT</span>`;
+  // The logo shows mid-zoom; the line chips (hidden until the street-zoom stage) replace it (#116).
+  const linesHtml = stopLinesMarkup(stop.lines);
+  if (linesHtml) inner.className += ' has-lines';
+  inner.innerHTML = `<span class="emt-stop-logo" style="transform: translateY(-0.5px); line-height: 1;">EMT</span>${linesHtml}`;
   wrapper.appendChild(inner);
 
-  wrapper.title = `Parada ${stop.stopCode || stop.code || ''} · ${stop.stopName || stop.name || 'EMT Stop'}`;
+  wrapper.title = translate(lang, 'bus.stopTooltip', {
+    code: stop.stopCode || stop.code || '',
+    name: stop.stopName || stop.name || translate(lang, 'bus.stopFallback'),
+  });
 
   wrapper.addEventListener('mouseenter', () => {
     if (!inner.classList.contains('is-selected')) {
@@ -320,6 +329,6 @@ export const createFeederStopMarker = (map, stop, onSelect, isSelected = false) 
 /**
  * Creates a generic bus stop marker for Variant B & C bus network browsing.
  */
-export const createBusStopNodeMarker = (map, stop, onSelect, isSelected = false) => {
-  return createFeederStopMarker(map, stop, onSelect, isSelected);
+export const createBusStopNodeMarker = (map, stop, onSelect, isSelected = false, lang = FALLBACK_LANGUAGE) => {
+  return createFeederStopMarker(map, stop, onSelect, isSelected, lang);
 };

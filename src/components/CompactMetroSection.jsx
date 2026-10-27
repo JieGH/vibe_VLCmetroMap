@@ -5,6 +5,7 @@ import { Footprints } from 'lucide-react';
 import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
+import { WALK_RADIUS_METRO_METRES, walkRadiusMinutes } from '../utils/walkRadius';
 import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 
 export const CompactMetroSection = ({
@@ -39,7 +40,7 @@ export const CompactMetroSection = ({
       return (
         <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <p style={{ fontSize: '0.85rem', margin: 0 }}>
-            {t('stationPanel.noNearbyMetro') || 'No Metro stations found within walking distance.'}
+            {t('stationPanel.noNearbyMetro')}
           </p>
         </div>
       );
@@ -78,7 +79,7 @@ export const CompactMetroSection = ({
             >
               m
             </span>
-            <span>Trains</span>
+            <span>{t('common.trains')}</span>
           </span>
           {showDistance && (
             <span
@@ -88,14 +89,14 @@ export const CompactMetroSection = ({
                 color: 'var(--text-secondary)',
               }}
             >
-              {nearbyMetro.length} {nearbyMetro.length === 1 ? 'station' : 'stations'}
+              {nearbyMetro.length} {t(nearbyMetro.length === 1 ? 'common.station' : 'common.stations')}
             </span>
           )}
         </div>
 
         {/* Nearby Metro Stations List */}
         {nearbyMetro.map((m, sIdx) => {
-          const stName = m.feature?.properties?.name || m.name || 'Metro';
+          const stName = m.feature?.properties?.name || m.name || t('common.metro');
           const stLines = m.lines || m.feature?.properties?.lines || [];
           const stArrivals = m.arrivals || [];
           const walkMin = m.walkMin || (m.distance ? Math.max(1, Math.round(m.distance / 80)) : 3);
@@ -105,7 +106,7 @@ export const CompactMetroSection = ({
               key={stName || sIdx}
               data-testid="metro-card"
               onClick={() => onSelectStation && onSelectStation(m.feature)}
-              title={`Open ${stName}`}
+              title={t('stationPanel.openStation', { station: stName })}
               style={{
                 cursor: onSelectStation ? 'pointer' : 'default',
                 background: 'var(--bg-hover, rgba(255, 255, 255, 0.04))',
@@ -274,7 +275,7 @@ export const CompactMetroSection = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: 6 }}>
                           {arr.isLive && !compact && (
                             <span
-                              title="Live FGV Telemetry"
+                              title={t('stationPanel.liveTelemetryFgv')}
                               style={{
                                 width: 5,
                                 height: 5,
@@ -335,7 +336,7 @@ export const CompactMetroSection = ({
                   })
                 ) : (
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', padding: '2px 4px' }}>
-                    {stLines.length > 0 ? `Lines ${stLines.map(l => typeof l === 'object' && l !== null ? (l.line || l.id) : l).join(', ')} · Check station board` : 'Regular schedule active'}
+                    {stLines.length > 0 ? t('stationPanel.linesCheckBoard', { lines: stLines.map(l => typeof l === 'object' && l !== null ? (l.line || l.id) : l).join(', ') }) : t('stationPanel.regularSchedule')}
                   </div>
                 )}
               </div>
@@ -351,7 +352,7 @@ export const CompactMetroSection = ({
     return (
       <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
         <p style={{ fontSize: '0.84rem', margin: 0 }}>
-          {t('stationPanel.noLiveTrains') || 'No scheduled rail arrivals in the immediate window.'}
+          {t('stationPanel.noLiveTrains')}
         </p>
       </div>
     );
@@ -399,7 +400,7 @@ export const CompactMetroSection = ({
           >
             m
           </span>
-          <span>{stationName || 'Metro'}</span>
+          <span>{stationName || t('common.metro')}</span>
         </span>
       </div>
 
@@ -520,11 +521,11 @@ export const CompactMetroSection = ({
         );
       })}
 
-      {/* Nearby Metro Stations within 5-minute walk radius */}
+      {/* Nearby Metro Stations within the walk radius */}
       {nearbyMetro && nearbyMetro.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
           <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Also within 5 min walk:
+            {t('stationPanel.alsoWithinWalk', { min: walkRadiusMinutes(WALK_RADIUS_METRO_METRES) })}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {nearbyMetro.map((m) => {
@@ -546,7 +547,7 @@ export const CompactMetroSection = ({
                     border: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))',
                     transition: 'background 0.15s ease',
                   }}
-                  title={`Switch to ${stName} (${walkMin} min walk)`}
+                  title={t('stationPanel.switchToStation', { station: stName, min: walkMin })}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <span

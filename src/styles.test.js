@@ -1,8 +1,10 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, it, expect } from 'vitest';
+import { SCREEN_PRESET_THRESHOLDS } from './utils/screenPreset';
 
 const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
+const androidCss = readFileSync(resolve(__dirname, 'android.css'), 'utf-8');
 
 describe('Top bar CSS layout stability', () => {
 
@@ -14,7 +16,7 @@ describe('Top bar CSS layout stability', () => {
 
   it('scopes desktop top-bar left positioning inside min-width media query', () => {
     const desktopSection = extractMediaSection(/@media\s*\(\s*min-width:\s*769px\s*\)\s*\{([\s\S]*?)\n\}/);
-    expect(desktopSection).toContain('left: 360px');
+    expect(desktopSection).toContain('left: calc(var(--sidebar-width) + 40px)');
     expect(desktopSection).toContain('.top-bar-container.sidebar-collapsed');
     expect(desktopSection).toContain('left: 20px');
   });
@@ -104,6 +106,16 @@ describe('Font size scaling and menu controls', () => {
     expect(css).toContain('--font-scale: 1.15;');
     expect(css).toContain("[data-font-size='xlarge']");
     expect(css).toContain('--font-scale: 1.3;');
+    expect(css).toContain("[data-font-size='xxlarge']");
+    expect(css).toContain('--font-scale: 1.5;');
+  });
+
+  it('android.css text follows --font-scale instead of pinning fixed px (#117)', () => {
+    const bare = androidCss.replace(/\/\*[\s\S]*?\*\//g, '');
+    const decls = bare.match(/(?:^|[;{\s])(?:font-size|line-height):[^;}]*/g) || [];
+    expect(decls.length).toBeGreaterThan(0);
+    const fixed = decls.filter((d) => /\d+px/.test(d) && !d.includes('var(--font-scale'));
+    expect(fixed).toEqual([]);
   });
 
   it('scales html font-size dynamically using --font-scale', () => {
@@ -131,14 +143,41 @@ describe('Map markers follow the Text Size setting (#103)', () => {
     return '';
   };
 
+  it('draws EMT stop markers 15% bigger than the Text Size scale', () => {
+    expect(ruleFor('.emt-stop-badge')).toContain('zoom: calc(var(--font-scale, 1) * 1.15)');
+  });
+
+  it('draws metro station markers 10% smaller than that (1.15 * 0.9)', () => {
+    expect(ruleFor('.metro-station-badge')).toContain('zoom: calc(var(--font-scale, 1) * 1.035)');
+  });
+
   it.each([
-    '.metro-station-badge',
-    '.emt-stop-badge',
     '.live-bus-pill',
     '.station-floating-chart',
     '.bus-floating-chart',
   ])('scales %s by --font-scale (1 at default, so default is unchanged)', (selector) => {
     expect(ruleFor(selector)).toContain('zoom: var(--font-scale, 1)');
+  });
+});
+
+describe('Map stays clickable under overlays (stops and pings)', () => {
+  const rule = (selector) => {
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const re = /([^{}]+)\{([^{}]*)\}/g;
+    let m;
+    while ((m = re.exec(bare))) {
+      if (m[1].split(',').map((x) => x.trim()).includes(selector)) return m[2];
+    }
+    return '';
+  };
+
+  it('the top bar container lets taps through; only its children take them', () => {
+    expect(rule('.top-bar-container')).toContain('pointer-events: none');
+    expect(rule('.top-bar-container > *')).toContain('pointer-events: auto');
+  });
+
+  it('the sidebar backdrop does not catch map clicks on a wide desktop window', () => {
+    expect(css).toMatch(/@media \(min-width: 1600px\) \{\s*\.sidebar-backdrop\.active \{ pointer-events: none; \}/);
   });
 });
 
@@ -245,8 +284,8 @@ describe('EMT zoomed-out dots and tight label (#108)', () => {
     return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
   };
 
-  it('turns non-selected EMT badges into 8px round dots under data-emt-dots', () => {
-    const dot = rule('.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected)');
+  it('turns non-selected EMT badges into 8px round dots under data-emt-stage="dot"', () => {
+    const dot = rule('.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected)');
     expect(dot).toContain('width: 8px');
     expect(dot).toContain('height: 8px');
     expect(dot).toContain('border-radius: 50%');
@@ -254,8 +293,8 @@ describe('EMT zoomed-out dots and tight label (#108)', () => {
   });
 
   it('hides the EMT text and the spawned line chips in dot mode', () => {
-    expect(rule('.map-container[data-emt-dots="true"] .emt-stop-badge:not(.is-selected) > span')).toContain('display: none');
-    expect(rule('.map-container[data-emt-dots="true"] .bus-floating-chart:not(.is-selected) > *')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="dot"] .emt-stop-badge:not(.is-selected) > span')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="dot"] .bus-floating-chart:not(.is-selected) > *')).toContain('display: none');
   });
 
   it('keeps a 24px invisible hit area on dots', () => {
@@ -290,5 +329,137 @@ describe('Fade everything else, incl. chip boxes and trains (#114)', () => {
 
   it('never fades the selected chart', () => {
     expect(css).not.toMatch(/data-has-selection="true"\]\s+\.(bus|station)-floating-chart\s*[,{]/);
+  });
+});
+
+describe('EMT line numbers at street zoom (#116)', () => {
+  const rule = (selector) => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+  };
+
+  it('is driven by one container attribute, no data-emt-dots left', () => {
+    expect(css).toContain('data-emt-stage="dot"');
+    expect(css).not.toContain('data-emt-dots');
+  });
+
+  it('keeps the line chips hidden until the lines stage', () => {
+    expect(rule('.emt-stop-lines')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines .emt-stop-lines')).toContain('display: grid');
+  });
+
+  it('hides the EMT logo in the lines stage and drops the red box', () => {
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines > .emt-stop-logo')).toContain('display: none');
+    expect(rule('.map-container[data-emt-stage="lines"] .emt-stop-badge.has-lines')).toContain('background: transparent');
+  });
+
+  it('hides the marker under the selected stop highlight so the stop is drawn once', () => {
+    expect(css).toContain('.map-container .emt-stop-badge.is-selected,\n.map-container .metro-station-badge.is-selected {');
+    const hidden = rule('.map-container .metro-station-badge.is-selected');
+    expect(hidden).toContain('opacity: 0 !important');
+    expect(hidden).toContain('pointer-events: none');
+  });
+
+  it('stacks the chips in exactly two columns so dense stops stay compact', () => {
+    const lines = rule('.emt-stop-lines');
+    expect(lines).toContain('grid-template-columns: repeat(2, auto)');
+    expect(lines).not.toContain('flex-wrap');
+  });
+
+  it('styles chips like the BusBadge (EMT red, white bold number)', () => {
+    const chip = rule('.emt-stop-chip');
+    expect(chip).toContain('#D62828');
+    expect(chip).toContain('font-weight: 900');
+  });
+});
+
+describe('Squarer bus line badges (#121)', () => {
+  const chip = css.match(/\.emt-stop-chip\s*\{([^}]*)\}/)?.[1] || '';
+
+  it('makes the map line chip a square minimum (min-width equals height) with tight padding', () => {
+    expect(chip).toMatch(/height:\s*14px/);
+    expect(chip).toMatch(/min-width:\s*14px/);
+    expect(chip).toMatch(/padding:\s*0 2px/);
+  });
+
+  it('keeps chip height, font size, colour and radius, and never fixes the width', () => {
+    expect(chip).toContain('font-size: 9px');
+    expect(chip).toContain('border-radius: 3px');
+    expect(chip).toContain('background: #D62828');
+    expect(chip).not.toMatch(/(^|[\s;])width:/);
+  });
+
+  it('does not override the bus badge geometry in android.css', () => {
+    expect(androidCss).not.toMatch(/\.bus-badge/);
+    expect(androidCss).not.toMatch(/\.emt-stop-chip/);
+  });
+});
+
+describe('Wide desktop sidebar (#125)', () => {
+  const wide = `(min-width: ${SCREEN_PRESET_THRESHOLDS.desktopMinWidth}px)`;
+  const block = css.match(/@media\s*\(min-width:\s*(\d+)px\)\s*\{\s*:root\s*\{([^}]*)\}/);
+
+  it('widens the sidebar at the same width as the desktop preset', () => {
+    expect(block).toBeTruthy();
+    expect(`(min-width: ${block[1]}px)`).toBe(wide);
+    const w = Number(block[2].match(/--sidebar-width:\s*(\d+)px/)[1]);
+    expect(w).toBeGreaterThanOrEqual(400);
+    expect(w).toBeLessThanOrEqual(440);
+  });
+
+  it('keeps the default (phone/tablet) width at 320px via one variable', () => {
+    expect(css).toMatch(/:root\s*\{[^}]*--sidebar-width:\s*320px/);
+    expect(css).toMatch(/\.sidebar\s*\{[^}]*width:\s*var\(--sidebar-width\)/);
+  });
+
+  it('offsets the top bar, hub chips and collapse transform by the variable', () => {
+    expect(css).toContain('left: calc(var(--sidebar-width) + 40px)');
+    expect(css).toMatch(/max-width:\s*calc\(100vw - var\(--sidebar-width\) - 60px\)/);
+    expect(css).toMatch(/\.hub-chips-container\.sidebar-open\s*\{\s*left:\s*calc\(var\(--sidebar-width\) \+ 40px\)/);
+    expect(css).toMatch(/\.sidebar\.collapsed\s*\{[^}]*translateX\(calc\(-1 \* \(var\(--sidebar-width\) \+ 40px\)\)\)/);
+  });
+
+  it('leaves the mobile sidebar rules unchanged', () => {
+    const m = css.match(/@media\s*\(max-width:\s*768px\)\s*\{([\s\S]*?)\n\}/)[1];
+    expect(m).toMatch(/\.sidebar\s*\{[^}]*width:\s*auto/);
+    expect(m).toContain('height: 70vh');
+  });
+
+  it('uses relative units for the wide spacing so Text Size S to XXL does not clip', () => {
+    const wideBlock = css.match(/@media\s*\(min-width:\s*1600px\)\s*\{\s*:root[\s\S]*?\n\}/)[0];
+    const spacing = wideBlock.match(/\.sidebar-body\s*\{([^}]*)\}/)?.[1] || '';
+    expect(spacing).toMatch(/gap:\s*[\d.]+rem/);
+    expect(wideBlock).not.toMatch(/\.sidebar\s*\{[^}]*height:\s*\d+px/);
+  });
+});
+
+describe('Chosen-stop highlight chips (one layout at every zoom)', () => {
+  const rule = (selector) => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'))?.[1] || '';
+  };
+
+  it('uses a grid whose column count comes from --focus-cols', () => {
+    const grid = rule('.focus-chip-grid');
+    expect(grid).toContain('display: grid');
+    expect(grid).toMatch(/grid-template-columns:\s*repeat\(var\(--focus-cols,\s*1\),\s*26px\)/);
+    expect(grid).toContain('justify-content: center');
+  });
+
+  it('gives every chip one fixed size, never a zoom-dependent one', () => {
+    const chip = rule('.focus-chip');
+    expect(chip).toContain('width: 26px');
+    expect(chip).toContain('height: 20px');
+    expect(chip).not.toMatch(/\bvw\b|\bem\b|%/);
+  });
+
+  it('centres an odd last chip across both columns', () => {
+    const last = rule('.focus-chip-last-odd');
+    expect(last).toContain('grid-column: 1 / -1');
+    expect(last).toContain('justify-self: center');
+  });
+
+  it('follows Text Size like the other chip boxes', () => {
+    expect(css).toMatch(/\.bus-floating-chart\s*\{\s*zoom:\s*var\(--font-scale, 1\)/);
   });
 });

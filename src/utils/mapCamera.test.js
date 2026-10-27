@@ -9,7 +9,12 @@ import {
   zoomOutTarget,
   CAMERA_EASE_MS,
   panelAwarePadding,
-  PORTRAIT_FOCUS_CLEARANCE_PX,
+  usableArea,
+  restingSheetRect,
+  samePadding,
+  recentreOnResize,
+  FOCUS_EDGE_PX,
+  SHEET_GAP_PX,
 } from './mapCamera';
 
 describe('mapCamera', () => {
@@ -73,85 +78,128 @@ describe('mapCamera', () => {
     });
   });
 
-  describe('panelAwarePadding', () => {
-    it('computes landscape padding using panel right width and search bar top', () => {
-      const padding = panelAwarePadding({
+  describe('usableArea (one rule for where a selected stop is centred)', () => {
+    const container = { top: 0, right: 400, bottom: 800, left: 0 };
+
+    it('portrait: the free area ends at the measured sheet top, below the search bar', () => {
+      const { rect, padding, centre } = usableArea({
+        isLandscape: false,
+        containerRect: container,
+        searchBarRect: { bottom: 70 },
+        sheetRect: { top: 450 },
+      });
+      expect(rect).toEqual({ left: FOCUS_EDGE_PX, top: 82, right: 400 - FOCUS_EDGE_PX, bottom: 450 - SHEET_GAP_PX });
+      expect(padding).toEqual({ top: 82, right: FOCUS_EDGE_PX, bottom: 800 - 450 + SHEET_GAP_PX, left: FOCUS_EDGE_PX });
+      expect(centre).toEqual({ x: 200, y: (82 + 442) / 2 });
+    });
+
+    it('landscape: the free area ends at the measured sheet left edge', () => {
+      const { rect, centre } = usableArea({
         isLandscape: true,
         containerRect: { top: 0, right: 1200, bottom: 800, left: 0 },
         searchBarRect: { bottom: 64 },
-        panelRect: { left: 850 },
+        sheetRect: { left: 850 },
       });
-
-      expect(padding.top).toBe(64 + 12);
-      expect(padding.right).toBe((1200 - 850) + 16);
-      expect(padding.bottom).toBe(40);
-      expect(padding.left).toBe(40);
+      expect(rect).toEqual({ left: FOCUS_EDGE_PX, top: 76, right: 850 - SHEET_GAP_PX, bottom: 800 - FOCUS_EDGE_PX });
+      expect(centre).toEqual({ x: (12 + 842) / 2, y: (76 + 788) / 2 });
     });
 
-    it('computes portrait padding using panel bottom height, search bar top, and vertical clearance', () => {
-      const padding = panelAwarePadding({
+    it('measures from the container, not the viewport', () => {
+      const { rect } = usableArea({
+        isLandscape: false,
+        containerRect: { top: 40, right: 420, bottom: 840, left: 20 },
+        searchBarRect: { bottom: 110 },
+        sheetRect: { top: 500 },
+      });
+      expect(rect.top).toBe(110 - 40 + 12);
+      expect(rect.bottom).toBe(500 - 40 - SHEET_GAP_PX);
+      expect(rect.right).toBe(400 - FOCUS_EDGE_PX);
+    });
+
+    it('moves the centre with every sheet height (no estimate, no extra clearance)', () => {
+      const centreFor = (top) => usableArea({
+        isLandscape: false, containerRect: container, searchBarRect: { bottom: 70 }, sheetRect: { top },
+      }).centre.y;
+      expect(centreFor(300)).toBeLessThan(centreFor(450));
+      expect(centreFor(450)).toBeLessThan(centreFor(600));
+      expect(centreFor(450)).toBe((82 + 450 - SHEET_GAP_PX) / 2);
+    });
+
+    it('keeps a minimum aperture on small windows', () => {
+      const { rect } = usableArea({
+        isLandscape: false,
+        containerRect: { top: 0, right: 360, bottom: 500, left: 0 },
+        searchBarRect: { bottom: 70 },
+        sheetRect: { top: 120 },
+      });
+      expect(rect.bottom - rect.top).toBeGreaterThanOrEqual(120);
+    });
+
+    it('has no sheet: only the edge margin at the bottom', () => {
+      const { rect } = usableArea({
+        isLandscape: false, containerRect: container, searchBarRect: { bottom: 70 }, hasPanel: false,
+      });
+      expect(rect.bottom).toBe(800 - FOCUS_EDGE_PX);
+    });
+
+    it('falls back to a proportional sheet when expected but not measurable yet', () => {
+      const portrait = usableArea({ isLandscape: false, hasPanel: true, viewportWidth: 400, viewportHeight: 800 });
+      expect(portrait.rect.bottom).toBe(Math.round(800 - 800 * 0.45 - SHEET_GAP_PX));
+      const landscape = usableArea({ isLandscape: true, hasPanel: true, viewportWidth: 1000, viewportHeight: 700 });
+      expect(landscape.rect.right).toBe(Math.round(1000 - 1000 * 0.34 - SHEET_GAP_PX));
+    });
+  });
+
+  describe('panelAwarePadding', () => {
+    it('is the padding of usableArea', () => {
+      const args = {
         isLandscape: false,
         containerRect: { top: 0, right: 400, bottom: 800, left: 0 },
         searchBarRect: { bottom: 70 },
         panelRect: { top: 450 },
-      });
+      };
+      expect(panelAwarePadding(args)).toEqual(usableArea(args).padding);
+    });
+  });
 
-      expect(padding.top).toBe(70 + 12);
-      expect(padding.right).toBe(24);
-      // Ensures the station dot and its expanded popup bubble clear the card
-      expect(padding.bottom).toBe((800 - 450) + PORTRAIT_FOCUS_CLEARANCE_PX);
-      expect(padding.left).toBe(24);
+  describe('restingSheetRect', () => {
+    it('uses layout offsets so an in-flight slide-up transform cannot skew the measurement', () => {
+      const rect = restingSheetRect({
+        rect: { top: 760, left: 12 }, // mid-animation, translated down
+        offsetParentRect: { top: 40, left: 0 },
+        offsetTop: 420,
+        offsetLeft: 12,
+      });
+      expect(rect).toEqual({ top: 460, left: 12 });
     });
 
-    it('prioritizes panelHeight layout height over in-flight partial translateY transforms', () => {
-      const padding = panelAwarePadding({
-        isLandscape: false,
-        containerRect: { top: 0, right: 400, bottom: 800, left: 0 },
-        searchBarRect: { bottom: 70 },
-        // During in-flight animation, panelRect reflects a partial/offscreen position
-        panelRect: { top: 750 },
-        panelHeight: 300,
-      });
-
-      expect(padding.top).toBe(70 + 12);
-      // Should use 300 (layout height) rather than 50 (800 - 750)
-      expect(padding.bottom).toBe(300 + PORTRAIT_FOCUS_CLEARANCE_PX);
+    it('falls back to the drawn rect without an offset parent', () => {
+      expect(restingSheetRect({ rect: { top: 500, left: 8 } })).toEqual({ top: 500, left: 8 });
     });
 
-    it('clamps bottom padding on small screens to preserve minimum map aperture', () => {
-      const padding = panelAwarePadding({
-        isLandscape: false,
-        containerRect: { top: 0, right: 360, bottom: 500, left: 0 },
-        searchBarRect: { bottom: 70 }, // topPadding = 82
-        panelHeight: 380, // 380 + 80 = 460, would consume entire 500px screen
-      });
-
-      // maxAllowedBottom: 500 - 82 - 120 = 298
-      expect(padding.bottom).toBe(298);
+    it('is undefined when nothing was measured', () => {
+      expect(restingSheetRect({})).toBeUndefined();
     });
+  });
 
-    it('does not apply panel clearance when hasPanel is false', () => {
-      const padding = panelAwarePadding({
-        isLandscape: false,
-        containerRect: { top: 0, right: 400, bottom: 800, left: 0 },
-        searchBarRect: { bottom: 70 },
-        hasPanel: false,
-      });
-
-      expect(padding.top).toBe(70 + 12);
-      expect(padding.bottom).toBe(40);
+  describe('samePadding', () => {
+    const p = { top: 82, right: 12, bottom: 358, left: 12 };
+    it('treats sub-pixel noise as equal and a real change as different', () => {
+      expect(samePadding(p, { ...p, bottom: 358.4 })).toBe(true);
+      expect(samePadding(p, { ...p, bottom: 372 })).toBe(false);
+      expect(samePadding(p, null)).toBe(false);
     });
+  });
 
-    it('falls back gracefully if rects are missing but hasPanel is true', () => {
-      const landscapePadding = panelAwarePadding({ isLandscape: true, hasPanel: true, viewportWidth: 1000 });
-      expect(landscapePadding.right).toBe(Math.round(1000 * 0.34 + 16));
-      expect(landscapePadding.bottom).toBe(40);
-      expect(landscapePadding.left).toBe(40);
-
-      const portraitPadding = panelAwarePadding({ isLandscape: false, hasPanel: true, viewportHeight: 800 });
-      expect(portraitPadding.right).toBe(24);
-      expect(portraitPadding.left).toBe(24);
-      expect(portraitPadding.bottom).toBe(Math.round(800 * 0.45 + PORTRAIT_FOCUS_CLEARANCE_PX));
+  describe('recentreOnResize', () => {
+    it('eases to the same target under the new padding, keeping the zoom', () => {
+      const calls = [];
+      const map = { getZoom: () => 16.2, easeTo: (o) => calls.push(o) };
+      const padding = { top: 82, right: 12, bottom: 400, left: 12 };
+      recentreOnResize(map, [-0.37, 39.46], padding);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({ center: [-0.37, 39.46], padding, duration: CAMERA_EASE_MS });
+      expect(calls[0].zoom).toBeUndefined();
     });
   });
 

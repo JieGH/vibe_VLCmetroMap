@@ -64,3 +64,10 @@ describe('#113 split-view minute tick', () => {
     expect(busFull).not.toContain(tick);
   });
 });
+
+describe('metro walk radius wording', () => {
+  it('"Also within N min walk" shows the minutes of the 320 m metro radius (5, rounded up)', () => {
+    const html = renderToStaticMarkup(<CompactMetroSection stationName="Colón" arrivals={[{ line: '3', destination: 'A', seconds: 120 }]} nearbyMetro={nearbyMetro} theme="dark" />);
+    expect(html).toContain('Also within 5 min walk');
+  });
+});

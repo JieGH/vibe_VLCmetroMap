@@ -168,8 +168,8 @@ _Avoid_: Network sync, bus polling, bulk sync
 The UX pattern where high-confidence train arrivals render with zero latency (from client Arrival Memory), followed by an asynchronous background fetch for connecting EMT bus arrivals, which pop in seamlessly when ready.
 _Avoid_: Synchronous blocking wait, all-or-nothing render
 
-**Spawn Radius (5-min Walk)**:
-The 375-metre spatial threshold around a dropped pin or User Location within which multimodal transit stops spawn into the "Where you're at" sheet.
+**Spawn Radius (3-min Walk)**:
+The spatial threshold (Metro stations within 320 m, EMT bus stops within 280 m) around a dropped pin or User Location within which multimodal transit stops spawn into the "Where you're at" sheet.
 _Avoid_: Buffer zone, catchment area, 1km radius
 
 **Bus GPS Stream**:

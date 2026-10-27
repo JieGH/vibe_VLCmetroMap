@@ -48,3 +48,14 @@ describe('getClientDiagnostics', () => {
     });
   });
 });
+
+describe('API failure diagnostics (#123)', () => {
+  it('shows the last failure class and status, not "fetch failed"', async () => {
+    const { recordApiFailure, getApiDiagnostics } = await import('./diagnostics');
+    recordApiFailure('train', { kind: 'blocked', status: 403 });
+    recordApiFailure('bus', { kind: 'unreachable', status: null });
+    expect(getApiDiagnostics().train).toMatchObject({ kind: 'blocked', status: 403 });
+    expect(getClientDiagnostics('es').apiFailures).toMatch(/train: blocked \(403\)/);
+    expect(getClientDiagnostics('es').apiFailures).toMatch(/bus: unreachable/);
+  });
+});

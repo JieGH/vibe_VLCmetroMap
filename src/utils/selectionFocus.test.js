@@ -26,10 +26,8 @@ describe('selection CSS', () => {
     expect(css).toMatch(/\[data-has-selection="true"\][^{]*\.metro-station-badge:not\(\.is-selected\)/);
     expect(css).toMatch(/\[data-has-selection="true"\][^{]*\.emt-stop-badge:not\(\.is-selected\)/);
   });
-  it('draws the selected focus node above spawned walk-radius nodes', () => {
-    const selected = zOf(/\.station-focus-node:not\(\.spawned-station-node\)[^{]*\{[^}]*z-index:\s*(\d+)/);
-    const spawned = zOf(/\.spawned-station-node[^{]*\{[^}]*z-index:\s*(\d+)/);
-    expect(selected).toBeGreaterThan(spawned);
+  it('draws the chosen focus node above the base markers (z-index 50)', () => {
+    expect(zOf(/\.station-focus-node,\s*\.bus-focus-node\s*\{[^}]*z-index:\s*(\d+)/)).toBeGreaterThan(50);
   });
 });
 

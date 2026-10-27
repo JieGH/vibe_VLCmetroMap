@@ -7,6 +7,7 @@ export const FONT_SIZE_CONFIG = {
   default: { id: 'default', label: 'Default', shortLabel: 'M', scale: 1.0 },
   large: { id: 'large', label: 'Large', shortLabel: 'L', scale: 1.15 },
   xlarge: { id: 'xlarge', label: 'X-Large', shortLabel: 'XL', scale: 1.3 },
+  xxlarge: { id: 'xxlarge', label: 'XX-Large', shortLabel: 'XXL', scale: 1.5 },
 };
 
 export const FONT_SIZES = Object.keys(FONT_SIZE_CONFIG);
@@ -15,10 +16,12 @@ export const isValidFontSize = (size) => Boolean(size && FONT_SIZE_CONFIG[size])
 
 /**
  * Reads the persisted font size from localStorage, validating against supported options.
+ * `fallback` is the first-launch size (no saved choice); a saved size always wins.
  */
-export const getStoredFontSize = () => {
+export const getStoredFontSize = (fallback = DEFAULT_FONT_SIZE) => {
+  const first = isValidFontSize(fallback) ? fallback : DEFAULT_FONT_SIZE;
   try {
-    if (typeof window === 'undefined' || !window.localStorage) return DEFAULT_FONT_SIZE;
+    if (typeof window === 'undefined' || !window.localStorage) return first;
     const stored = window.localStorage.getItem(FONT_SIZE_STORAGE_KEY);
     if (isValidFontSize(stored)) {
       return stored;
@@ -26,7 +29,7 @@ export const getStoredFontSize = () => {
   } catch {
     // Ignore storage quota / access exceptions in sandboxed environments
   }
-  return DEFAULT_FONT_SIZE;
+  return first;
 };
 
 /**

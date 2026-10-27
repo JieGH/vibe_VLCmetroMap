@@ -1,5 +1,25 @@
 import { Capacitor } from '@capacitor/core';
 
+// Last failed request per API, so a screenshot or bug report shows "blocked
+// (403)" rather than "fetch failed" (#123). Class, status and time only: never
+// the address, the URL or anything about the user.
+const lastApiFailure = { train: null, bus: null };
+
+export function recordApiFailure(api, { kind, status }) {
+  lastApiFailure[api] = { kind, status: status ?? null, at: new Date().toISOString() };
+}
+
+export function getApiDiagnostics() {
+  return { ...lastApiFailure };
+}
+
+function describeApiFailures() {
+  const parts = Object.entries(lastApiFailure)
+    .filter(([, f]) => f)
+    .map(([api, f]) => `${api}: ${f.kind}${f.status ? ` (${f.status})` : ''} at ${f.at}`);
+  return parts.length ? parts.join('; ') : 'none';
+}
+
 /**
  * Collects non-sensitive client diagnostic information to assist debugging issues reported in feedback.
  * Includes platform (iOS/Android/Web/PWA), device summary, screen resolution, timezone, language, and app version.
@@ -50,6 +70,7 @@ export function getClientDiagnostics(language) {
     appVersion: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev',
     gitSha: typeof __GIT_SHA__ !== 'undefined' ? __GIT_SHA__ : '',
     userAgent,
+    apiFailures: describeApiFailures(),
     timestamp: new Date().toISOString(),
   };
 }

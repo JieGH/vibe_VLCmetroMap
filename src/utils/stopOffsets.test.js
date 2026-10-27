@@ -3,6 +3,8 @@ import {
   buildDisplayCoordinates,
   displayCoordinatesFor,
   MAX_OFFSET_METRES,
+  STOP_OFFSET_CAP_OVERRIDES,
+  TARGET_SEPARATION_METRES,
   PAIR_MAX_METRES,
 } from './stopOffsets';
 import { getDistance } from './geoUtils';
@@ -76,7 +78,7 @@ describe('buildDisplayCoordinates', () => {
 
   it('does not move stops already well separated', () => {
     const a = stop('1', 'X - Y', at(0, 0));
-    const b = stop('2', 'X - Y', at(0, PAIR_MAX_METRES - 5));
+    const b = stop('2', 'X - Y', at(0, TARGET_SEPARATION_METRES));
     expect(buildDisplayCoordinates([a, b]).size).toBe(0);
   });
 
@@ -100,15 +102,15 @@ describe('buildDisplayCoordinates', () => {
     expect(JSON.stringify(list)).toBe(snapshot);
   });
 
-  it('pushes a pair at 59 m by about 0.5 m each', () => {
+  it('pushes a pair at 79 m by about 3.5 m each (target 86 m)', () => {
     const a = stop('1', 'X - Y', at(0, 0));
-    const b = stop('2', 'X - Y', at(0, 59));
+    const b = stop('2', 'X - Y', at(0, 79));
     const map = buildDisplayCoordinates([a, b]);
     // at() uses a slightly different metres-per-degree, so allow a margin.
     for (const [s, code] of [[a, '1'], [b, '2']]) {
       const m = getDistance(s.coordinates, map.get(code));
-      expect(m).toBeGreaterThan(0.2);
-      expect(m).toBeLessThan(1);
+      expect(m).toBeGreaterThan(3);
+      expect(m).toBeLessThan(4);
     }
   });
 
@@ -121,6 +123,38 @@ describe('buildDisplayCoordinates', () => {
     expect(map.has('1')).toBe(false);
     expect(map.has('2')).toBe(true);
     expect(map.has('3')).toBe(true);
+  });
+
+  it('pushes a 30 m pair to the 12 m cap each (drawn 54 m apart, short of the 86 m target)', () => {
+    const a = stop('1', 'X - Y', at(0, 0));
+    const b = stop('2', 'X - Y', at(0, 30));
+    const map = buildDisplayCoordinates([a, b]);
+    expect(getDistance(map.get('1'), map.get('2'))).toBeGreaterThan(53);
+    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(MAX_OFFSET_METRES, 0);
+  });
+
+  it('a 70 m pair is under the cap: each moves (86 - 70) / 2 = 8 m', () => {
+    const a = stop('1', 'X - Y', at(0, 0));
+    const b = stop('2', 'X - Y', at(0, 70));
+    const map = buildDisplayCoordinates([a, b]);
+    expect(getDistance(a.coordinates, map.get('1'))).toBeCloseTo(8, 0);
+  });
+
+  it('a stop with a per-stop cap override is drawn at most that far; an unlisted partner keeps the normal push', () => {
+    expect(STOP_OFFSET_CAP_OVERRIDES['1168']).toBe(1);
+    expect(STOP_OFFSET_CAP_OVERRIDES['1613']).toBe(1);
+    // Both Comissaria stops are limited to 1 m.
+    const a = stop('1168', 'X - Y', at(0, 0));
+    const b = stop('1613', 'X - Y', at(0, 15));
+    const both = buildDisplayCoordinates([a, b]);
+    expect(getDistance(a.coordinates, both.get('1168'))).toBeCloseTo(1, 0);
+    expect(getDistance(b.coordinates, both.get('1613'))).toBeCloseTo(1, 0);
+    // A listed stop next to an unlisted partner: only the listed one is held back.
+    const c = stop('9001', 'X - Y', at(0, 0));
+    const d = stop('1613', 'X - Y', at(0, 15));
+    const mixed = buildDisplayCoordinates([c, d]);
+    expect(getDistance(d.coordinates, mixed.get('1613'))).toBeCloseTo(1, 0);
+    expect(getDistance(c.coordinates, mixed.get('9001'))).toBeCloseTo(MAX_OFFSET_METRES, 0);
   });
 
   it('KNOWN LIMITATION: same-name stops on the same side are still pushed apart', () => {

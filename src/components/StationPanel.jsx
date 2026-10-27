@@ -14,11 +14,13 @@ import { lineColor } from '../utils/lineColor';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
-import { getStationBusFeeders, getAllBusStops } from '../data/emtData';
+import { getStationBusFeeders, getAllBusStops, feederFromStop } from '../data/emtData';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 import { getDistance, nearbyFeatures } from '../utils/geoUtils';
 import { walkingMinutes } from '../utils/walking';
+import { hubDisplayName } from '../utils/hubName';
+import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import gtfsData from '../data/gtfs_expanded.json';
 
 const allMetroStations = gtfsData.features.filter(f => f.geometry.type === 'Point');
@@ -64,8 +66,9 @@ export function multimodalSheetGeometry(_tab, isExpanded) {
   };
 }
 
-// #111: split-view horizontal spacing. Was gap 10 + side padding 10 + metro padR 6 + bus padL 6 (23px dead strip).
-export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 3, sidePadding: 6, metroPadRight: 3, busPadLeft: 0 };
+// #111: split-view horizontal spacing. Was gap 10 + side padding 10 + metro padR 6 + bus padL 6 (23px dead strip). The divider is the
+// metro column's borderRight, so 10 px padding each side matches the 10 px gap between two bus cards.
+export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 0, sidePadding: 6, metroPadRight: 10, busPadLeft: 10 };
 
 export const SPLIT_SHEET_BOTTOM = 'calc(4px + env(safe-area-inset-bottom, 0px))';
 export const EXPANDED_SHEET_HEIGHT =
@@ -113,11 +116,11 @@ const StationPanel = ({
   const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
   const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
 
-  // Other Metro stations within 5-minute walk radius (~500m) of this station/anchor:
+  // Other Metro stations within the walk radius of this station/anchor:
   const nearbyMetro = useMemo(() => {
     if (!anchorCoords) return [];
     const stationName = station?.properties?.name;
-    return nearbyFeatures(allMetroStations, anchorCoords, 500)
+    return nearbyFeatures(allMetroStations, anchorCoords, WALK_RADIUS_METRO_METRES)
       .filter((m) => m.feature.properties.name !== stationName)
       .slice(0, 8);
   }, [anchorCoords, station?.properties?.name]);
@@ -177,6 +180,9 @@ const StationPanel = ({
   if (!station) return null;
 
   const focus = getStationFocus(station.properties, now);
+  const shownName = hubDisplayName(focus.name, t);
+  // The arrival store reports why a list is stale as a dictionary key; show it in the viewer's language.
+  const fetchErrorText = focus.fetchError && focus.fetchError.startsWith('arrivals.errors.') ? t(focus.fetchError) : focus.fetchError;
   const unheardLabel = focus.secondsUnheard === null
     ? t('stationPanel.neverFetched')
     : focus.secondsUnheard < 60
@@ -185,42 +191,17 @@ const StationPanel = ({
 
   const stationLines = focus.servedLines || [];
 
-  const rawFeeders = getStationBusFeeders(focus.name, stationCoords);
+  // Real EMT stops only (#122): inside the walk radius, no nearest-stop fallback
+  // for a map ping, and never invented times, vehicles or default lines.
+  const isMapPing = Boolean(userLocation?.isMapClick) || focus.name === 'Map Ping';
   const feeders = anchorCoords
-    ? (() => {
-        const allStops = getAllBusStops() || [];
-        const nearbyReal = allStops
-          .map((stop) => {
-            const dist = Math.round(getDistance(anchorCoords, stop.coordinates));
-            const mins = walkingMinutes(dist);
-            return {
-              stopCode: String(stop.stopCode || stop.code || ''),
-              stopName: stop.stopName || stop.name || 'Parada EMT',
-              walkMetres: dist,
-              walkMin: mins,
-              bearingDegrees: 90,
-              coordinates: stop.coordinates,
-              lines: (stop.lines && stop.lines.length > 0 ? stop.lines : ['19', 'C1']).map((l) => ({
-                line: String(typeof l === 'object' && l !== null ? (l.line || l.id) : l),
-                destination: typeof l === 'object' && l?.destination ? l.destination : 'Centre / Platja',
-                dueSeconds: typeof l === 'object' && l?.dueSeconds ? l.dueSeconds : 180,
-                isLive: true,
-                vehicleId: `EMT-${stop.stopCode || '1000'}`,
-              })),
-            };
-          })
-          .filter((f) => f.walkMetres <= 500 || f.walkMin <= 6)
-          .sort((a, b) => a.walkMetres - b.walkMetres);
-
-        if (nearbyReal.length > 0) return nearbyReal;
-        return rawFeeders.map((f) => {
-          if (!f.coordinates) return f;
-          const dist = Math.round(getDistance(anchorCoords, f.coordinates));
-          const mins = walkingMinutes(dist);
-          return { ...f, walkMetres: dist, walkMin: mins };
-        }).filter((f) => f.walkMin <= 6);
-      })()
-    : rawFeeders;
+    ? pickWalkSet(getAllBusStops(), anchorCoords, {
+        getCoords: (stop) => stop.coordinates,
+        getKey: (stop) => String(stop.stopCode || stop.code || ''),
+        radiusMetres: WALK_RADIUS_BUS_METRES,
+        allowFallback: !isMapPing,
+      }).items.map(({ item: stop, distance }) => feederFromStop(stop, distance))
+    : getStationBusFeeders(focus.name, stationCoords);
 
   const _totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
   const metroStopsCount = (focus.name === 'Map Ping' || focus.name === "Where you're at") ? nearbyMetro.length : (1 + nearbyMetro.length);
@@ -231,7 +212,7 @@ const StationPanel = ({
   const renderMultimodalTabs = (isHeaderRow = false) => (
     <nav
       className="station-multimodal-tabs"
-      aria-label="Multimodal arrivals navigation"
+      aria-label={t('stationPanel.tabsAria')}
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         display: 'flex',
@@ -252,7 +233,7 @@ const StationPanel = ({
         aria-selected={activeTab === 'split'}
         onClick={() => setActiveTab('split')}
         onPointerDown={(e) => e.stopPropagation()}
-        title="All transit departures (Trains and Bus side-by-side)"
+        title={t('stationPanel.tabAllTitle')}
         style={{
           padding: '6px 13px',
           borderRadius: 9,
@@ -270,7 +251,7 @@ const StationPanel = ({
           transition: 'all 0.15s ease',
         }}
       >
-        <span>All</span>
+        <span>{t('common.all')}</span>
         <span
           style={{
             fontSize: '.72rem',
@@ -288,11 +269,11 @@ const StationPanel = ({
       <button
         type="button"
         role="tab"
-        aria-label="Metro train departures"
+        aria-label={t('stationPanel.tabMetroAria')}
         aria-selected={activeTab === 'metro'}
         onClick={() => setActiveTab('metro')}
         onPointerDown={(e) => e.stopPropagation()}
-        title="Trains departures only"
+        title={t('stationPanel.tabMetroTitle')}
         style={{
           padding: '6px 13px',
           borderRadius: 9,
@@ -345,11 +326,11 @@ const StationPanel = ({
       <button
         type="button"
         role="tab"
-        aria-label="EMT bus departures"
+        aria-label={t('stationPanel.tabBusAria')}
         aria-selected={activeTab === 'bus'}
         onClick={() => setActiveTab('bus')}
         onPointerDown={(e) => e.stopPropagation()}
-        title="EMT Bus departures only"
+        title={t('stationPanel.tabBusTitle')}
         style={{
           padding: '6px 13px',
           borderRadius: 9,
@@ -400,7 +381,7 @@ const StationPanel = ({
     <>
       <aside
         className="glass-panel station-panel"
-        aria-label={focus.name}
+        aria-label={shownName}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
@@ -464,9 +445,9 @@ const StationPanel = ({
             <div
               className="station-header-icon"
               data-testid="station-header-icon"
-              aria-label="Toggle expand station panel"
+              aria-label={t('stationPanel.toggleExpandAria')}
               onClick={() => setIsExpanded((v) => !v)}
-              title={isExpanded ? 'Collapse view' : 'Expand full view'}
+              title={isExpanded ? t('stationPanel.collapseView') : t('stationPanel.expandView')}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, minWidth: 34, borderRadius: '50%',
@@ -503,11 +484,11 @@ const StationPanel = ({
                   wordBreak: 'break-word',
                   minWidth: 0, margin: 0,
                 }}>
-                  {focus.name}
+                  {shownName}
                 </h2>
                 {metroWalkMin !== undefined && (
                   <span
-                    title={`${metroWalkMin} min walk`}
+                    title={t('common.minWalk', { min: metroWalkMin })}
                     style={{
                       fontSize: '0.74rem',
                       fontWeight: 700,
@@ -596,8 +577,8 @@ const StationPanel = ({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-expand"
-            aria-label={isExpanded ? 'Collapse station panel' : 'Expand station panel'}
-            title={isExpanded ? 'Minimize / Collapse view' : 'Maximize / Expand full departures'}
+            aria-label={isExpanded ? t('stationPanel.collapsePanelAria') : t('stationPanel.expandPanelAria')}
+            title={isExpanded ? t('stationPanel.minimizeTitle') : t('stationPanel.maximizeTitle')}
             style={{
               width: 32,
               height: 32,
@@ -640,7 +621,7 @@ const StationPanel = ({
               margin: '6px 10px', padding: '6px 10px', borderRadius: 8,
               background: 'rgba(255,152,0,.14)', color: '#ffb74d', fontSize: '.72rem', lineHeight: 1.35,
             }}>
-              {focus.fetchError}
+              {fetchErrorText}
             </div>
           )}
 
@@ -664,6 +645,7 @@ const StationPanel = ({
               style={{
                 display: activeTab === 'bus' ? 'none' : 'block',
                 height: '100%',
+                minWidth: 0, // a 1fr column may shrink below its content: the cards wrap, nothing clips the sheet
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 ...(activeTab === 'split'
@@ -692,6 +674,7 @@ const StationPanel = ({
               style={{
                 display: activeTab === 'metro' ? 'none' : 'block',
                 height: '100%',
+                minWidth: 0, // a 1fr column may shrink below its content: the cards wrap, nothing clips the sheet
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 ...(activeTab === 'split' ? { paddingLeft: SPLIT_LAYOUT.busPadLeft } : { padding: '8px 12px 10px' }),
@@ -704,6 +687,7 @@ const StationPanel = ({
                 theme={theme}
                 showDistance={activeTab !== 'split'}
                 compact={activeTab === 'split'}
+                active={activeTab !== 'metro'}
                 onSelectFeederStop={onSelectFeederStop}
               />
             </div>
@@ -725,7 +709,7 @@ const StationPanel = ({
               margin: '8px 0', padding: '8px 10px', borderRadius: 8,
               background: 'rgba(255,152,0,.14)', color: '#ffb74d', fontSize: '.72rem', lineHeight: 1.35,
             }}>
-              {focus.fetchError}
+              {fetchErrorText}
             </div>
           )}
 
@@ -735,7 +719,7 @@ const StationPanel = ({
             </p>
           ) : (
             <table className="station-arrivals-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.98rem' }}>
-              <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: focus.name })}</caption>
+              <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: shownName })}</caption>
               <thead>
                 <tr style={{
                   fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',

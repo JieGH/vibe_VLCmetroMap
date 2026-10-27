@@ -29,6 +29,7 @@ import { initialTheme, watchSystemTheme } from './utils/systemTheme';
 import { openAppSettings } from './services/openSettings';
 import arrivalStore from './services/arrivalStore';
 import trainPositionEngine from './services/trainPositionEngine';
+import { getWindowScreenPreset, getInitialSidebarOpen, getPresetFontSize } from './utils/screenPreset';
 import { getStoredFontSize, setStoredFontSize, applyFontSize } from './utils/fontSize';
 import { useTranslation } from './i18n';
 import { Search, X } from 'lucide-react';
@@ -39,7 +40,7 @@ import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnConte
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import BusBadge from './components/BusBadge';
-import { EMT_LINES, LIVE_BUS_TELEMETRY } from './data/emtData';
+import { getRealBusLines } from './data/emtData';
 import './index.css';
 
 // How long a locate's answer stays on screen. Long enough to read a refusal,
@@ -80,7 +81,9 @@ function App() {
   const selectedBusStopRef = useRef(null);
   selectedBusStopRef.current = selectedBusStop;
   const [activeMode, setActiveMode] = useState('bus'); // In Variant C, bus mode is default so differences are tactile
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
+    getInitialSidebarOpen(getWindowScreenPreset(), { isNative: Capacitor.isNativePlatform() }),
+  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -153,6 +156,17 @@ function App() {
     return arrivalStore.subscribe(computeStats);
   }, []);
 
+  // The train API refusing this network (VPN, blocked IP) after repeated
+  // evidence, #123. Dismissing hides it until a good answer clears the state and
+  // a new refusal follows.
+  const [trainRefused, setTrainRefused] = useState(() => arrivalStore.isApiRefused());
+  const [refusalDismissed, setRefusalDismissed] = useState(false);
+  useEffect(() => arrivalStore.subscribe(() => {
+    const refused = arrivalStore.isApiRefused();
+    setTrainRefused(refused);
+    if (!refused) setRefusalDismissed(false);
+  }), []);
+
   // Set up incident reporting and report normal human user access to Telegram
   useEffect(() => {
     setupIncidentReporting();
@@ -214,7 +228,11 @@ function App() {
     return true;
   };
 
-  const [fontSize, setFontSize] = useState(getStoredFontSize);
+  const [fontSize, setFontSize] = useState(() =>
+    getStoredFontSize(
+      getPresetFontSize(getWindowScreenPreset(), { isNative: Capacitor.isNativePlatform() }),
+    ),
+  );
   useEffect(() => {
     applyFontSize(fontSize);
   }, [fontSize]);
@@ -483,7 +501,7 @@ function App() {
 
   // Live tracking: once located, follow the viewer while the app is visible. The tracker (liveTracking.js) owns
   // cadence, gating and pausing; this wires its three outputs. Per fix: the dot only. Past ANCHOR_RECOMPUTE_M:
-  // the nearest station, the 5-minute-walk nodes and the "Where you're at" hub (all driven by `userLocation`,
+  // the nearest station, the walk-radius nodes and the "Where you're at" hub (all driven by `userLocation`,
   // whose `fetchedAt` is kept so the camera is not re-framed). No EMT request is made from here (ADR-0011).
   const walkTargetRef = useRef(null);
   walkTargetRef.current = walkTarget;
@@ -787,7 +805,7 @@ function App() {
               <div
                 className="dual-lens-mode-control"
                 role="tablist"
-                aria-label="Transit Mode Selector"
+                aria-label={t('app.transitModeAria')}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -835,7 +853,7 @@ function App() {
                   >
                     m
                   </span>
-                  <span>Metro</span>
+                  <span>{t('common.metro')}</span>
                 </button>
                 <button
                   type="button"
@@ -870,7 +888,7 @@ function App() {
                   >
                     EMT
                   </span>
-                  <span>Bus</span>
+                  <span>{t('common.bus')}</span>
                 </button>
                 <button
                   type="button"
@@ -892,7 +910,7 @@ function App() {
                   }}
                 >
                   <span>✨</span>
-                  <span>All</span>
+                  <span>{t('common.all')}</span>
                 </button>
               </div>
             )}
@@ -909,8 +927,8 @@ function App() {
               type="button"
               onClick={() => setIsSearchOpen(false)}
               className="search-close-btn"
-              title={t('searchBar.closeTitle') || 'Close search'}
-              aria-label={t('searchBar.closeTitle') || 'Close search'}
+              title={t('searchBar.closeTitle')}
+              aria-label={t('searchBar.closeTitle')}
             >
               <X size={20} />
             </button>
@@ -947,9 +965,9 @@ function App() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                EMT Trunks
+                {t('app.emtTrunks')}
               </span>
-              {EMT_LINES.map((line) => {
+              {getRealBusLines().slice(0, 12).map((line) => {
                 const isSelected = activeBusLine?.id === line.id;
                 return (
                   <button
@@ -1000,9 +1018,9 @@ function App() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Bus Network Trunks
+                {t('app.busNetworkTrunks')}
               </span>
-              {EMT_LINES.slice(0, 5).map((line) => {
+              {getRealBusLines().slice(0, 5).map((line) => {
                 const isSelected = activeBusLine?.id === line.id;
                 return (
                   <button
@@ -1063,6 +1081,18 @@ function App() {
           title={t('app.dismissTitle')}
         >
           {locateNotice.text}
+        </button>
+      )}
+
+      {trainRefused && !refusalDismissed && (
+        <button
+          className="locate-notice refusal-notice glass-panel"
+          role="status"
+          onClick={() => setRefusalDismissed(true)}
+          title={t('app.trainApiRefusedLong')}
+          aria-label={t('app.trainApiRefusedLong')}
+        >
+          {t('app.trainApiRefused')}
         </button>
       )}
 
@@ -1134,7 +1164,6 @@ function App() {
       {activeBusLine && (
         <BusLineInspector
           line={activeBusLine}
-          liveBuses={LIVE_BUS_TELEMETRY}
           onClose={() => setActiveBusLine(null)}
           onSelectStop={handleSelectBusStop}
         />
@@ -1154,7 +1183,7 @@ function App() {
             }
           }}
           onSelectLine={(lineId) => {
-            const found = EMT_LINES.find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
+            const found = getRealBusLines().find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
             if (found) handleSelectBusLine(found);
           }}
         />

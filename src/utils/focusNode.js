@@ -5,6 +5,8 @@
 // data. Built as a string because it lives inside a MapLibre Marker, outside
 // React's tree.
 import { lineColor } from './lineColor';
+import { capStopLines } from './emtStopLines';
+import { translate, FALLBACK_LANGUAGE } from '../i18n/translate';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
@@ -51,6 +53,45 @@ export const shortenStopName = (name, maxChars = 6) => {
 };
 
 /**
+ * Chips for a chosen stop's lines: sorted, at most 6, the last one a +N chip when lines were cut
+ * (same rule as the chips on EMT stop markers, see emtStopLines).
+ * @param {(string|number|{ line?: string, id?: string })[]} [lines]
+ * @returns {{ label: string, line: string|null, isMore: boolean }[]}
+ */
+export const highlightChips = (lines) => {
+  const ids = (lines || []).map((l) => (typeof l === 'object' && l !== null ? (l.line || l.id || '') : l));
+  const { shown, extra } = capStopLines(ids);
+  const chips = shown.map((label) => ({ label, line: label, isMore: false }));
+  if (extra > 0) chips.push({ label: `+${extra}`, line: null, isMore: true });
+  return chips;
+};
+
+/**
+ * The one grid rule for the chips: 1 chip = 1 column, 2 or more = 2 columns, and an odd last
+ * chip is centred across both columns, so no grid cell is ever left empty.
+ * @param {number} count
+ * @returns {{ columns: 1|2, rows: number, lastOddIndex: number }} lastOddIndex is -1 when every row is full
+ */
+export const chipGridLayout = (count) => {
+  const columns = count >= 2 ? 2 : 1;
+  return {
+    columns,
+    rows: Math.ceil(count / columns),
+    lastOddIndex: columns === 2 && count % 2 === 1 ? count - 1 : -1,
+  };
+};
+
+// Chip grid markup shared by the station and bus stop highlight (sizes live in CSS: .focus-chip-grid / .focus-chip).
+const chipGridMarkup = (chips, chipStyle) => {
+  const { columns, lastOddIndex } = chipGridLayout(chips.length);
+  const cells = chips.map((chip, i) => {
+    const cls = `focus-chip${i === lastOddIndex ? ' focus-chip-last-odd' : ''}`;
+    return `<span class="${cls}" style="${chipStyle(chip)}">${escapeHtml(chip.label)}</span>`;
+  }).join('');
+  return `<div class="focus-chip-grid" style="--focus-cols:${columns};">${cells}</div>`;
+};
+
+/**
  * Renders the compact HTML marker for a selected Metro Station.
  *
  * @param {{ name: string, lines?: (string|number)[] }} properties
@@ -66,9 +107,9 @@ export const renderStationHighlight = (properties, theme, isSelected = false) =>
   const rawName = properties?.name || '';
   const displayName = shortenStopName(rawName, 6);
 
-  const lineBadges = lines.slice(0, 4).map((l) => (
-    `<span style="font:900 8.5px/1 system-ui;padding:1.5px 3.5px;border-radius:3px;background:${lineColor(l)};color:#000;">${escapeHtml(l)}</span>`
-  )).join('');
+  const lineBadges = chipGridMarkup(highlightChips(lines), (chip) => (
+    `background:${chip.isMore ? '#6b7280' : lineColor(chip.line)};color:${chip.isMore ? '#fff' : '#000'};`
+  ));
 
   return `
     <div class="station-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
@@ -77,69 +118,39 @@ export const renderStationHighlight = (properties, theme, isSelected = false) =>
         <!-- Row 1: Shortened Station Name -->
         <span style="font:800 11px/1.1 system-ui;color:${text};letter-spacing:-0.01em;">${escapeHtml(displayName)}</span>
         <!-- Row 2: Metro Line Badges -->
-        ${lineBadges ? `<div style="display:flex;gap:2px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:75px;">${lineBadges}</div>` : ''}
+        ${lines.length ? lineBadges : ''}
       </div>
-
-      <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 
 /**
  * Renders the compact HTML marker for a selected or surrounding EMT Bus Stop.
- * Displays available bus line badges in consistent EMT red.
- * When isSelected is true (user clicked this bus stop), the bubble and line numbers expand bigger.
+ * Displays available bus line chips in consistent EMT red, in the one grid layout (chipGridLayout).
+ * isSelected only adds the .is-selected class: the box looks the same at every zoom.
  *
  * @param {{ stopCode?: string|number, stopName?: string, name?: string, lines?: (string|number)[] }} stop
  * @param {'light'|'dark'} theme
  * @param {boolean} [isSelected=false]
  * @returns {string} HTML string
  */
-export const renderBusStopHighlight = (stop, theme, isSelected = false) => {
+export const renderBusStopHighlight = (stop, theme, isSelected = false, lang = FALLBACK_LANGUAGE) => {
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
-  const border = isSelected
-    ? (theme === 'light' ? '#D62828' : 'rgba(255,255,255,0.7)')
-    : (theme === 'light' ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.16)');
-  const lines = stop?.lines || [];
-  const displayLines = lines.slice(0, 6);
-  const isMultiColumn = displayLines.length > 2;
-
-  const fontStyle = isSelected ? 'font:900 12px/1.1 system-ui;' : 'font:900 8px/1 system-ui;';
-  const badgePadding = isSelected ? 'padding:2.5px 5.5px;' : 'padding:1.5px 3.5px;';
-  const badgeRadius = isSelected ? 'border-radius:3.5px;' : 'border-radius:2.5px;';
-  const badgeGap = isSelected ? '3.5px' : '2.5px';
-  const bubblePadding = isSelected ? 'padding:5px 8px;' : 'padding:3px 5px;';
-  const bubbleRadius = isSelected ? 'border-radius:8px;' : 'border-radius:6px;';
-  const borderWidth = isSelected ? '2px' : '1.5px';
-  const shadow = isSelected ? 'box-shadow:0 4px 16px rgba(0,0,0,.5);' : 'box-shadow:0 3px 12px rgba(0,0,0,.4);';
+  // One look for the chosen stop's box at every zoom and line count: white outline, fixed chips.
+  const border = theme === 'light' ? '#D62828' : 'rgba(255,255,255,0.7)';
+  const chips = highlightChips(stop?.lines);
 
   // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
-  const lineBadges = displayLines.map((l) => {
-    const lineId = typeof l === 'object' && l !== null ? (l.line || l.id || '') : l;
-    return `<span style="${fontStyle}${badgePadding}${badgeRadius}background:#D62828;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;text-align:center;">${escapeHtml(lineId)}</span>`;
-  }).join('');
-
-  const containerStyle = isMultiColumn
-    ? `display:grid;grid-template-columns:repeat(2, auto);gap:${badgeGap};align-items:center;justify-content:center;`
-    : `display:flex;gap:${badgeGap};align-items:center;justify-content:center;`;
-
-  const fallbackFont = isSelected ? 'font:800 11.5px/1.1 system-ui;' : 'font:800 8.5px/1 system-ui;';
-  const content = lineBadges
-    ? `<div style="${containerStyle}">${lineBadges}</div>`
-    : `<span style="${fallbackFont}color:${text};">Bus</span>`;
-
-  const caretBorder = isSelected ? '5px' : '4px';
+  const content = chips.length
+    ? chipGridMarkup(chips, (chip) => `background:${chip.isMore ? '#8f1d1d' : '#D62828'};color:#ffffff;`)
+    : `<span style="font:800 11.5px/1.1 system-ui;color:${text};">${translate(lang, 'common.bus')}</span>`;
 
   return `
     <div class="bus-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
-      <!-- Compact bubble: line badges only (transport logo & stop ID omitted to save space) -->
-      <div style="display:flex;align-items:center;justify-content:center;${bubblePadding}${bubbleRadius}background:${panel};border:${borderWidth} solid ${border};${shadow}white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+      <!-- Compact bubble: line chips only (transport logo & stop ID omitted to save space) -->
+      <div style="display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:${panel};border:2px solid ${border};box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         ${content}
       </div>
-
-      <!-- Pointing Caret -->
-      <div style="width:0;height:0;border-left:${caretBorder} solid transparent;border-right:${caretBorder} solid transparent;border-top:${caretBorder} solid ${panel};margin-top:-1px;"></div>
     </div>`;
 };
 

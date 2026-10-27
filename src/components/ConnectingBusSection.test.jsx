@@ -59,7 +59,7 @@ describe('ConnectingBusSection component', () => {
 
     expect(html).toContain('connecting-bus-feeder-section');
     expect(html).toContain('EMT');
-    expect(html).toContain('Autobús');
+    expect(html).toContain('>Bus<');
     expect(html).toContain('2 stops');
 
     expect(html).toContain('P-2261');
@@ -131,5 +131,45 @@ describe('ConnectingBusSection component', () => {
       <ConnectingBusSection feeders={[sampleFeeders[1]]} theme="dark" />
     );
     expect(fullHtml).toContain('Nothing further due yet.');
+  });
+});
+
+describe('ConnectingBusSection countdown formatting and states (#90)', () => {
+  const feeder = (arrivals) => [{ stopCode: '2261', stopName: 'Xàtiva', walkMin: 2, lines: ['6'], arrivals }];
+  const arr = (over) => ({ line: '6', destination: 'Torrefiel', dueSeconds: 300, isLive: true, ...over });
+
+  it('formats 2 and 15 minute departures as whole minutes with a unit', () => {
+    const html = renderToStaticMarkup(
+      <ConnectingBusSection feeders={feeder([arr({ dueSeconds: 120 }), arr({ dueSeconds: 900 })])} theme="dark" />
+    );
+    expect(html).toContain('>2<');
+    expect(html).toContain('>15<');
+    expect(html).toContain('>min<');
+  });
+
+  it('formats sub-minute departures in seconds', () => {
+    const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({ dueSeconds: 50 })])} theme="dark" />);
+    expect(html).toContain('>50<');
+    expect(html).toContain('>s<');
+  });
+
+  it('shows no unit for a due (30 s) departure', () => {
+    const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({ dueSeconds: 30 })])} theme="dark" />);
+    expect(html).not.toContain('>min<');
+    expect(html).not.toContain('>s<');
+  });
+
+  it('shows the live indicator only for live rows and hides it in compact mode', () => {
+    const live = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({})])} theme="dark" />);
+    expect(live).toContain('Live GPS AVL Telemetry');
+    const sched = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({ isLive: false })])} theme="dark" />);
+    expect(sched).not.toContain('Live GPS AVL Telemetry');
+    const compact = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({})])} compact theme="dark" />);
+    expect(compact).not.toContain('Live GPS AVL Telemetry');
+  });
+
+  it('shows the no-arrivals state for an empty arrival list', () => {
+    const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([])} theme="dark" />);
+    expect(html).toContain('data-testid="feeder-no-arrivals"');
   });
 });

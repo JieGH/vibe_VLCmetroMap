@@ -75,7 +75,8 @@ describe('Sidebar component', () => {
       <Sidebar isOpen onToggleSidebar={() => {}} fontSize={fontSize} onSelectFontSize={() => {}} />
     );
     expect(at('small')).toMatch(/disabled=""[^>]*aria-label="Smaller text"/);
-    expect(at('xlarge')).toMatch(/disabled=""[^>]*aria-label="Larger text"/);
+    expect(at('xxlarge')).toMatch(/disabled=""[^>]*aria-label="Larger text"/);
+    expect(at('xlarge')).not.toContain('disabled=""');
     expect(at('default')).not.toContain('disabled=""');
   });
 

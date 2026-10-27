@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../i18n';
 
 // The launcher icon (same mark as the Android apps) on its dark tile, for the
 // sidebar and About headers.
@@ -26,7 +27,9 @@ const AppBadge = ({ size = 40, bare = false, className = '', style = {} }) => (
   </svg>
 );
 
-export const VersionPill = ({ style, onClick, title, ...props }) => (
+export const VersionPill = ({ style, onClick, title, ...props }) => {
+  const { t } = useTranslation();
+  return (
   <span
     className="version-pill"
     onClick={onClick}
@@ -48,11 +51,12 @@ export const VersionPill = ({ style, onClick, title, ...props }) => (
   >
     v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'build'}
     {typeof __GIT_SHA__ !== 'undefined' && __GIT_SHA__ && (
-      <span style={{ opacity: 0.6, fontWeight: 600, marginLeft: '6px' }} title="Git commit">
+      <span style={{ opacity: 0.6, fontWeight: 600, marginLeft: '6px' }} title={t('common.gitCommit')}>
         {__GIT_SHA__}
       </span>
     )}
   </span>
-);
+  );
+};
 
 export default AppBadge;
