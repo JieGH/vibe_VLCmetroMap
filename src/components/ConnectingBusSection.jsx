@@ -1,13 +1,13 @@
 // ConnectingBusSection Component for Variant A (Multimodal Hub Feeder)
 // Shows street bus stops within 200m walking shed of the focused metro station.
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
 import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
+import { FEEDER_FETCH_BATCH, visibleFeederCodes, fetchFeederArrivals } from '../services/feederArrivalFetch';
 import {
-  fetchStopArrivals,
   getEmtCachedArrivals,
   normalizeStopCode,
 } from '../services/emtArrivalService';
@@ -29,6 +29,8 @@ export const ConnectingBusSection = ({
   theme = 'dark',
   showDistance = true,
   compact = false,
+  // False while the bus list is out of view (e.g. the metro-only tab): nothing fetches.
+  active = true,
   onSelectFeederStop
 }) => {
   const { t } = useTranslation();
@@ -50,34 +52,59 @@ export const ConnectingBusSection = ({
     setLiveArrivalsMap(buildCachedArrivalsMap(stopCodes));
   }
 
+  // #109: only the nearest batch of stops fetches; a sentinel after the last card
+  // widens the batch as the user scrolls, so a dense area never polls every stop.
+  const [fetchLimit, setFetchLimit] = useState(FEEDER_FETCH_BATCH);
+  const [pageHidden, setPageHidden] = useState(
+    () => typeof document !== 'undefined' && document.hidden === true
+  );
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onVisibility = () => setPageHidden(document.hidden === true);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  // A different hub starts from the nearest batch again; an anchor refresh keeps its reach.
+  const [prevFirstCode, setPrevFirstCode] = useState(stopCodes[0]);
+  if (prevFirstCode !== stopCodes[0] && !stopCodes.slice(0, fetchLimit).includes(prevFirstCode)) {
+    setPrevFirstCode(stopCodes[0]);
+    setFetchLimit(FEEDER_FETCH_BATCH);
+  }
+
+  const fetchCodes = visibleFeederCodes(stopCodes, { limit: fetchLimit, active, pageHidden });
+  // Stable key: an unchanged nearest set causes no effect re-run.
+  const fetchCodesKey = fetchCodes.join(',');
+  const hasMore = stopCodes.length > fetchLimit;
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!active || !hasMore || !node || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setFetchLimit((n) => n + FEEDER_FETCH_BATCH);
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [active, hasMore, fetchLimit]);
+
   // Non-blocking strictly on-demand arrival fetch adhering to "Train-First, Then Bus"
   useEffect(() => {
-    if (!stopCodesKey) return undefined;
-    const codes = stopCodesKey.split(',');
+    if (!fetchCodesKey) return undefined;
     let isMounted = true;
 
-    Promise.allSettled(
-      codes.map(async (code) => {
-        const arrivals = await fetchStopArrivals(code);
-        return { code, arrivals };
-      })
-    ).then((results) => {
+    fetchFeederArrivals(fetchCodesKey.split(',')).then((fetched) => {
       if (!isMounted) return;
-      setLiveArrivalsMap((prev) => {
-        const next = { ...prev };
-        for (const res of results) {
-          if (res.status === 'fulfilled' && res.value) {
-            next[res.value.code] = res.value.arrivals;
-          }
-        }
-        return next;
-      });
+      setLiveArrivalsMap((prev) => ({ ...prev, ...fetched }));
     });
 
     return () => {
       isMounted = false;
     };
-  }, [stopCodesKey]);
+  }, [fetchCodesKey]);
 
   if (!feeders || feeders.length === 0) {
     return (
@@ -339,6 +366,7 @@ export const ConnectingBusSection = ({
           </div>
         );
       })}
+      {hasMore && <div ref={sentinelRef} data-testid="feeder-more-sentinel" style={{ height: 1 }} />}
     </div>
   );
 };

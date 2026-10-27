@@ -704,6 +704,7 @@ const StationPanel = ({
                 theme={theme}
                 showDistance={activeTab !== 'split'}
                 compact={activeTab === 'split'}
+                active={activeTab !== 'metro'}
                 onSelectFeederStop={onSelectFeederStop}
               />
             </div>

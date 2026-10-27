@@ -51,3 +51,7 @@ Concurrently, deep research on EMT València's data feeds confirmed:
 - The user's fine-tuned Variant A UX remains protected from unintended AI redesigns.
 - Device battery, mobile data, and municipal server load are protected by the on-demand policy.
 - Future LLM agents have explicit instructions on the repository split, the API architecture, and the user's UX expectations.
+
+## Follow-up (#109): visible stops only
+
+A locate or a 45 m tracking anchor used to fetch every feeder stop in range (about 34 `getSAE` requests in the centre). `ConnectingBusSection` now fetches only the nearest `FEEDER_FETCH_BATCH` (8) stops (`src/services/feederArrivalFetch.js`) and widens the batch by 8 when a sentinel after the last card scrolls into view. Nothing fetches while the bus list is not shown (metro-only tab) or the page is hidden. Stops still fresh in the 20 s cache cost no request, so an anchor refresh with an overlapping set fetches only new stops. Budget: at most 8 EMT requests per locate or anchor in a dense area, typically fewer.
