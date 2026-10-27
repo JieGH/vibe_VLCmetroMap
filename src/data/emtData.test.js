@@ -6,6 +6,7 @@ import {
   getAllBusStops,
   LIVE_BUS_TELEMETRY,
 } from './emtData';
+import { WALK_RADIUS_METRES, WALK_RADIUS_MIN } from '../utils/walkRadius';
 
 describe('EMT Prototype Data', () => {
   it('defines primary EMT lines including C1, C2, C3, 19, 95', () => {
@@ -42,6 +43,15 @@ describe('EMT Prototype Data', () => {
     const generic = getStationBusFeeders('Bétera', [-0.457, 39.590]);
     expect(generic.length).toBeGreaterThanOrEqual(1);
     expect(generic[0].walkMetres).toBeLessThanOrEqual(200);
+  });
+
+  it('only offers real EMT stops within the 3-minute walk radius of a station', () => {
+    const feeders = getStationBusFeeders('Sin transbordo', [-0.3774, 39.4699]);
+    expect(feeders.length).toBeGreaterThan(0);
+    feeders.forEach((f) => {
+      expect(f.walkMetres).toBeLessThanOrEqual(WALK_RADIUS_METRES);
+      expect(f.walkMin).toBeLessThanOrEqual(WALK_RADIUS_MIN);
+    });
   });
 
   it('contains live simulated telemetry for real-time fleet', () => {

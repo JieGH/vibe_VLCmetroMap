@@ -29,6 +29,7 @@ import trainPositionEngine from '../services/trainPositionEngine';
 import { hasMapSelection, fadesAllVehicles } from '../utils/selectionFocus';
 import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNode';
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
+import { pickWalkSet } from '../utils/walkRadius';
 import returnTrackData from '../data/return_tracks.json';
 import { emtStage } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
@@ -645,7 +646,8 @@ const MapView = ({
   const trainCountRef   = useRef(null);
   const focusMarkerRef  = useRef(null); // the expanded node for the Station in focus
   const busFocusMarkerRef = useRef(null); // the expanded node for the Bus Stop in focus
-  const spawnedTransitMarkersRef = useRef([]); // transit nodes spawned for 5-min walk radius on pin selection
+  const spawnedKeysRef = useRef(new Set()); // keys shown by the last spawn, for the radius hysteresis
+  const spawnedTransitMarkersRef = useRef([]); // transit nodes spawned for the walk radius on pin selection
   const selectedBusStopRef = useRef(selectedBusStop);
   useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
   const onSelectBusStopRef = useRef(onSelectBusStop);
@@ -1242,11 +1244,11 @@ const MapView = ({
           return;
         }
 
-        // Multimodal 5-Minute Walk Radius click on the map:
+        // Multimodal Walk Radius click on the map:
         // When zoomed in (zoom >= 12.5), clicking any point explores all transit
-        // (Metro stations and EMT bus stops) within a 5-minute walk (~420m).
+        // (Metro stations and EMT bus stops) within the walk radius (3 minutes, see walkRadius.js).
         if (currentZoom >= 12.5) {
-          const nearestWithin5Min = drawnStationsRef.current && drawnStationsRef.current.length > 0
+          const nearestToPing = drawnStationsRef.current && drawnStationsRef.current.length > 0
             ? nearestFeature(drawnStationsRef.current, [lng, lat])
             : null;
           const targetStation = {
@@ -1265,7 +1267,7 @@ const MapView = ({
               accuracy: 15,
               isMapClick: true,
               status: 'located',
-              nearestStation: nearestWithin5Min?.feature || null,
+              nearestStation: nearestToPing?.feature || null,
               fetchedAt: Date.now(),
             }
           });
@@ -1724,7 +1726,7 @@ const MapView = ({
     };
   }, [userLocation]);
 
-  // ── Spawn 5-minute walk surrounding transit popups when pin is selected ───────
+  // ── Spawn walk-radius surrounding transit popups when pin is selected ───────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return undefined;
@@ -1735,19 +1737,25 @@ const MapView = ({
       userLocation?.isMapClick ||
       (userLocation?.status === 'located' && userLocation?.coordinates && (selectedStation?.isPin || !selectedStation))
     );
-    if (!isPingOrGps || !userLocation?.coordinates) return undefined;
+    if (!isPingOrGps || !userLocation?.coordinates) {
+      spawnedKeysRef.current = new Set();
+      return undefined;
+    }
 
     const pinCoords = userLocation.coordinates;
-    const MAX_WALK_METRES = 375; // 5-minute walk radius (1.25 m/s * 300s = 375m)
     const currentTheme = themeRef.current;
+    const keep = spawnedKeysRef.current;
+    const shown = new Set();
 
-    // 1. Surrounding Metro Stations
-    const nearbyStations = (drawnStationsRef.current || []).filter((st) => {
-      const coords = snappedCoordinates(st);
-      return getDistance(pinCoords, coords) <= MAX_WALK_METRES;
-    });
+    // 1. Surrounding Metro Stations within the walk radius (nearest one if none)
+    const nearbyStations = pickWalkSet(drawnStationsRef.current, pinCoords, {
+      getCoords: snappedCoordinates,
+      getKey: (st) => `m:${st.properties.name}`,
+      keep,
+    }).items.map(({ item }) => item);
 
     nearbyStations.forEach((st) => {
+      shown.add(`m:${st.properties.name}`);
       const coords = snappedCoordinates(st);
       const isSelected = selectedStation?.properties?.name === st.properties.name;
       if (isSelected && focusMarkerRef.current) return;
@@ -1769,12 +1777,15 @@ const MapView = ({
 
     // 2. Surrounding EMT Bus Stops
     const allBusStops = getAllBusStops();
-    const nearbyBusStops = (allBusStops || []).filter((stop) => {
-      if (!stop.coordinates || !Array.isArray(stop.coordinates)) return false;
-      return getDistance(pinCoords, stop.coordinates) <= MAX_WALK_METRES;
-    });
+    // Distance is to the stop's real coordinate; the marker is drawn at its display offset.
+    const nearbyBusStops = pickWalkSet(allBusStops, pinCoords, {
+      getCoords: (stop) => stop.coordinates,
+      getKey: (stop) => `b:${stop.stopCode}`,
+      keep,
+    }).items.map(({ item }) => item);
 
     nearbyBusStops.forEach((stop) => {
+      shown.add(`b:${stop.stopCode}`);
       const isSelected = String(selectedBusStopRef.current?.stopCode) === String(stop.stopCode);
       if (isSelected && busFocusMarkerRef.current) return;
 
@@ -1794,6 +1805,8 @@ const MapView = ({
 
       spawnedTransitMarkersRef.current.push(marker);
     });
+
+    spawnedKeysRef.current = shown;
 
     return () => {
       clearSpawnedTransitMarkers();
@@ -1903,7 +1916,7 @@ const MapView = ({
           });
         }
 
-        // 2. When a station/ping is focused, draw the 5-min walk radius circle + dashed feeder walk links
+        // 2. When a station/ping is focused, draw the walk radius circle + dashed feeder walk links
         if (selectedStation) {
           const coords = snappedCoordinates(selectedStation);
           const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;

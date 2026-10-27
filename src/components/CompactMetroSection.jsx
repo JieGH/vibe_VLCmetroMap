@@ -520,11 +520,11 @@ export const CompactMetroSection = ({
         );
       })}
 
-      {/* Nearby Metro Stations within 5-minute walk radius */}
+      {/* Nearby Metro Stations within the walk radius */}
       {nearbyMetro && nearbyMetro.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
           <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Also within 5 min walk:
+            Also within 3 min walk:
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {nearbyMetro.map((m) => {

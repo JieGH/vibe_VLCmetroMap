@@ -2,6 +2,8 @@
 // Grounded in EMT Open Data specifications and TCRP Report 45 design guidelines.
 
 import { getDistance } from '../utils/geoUtils';
+import { WALK_RADIUS_METRES } from '../utils/walkRadius';
+import { walkingMinutes } from '../utils/walking';
 import REAL_EMT_STOPS from './emt_stops.json';
 import { buildDisplayCoordinates, displayCoordinatesFor } from '../utils/stopOffsets';
 
@@ -404,7 +406,7 @@ export const getStationBusFeeders = (stationName, stationCoords) => {
   if (stationCoords && Array.isArray(stationCoords) && Array.isArray(REAL_EMT_STOPS) && REAL_EMT_STOPS.length > 0) {
     const nearbyReal = REAL_EMT_STOPS
       .map((stop) => ({ stop, dist: getDistance(stationCoords, stop.coordinates) }))
-      .filter((item) => item.dist <= 450)
+      .filter((item) => item.dist <= WALK_RADIUS_METRES)
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 4);
 
@@ -413,7 +415,7 @@ export const getStationBusFeeders = (stationName, stationCoords) => {
         stopCode: String(stop.stopCode),
         stopName: stop.stopName,
         walkMetres: Math.round(dist),
-        walkMin: Math.max(1, Math.round(dist / 80)),
+        walkMin: walkingMinutes(dist),
         bearingDegrees: 90,
         coordinates: stop.coordinates,
         lines: (stop.lines && stop.lines.length > 0 ? stop.lines : ['19', 'C1']).map((l) => ({

@@ -1,5 +1,7 @@
 // Helper functions for geospatial calculations along polylines
 
+import { walkingMinutes } from './walking';
+
 // Haversine distance in meters between two [lon, lat] points
 export const getDistance = (p1, p2) => {
   const R = 6371000; // Earth radius in meters
@@ -216,7 +218,7 @@ export const nearbyFeatures = (features, coordinates, maxDistanceM = 800) => {
       matches.push({
         feature,
         distance,
-        walkMin: Math.max(1, Math.round(distance / 80)),
+        walkMin: walkingMinutes(distance),
       });
     }
   }

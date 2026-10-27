@@ -19,6 +19,7 @@ import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 import { getDistance, nearbyFeatures } from '../utils/geoUtils';
 import { walkingMinutes } from '../utils/walking';
+import { pickWalkSet, WALK_RADIUS_METRES, WALK_RADIUS_MIN } from '../utils/walkRadius';
 import gtfsData from '../data/gtfs_expanded.json';
 
 const allMetroStations = gtfsData.features.filter(f => f.geometry.type === 'Point');
@@ -113,11 +114,11 @@ const StationPanel = ({
   const metroWalkMeters = (userCoords && stationCoords) ? Math.round(getDistance(userCoords, stationCoords)) : undefined;
   const metroWalkMin = metroWalkMeters !== undefined ? walkingMinutes(metroWalkMeters) : undefined;
 
-  // Other Metro stations within 5-minute walk radius (~500m) of this station/anchor:
+  // Other Metro stations within the walk radius of this station/anchor:
   const nearbyMetro = useMemo(() => {
     if (!anchorCoords) return [];
     const stationName = station?.properties?.name;
-    return nearbyFeatures(allMetroStations, anchorCoords, 500)
+    return nearbyFeatures(allMetroStations, anchorCoords, WALK_RADIUS_METRES)
       .filter((m) => m.feature.properties.name !== stationName)
       .slice(0, 8);
   }, [anchorCoords, station?.properties?.name]);
@@ -188,11 +189,13 @@ const StationPanel = ({
   const rawFeeders = getStationBusFeeders(focus.name, stationCoords);
   const feeders = anchorCoords
     ? (() => {
-        const allStops = getAllBusStops() || [];
-        const nearbyReal = allStops
-          .map((stop) => {
-            const dist = Math.round(getDistance(anchorCoords, stop.coordinates));
-            const mins = walkingMinutes(dist);
+        // Only stops inside the walk radius (or the nearest one, if none) are built and fetched.
+        const nearbyReal = pickWalkSet(getAllBusStops(), anchorCoords, {
+          getCoords: (stop) => stop.coordinates,
+          getKey: (stop) => String(stop.stopCode || stop.code || ''),
+        }).items
+          .map(({ item: stop, distance, walkMin: mins }) => {
+            const dist = Math.round(distance);
             return {
               stopCode: String(stop.stopCode || stop.code || ''),
               stopName: stop.stopName || stop.name || 'Parada EMT',
@@ -208,9 +211,7 @@ const StationPanel = ({
                 vehicleId: `EMT-${stop.stopCode || '1000'}`,
               })),
             };
-          })
-          .filter((f) => f.walkMetres <= 500 || f.walkMin <= 6)
-          .sort((a, b) => a.walkMetres - b.walkMetres);
+          });
 
         if (nearbyReal.length > 0) return nearbyReal;
         return rawFeeders.map((f) => {
@@ -218,7 +219,7 @@ const StationPanel = ({
           const dist = Math.round(getDistance(anchorCoords, f.coordinates));
           const mins = walkingMinutes(dist);
           return { ...f, walkMetres: dist, walkMin: mins };
-        }).filter((f) => f.walkMin <= 6);
+        }).filter((f) => f.walkMin <= WALK_RADIUS_MIN);
       })()
     : rawFeeders;
 

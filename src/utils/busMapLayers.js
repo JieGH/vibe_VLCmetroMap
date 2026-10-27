@@ -3,6 +3,7 @@
 
 import { Marker } from 'maplibre-gl';
 import { createCircleGeoJSON } from './geoUtils';
+import { WALK_RADIUS_METRES } from './walkRadius';
 import { getStopDisplayCoordinates } from '../data/emtData';
 import { stopLinesMarkup } from './emtStopLines';
 
@@ -91,7 +92,7 @@ export const ensureBusLayers = (map, theme = 'dark') => {
     });
   }
 
-  // 3. Multimodal 10-Minute Walk Radius Circle (Variant A)
+  // 3. Multimodal Walk Radius Circle (Variant A)
   if (!map.getSource(WALK_RADIUS_SOURCE_ID)) {
     map.addSource(WALK_RADIUS_SOURCE_ID, {
       type: 'geojson',
@@ -152,7 +153,7 @@ export const setBusRoutesData = (map, lines = []) => {
 };
 
 /**
- * Draws the 10-minute walk radius circle (~800m) and dashed walking links to nearby bus stops.
+ * Draws the walk radius circle (WALK_RADIUS_METRES) and dashed walking links to nearby bus stops.
  */
 export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
   if (!map || !map.isStyleLoaded()) return;
@@ -165,9 +166,9 @@ export const setFeederWalkLinks = (map, stationCoords, feeders = []) => {
     return;
   }
 
-  // Draw 5-minute walk boundary circle (~400m)
+  // Draw the walk boundary circle
   if (radiusSource) {
-    radiusSource.setData(createCircleGeoJSON(stationCoords, 400));
+    radiusSource.setData(createCircleGeoJSON(stationCoords, WALK_RADIUS_METRES));
   }
 
   if (source) {
