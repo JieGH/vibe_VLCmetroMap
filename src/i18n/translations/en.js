@@ -53,6 +53,7 @@ export default {
       default: 'Default',
       large: 'Large',
       xlarge: 'X-Large',
+      xxlarge: 'XX-Large',
     },
     liveNetwork: 'Live Network',
     liveTrains: 'Live trains',

@@ -49,6 +49,7 @@ export default {
       default: 'Predeterminado',
       large: 'Grande',
       xlarge: 'Extra grande',
+      xxlarge: 'Extra extra grande',
     },
     liveNetwork: 'Red en directo',
     liveTrains: 'Trenes en directo',

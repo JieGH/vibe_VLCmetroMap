@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { describe, it, expect } from 'vitest';
 
 const css = readFileSync(resolve(__dirname, 'index.css'), 'utf-8');
+const androidCss = readFileSync(resolve(__dirname, 'android.css'), 'utf-8');
 
 describe('Top bar CSS layout stability', () => {
 
@@ -104,6 +105,16 @@ describe('Font size scaling and menu controls', () => {
     expect(css).toContain('--font-scale: 1.15;');
     expect(css).toContain("[data-font-size='xlarge']");
     expect(css).toContain('--font-scale: 1.3;');
+    expect(css).toContain("[data-font-size='xxlarge']");
+    expect(css).toContain('--font-scale: 1.5;');
+  });
+
+  it('android.css text follows --font-scale instead of pinning fixed px (#117)', () => {
+    const bare = androidCss.replace(/\/\*[\s\S]*?\*\//g, '');
+    const decls = bare.match(/(?:^|[;{\s])(?:font-size|line-height):[^;}]*/g) || [];
+    expect(decls.length).toBeGreaterThan(0);
+    const fixed = decls.filter((d) => /\d+px/.test(d) && !d.includes('var(--font-scale'));
+    expect(fixed).toEqual([]);
   });
 
   it('scales html font-size dynamically using --font-scale', () => {

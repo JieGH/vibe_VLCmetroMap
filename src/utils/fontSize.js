@@ -7,6 +7,7 @@ export const FONT_SIZE_CONFIG = {
   default: { id: 'default', label: 'Default', shortLabel: 'M', scale: 1.0 },
   large: { id: 'large', label: 'Large', shortLabel: 'L', scale: 1.15 },
   xlarge: { id: 'xlarge', label: 'X-Large', shortLabel: 'XL', scale: 1.3 },
+  xxlarge: { id: 'xxlarge', label: 'XX-Large', shortLabel: 'XXL', scale: 1.5 },
 };
 
 export const FONT_SIZES = Object.keys(FONT_SIZE_CONFIG);

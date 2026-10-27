@@ -49,6 +49,7 @@ export default {
       default: 'Predeterminat',
       large: 'Gran',
       xlarge: 'Extra gran',
+      xxlarge: 'Extra extra gran',
     },
     liveNetwork: 'Xarxa en directe',
     liveTrains: 'Trens en directe',
