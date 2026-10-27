@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { isAndroid } from './platform';
 import { isIosDevice } from './appDownload';
+import { isChunkLoadError, isOpaqueScriptError } from './chunkReload';
 
 const getAppMode = () => {
   try {
@@ -205,6 +206,8 @@ export async function reportStationAccess(stationName, extra = {}) {
  */
 export async function reportIncident(incidentData) {
   if (typeof window === 'undefined') return;
+  // A stale build asking for a chunk that a deploy removed: a reload fixes it, nothing to alert on.
+  if (isChunkLoadError(incidentData.error)) return;
 
   try {
     const errorKey = `xarxa_incident_${incidentData.error || ''}`.slice(0, 100);
@@ -245,6 +248,8 @@ export function setupIncidentReporting() {
     if (!event.error && !event.message) return;
     const msg = event.message || event.error?.message || 'Unknown error';
     if (msg.includes('ResizeObserver') || msg.includes('chrome-extension://')) return;
+    // The browser hides the detail of cross-origin script failures; there is nothing to act on.
+    if (isOpaqueScriptError(msg, event.filename)) return;
 
     reportIncident({
       error: msg,

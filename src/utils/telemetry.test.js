@@ -199,3 +199,16 @@ describe('telemetry utility', () => {
     );
   });
 });
+
+describe('reportIncident noise filter', () => {
+  it('does not send a stale-chunk load error', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { sessionStorage: { getItem: () => null, setItem: () => {} }, location: { href: 'https://xarxa.net/' } });
+    await reportIncident({
+      error: "'text/html' is not a valid JavaScript MIME type for module script 'https://xarxa.net/assets/MapView-C7SPjvDb.js'.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
