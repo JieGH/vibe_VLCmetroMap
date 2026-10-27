@@ -18,7 +18,7 @@
       </p>
     </td>
     <td valign="middle" align="center" width="45%">
-      <img src="docs/demo-phone.gif" width="300" alt="Phone screen recording of Xarxa: it opens beside Xàtiva station with the walking time and live departures, zooms out to the network, jumps to Àngel Guimerà, searches Dr. Lluch on the one-way east coast, then taps the GPS button to return to the user location">
+      <img src="docs/demo-phone.gif" width="300" alt="Phone screen recording of Xarxa at Grau - La Marina: a pin dropped beside the station shows the live metro departures and nearby EMT bus stops, then the Grau - La Marina station opens, back to the pin, a bus stop opens, and a tap on line 19 shows its route"">
     </td>
   </tr>
 </table>
