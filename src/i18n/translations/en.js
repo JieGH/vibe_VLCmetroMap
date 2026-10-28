@@ -271,6 +271,8 @@ export default {
     itemBigDesc: 'New XXL text size, and a wider, open sidebar on large screens.',
     itemNetTitle: 'Train Service Notice',
     itemNetDesc: 'If the train service blocks your network (a VPN, say), the app now tells you.',
+    itemVpnTitle: 'Outside Spain Notice',
+    itemVpnDesc: 'A small yellow note tells you when your connection is outside Spain, such as a VPN switched on while the app is open, because train and bus times may then be wrong.',
     itemBusTitle: 'Live Bus Arrivals',
     itemBusDesc: 'Real-time EMT València bus times at any stop, loaded when you tap it.',
     itemSplitTitle: 'Metro and Bus Together',

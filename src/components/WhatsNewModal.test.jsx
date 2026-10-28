@@ -23,6 +23,7 @@ describe('WhatsNewModal component', () => {
     expect(html).toContain('Closer Nearby Stops');
     expect(html).toContain('Bigger Text, Roomier Desktop');
     expect(html).toContain('Train Service Notice');
+    expect(html).toContain('Outside Spain Notice');
     expect(html).toContain('Live Bus Arrivals');
     expect(html).toContain('Metro and Bus Together');
     expect(html).toContain('Follows You as You Walk');

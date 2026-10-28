@@ -267,6 +267,8 @@ export default {
     itemBigDesc: 'Nova mida de text XXL i barra lateral oberta i més ampla en pantalles grans.',
     itemNetTitle: 'Avís del servei de trens',
     itemNetDesc: 'Si el servei de trens bloqueja la teua xarxa (per exemple una VPN), l\'app t\'ho indica.',
+    itemVpnTitle: 'Avís fora d\'Espanya',
+    itemVpnDesc: 'Una nota groga t\'avisa quan la teua connexió està fora d\'Espanya, per exemple si actives una VPN amb l\'app oberta, perquè els horaris de trens i autobusos poden fallar.',
     itemBusTitle: 'Arribades d\'autobús en directe',
     itemBusDesc: 'Temps reals de l\'EMT València a cada parada, en tocar-la.',
     itemSplitTitle: 'Metro i autobús junts',
