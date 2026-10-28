@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import { SPLIT_HEADER, SPLIT_TICK, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
+import { SPLIT_HEADER, SPLIT_TICK, badgeGridStyle, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 
@@ -73,17 +73,24 @@ describe('metro walk radius wording', () => {
 });
 
 describe('split-view station line badges', () => {
-  const multi = [{ name: 'Marítim', walkMin: 3, lines: ['5', '7', '6', '8'], arrivals: [{ line: '7', destination: 'T', seconds: 120 }] }];
+  const station = (lines) => [{ name: 'Marítim', walkMin: 3, lines, arrivals: [{ line: '7', destination: 'T', seconds: 120 }] }];
+  const render = (lines, compact = true) =>
+    renderToStaticMarkup(<CompactMetroSection nearbyMetro={station(lines)} compact={compact} isPinMode theme="dark" />);
 
-  it('stack in two rows in the compact split view, so the station name gets the width', () => {
-    const html = renderToStaticMarkup(<CompactMetroSection nearbyMetro={multi} compact isPinMode theme="dark" />);
-    expect(html).toContain('display:grid;grid-template-rows:repeat(2, 16px);grid-auto-flow:column');
+  it('badgeGridStyle: 1-2 lines in a row, 3-4 in a 2x2 grid, 5 or more in a 3x3 grid, never stacked outside the split view', () => {
+    expect(badgeGridStyle(true, 1).display).toBe('flex');
+    expect(badgeGridStyle(true, 2).display).toBe('flex');
+    expect(badgeGridStyle(true, 3)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
+    expect(badgeGridStyle(true, 4)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
+    expect(badgeGridStyle(true, 5)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(3, 16px)' });
+    expect(badgeGridStyle(true, 9)).toMatchObject({ gridTemplateColumns: 'repeat(3, 16px)' });
+    expect(badgeGridStyle(false, 6).display).toBe('flex');
   });
 
-  it('stay in one row outside the split view and for a single line', () => {
-    const wide = renderToStaticMarkup(<CompactMetroSection nearbyMetro={multi} isPinMode theme="dark" />);
-    expect(wide).not.toContain('grid-template-rows:repeat(2, 16px)');
-    const one = renderToStaticMarkup(<CompactMetroSection nearbyMetro={[{ ...multi[0], lines: ['5'] }]} compact isPinMode theme="dark" />);
-    expect(one).not.toContain('grid-template-rows:repeat(2, 16px)');
+  it('renders the grid in the compact split view and a row otherwise', () => {
+    expect(render(['5', '7', '6', '8'])).toContain('grid-template-columns:repeat(2, 16px)');
+    expect(render(['5', '7', '6', '8', '3'])).toContain('grid-template-columns:repeat(3, 16px)');
+    expect(render(['5', '7'])).not.toContain('grid-template-columns');
+    expect(render(['5', '7', '6', '8'], false)).not.toContain('grid-template-columns');
   });
 });

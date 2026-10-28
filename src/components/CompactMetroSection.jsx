@@ -6,9 +6,9 @@ import { lineColor } from '../utils/lineColor';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
 import { WALK_RADIUS_METRO_METRES, walkRadiusMinutes } from '../utils/walkRadius';
-import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
+import { SPLIT_HEADER, badgeGridStyle, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 
-export const CompactMetroSection = ({
+const CompactMetroSection = ({
   arrivals = [],
   stationName,
   theme = 'dark',
@@ -164,12 +164,8 @@ export const CompactMetroSection = ({
                   >
                     {stName}
                   </span>
-                  {/* Split view: the line badges stack in two rows so the station name gets the width. */}
-                  <div
-                    style={compact && stLines.length > 1
-                      ? { display: 'grid', gridTemplateRows: 'repeat(2, 16px)', gridAutoFlow: 'column', gap: 3, flexShrink: 0 }
-                      : { display: 'flex', gap: 3, flexShrink: 0 }}
-                  >
+                  {/* Split view: 1-2 lines stay in a row, 3-4 stack as a 2x2 grid, 5 or more as a 3x3 grid. */}
+                  <div style={badgeGridStyle(compact, stLines.length)}>
                     {stLines.map((l, lIdx) => {
                       const lineId = typeof l === 'object' && l !== null ? (l.line || l.id || '') : l;
                       return (

@@ -28,3 +28,10 @@ export const timeUnitStyle = ({ compact, unit, baseFontSize, gap = 2 }) =>
   compact && unit === 'min'
     ? { ...SPLIT_TICK }
     : { fontSize: baseFontSize, marginLeft: gap, color: 'var(--text-secondary)' };
+
+// How a station's line badges are laid out. Only the split view (compact) stacks them, to leave width for the name.
+export function badgeGridStyle(compact, count) {
+  if (!compact || count <= 2) return { display: 'flex', gap: 3, flexShrink: 0 };
+  const columns = count <= 4 ? 2 : 3;
+  return { display: 'grid', gridTemplateColumns: `repeat(${columns}, 16px)`, gap: 3, flexShrink: 0 };
+}
