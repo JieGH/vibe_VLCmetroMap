@@ -2069,3 +2069,24 @@ button:active {
 .bus-badge {
   font-variant-numeric: tabular-nums;
 }
+
+/* Centre pin: a new tap placement drops the pin onto the spot once the camera has settled (transform/opacity
+   only, one short run, no loop). `is-awaiting` hides it until then. */
+.map-pin-drop.is-awaiting {
+  opacity: 0;
+}
+.map-pin-drop.is-dropping {
+  animation: map-pin-drop 320ms both;
+}
+@keyframes map-pin-drop {
+  0% { transform: translateY(-48px); opacity: 0; animation-timing-function: ease-out; }
+  14% { opacity: 1; animation-timing-function: cubic-bezier(0.5, 0, 1, 0.7); }
+  72% { transform: translateY(0); animation-timing-function: ease-out; }
+  86% { transform: translateY(-3px); animation-timing-function: ease-in; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-pin-drop.is-dropping {
+    animation: none;
+  }
+}

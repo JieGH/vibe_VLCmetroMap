@@ -178,6 +178,16 @@ describe('App and MapView wiring (by source: no DOM test env)', () => {
   const mapView = readFileSync(new URL('../components/MapView.jsx', import.meta.url), 'utf8');
   const tracker = readFileSync(new URL('../services/liveTracking.js', import.meta.url), 'utf8');
 
+  it('drops the pin only for a new tap or locate press, after moveend, with a timeout fallback', () => {
+    expect(mapView).toMatch(/tapDropKey = [^;]*isMapClick && !userLocation\.centrePin/);
+    expect(mapView).toContain("map.once('moveend', play)");
+    expect(mapView).toContain('PIN_DROP_FALLBACK_MS');
+    expect(mapView).toContain("'is-awaiting'");
+    const css = readFileSync(new URL('../index.css', import.meta.url), 'utf8');
+    expect(css).toContain('@keyframes map-pin-drop');
+    expect(css).toMatch(/prefers-reduced-motion[\s\S]*map-pin-drop[\s\S]*animation: none/);
+  });
+
   it('passes the derived centre-pin state and the frozen GPS fix to MapView', () => {
     expect(app).toContain('centrePinActive={centrePinActive}');
     expect(app).toContain('gpsFix={gpsFix}');
@@ -199,7 +209,7 @@ describe('App and MapView wiring (by source: no DOM test env)', () => {
   });
   it('draws the one green pin for both the ping marker and the overlay (no emoji)', () => {
     expect(mapView).not.toContain('📍');
-    expect(mapView.match(/pinSvg\(\)/g)).toHaveLength(2);
+    expect(mapView.match(/pinMarkup\(\)/g)).toHaveLength(2);
   });
   it('refreshes the hub in place for a centre-pin move: no selection focus or framing ease (#136)', () => {
     expect(mapView).toContain('isCentrePinRefresh(userLocation) && Boolean(selectedStation.isPin)');

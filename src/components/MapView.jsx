@@ -25,7 +25,10 @@ import {
 } from '../utils/mapCamera';
 import { buildCentrePing, createCentrePinSync, createUserGestureGate, isCentrePinRefresh, movedEnough } from '../utils/centrePin';
 import { centreGesture, createThrottle } from '../utils/centrePinBuffer';
-import { pinSvg, pinWrapperStyle } from '../utils/pinIcon';
+import { pinMarkup, pinWrapperStyle } from '../utils/pinIcon';
+
+// Safety net if `moveend` never arrives before the pin's drop (ease is CAMERA_EASE_MS).
+const PIN_DROP_FALLBACK_MS = 900;
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -1699,7 +1702,7 @@ const MapView = ({
     if (isPing) {
       wrapper.className = 'user-ping-marker';
       wrapper.style.cssText = `position: relative; cursor: pointer; z-index: 35; ${pinWrapperStyle}`;
-      wrapper.innerHTML = pinSvg();
+      wrapper.innerHTML = pinMarkup();
       wrapper.onclick = (e) => {
         e.stopPropagation();
         focusTarget(map, userLocation.coordinates, panelAwarePadding(map, { hasPanel: true }), {
@@ -2046,6 +2049,7 @@ const MapView = ({
   // (debounced) republishes the centre as a Map Ping, so hub, nodes and walk radii follow it.
   // Nothing is drawn here: the ping marker is reused.
   const centreSyncRef = useRef(null);
+  const centrePinElRef = useRef(null);
   useEffect(() => {
     const map = mapRef.current;
     if (!centrePinActive || !map) return undefined;
@@ -2100,7 +2104,8 @@ const MapView = ({
     const el = document.createElement('div');
     el.className = 'user-ping-marker centre-pin-overlay';
     el.style.cssText = `position: absolute; left: 0; top: 0; pointer-events: none; z-index: 35; ${pinWrapperStyle}`;
-    el.innerHTML = pinSvg();
+    el.innerHTML = pinMarkup();
+    centrePinElRef.current = el;
     const place = () => {
       const { x, y } = visibleCentreScreenPoint(map);
       el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
@@ -2112,6 +2117,7 @@ const MapView = ({
     return () => {
       map.off('move', place);
       map.off('resize', place);
+      if (centrePinElRef.current === el) centrePinElRef.current = null;
       el.remove();
     };
   }, [centrePinActive]);
@@ -2120,17 +2126,44 @@ const MapView = ({
   // on the fix, so the green dot exists immediately without a pan. Declared after the framing effect, so
   // that ease has started (isMoving) by the time this runs.
   const pressFixKey = userLocation?.status === 'located' && !userLocation.isMapClick ? userLocation.fetchedAt : null;
+  // A new tap placement (not the centre pin's own drag republish, which carries `centrePin`).
+  const tapDropKey = userLocation?.status === 'located' && userLocation.isMapClick && !userLocation.centrePin ? userLocation.fetchedAt : null;
   useEffect(() => {
     const map = mapRef.current;
-    if (!centrePinActive || !map || pressFixKey == null) return undefined;
-    const drop = () => centreSyncRef.current?.schedule({ force: true });
-    if (map.isMoving()) {
-      map.once('moveend', drop);
-      return () => map.off('moveend', drop);
+    if (!centrePinActive || !map || (pressFixKey == null && tapDropKey == null)) return undefined;
+    const inner = centrePinElRef.current?.querySelector('.map-pin-drop');
+    let timer = null;
+    let played = false;
+    // The pin stays hidden while the camera eases to the spot, then drops onto it once (CSS animation only).
+    const play = () => {
+      if (played) return;
+      played = true;
+      clearTimeout(timer);
+      map.off('moveend', play);
+      if (inner) {
+        inner.classList.remove('is-awaiting', 'is-dropping');
+        void inner.offsetWidth;
+        inner.classList.add('is-dropping');
+      }
+      if (pressFixKey != null) centreSyncRef.current?.schedule({ force: true });
+    };
+    if (inner) {
+      inner.classList.remove('is-dropping');
+      inner.classList.add('is-awaiting');
     }
-    drop();
-    return undefined;
-  }, [centrePinActive, pressFixKey]);
+    if (map.isMoving()) {
+      map.once('moveend', play);
+      timer = setTimeout(play, PIN_DROP_FALLBACK_MS);
+    } else {
+      play();
+    }
+    return () => {
+      played = true;
+      clearTimeout(timer);
+      map.off('moveend', play);
+      inner?.classList.remove('is-awaiting');
+    };
+  }, [centrePinActive, pressFixKey, tapDropKey]);
 
   return (
     <div
