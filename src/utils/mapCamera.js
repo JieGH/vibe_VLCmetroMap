@@ -240,3 +240,21 @@ export const focusTarget = (map, center, padding, { minZoom, duration = CAMERA_E
   map.easeTo({ center, zoom: targetZoom, padding, duration, essential });
   return true;
 };
+
+/**
+ * The geographic point under the centre of the visible map: the area left free by the camera
+ * padding (above the sheet, below the search bar), not the raw container middle. Reads the
+ * padding the camera already carries, so it matches where focusTarget frames a stop.
+ *
+ * @param {object} map - MapLibre-like: getContainer, getPadding, unproject
+ * @returns {[number, number]} lng/lat
+ */
+export const visibleCentreLngLat = (map) => {
+  const container = map.getContainer();
+  const { x, y } = usableCentre(
+    { width: container.clientWidth, height: container.clientHeight },
+    map.getPadding(),
+  );
+  const { lng, lat } = map.unproject([x, y]);
+  return [lng, lat];
+};

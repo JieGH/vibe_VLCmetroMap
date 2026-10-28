@@ -21,6 +21,7 @@ import {
   samePadding,
   recentreOnResize,
 } from '../utils/mapCamera';
+import { buildCentrePing, createCentrePinSync } from '../utils/centrePin';
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -621,6 +622,7 @@ const MapView = ({
   onSelectBusStop = null,
   liveFixChannel = null,
   following = false,
+  centrePinActive = false,
 }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
@@ -2022,6 +2024,28 @@ const MapView = ({
     selectedStation?.properties?.name === 'Map Ping' ||
     selectedStation?.properties?.name === "Where you're at"
   );
+
+  // Centre pin (#134): while active, the pin is the middle of the visible map. Each gesture end
+  // (debounced) republishes the centre as a Map Ping, so hub, nodes and walk radii follow it.
+  // Inert until centrePinActive is switched on; nothing is drawn here, the ping marker is reused.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!centrePinActive || !map) return undefined;
+    const sync = createCentrePinSync({
+      map,
+      getLast: () => userLocationRef.current?.coordinates,
+      publish: (centre) => {
+        const nearest = drawnStationsRef.current?.length ? nearestFeature(drawnStationsRef.current, centre) : null;
+        const { userLocation: pingLocation, ...ping } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
+        selectStRef.current(ping, { userLocation: pingLocation });
+      },
+    });
+    map.on('moveend', sync.schedule);
+    return () => {
+      map.off('moveend', sync.schedule);
+      sync.cancel();
+    };
+  }, [centrePinActive]);
 
   return (
     <div
