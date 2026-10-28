@@ -226,3 +226,14 @@ describe('fitBoundsOptions (#95)', () => {
     expect(o.duration).toBe(400);
   });
 });
+
+describe('visibleCentreScreenPoint', () => {
+  it('is the middle of the area left free by the padding', async () => {
+    const { visibleCentreScreenPoint } = await import('./mapCamera');
+    const map = {
+      getContainer: () => ({ clientWidth: 390, clientHeight: 844 }),
+      getPadding: () => ({ top: 100, right: 0, bottom: 400, left: 0 }),
+    };
+    expect(visibleCentreScreenPoint(map)).toEqual({ x: 195, y: 272 });
+  });
+});

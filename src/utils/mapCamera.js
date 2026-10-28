@@ -258,3 +258,15 @@ export const visibleCentreLngLat = (map) => {
   const { lng, lat } = map.unproject([x, y]);
   return [lng, lat];
 };
+
+/**
+ * Screen point (container px) of the visible-map centre: where a screen-fixed centre pin is drawn.
+ * It is the same point visibleCentreLngLat unprojects, so the pin and the geographic centre agree.
+ *
+ * @param {object} map - MapLibre-like: getContainer, getPadding
+ * @returns {{ x: number, y: number }}
+ */
+export const visibleCentreScreenPoint = (map) => {
+  const container = map.getContainer();
+  return usableCentre({ width: container.clientWidth, height: container.clientHeight }, map.getPadding());
+};

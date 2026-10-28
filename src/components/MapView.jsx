@@ -21,6 +21,7 @@ import {
   samePadding,
   recentreOnResize,
   visibleCentreLngLat,
+  visibleCentreScreenPoint,
 } from '../utils/mapCamera';
 import { buildCentrePing, createCentrePinSync, createUserGestureGate, isCentrePinRefresh, movedEnough } from '../utils/centrePin';
 import { centreGesture, createThrottle } from '../utils/centrePinBuffer';
@@ -1690,6 +1691,8 @@ const MapView = ({
     if (!map || !userLocation || userLocation.status !== 'located') return undefined;
 
     const isPing = Boolean(userLocation.isMapClick);
+    // The centre pin is a screen-fixed overlay (below), not a map marker that would slide with the map.
+    if (isPing && centrePinActive) return undefined;
     const wrapper = isPing ? document.createElement('div') : createUserDot({ accuracyRing: true });
 
     if (isPing) {
@@ -1778,7 +1781,7 @@ const MapView = ({
       clearInterval(fadeTimer);
       marker.remove();
     };
-  }, [userLocation]);
+  }, [userLocation, centrePinActive]);
 
   // While the centre pin has replaced the GPS dot's location, keep the blue dot where the fix was (it moves
   // with the map). Static: live tracking is stopped by then, and the dot is the same markup as the live one.
@@ -2095,6 +2098,44 @@ const MapView = ({
       centreGesture.setActive(false);
       sync.cancel();
       centreSyncRef.current = null;
+    };
+  }, [centrePinActive]);
+
+  // The centre pin itself: a screen-fixed element at the visible-map centre (above the sheet), so it stays
+  // put under the finger while the map and the blue dot slide. Same look as the ping marker; it never
+  // takes pointer events, so map gestures pass through.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!centrePinActive || !map) return undefined;
+    const el = document.createElement('div');
+    el.className = 'user-ping-marker centre-pin-overlay';
+    el.style.cssText = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 35;
+      font-size: 26px;
+      line-height: 1;
+      user-select: none;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+    `;
+    el.innerHTML = '<span>📍</span>';
+    const place = () => {
+      const { x, y } = visibleCentreScreenPoint(map);
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+    };
+    place();
+    map.getContainer().appendChild(el);
+    map.on('move', place);
+    map.on('resize', place);
+    return () => {
+      map.off('move', place);
+      map.off('resize', place);
+      el.remove();
     };
   }, [centrePinActive]);
 
