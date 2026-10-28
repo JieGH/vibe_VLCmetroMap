@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
+  paintLineDim,
   withMapLines,
   lineServesStation,
   lineOpacityExpression,
@@ -124,5 +125,40 @@ describe('withMapLines', () => {
     const pin = { isPin: true, properties: { name: 'Map Ping', lines: [] } };
     expect(withMapLines(pin, mapSt)).toBe(pin);
     expect(withMapLines(raw, undefined)).toBe(raw);
+  });
+});
+
+describe('paintLineDim (#143)', () => {
+  const colon = { properties: { lines: ['3', '5', '7', '9'] } };
+  const fakeMap = ({ styleLoaded, layers = ['metro-fill', 'metro-casing'] }) => {
+    const idle = [];
+    const map = {
+      style: {},
+      isStyleLoaded: () => styleLoaded,
+      getLayer: (id) => (layers.includes(id) ? {} : undefined),
+      setPaintProperty: vi.fn(),
+      once: (event, fn) => { if (event === 'idle') idle.push(fn); },
+    };
+    return { map, idle };
+  };
+
+  it('paints the focused Station\'s Lines even while a source is still updating (isStyleLoaded false)', () => {
+    const { map, idle } = fakeMap({ styleLoaded: false });
+    expect(paintLineDim(map, () => colon)).toBe(true);
+    const fill = map.setPaintProperty.mock.calls.find(([id]) => id === 'metro-fill');
+    expect(fill[2]).toEqual(['case', ['in', ['get', 'line'], ['literal', ['3', '5', '7', '9']]], 1, 0.35 * 0.2]);
+    expect(idle).toHaveLength(0);
+  });
+
+  it('waits for idle when the layers are not there yet, then paints the Station in focus by then', () => {
+    const { map, idle } = fakeMap({ styleLoaded: false, layers: [] });
+    let station = colon;
+    expect(paintLineDim(map, () => station)).toBe(false);
+    expect(map.setPaintProperty).not.toHaveBeenCalled();
+    station = null; // the viewer closed the panel meanwhile
+    map.getLayer = () => ({});
+    idle.forEach((fn) => fn());
+    const fill = map.setPaintProperty.mock.calls.find(([id]) => id === 'metro-fill');
+    expect(fill[2]).toBe(0.35);
   });
 });

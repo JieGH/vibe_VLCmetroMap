@@ -44,7 +44,7 @@ import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '.
 import returnTrackData from '../data/return_tracks.json';
 import { emtStage, EMT_MARKER_MIN_ZOOM, thinStopsForZoom } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
-import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse, withMapLines } from '../utils/lineDim';
+import { dimmedVehicleOpacity, vehicleShouldPulse, withMapLines, paintLineDim } from '../utils/lineDim';
 import {
   ensureBusLayers,
   setBusRoutesData,
@@ -1159,21 +1159,7 @@ const MapView = ({
   // outright via `filter`, this only ever de-emphasizes a Line the filter
   // has already let through, via a `line-opacity` paint expression, so the
   // two can never fight over the same Line.
-  const applyLineDim = (map, selectedStation) => {
-    const apply = () => {
-      try {
-        if (!map || !map.isStyleLoaded() || !map.style) return;
-        if (map.getLayer('metro-fill') && map.getLayer('metro-casing')) {
-          map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(selectedStation, 1, 0.35));
-          map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(selectedStation, 0.35, 0.15));
-        }
-      } catch (err) {
-        console.warn('applyLineDim suppressed error during style transition:', err);
-      }
-    };
-    if (map.isStyleLoaded()) apply();
-    else map.once('styledata', apply);
-  };
+  const applyLineDim = (map) => paintLineDim(map, () => selectedStationRef.current);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -1314,7 +1300,7 @@ const MapView = ({
         initVehicleLoop(map);
         markersReadyRef.current = true;
         applyLineFilter(map, filterRef.current);
-        applyLineDim(map, selectedStationRef.current);
+        applyLineDim(map);
         ensureBusLayers(map, themeRef.current);
       });
 
@@ -1332,7 +1318,7 @@ const MapView = ({
         initVehicleLoop(map);
         markersReadyRef.current = true;
         applyLineFilter(map, filterRef.current);
-        applyLineDim(map, selectedStationRef.current);
+        applyLineDim(map);
         ensureBusLayers(map, themeRef.current);
       });
 
@@ -1425,7 +1411,7 @@ const MapView = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    applyLineDim(map, selectedStation);
+    applyLineDim(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStation]);
 

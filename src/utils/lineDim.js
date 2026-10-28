@@ -93,3 +93,34 @@ export const withMapLines = (station, mapStation) => {
   if (merged.length === own.length && merged.every((l) => own.includes(l))) return station;
   return { ...station, properties: { ...station.properties, lines: [...new Set([...own, ...merged])] } };
 };
+
+/**
+ * Paints the Station-focus dimming onto the map's metro Line layers (#143).
+ *
+ * `map.isStyleLoaded()` is false whenever any source is still updating, and picking a Station updates the
+ * walk-link source in the same instant, so gating on it (then waiting for one `styledata`) dropped the dim
+ * and the Line never highlighted. Painting needs only the layers to exist; if they do not yet, retry on
+ * `idle`. The Station is read at paint time, so a deferred paint never applies a stale selection.
+ *
+ * @param {object} map MapLibre map
+ * @param {() => ({ properties?: { lines?: (string|number)[] } }|null)} getStation the Station in focus now
+ * @returns {boolean} whether it painted straight away
+ */
+export const paintLineDim = (map, getStation) => {
+  if (!map) return false;
+  const paint = () => {
+    try {
+      if (!map.style || !map.getLayer('metro-fill') || !map.getLayer('metro-casing')) return false;
+      const station = getStation();
+      map.setPaintProperty('metro-fill', 'line-opacity', lineOpacityExpression(station, 1, UNSELECTED_LINE_OPACITY));
+      map.setPaintProperty('metro-casing', 'line-opacity', lineOpacityExpression(station, 0.35, UNSELECTED_CASING_OPACITY));
+      return true;
+    } catch (err) {
+      console.warn('paintLineDim suppressed error during style transition:', err);
+      return false;
+    }
+  };
+  if (paint()) return true;
+  map.once('idle', paint);
+  return false;
+};
