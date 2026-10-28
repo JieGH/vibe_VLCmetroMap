@@ -1,4 +1,4 @@
-// Which country the visitor's connection comes from, asked of our own /api/region once per page load. The FGV
+// Which country the visitor's connection comes from, asked of our own /api/region on load and again every minute and on return to the tab. The FGV
 // and EMT services can refuse addresses outside Spain, so a visitor on a VPN or abroad gets a heads-up before
 // they wonder why the trains and buses are missing. Only the country code travels; no IP is stored.
 import { useSyncExternalStore } from 'react';
@@ -31,14 +31,28 @@ function devOverride() {
   return new URLSearchParams(window.location.search).get('region');
 }
 
+async function refreshCountry() {
+  const override = devOverride();
+  const c = await (override ? Promise.resolve(override) : fetchCountry());
+  // A failed lookup says nothing about the connection, so keep the last answer instead of clearing the notice.
+  if (c === null && country !== null) return;
+  if (c === country) return;
+  country = c;
+  listeners.forEach((fn) => fn());
+}
+
+// How often an open page re-asks. A VPN switched on mid-session has to be noticed without a reload.
+export const RECHECK_MS = 60_000;
+
 export function startRegionCheck() {
   if (started || typeof window === 'undefined') return;
   started = true;
-  const override = devOverride();
-  (override ? Promise.resolve(override) : fetchCountry()).then((c) => {
-    country = c;
-    listeners.forEach((fn) => fn());
-  });
+  refreshCountry();
+  setInterval(() => { if (document.visibilityState !== 'hidden') refreshCountry(); }, RECHECK_MS);
+  // Coming back to the tab or the network returning is when a VPN toggle is most likely to have happened.
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshCountry(); });
+  window.addEventListener('online', refreshCountry);
+  window.addEventListener('focus', refreshCountry);
 }
 
 const subscribe = (fn) => {
