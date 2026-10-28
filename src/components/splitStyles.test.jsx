@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
-import { SPLIT_HEADER, SPLIT_TICK, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
+import { SPLIT_HEADER, SPLIT_TICK, badgeGridStyle, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 import ConnectingBusSection from './ConnectingBusSection';
 import CompactMetroSection from './CompactMetroSection';
 
@@ -69,5 +69,28 @@ describe('metro walk radius wording', () => {
   it('"Also within N min walk" shows the minutes of the 320 m metro radius (5, rounded up)', () => {
     const html = renderToStaticMarkup(<CompactMetroSection stationName="Colón" arrivals={[{ line: '3', destination: 'A', seconds: 120 }]} nearbyMetro={nearbyMetro} theme="dark" />);
     expect(html).toContain('Also within 5 min walk');
+  });
+});
+
+describe('split-view station line badges', () => {
+  const station = (lines) => [{ name: 'Marítim', walkMin: 3, lines, arrivals: [{ line: '7', destination: 'T', seconds: 120 }] }];
+  const render = (lines, compact = true) =>
+    renderToStaticMarkup(<CompactMetroSection nearbyMetro={station(lines)} compact={compact} isPinMode theme="dark" />);
+
+  it('badgeGridStyle: 1-2 lines in a row, 3-4 in a 2x2 grid, 5 or more in a 3x3 grid, never stacked outside the split view', () => {
+    expect(badgeGridStyle(true, 1).display).toBe('flex');
+    expect(badgeGridStyle(true, 2).display).toBe('flex');
+    expect(badgeGridStyle(true, 3)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
+    expect(badgeGridStyle(true, 4)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
+    expect(badgeGridStyle(true, 5)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(3, 16px)' });
+    expect(badgeGridStyle(true, 9)).toMatchObject({ gridTemplateColumns: 'repeat(3, 16px)' });
+    expect(badgeGridStyle(false, 6).display).toBe('flex');
+  });
+
+  it('renders the grid in the compact split view and a row otherwise', () => {
+    expect(render(['5', '7', '6', '8'])).toContain('grid-template-columns:repeat(2, 16px)');
+    expect(render(['5', '7', '6', '8', '3'])).toContain('grid-template-columns:repeat(3, 16px)');
+    expect(render(['5', '7'])).not.toContain('grid-template-columns');
+    expect(render(['5', '7', '6', '8'], false)).not.toContain('grid-template-columns');
   });
 });
