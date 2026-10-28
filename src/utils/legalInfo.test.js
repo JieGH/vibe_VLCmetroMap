@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   APP_LEGAL_INFO,
+  APP_LEGAL_INFO_CA,
   APP_LEGAL_INFO_ES,
   containsRepoUrls,
   hasRawRepoLinks,
@@ -54,6 +55,16 @@ describe('APP_LEGAL_INFO metadata', () => {
       const { text } = info.attributions.arrivals;
       expect(text).toContain('Ferrocarrils de la Generalitat Valenciana');
       expect(text).not.toMatch(/alexbadi|GTFS-RT|https?:\/\//i);
+    },
+  );
+
+  // #131: the typeface is Overpass under the SIL Open Font License, which asks for the notice to travel with it.
+  it.each([['en', APP_LEGAL_INFO], ['es', APP_LEGAL_INFO_ES], ['ca', APP_LEGAL_INFO_CA]])(
+    'credits the Overpass typeface and its SIL Open Font License in %s',
+    (_lang, info) => {
+      expect(info.attributions.overpass.title).toContain('Overpass');
+      expect(info.attributions.overpass.text).toContain('SIL Open Font License');
+      expect(info.attributions.overpass.text).toContain('The Overpass Project Authors');
     },
   );
 

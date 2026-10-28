@@ -36,6 +36,10 @@ export const APP_LEGAL_INFO = {
       title: 'MapLibre GL JS',
       text: 'Interactive web and vector map rendering powered by the open-source MapLibre GL engine (BSD 3-Clause License).',
     },
+    overpass: {
+      title: 'Overpass',
+      text: 'Overpass typeface, Copyright 2021 The Overpass Project Authors, used under the SIL Open Font License, Version 1.1.',
+    },
   },
   privacy: {
     title: 'Privacy & Device Data',
@@ -81,6 +85,10 @@ export const APP_LEGAL_INFO_ES = {
       title: 'MapLibre GL JS',
       text: 'Renderizado de mapas web y vectoriales interactivos impulsado por el motor de código abierto MapLibre GL (licencia BSD de 3 cláusulas).',
     },
+    overpass: {
+      title: 'Overpass',
+      text: 'Tipografía Overpass, Copyright 2021 The Overpass Project Authors, usada bajo la SIL Open Font License, Version 1.1.',
+    },
   },
   privacy: {
     title: 'Privacidad y datos del dispositivo',
@@ -124,6 +132,10 @@ export const APP_LEGAL_INFO_CA = {
     maplibre: {
       title: 'MapLibre GL JS',
       text: 'Renderitzat de mapes web i vectorials interactius impulsat pel motor de codi obert MapLibre GL (llicència BSD de 3 clàusules).',
+    },
+    overpass: {
+      title: 'Overpass',
+      text: 'Tipografia Overpass, Copyright 2021 The Overpass Project Authors, usada baix la SIL Open Font License, Version 1.1.',
     },
   },
   privacy: {

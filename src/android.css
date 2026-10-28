@@ -58,7 +58,7 @@ html.android {
   --md-dur-short: 150ms;
 
   /* Type scale. */
-  --md-font: Roboto, 'Google Sans', system-ui, sans-serif;
+  --md-font: var(--font-ui);
 
   font-family: var(--md-font);
 

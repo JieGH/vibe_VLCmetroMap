@@ -3,7 +3,7 @@
 // Before (#97): title 0.74rem, metro badge 15px / 0.60rem, EMT badge 0.58rem, padding 2px 4px 6px.
 export const SPLIT_HEADER = {
   titleFontSize: '0.64rem', // -13.5%
-  metroBadge: { size: 13, fontSize: '0.52rem' },
+  metroBadge: { size: 15, fontSize: '0.52rem' }, // same mark as on the station cards
   emtBadge: { fontSize: '0.50rem', padding: '1px 3px' },
   padding: '1px 4px 4px',
   gap: 5,
@@ -33,5 +33,5 @@ export const timeUnitStyle = ({ compact, unit, baseFontSize, gap = 2 }) =>
 export function badgeGridStyle(compact, count) {
   if (!compact || count <= 2) return { display: 'flex', gap: 3, flexShrink: 0 };
   const columns = count <= 4 ? 2 : 3;
-  return { display: 'grid', gridTemplateColumns: `repeat(${columns}, 16px)`, gap: 3, flexShrink: 0 };
+  return { display: 'grid', gridTemplateColumns: `repeat(${columns}, 18px)`, gap: 3, flexShrink: 0 };
 }

@@ -198,7 +198,7 @@ export const BusStopBoard = ({
             title={isExpanded ? t('stationPanel.collapseView') : t('stationPanel.expandView')}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 35, height: 18, minWidth: 35, borderRadius: 4,
+              width: 40, height: 20, minWidth: 40, borderRadius: 4,
               background: '#D62828', color: '#FFFFFF',
               boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
               flexShrink: 0,
@@ -207,11 +207,11 @@ export const BusStopBoard = ({
           >
             <span
               style={{
-                fontSize: '0.70rem',
-                fontWeight: 900,
+                fontSize: '0.60rem',
+                fontWeight: 800,
                 letterSpacing: '0.04em',
                 lineHeight: 1,
-                fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                fontFamily: 'var(--font-ui)',
                 userSelect: 'none',
               }}
             >
@@ -222,7 +222,7 @@ export const BusStopBoard = ({
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
               <h2 style={{
-                fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
+                fontSize: '1.02rem', fontWeight: 700, lineHeight: 1.15,
                 letterSpacing: '-.01em',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
@@ -237,6 +237,7 @@ export const BusStopBoard = ({
                 style={{
                   fontSize: '0.72rem',
                   fontWeight: 800,
+                  fontVariantNumeric: 'tabular-nums',
                   background: 'rgba(214, 40, 40, 0.2)',
                   color: '#ff6369',
                   padding: '1px 5px',
@@ -395,11 +396,11 @@ export const BusStopBoard = ({
             <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: displayName })}</caption>
             <thead>
               <tr style={{
-                fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                fontSize: '.68rem', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                 position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
               }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 2px 4px 6px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px 2px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
                 <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
               </tr>
             </thead>
@@ -418,7 +419,7 @@ export const BusStopBoard = ({
                     }}
                     onClick={() => onSelectLine && onSelectLine(a.line)}
                   >
-                    <td style={{ padding: '5px 6px', width: 1 }}>
+                    <td style={{ padding: '5px 2px 5px 6px', width: 1 }}>
                       <BusBadge
                         line={a.line}
                         className="station-line-badge"
@@ -430,7 +431,7 @@ export const BusStopBoard = ({
                         }}
                       />
                     </td>
-                    <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                    <td style={{ padding: '5px 6px 5px 2px', maxWidth: 0 }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -439,7 +440,7 @@ export const BusStopBoard = ({
                       }}>
                         <span style={{
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
+                          fontWeight: 600, fontSize: '0.98rem', color: 'var(--text-primary)',
                           minWidth: 0,
                         }}>
                           {a.destination}
@@ -462,7 +463,7 @@ export const BusStopBoard = ({
                       className="station-arrival-due"
                       style={{
                         padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
-                        fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 700, fontSize: '1rem', fontVariantNumeric: 'tabular-nums',
                         color: heat,
                       }}
                     >

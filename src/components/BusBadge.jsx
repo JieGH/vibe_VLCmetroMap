@@ -54,7 +54,7 @@ export const BusBadge = ({
         fontWeight: 900,
         fontSize: dims.fontSize,
         lineHeight: 1,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-ui)',
         letterSpacing: '0.02em',
         border: '1px solid rgba(255, 255, 255, 0.25)',
         boxShadow: '0 1.5px 3px rgba(0, 0, 0, 0.35)',

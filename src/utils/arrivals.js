@@ -24,7 +24,7 @@ export const getStationArrivalsFallback = (stationProps) => {
       f => f.properties.line === lineId && f.geometry.type === 'LineString'
     );
     const lineName = lineFeature ? lineFeature.properties.name : `Line ${lineId}`;
-    const lineColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#FFD100' : lineId === '3' ? '#E2001A' : '#00994D');
+    const lineColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#E3AD43' : lineId === '3' ? '#C22638' : '#008D62');
 
     let destinations = [];
     if (lineId === '1') destinations = ['Bétera', 'Castellón'];

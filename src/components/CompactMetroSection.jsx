@@ -3,6 +3,7 @@
 import React from 'react';
 import { Footprints } from 'lucide-react';
 import { lineColor } from '../utils/lineColor';
+import { busBadgeBox } from '../utils/busBadgeStyle';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
 import { WALK_RADIUS_METRO_METRES, walkRadiusMinutes } from '../utils/walkRadius';
@@ -64,17 +65,18 @@ const CompactMetroSection = ({
           >
             <span
               style={{
-                width: compact ? SPLIT_HEADER.metroBadge.size : 15,
-                height: compact ? SPLIT_HEADER.metroBadge.size : 15,
+                width: SPLIT_HEADER.metroBadge.size,
+                height: SPLIT_HEADER.metroBadge.size,
                 borderRadius: '50%',
                 background: '#E2001A',
                 color: '#ffffff',
-                fontSize: compact ? SPLIT_HEADER.metroBadge.fontSize : '0.60rem',
+                fontSize: SPLIT_HEADER.metroBadge.fontSize,
                 fontWeight: 900,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 lineHeight: 1,
+                textTransform: 'none', // the label beside it is uppercase; the mark stays a lowercase m
               }}
             >
               m
@@ -134,7 +136,7 @@ const CompactMetroSection = ({
                       borderRadius: '50%',
                       background: '#E2001A',
                       color: '#ffffff',
-                      fontSize: '0.60rem',
+                      fontSize: '0.52rem',
                       fontWeight: 900,
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -172,17 +174,15 @@ const CompactMetroSection = ({
                         <span
                           key={lineId || lIdx}
                           style={{
-                            minWidth: 16,
-                            height: 16,
-                            borderRadius: 3,
+                            ...busBadgeBox(18),
+                            borderRadius: 4,
                             background: lineColor(lineId),
-                            color: '#000000',
-                            fontSize: '0.60rem',
+                            color: '#ffffff',
+                            fontSize: '0.70rem',
                             fontWeight: 900,
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            padding: '0 2px',
                             lineHeight: 1,
                           }}
                         >
@@ -235,19 +235,18 @@ const CompactMetroSection = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
                           <span
                             style={{
-                              ...(compact ? { width: 20 } : { minWidth: 18 }),
-                              height: compact ? 16 : 18,
-                              borderRadius: compact ? 3 : 4,
+                              ...(compact ? busBadgeBox(18) : { minWidth: 18, height: 18 }),
+                              borderRadius: 4,
                               background: bg,
-                              color: '#000000',
-                              fontSize: compact ? '0.60rem' : '0.66rem',
+                              color: '#ffffff',
+                              fontSize: compact ? '0.70rem' : '0.66rem',
                               fontWeight: 900,
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               padding: compact ? '0 2px' : '0 3px',
                               flexShrink: 0,
-                              ...(compact ? { border: '0.5px solid rgba(255, 255, 255, 0.25)', boxSizing: 'border-box' } : {}),
+                              ...(compact ? { border: '1px solid rgba(255, 255, 255, 0.25)', boxSizing: 'border-box' } : {}),
                             }}
                           >
                             {arr.line}
@@ -391,12 +390,13 @@ const CompactMetroSection = ({
               borderRadius: '50%',
               background: '#E2001A',
               color: '#ffffff',
-              fontSize: '0.60rem',
+              fontSize: '0.52rem',
               fontWeight: 900,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               lineHeight: 1,
+              textTransform: 'none',
             }}
           >
             m
@@ -433,17 +433,15 @@ const CompactMetroSection = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  ...(compact ? { width: 20 } : { minWidth: 22 }),
-                  height: compact ? 16 : 22,
-                  padding: compact ? '0 2px' : '0 5px',
-                  borderRadius: compact ? 3 : 11,
+                  ...(compact ? busBadgeBox(18) : { minWidth: 22, height: 22, padding: '0 5px' }),
+                  borderRadius: compact ? 4 : 11,
                   background: bg,
-                  color: '#000000',
-                  fontSize: compact ? '0.60rem' : '0.74rem',
+                  color: '#ffffff',
+                  fontSize: compact ? '0.70rem' : '0.74rem',
                   fontWeight: 900,
                   flexShrink: 0,
                   ...(compact
-                    ? { border: '0.5px solid rgba(255, 255, 255, 0.25)', boxSizing: 'border-box' }
+                    ? { border: '1px solid rgba(255, 255, 255, 0.25)', boxSizing: 'border-box' }
                     : { boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }),
                 }}
               >
@@ -558,7 +556,7 @@ const CompactMetroSection = ({
                         borderRadius: '50%',
                         background: '#E2001A',
                         color: '#ffffff',
-                        fontSize: '0.54rem',
+                        fontSize: '0.47rem',
                         fontWeight: 900,
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -593,17 +591,15 @@ const CompactMetroSection = ({
                         <span
                           key={l}
                           style={{
-                            minWidth: 15,
-                            height: 15,
-                            borderRadius: 3,
+                            ...busBadgeBox(18),
+                            borderRadius: 4,
                             background: lineColor(l),
-                            color: '#000000',
-                            fontSize: '0.58rem',
+                            color: '#ffffff',
+                            fontSize: '0.70rem',
                             fontWeight: 900,
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            padding: '0 2px',
                             lineHeight: 1,
                           }}
                         >

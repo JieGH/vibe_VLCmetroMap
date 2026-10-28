@@ -442,14 +442,14 @@ describe('Chosen-stop highlight chips (one layout at every zoom)', () => {
   it('uses a grid whose column count comes from --focus-cols', () => {
     const grid = rule('.focus-chip-grid');
     expect(grid).toContain('display: grid');
-    expect(grid).toMatch(/grid-template-columns:\s*repeat\(var\(--focus-cols,\s*1\),\s*26px\)/);
+    expect(grid).toMatch(/grid-template-columns:\s*repeat\(var\(--focus-cols,\s*1\),\s*22px\)/);
     expect(grid).toContain('justify-content: center');
   });
 
   it('gives every chip one fixed size, never a zoom-dependent one', () => {
     const chip = rule('.focus-chip');
-    expect(chip).toContain('width: 26px');
-    expect(chip).toContain('height: 20px');
+    expect(chip).toContain('width: 22px');
+    expect(chip).toContain('height: 18px');
     expect(chip).not.toMatch(/\bvw\b|\bem\b|%/);
   });
 

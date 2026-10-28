@@ -73,7 +73,7 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
       display: 'flex', flexDirection: 'column',
       padding: 'clamp(16px, 3vw, 48px)',
       paddingTop: 'calc(clamp(16px, 3vw, 48px) + env(safe-area-inset-top, 0px))',
-      fontFamily: 'Inter, system-ui, sans-serif',
+      fontFamily: 'var(--font-ui)',
     }}>
       <header style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24,
@@ -149,7 +149,7 @@ const DashboardBoard = ({ theme, onExit, onOpenAbout }) => {
             <span style={{
               width: 'clamp(40px, 5.4vw, 80px)', height: 'clamp(40px, 5.4vw, 80px)',
               borderRadius: 'clamp(9px, 1.3vw, 18px)',
-              background: lineColor(a.line), color: '#000',
+              background: lineColor(a.line), color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'clamp(18px, 2.8vw, 42px)', fontWeight: 900,
             }}>

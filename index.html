@@ -13,13 +13,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#1D1D29" />
+    <link rel="preload" href="/fonts/Overpass-subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="modulepreload" href="/vendor/maplibre/maplibre-gl-worker.mjs" />
     <link rel="preload" href="/basemap/valencia.pmtiles.json" as="fetch" crossorigin="anonymous" />
     <link rel="preload" href="/basemap/valencia.pmtiles.p0" as="fetch" crossorigin="anonymous" />
   </head>
   <body>
     <div id="root">
-      <div id="initial-splash" style="position:fixed;inset:0;background:#16161f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#ffffff;z-index:9999;">
+      <div id="initial-splash" style="position:fixed;inset:0;background:#16161f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Overpass','Overpass Fallback',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ffffff;z-index:9999;">
         <div style="width:88px;height:88px;margin-bottom:20px;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.4));">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="22 22 64 64" width="88" height="88" aria-hidden="true">
             <rect x="22" y="22" width="64" height="64" rx="18" fill="#1e1e2a" />

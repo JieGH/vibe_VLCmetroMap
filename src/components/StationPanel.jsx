@@ -298,13 +298,13 @@ const StationPanel = ({
             borderRadius: '50%',
             background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
             color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
-            fontSize: '0.66rem',
+            fontSize: '0.56rem',
             fontWeight: 900,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             lineHeight: 1,
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            fontFamily: 'var(--font-ui)',
           }}
         >
           m
@@ -459,10 +459,10 @@ const StationPanel = ({
             >
               <span
                 style={{
-                  fontSize: '1.18rem',
+                  fontSize: '1.02rem',
                   fontWeight: 900,
                   fontStyle: 'italic',
-                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  fontFamily: 'var(--font-ui)',
                   lineHeight: 1,
                   transform: 'translate(-0.5px, -0.5px)',
                   userSelect: 'none',
@@ -523,7 +523,7 @@ const StationPanel = ({
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
-                      background: lineColor(lineId), color: '#000',
+                      background: lineColor(lineId), color: '#fff',
                       fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
                     }}
                   >
@@ -722,31 +722,31 @@ const StationPanel = ({
               <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: shownName })}</caption>
               <thead>
                 <tr style={{
-                  fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                  fontSize: '.68rem', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                   position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
                 }}>
-                  <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                  <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '5px 2px 4px 6px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px 2px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
                   <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
                 </tr>
               </thead>
               <tbody>
                 {focus.arrivals.map((a, i) => (
                   <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)', height: ROW_HEIGHT_PX }}>
-                    <td style={{ padding: '5px 6px', width: 1 }}>
+                    <td style={{ padding: '5px 2px 5px 6px', width: 1 }}>
                       <span
                         className="station-line-badge"
                         style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
-                          background: lineColor(a.line), color: '#000',
-                          fontSize: '.86rem', fontWeight: 900,
+                          background: lineColor(a.line), color: '#fff',
+                          fontSize: '1.1rem', fontWeight: 800, lineHeight: 1,
                         }}
                       >
                         {a.line}
                       </span>
                     </td>
-                    <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                    <td style={{ padding: '5px 6px 5px 2px', maxWidth: 0 }}>
                       <div style={{
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',

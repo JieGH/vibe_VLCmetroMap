@@ -108,15 +108,15 @@ export const renderStationHighlight = (properties, theme, isSelected = false) =>
   const displayName = shortenStopName(rawName, 6);
 
   const lineBadges = chipGridMarkup(highlightChips(lines), (chip) => (
-    `background:${chip.isMore ? '#6b7280' : lineColor(chip.line)};color:${chip.isMore ? '#fff' : '#000'};`
+    `background:${chip.isMore ? '#6b7280' : lineColor(chip.line)};color:#fff;`
   ));
 
   return `
     <div class="station-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <!-- Two-row square-ish bubble: station name + line badges (transport logo omitted since marker has it) -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 6px;border-radius:7px;background:${panel};border:1.5px solid ${border};box-shadow:0 3px 12px rgba(0,0,0,.4);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 6px;border-radius:7px;background:${panel};border:1px solid ${border};box-shadow:0 3px 12px rgba(0,0,0,.4);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         <!-- Row 1: Shortened Station Name -->
-        <span style="font:800 11px/1.1 system-ui;color:${text};letter-spacing:-0.01em;">${escapeHtml(displayName)}</span>
+        <span style="font:800 11px/1.1 var(--font-ui);color:${text};letter-spacing:-0.01em;">${escapeHtml(displayName)}</span>
         <!-- Row 2: Metro Line Badges -->
         ${lines.length ? lineBadges : ''}
       </div>
@@ -137,18 +137,18 @@ export const renderBusStopHighlight = (stop, theme, isSelected = false, lang = F
   const panel = theme === 'light' ? '#ffffff' : '#1e1e24';
   const text = theme === 'light' ? '#121212' : '#ffffff';
   // One look for the chosen stop's box at every zoom and line count: white outline, fixed chips.
-  const border = theme === 'light' ? '#D62828' : 'rgba(255,255,255,0.7)';
+  const border = theme === 'light' ? '#D62828' : 'rgba(255,255,255,0.55)';
   const chips = highlightChips(stop?.lines);
 
   // Consistent EMT red bus line badges (no transport logo or stop ID, to save space)
   const content = chips.length
     ? chipGridMarkup(chips, (chip) => `background:${chip.isMore ? '#8f1d1d' : '#D62828'};color:#ffffff;`)
-    : `<span style="font:800 11.5px/1.1 system-ui;color:${text};">${translate(lang, 'common.bus')}</span>`;
+    : `<span style="font:800 11.5px/1.1 var(--font-ui);color:${text};">${translate(lang, 'common.bus')}</span>`;
 
   return `
     <div class="bus-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <!-- Compact bubble: line chips only (transport logo & stop ID omitted to save space) -->
-      <div style="display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:${panel};border:2px solid ${border};box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:${panel};border:0.75px solid ${border};box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         ${content}
       </div>
     </div>`;

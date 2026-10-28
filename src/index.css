@@ -1,5 +1,28 @@
+/* Overpass, self-hosted (#131): one variable woff2, weights 400 to 800, cut down to Latin, Latin-1, Latin
+   Extended-A and the UI punctuation (scripts/subset_overpass.py). SIL OFL, see public/fonts/OFL.txt. */
+@font-face {
+  font-family: 'Overpass';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/Overpass-subset.woff2') format('woff2');
+}
+
+/* Arial stretched to Overpass's measured widths and vertical metrics, so the swap from fallback to Overpass
+   moves the text as little as possible. Overpass lowercase+digits average 1.032x Arial's advance; its
+   ascent/descent (1.0/0.266 em, after the vertical-metrics shift in scripts/subset_overpass.py) are divided by that size-adjust. */
+@font-face {
+  font-family: 'Overpass Fallback';
+  src: local('Arial');
+  size-adjust: 103.2%;
+  ascent-override: 96.9%;
+  descent-override: 25.8%;
+  line-gap-override: 0%;
+}
+
 :root {
-  font-family: 'Inter', 'Roboto', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-ui: 'Overpass', 'Overpass Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   line-height: 1.5;
   font-weight: 400;
   
@@ -17,17 +40,17 @@
   --text-secondary: #b6bbc8;
   --border-color: rgba(255, 255, 255, 0.18);
   
-  /* Metro Valencia Official Colors */
-  --color-line-1: #FFD100; /* Yellow */
-  --color-line-2: #E3007E; /* Pink */
-  --color-line-3: #E2001A; /* Red */
-  --color-line-4: #004D99; /* Navy Blue */
-  --color-line-5: #00994D; /* Green */
-  --color-line-6: #8F6DB8; /* Purple (Tram) */
-  --color-line-7: #F37021; /* Orange */
-  --color-line-8: #00A3E0; /* Light Blue (Tram) */
-  --color-line-9: #996633; /* Brown */
-  --color-line-10: #A8C82B; /* Lime Green (Tram) */
+  /* Metro Valencia colours, read from the official zonal fare map (Plano zonal tarifario) */
+  --color-line-1: #E3AD43; /* Gold */
+  --color-line-2: #D2438C; /* Pink */
+  --color-line-3: #C22638; /* Red */
+  --color-line-4: #054F8C; /* Navy Blue */
+  --color-line-5: #008D62; /* Green */
+  --color-line-6: #7B66A4; /* Purple (Tram) */
+  --color-line-7: #DA852C; /* Orange */
+  --color-line-8: #39B3C9; /* Light Blue (Tram) */
+  --color-line-9: #A47852; /* Brown */
+  --color-line-10: #A8CB77; /* Lime Green (Tram) */
 
   /* Typography Scaling */
   --font-scale: 1;
@@ -123,6 +146,14 @@ html.ui-zoomed body,
 html.ui-zoomed #root {
   height: calc(100dvh / var(--ui-zoom));
   min-height: calc(100vh / var(--ui-zoom));
+}
+
+/* Buttons and form controls ignore the inherited font unless told; the one token reaches them too. */
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
 }
 
 /* Enforce minimum 16px input size so iOS Safari never triggers automatic 5% viewport auto-zoom */
@@ -1323,7 +1354,7 @@ button:active {
   border: 1px solid var(--border-color);
   background: var(--bg-hover);
   color: var(--text-primary);
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 16px; /* 16px avoids iOS Safari auto-zooming the viewport on focus */
   line-height: 1.5;
   box-sizing: border-box;
@@ -1664,22 +1695,22 @@ button:active {
    An odd last chip spans both columns and is centred, so there is never an empty cell. */
 .focus-chip-grid {
   display: grid;
-  grid-template-columns: repeat(var(--focus-cols, 1), 26px);
-  gap: 3.5px;
+  grid-template-columns: repeat(var(--focus-cols, 1), 22px);
+  gap: 3px;
   justify-content: center;
   align-items: center;
 }
 
 .focus-chip {
   box-sizing: border-box;
-  width: 26px;
-  height: 20px;
+  width: 22px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 3.5px;
-  font: 900 12px/1 system-ui;
+  border-radius: 3px;
+  font: 800 15px/1 var(--font-ui);
   text-align: center;
 }
 
@@ -1746,7 +1777,7 @@ button:active {
   letter-spacing: -0.02em;
   color: #ffffff;
   margin: 0 0 6px 0;
-  font-family: inherit;
+  font-family: var(--font-ui);
 }
 
 .welcome-screen-subtitle {
@@ -1755,6 +1786,7 @@ button:active {
   color: #a0a0b0;
   margin: 0;
   letter-spacing: 0.01em;
+  font-family: var(--font-ui);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2026,4 +2058,13 @@ button:active {
 .sidebar-settings-row .size-stepper-value {
   flex: 1;
   min-width: 0;
+}
+
+/* Overpass has tabular figures (tnum): digits of equal width, so a countdown ticking down or a two-digit line
+   badge does not shift its neighbours. */
+.station-line-badge,
+.station-arrival-due,
+.station-arrival-num,
+.bus-badge {
+  font-variant-numeric: tabular-nums;
 }

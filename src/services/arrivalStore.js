@@ -557,7 +557,7 @@ class ArrivalStore {
               f => f.properties.line === lineId && f.geometry.type === 'LineString'
             );
             const lineName = lineFeature ? lineFeature.properties.name : `Line ${lineId}`;
-            const defaultColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#FFD100' : lineId === '3' ? '#E2001A' : lineId === '5' ? '#00994D' : '#8F6DB8');
+            const defaultColor = lineFeature ? lineFeature.properties.color : (lineId === '1' ? '#E3AD43' : lineId === '3' ? '#C22638' : lineId === '5' ? '#008D62' : '#7B66A4');
             const lineColor = (imageLineColors && imageLineColors[lineId]) ? imageLineColors[lineId] : defaultColor;
 
             // When the old API relay provides trainTimestamp (epoch seconds),

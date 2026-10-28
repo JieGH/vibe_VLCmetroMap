@@ -216,7 +216,7 @@ export const createLiveBusMarker = (map, bus, onSelect, lang = FALLBACK_LANGUAGE
     border-radius: 5px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     color: #ffffff;
-    font: 800 11px/1 system-ui, sans-serif;
+    font: 800 11px/1 var(--font-ui);
     cursor: pointer;
     transform-origin: center center;
     transition: transform 0.15s ease;
@@ -281,7 +281,7 @@ export const createFeederStopMarker = (map, stop, onSelect, isSelected = false, 
     border-radius: 3.5px;
     background: #D62828;
     color: #ffffff;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-ui);
     font-size: 8px;
     font-weight: 900;
     letter-spacing: 0.03em;

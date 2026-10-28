@@ -94,7 +94,7 @@ describe('busMapLayers marker creators', () => {
     expect(el.appendChild).toHaveBeenCalledTimes(1);
     const pill = el.appendChild.mock.calls[0][0];
     expect(pill.className).toBe('live-bus-pill');
-    expect(pill.style.cssText).toContain('font: 800 11px/1 system-ui');
+    expect(pill.style.cssText).toContain('font: 800 11px/1 var(--font-ui)');
   });
 });
 

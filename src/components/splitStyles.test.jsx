@@ -12,7 +12,8 @@ describe('#112 split-view headers', () => {
   it('are smaller than the old 0.74rem / 15px / 0.60rem / 0.58rem values', () => {
     expect(parseFloat(SPLIT_HEADER.titleFontSize)).toBeLessThan(0.74 * 0.9);
     expect(parseFloat(SPLIT_HEADER.titleFontSize)).toBeGreaterThan(0.74 * 0.8);
-    expect(SPLIT_HEADER.metroBadge.size).toBeLessThan(15);
+    // the header mark matches the one on the station cards (15 px, 0.52rem), so the two read as one logo
+    expect(SPLIT_HEADER.metroBadge).toEqual({ size: 15, fontSize: '0.52rem' });
     expect(parseFloat(SPLIT_HEADER.emtBadge.fontSize)).toBeLessThan(0.58);
   });
 
@@ -80,16 +81,16 @@ describe('split-view station line badges', () => {
   it('badgeGridStyle: 1-2 lines in a row, 3-4 in a 2x2 grid, 5 or more in a 3x3 grid, never stacked outside the split view', () => {
     expect(badgeGridStyle(true, 1).display).toBe('flex');
     expect(badgeGridStyle(true, 2).display).toBe('flex');
-    expect(badgeGridStyle(true, 3)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
-    expect(badgeGridStyle(true, 4)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
-    expect(badgeGridStyle(true, 5)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(3, 16px)' });
-    expect(badgeGridStyle(true, 9)).toMatchObject({ gridTemplateColumns: 'repeat(3, 16px)' });
+    expect(badgeGridStyle(true, 3)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 18px)' });
+    expect(badgeGridStyle(true, 4)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 18px)' });
+    expect(badgeGridStyle(true, 5)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(3, 18px)' });
+    expect(badgeGridStyle(true, 9)).toMatchObject({ gridTemplateColumns: 'repeat(3, 18px)' });
     expect(badgeGridStyle(false, 6).display).toBe('flex');
   });
 
   it('renders the grid in the compact split view and a row otherwise', () => {
-    expect(render(['5', '7', '6', '8'])).toContain('grid-template-columns:repeat(2, 16px)');
-    expect(render(['5', '7', '6', '8', '3'])).toContain('grid-template-columns:repeat(3, 16px)');
+    expect(render(['5', '7', '6', '8'])).toContain('grid-template-columns:repeat(2, 18px)');
+    expect(render(['5', '7', '6', '8', '3'])).toContain('grid-template-columns:repeat(3, 18px)');
     expect(render(['5', '7'])).not.toContain('grid-template-columns');
     expect(render(['5', '7', '6', '8'], false)).not.toContain('grid-template-columns');
   });

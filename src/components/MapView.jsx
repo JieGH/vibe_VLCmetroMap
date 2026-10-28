@@ -838,7 +838,7 @@ const MapView = ({
         border-radius: 50%;
         background: #E2001A;
         color: #ffffff;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: var(--font-ui);
         font-size: 9px;
         font-weight: 900;
         font-style: italic;
