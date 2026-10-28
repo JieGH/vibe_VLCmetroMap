@@ -156,6 +156,23 @@ describe('locate -> pan -> locate -> close, at state level', () => {
   });
 });
 
+describe('no-GPS flow: map tap -> drag -> close', () => {
+  const tapState = (st) => {
+    const { station, userLocation } = buildCentrePing([-0.37, 39.47], 1);
+    return { centre: st.centre || { fix: null }, selectedStation: station, userLocation };
+  };
+  const leaves = (st) => shouldLeaveCentreMode({ centreMode: Boolean(st.centre), userLocation: st.userLocation, selectedStation: st.selectedStation, selectedBusStop: null, hasReturnContext: false });
+  it('a tap without a fix is an active centre pin with no blue dot', () => {
+    const st = tapState({});
+    expect(st.centre.fix).toBeNull();
+    expect(leaves(st)).toBe(false);
+    expect(isCentrePinActive({ centreMode: true, selectedStation: st.selectedStation, selectedBusStop: null })).toBe(true);
+  });
+  it('closing the sheet ends centre mode', () => {
+    expect(leaves({ ...tapState({}), selectedStation: null, userLocation: null })).toBe(true);
+  });
+});
+
 describe('App and MapView wiring (by source: no DOM test env)', () => {
   const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   const mapView = readFileSync(new URL('../components/MapView.jsx', import.meta.url), 'utf8');
@@ -171,9 +188,18 @@ describe('App and MapView wiring (by source: no DOM test env)', () => {
     expect(app).toContain('shouldLeaveCentreMode(');
     expect(app).toContain('setCentre(null)');
   });
-  it('treats only a map tap (not the centre pin itself) as leaving centre mode', () => {
+  it('enters centre mode on a map tap (no GPS fix needed), but not for the centre pin own republish', () => {
     expect(mapView).toContain('centrePin: true');
     expect(app).toContain('options.centrePin');
+    expect(app).toContain('setCentre((prev) => prev || { fix: null })');
+    expect(app).not.toMatch(/isMapClick && !options\.centrePin\) setCentre\(null\)/);
+  });
+  it('enters centre mode for the launch auto-locate fix too', () => {
+    expect(app).toMatch(/applyUserLocation\(fix, true\);\s*\/\/[^\n]*\n\s*if \(fix\.status === 'located' && fix\.coordinates\) enterCentreMode\(fix\)/);
+  });
+  it('draws the one green pin for both the ping marker and the overlay (no emoji)', () => {
+    expect(mapView).not.toContain('📍');
+    expect(mapView.match(/pinSvg\(\)/g)).toHaveLength(2);
   });
   it('refreshes the hub in place for a centre-pin move: no selection focus or framing ease (#136)', () => {
     expect(mapView).toContain('isCentrePinRefresh(userLocation) && Boolean(selectedStation.isPin)');

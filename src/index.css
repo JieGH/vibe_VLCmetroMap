@@ -1046,14 +1046,15 @@ button:active {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 16px;
-  height: 16px;
-  margin: -8px 0 0 -8px;
+  width: 19px;
+  height: 19px;
+  margin: -9.5px 0 0 -9.5px;
   border-radius: 50%;
   background: #1a73e8;
-  border: 3px solid #fff;
+  border: 3.5px solid #fff;
   box-sizing: border-box;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+  /* Static (no animation, #129/#120): a faint blue halo, then the soft drop shadow. */
+  box-shadow: 0 0 0 6px rgba(26, 115, 232, .22), 0 2px 6px rgba(0, 0, 0, .45);
 }
 
 .user-location-accuracy {

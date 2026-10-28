@@ -25,6 +25,7 @@ import {
 } from '../utils/mapCamera';
 import { buildCentrePing, createCentrePinSync, createUserGestureGate, isCentrePinRefresh, movedEnough } from '../utils/centrePin';
 import { centreGesture, createThrottle } from '../utils/centrePinBuffer';
+import { pinSvg, pinWrapperStyle } from '../utils/pinIcon';
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -621,7 +622,7 @@ const createUserDot = ({ accuracyRing = false } = {}) => {
   `;
   wrapper.innerHTML = `
     ${accuracyRing ? '<div class="user-location-accuracy" style="display:none;"></div>' : ''}
-    <div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>
+    <div class="user-location-dot"></div>
   `;
   return wrapper;
 };
@@ -1697,19 +1698,8 @@ const MapView = ({
 
     if (isPing) {
       wrapper.className = 'user-ping-marker';
-      wrapper.style.cssText = `
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        z-index: 35;
-        font-size: 26px;
-        line-height: 1;
-        user-select: none;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
-      `;
-      wrapper.innerHTML = `<span>📍</span>`;
+      wrapper.style.cssText = `position: relative; cursor: pointer; z-index: 35; ${pinWrapperStyle}`;
+      wrapper.innerHTML = pinSvg();
       wrapper.onclick = (e) => {
         e.stopPropagation();
         focusTarget(map, userLocation.coordinates, panelAwarePadding(map, { hasPanel: true }), {
@@ -2109,21 +2099,8 @@ const MapView = ({
     if (!centrePinActive || !map) return undefined;
     const el = document.createElement('div');
     el.className = 'user-ping-marker centre-pin-overlay';
-    el.style.cssText = `
-      position: absolute;
-      left: 0;
-      top: 0;
-      pointer-events: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 35;
-      font-size: 26px;
-      line-height: 1;
-      user-select: none;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
-    `;
-    el.innerHTML = '<span>📍</span>';
+    el.style.cssText = `position: absolute; left: 0; top: 0; pointer-events: none; z-index: 35; ${pinWrapperStyle}`;
+    el.innerHTML = pinSvg();
     const place = () => {
       const { x, y } = visibleCentreScreenPoint(map);
       el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;

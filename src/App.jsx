@@ -137,8 +137,8 @@ function App() {
   const liveTrackerRef = useRef(null);
   // True while the camera follows the dot; broken by a manual pan or by choosing a stop, restored by locate.
   const [following, setFollowing] = useState(false);
-  // Centre-pin mode (#135): entered by a locate press; while on, a manual pan moves the pin to the map centre.
-  // `{ fix }` (the GPS fix the dot stays at) while on, null otherwise.
+  // Centre-pin mode (#135): entered by a locate press or a map tap; while on, a manual pan moves the pin to the map centre.
+  // `{ fix }` (the GPS fix the dot stays at; null for a map tap without GPS) while on, null otherwise.
   const [centre, setCentre] = useState(null);
   const centreMode = Boolean(centre);
   const centreModeRef = useRef(false);
@@ -302,8 +302,9 @@ function App() {
     } else {
       setSelectedBusStop(null);
     }
-    // A map tap (Map Ping) ends centre mode; the centre pin's own republish (options.centrePin) does not.
-    if (options.userLocation?.isMapClick && !options.centrePin) setCentre(null);
+    // A map tap (Map Ping) enters centre mode without needing a GPS fix (no blue dot to keep); the centre pin's
+    // own republish (options.centrePin) leaves it as it is.
+    if (options.userLocation?.isMapClick && !options.centrePin) setCentre((prev) => prev || { fix: null });
     if (options.userLocation) {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
@@ -341,6 +342,11 @@ function App() {
       const next = !prev;
       if (next && selectedStationRef.current) {
         setSelectedStation(null);
+        // The pin belongs to the sheet it opened: hiding the sheet removes it too.
+        if (userLocationRef.current?.isMapClick) {
+          setUserLocation(null);
+          userLocationRef.current = null;
+        }
       }
       return next;
     });
@@ -508,6 +514,8 @@ function App() {
         if (current && current !== autoSelectedRef.current) return;
         autoSelectedRef.current = fix.nearestStation;
         applyUserLocation(fix, true);
+        // The launch fix behaves like a locate press: the first drag turns the hub into the centre pin.
+        if (fix.status === 'located' && fix.coordinates) enterCentreMode(fix);
       },
     });
     autoLocatorRef.current = locator;
@@ -628,7 +636,7 @@ function App() {
   }, [centreMode, userLocation, selectedStation, selectedBusStop, hasReturnContext]);
   const centrePinActive = isCentrePinActive({ centreMode, selectedStation, selectedBusStop });
   // The GPS dot stays where the fix was while the pin (a Map Ping) has taken over `userLocation`.
-  const gpsFix = centrePinActive && userLocation?.isMapClick ? centre.fix : null;
+  const gpsFix = centrePinActive && userLocation?.isMapClick ? centre?.fix ?? null : null;
   // Choosing a station or bus stop is the viewer steering the camera elsewhere (#95): stop following.
   useEffect(() => {
     if (selectedBusStop || (selectedStation && !isHubStation(selectedStation))) setFollowing(false);

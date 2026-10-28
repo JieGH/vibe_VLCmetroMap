@@ -26,3 +26,9 @@ With the pin glued to the map centre, every pan changes the walk set. Refetching
 - A long pan costs one burst after it ends (up to 12 requests), not one per position.
 - A burst right after another can be partly deferred by about 10 s; rows show placeholders meanwhile.
 - Verified by unit tests and a scripted simulation with a fake map. A real-browser run of the drags was not possible when this was written (browser extension not connected), so heat and frame rate are unmeasured.
+
+## Addendum: the pin follows the map from a map tap and from the launch fix, and has one look
+
+- Centre mode now starts from a map tap (Map Ping) as well as from a locate press and the launch auto-locate fix. A tap needs no GPS fix and shows no blue dot. The tap's own camera focus already puts the pin at the visible-map centre, so the first drag does not make the screen-fixed overlay jump.
+- Closing the sheet (X, back, closing the hub, opening the menu) removes the pin and ends centre mode; dragging with no sheet open spawns no pin until the next tap, or locate press.
+- The pin is a green ball on a green stick (`src/utils/pinIcon.js`), the same for the overlay and the geographic marker. The blue GPS dot is 19 px (was 14 px), static halo, no animation.
