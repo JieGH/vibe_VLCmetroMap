@@ -1902,7 +1902,12 @@ const MapView = ({
         const maxLat = bounds.getNorth() + latSpan * 0.3;
 
         // Zoomed out one dot per street is enough (#140); the selected stop is added back below.
-        const visibleStops = thinStopsForZoom(allStops, currentZoom, map.getCenter().lat).filter((stop) => {
+        const visibleStops = thinStopsForZoom(
+          allStops,
+          currentZoom,
+          map.getCenter().lat,
+          emtStage(currentZoom, containerRef.current?.dataset.emtStage)
+        ).filter((stop) => {
           const [lng, lat] = stop.coordinates;
           return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
         });

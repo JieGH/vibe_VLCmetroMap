@@ -3,12 +3,19 @@ import { POPULAR_BUS_LINE_IDS } from './popularBus';
 import { getRealBusLines, getAllBusStops } from '../data/emtData';
 import { getDistance } from './geoUtils';
 
+// Hub coordinates [lng, lat], read off the map: Plaça de l'Ajuntament, Estació del Nord, Joaquín Sorolla.
 const HUBS = {
   ajuntament: [-0.3763, 39.4699],
   nord: [-0.3774, 39.4666],
+  sorolla: [-0.3813, 39.458],
 };
-const serves = (lineId, hub, radius = 300) =>
-  getAllBusStops().some((s) => s.lines.map(String).includes(lineId) && getDistance(HUBS[hub], s.coordinates) <= radius);
+const HUB_RADIUS_M = { ajuntament: 300, nord: 300, sorolla: 450 }; // Sorolla sits on a wide ring road, stops are further out
+const ALL_THREE = POPULAR_BUS_LINE_IDS.slice(0, 5);
+// emt_stops.json carries line ids as strings, but feeder data can carry numbers; compare as strings.
+const serves = (lineId, hub) =>
+  getAllBusStops().some(
+    (s) => s.lines.map(String).includes(lineId) && getDistance(HUBS[hub], s.coordinates) <= HUB_RADIUS_M[hub]
+  );
 
 describe('popular bus lines (#142)', () => {
   it('are all real EMT lines, without duplicates', () => {
@@ -22,5 +29,9 @@ describe('popular bus lines (#142)', () => {
       expect(serves(id, 'ajuntament'), `line ${id} near Pl. Ajuntament`).toBe(true);
       expect(serves(id, 'nord'), `line ${id} near Estació del Nord`).toBe(true);
     }
+  });
+
+  it('the first five also serve Joaquín Sorolla, as the list claims', () => {
+    for (const id of ALL_THREE) expect(serves(id, 'sorolla'), `line ${id} near Joaquín Sorolla`).toBe(true);
   });
 });

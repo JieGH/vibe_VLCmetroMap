@@ -40,12 +40,12 @@ const SearchBar = ({
     }
   }, [autoFocus]);
 
-  // Filtered results with Valencian accent-insensitive fuzzy search
   // The popular buses, as the real line objects a search result would hand on.
   const popularBuses = onSelectBusLine
     ? POPULAR_BUS_LINE_IDS.map(id => getRealBusLines().find(b => b.id === id)).filter(Boolean)
     : [];
 
+  // Filtered results with Valencian accent-insensitive fuzzy search
   const filteredLines = query.trim()
     ? searchFuzzy(lines, query, l => `${l.properties.name} Line ${l.properties.line} Linia ${l.properties.line}`)
     : [];
@@ -115,58 +115,42 @@ const SearchBar = ({
     }
   }, [selectedStation, query]);
 
+  // What every pick does once its own callback has run: close the list, drop focus, reset the page, close the overlay.
+  const finishSelection = useCallback(() => {
+    setIsOpen(false);
+    setHighlighted(-1);
+    inputRef.current?.blur();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }
+    if (onClose) onClose();
+  }, [onClose]);
+
   const handleSelectStation = useCallback((station) => {
     selectedStationNameRef.current = station.properties.name;
     onSelectStation(station);
     setQuery(station.properties.name);
-    setIsOpen(false);
-    setHighlighted(-1);
-    inputRef.current?.blur();
-    if (typeof window !== 'undefined') {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-    }
-    if (onClose) onClose();
-  }, [onSelectStation, onClose]);
+    finishSelection();
+  }, [onSelectStation, finishSelection]);
 
   const handleSelectLine = useCallback((line) => {
     onSelectLine(line.properties.line);
     setQuery(t('searchBar.linePrefix', { line: line.properties.line }));
-    setIsOpen(false);
-    setHighlighted(-1);
-    inputRef.current?.blur();
-    if (typeof window !== 'undefined') {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-    }
-    if (onClose) onClose();
-  }, [onSelectLine, t, onClose]);
+    finishSelection();
+  }, [onSelectLine, t, finishSelection]);
 
   const handleSelectBusLine = useCallback((busLine) => {
     if (onSelectBusLine) onSelectBusLine(busLine);
     setQuery(t('bus.searchQuery', { line: busLine.id, name: busLine.name }));
-    setIsOpen(false);
-    setHighlighted(-1);
-    inputRef.current?.blur();
-    if (typeof window !== 'undefined') {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-    }
-    if (onClose) onClose();
-  }, [onSelectBusLine, onClose]);
+    finishSelection();
+  }, [onSelectBusLine, finishSelection]);
 
   const handleSelectBusStop = useCallback((stop) => {
     onSelectBusStop(stop);
     setQuery(stop.stopName);
-    setIsOpen(false);
-    setHighlighted(-1);
-    inputRef.current?.blur();
-    if (typeof window !== 'undefined') {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-    }
-    if (onClose) onClose();
-  }, [onSelectBusStop, onClose]);
+    finishSelection();
+  }, [onSelectBusStop, finishSelection]);
 
   const handleClear = () => {
     setQuery('');

@@ -28,3 +28,12 @@ describe('thinStopsForZoom (#140)', () => {
     expect(a.map((s) => s.stopCode)).toContain('999');
   });
 });
+
+describe('thinning follows the real marker stage (#140)', () => {
+  it('stays thinned while the markers are still dots, even past the enter zoom (hysteresis band)', () => {
+    expect(thinStopsForZoom(street, 14.0, 39.47, 'dot').length).toBeLessThan(street.length);
+  });
+  it('draws every stop once the stage is logo or lines, whatever the zoom', () => {
+    expect(thinStopsForZoom(street, 13.0, 39.47, 'logo')).toBe(street);
+  });
+});

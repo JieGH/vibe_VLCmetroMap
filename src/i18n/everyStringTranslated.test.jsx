@@ -34,16 +34,6 @@ const NEW_KEYS = [
   'arrivals.errors.refreshedRecently', 'arrivals.errors.noEndpoint', 'arrivals.errors.rateLimited',
   'arrivals.errors.networkRefused', 'arrivals.errors.updateFailed', 'arrivals.errors.unavailable',
   'errorBoundary.title', 'errorBoundary.body', 'errorBoundary.reload', 'errorBoundary.retry',
-  'prototype.badge', 'prototype.switcherAria', 'prototype.prevTitle', 'prototype.prevAria', 'prototype.nextTitle',
-  'prototype.nextAria', 'prototype.infoTrigger', 'prototype.inspect', 'prototype.rationaleAria',
-  'prototype.counter', 'prototype.variantUpper', 'prototype.variant', 'prototype.rationaleHeading',
-  'prototype.prosHeading', 'prototype.consHeading', 'prototype.questionHeading', 'prototype.closeRationale',
-  'prototype.A.label', 'prototype.A.shortLabel', 'prototype.A.concept', 'prototype.A.subtitle', 'prototype.A.rationale',
-  'prototype.A.pro1', 'prototype.A.pro2', 'prototype.A.pro3', 'prototype.A.pro4', 'prototype.A.con1', 'prototype.A.question',
-  'prototype.B.label', 'prototype.B.shortLabel', 'prototype.B.concept', 'prototype.B.subtitle', 'prototype.B.rationale',
-  'prototype.B.pro1', 'prototype.B.pro2', 'prototype.B.pro3', 'prototype.B.pro4', 'prototype.B.con1', 'prototype.B.question',
-  'prototype.C.label', 'prototype.C.shortLabel', 'prototype.C.concept', 'prototype.C.subtitle', 'prototype.C.rationale',
-  'prototype.C.pro1', 'prototype.C.pro2', 'prototype.C.pro3', 'prototype.C.pro4', 'prototype.C.con1', 'prototype.C.question',
 ];
 
 // Words that really are identical in all three languages.

@@ -29,6 +29,9 @@ export const emtStage = (zoom, prev) => {
   return zoom >= EMT_LINES_ENTER_ZOOM ? 'lines' : 'logo';
 };
 
+const WEB_MERCATOR_METRES_PER_PX_AT_Z0 = 156543.03;
+const METRES_PER_DEGREE_LAT = 111320;
+
 /** While dots show, one stop is drawn per cell this many screen pixels wide (#140). */
 export const EMT_DOT_CELL_PX = 28;
 
@@ -42,12 +45,14 @@ export const EMT_DOT_CELL_PX = 28;
  * @param {{ stopCode?: string, code?: string, coordinates: number[], lines?: unknown[] }[]} stops
  * @param {number} zoom current map zoom
  * @param {number} latitude map centre latitude, for metres per pixel
+ * @param {'dot'|'logo'|'lines'} [stage] the stage the markers are really in (with hysteresis); thinning
+ *   follows it, so it never ends while the markers are still dots. Defaults to the stage zoom alone gives.
  * @returns {typeof stops}
  */
-export const thinStopsForZoom = (stops, zoom, latitude) => {
-  if (zoom >= EMT_DOT_ENTER_ZOOM) return stops;
-  const metresPerPixel = (156543.03 * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
-  const cellLat = (EMT_DOT_CELL_PX * metresPerPixel) / 111320;
+export const thinStopsForZoom = (stops, zoom, latitude, stage = emtStage(zoom, 'logo')) => {
+  if (stage !== 'dot') return stops;
+  const metresPerPixel = (WEB_MERCATOR_METRES_PER_PX_AT_Z0 * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
+  const cellLat = (EMT_DOT_CELL_PX * metresPerPixel) / METRES_PER_DEGREE_LAT;
   const cellLng = cellLat / Math.cos((latitude * Math.PI) / 180);
   const code = (s) => String(s.stopCode || s.code || '');
   const better = (a, b) => {
