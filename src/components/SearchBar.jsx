@@ -6,7 +6,7 @@ import { searchFuzzy } from '../utils/fuzzySearch';
 import { useTranslation } from '../i18n';
 import { COMMON_STOPS } from '../utils/commonStops';
 import { lineColor } from '../utils/lineColor';
-import { getRealBusLines } from '../data/emtData';
+import { getRealBusLines, getAllBusStops } from '../data/emtData';
 import BusBadge from './BusBadge';
 
 // gtfs_expanded.json is the canonical station set for the whole network; the
@@ -20,6 +20,7 @@ const SearchBar = ({
   activeLineFilter,
   selectedStation,
   onSelectBusLine,
+  onSelectBusStop,
   autoFocus = false,
   onClose,
 }) => {
@@ -51,11 +52,17 @@ const SearchBar = ({
     ? searchFuzzy(stations, query, st => st.properties.name)
     : [];
 
+  // A stop code is a search key too; capped so a short query does not list hundreds.
+  const filteredBusStops = query.trim() && onSelectBusStop
+    ? searchFuzzy(getAllBusStops(), query, s => `${s.stopCode} ${s.stopName}`).slice(0, 8)
+    : [];
+
   // Flat ordered list of all results for keyboard nav
   const allItems = [
     ...filteredLines.map(l  => ({ type: 'line',    data: l  })),
     ...filteredBusLines.map(b => ({ type: 'busLine', data: b })),
     ...filteredStations.map(st => ({ type: 'station', data: st })),
+    ...filteredBusStops.map(s => ({ type: 'busStop', data: s })),
   ];
 
   // The suggestions are wider than the search field, so place them inside the viewport.
@@ -142,6 +149,19 @@ const SearchBar = ({
     if (onClose) onClose();
   }, [onSelectBusLine, onClose]);
 
+  const handleSelectBusStop = useCallback((stop) => {
+    onSelectBusStop(stop);
+    setQuery(stop.stopName);
+    setIsOpen(false);
+    setHighlighted(-1);
+    inputRef.current?.blur();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }
+    if (onClose) onClose();
+  }, [onSelectBusStop, onClose]);
+
   const handleClear = () => {
     setQuery('');
     setIsOpen(false);
@@ -186,6 +206,7 @@ const SearchBar = ({
         const item = allItems[highlighted];
         if (item.type === 'station') handleSelectStation(item.data);
         else if (item.type === 'busLine') handleSelectBusLine(item.data);
+        else if (item.type === 'busStop') handleSelectBusStop(item.data);
         else handleSelectLine(item.data);
       }
     }
@@ -445,6 +466,51 @@ const SearchBar = ({
                       </div>
                     </div>
                     <Navigation size={12} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* EMT bus stops section */}
+          {filteredBusStops.length > 0 && (
+            <div style={{ padding: '4px 0' }}>
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '2px 14px 6px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#ff6369', fontWeight: 800 }}>
+                <span style={{ fontSize: '0.54rem', fontWeight: 900, background: '#D62828', color: '#fff', padding: '1px 3px', borderRadius: 2 }}>EMT</span>
+                <span>{t('bus.busStops')}</span>
+              </div>
+              {filteredBusStops.map((stop) => {
+                const idx = itemIdx++;
+                const isHl = highlighted === idx;
+                return (
+                  <div
+                    key={`stop-${stop.stopCode}`}
+                    id={`search-bar-option-${idx}`}
+                    className="search-bar-option"
+                    role="option"
+                    aria-selected={isHl}
+                    onClick={() => handleSelectBusStop(stop)}
+                    onMouseEnter={() => setHighlighted(idx)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 14px',
+                      cursor: 'pointer',
+                      background: isHl ? 'var(--bg-hover)' : 'transparent',
+                      transition: 'background 0.1s',
+                    }}
+                  >
+                    <MapPin size={14} color="#ff6369" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {stop.stopName}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                        {t('bus.stopResult', { code: stop.stopCode, lines: (stop.lines || []).join(', ') })}
+                      </div>
+                    </div>
                   </div>
                 );
               })}

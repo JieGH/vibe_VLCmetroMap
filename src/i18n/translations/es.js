@@ -298,6 +298,8 @@ export default {
     stopsOnRoute: 'Paradas de la ruta',
     dismissRibbon: 'Cerrar la ficha de la línea de autobús',
     valenciaLines: 'Líneas de autobús de València',
+    busStops: 'Paradas de autobús',
+    stopResult: 'Parada {{code}} · líneas {{lines}}',
     searchQuery: 'Bus {{line}} · {{name}}',
   },
   arrivals: {

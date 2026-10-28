@@ -90,3 +90,15 @@ describe('EMT data (real stops only, #122)', () => {
     expect(stop.coordinates[1]).toBeGreaterThan(39.0);
   });
 });
+
+describe('bus stop search (#138)', () => {
+  it('finds a real stop by its code and by its name, as the same object a marker tap passes', async () => {
+    const { getAllBusStops } = await import('./emtData');
+    const { searchFuzzy } = await import('../utils/fuzzySearch');
+    const stops = getAllBusStops();
+    const target = stops.find((s) => s.stopCode === '1044');
+    const key = (s) => `${s.stopCode} ${s.stopName}`;
+    expect(searchFuzzy(stops, '1044', key)).toContain(target);
+    expect(searchFuzzy(stops, 'Poliesportiu de Burjassot', key)).toContain(target);
+  });
+});

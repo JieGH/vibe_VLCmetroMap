@@ -302,6 +302,8 @@ export default {
     stopsOnRoute: 'Stops Chain on Route',
     dismissRibbon: 'Dismiss bus line ribbon',
     valenciaLines: 'València Bus Lines',
+    busStops: 'Bus stops',
+    stopResult: 'Stop {{code}} · lines {{lines}}',
     searchQuery: 'Bus {{line}} · {{name}}',
   },
   arrivals: {

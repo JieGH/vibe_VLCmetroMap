@@ -983,6 +983,7 @@ function App() {
               activeLineFilter={activeLineFilter}
               selectedStation={selectedStation}
               onSelectBusLine={handleSelectBusLine}
+              onSelectBusStop={handleSelectBusStop}
               onClose={() => setIsSearchOpen(false)}
             />
             <button
