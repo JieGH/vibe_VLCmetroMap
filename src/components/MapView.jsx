@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Map as MapLibreMap, Marker, LngLatBounds, addProtocol, setWorkerUrl } from 'maplibre-gl';
 import { Protocol, PMTiles } from 'pmtiles';
 import { Capacitor } from '@capacitor/core';
@@ -44,7 +44,7 @@ import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '.
 import returnTrackData from '../data/return_tracks.json';
 import { emtStage, EMT_MARKER_MIN_ZOOM } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
-import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse } from '../utils/lineDim';
+import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse, withMapLines } from '../utils/lineDim';
 import {
   ensureBusLayers,
   setBusRoutesData,
@@ -632,7 +632,7 @@ const createUserDot = ({ accuracyRing = false } = {}) => {
 
 const MapView = ({
   theme,
-  selectedStation,
+  selectedStation: selectedStationProp,
   onSelectStation,
   activeLineFilter,
   hoverLine,
@@ -651,6 +651,11 @@ const MapView = ({
   centrePinActive = false,
   gpsFix = null,
 }) => {
+  // Search hands in the raw feed's Station; focus must read like a tapped marker.
+  const selectedStation = useMemo(
+    () => withMapLines(selectedStationProp, snappedByName.get(selectedStationProp?.properties?.name)),
+    [selectedStationProp]
+  );
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);

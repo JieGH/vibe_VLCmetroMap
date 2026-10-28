@@ -76,3 +76,20 @@ export const dimmedVehicleOpacity = (baseOpacity, lineId, selectedStation, fadeA
 export const vehicleShouldPulse = (vehicle, selectedStation) => (
   !!vehicle.isLive && !!selectedStation && lineServesStation(vehicle.line, selectedStation)
 );
+
+/**
+ * A Station handed to the map from outside (search, say) carries the raw feed's
+ * Lines; a tapped marker carries the map's merged ones (duplicate dots of one
+ * interchange are unioned). Focus must read the same either way, so this lends
+ * the raw Station the map's Lines. Pins and unknown names pass through as-is.
+ *
+ * @param {{ properties?: { lines?: (string|number)[] } }|null} station
+ * @param {{ properties?: { lines?: (string|number)[] } }|null|undefined} mapStation
+ */
+export const withMapLines = (station, mapStation) => {
+  if (!station || !mapStation || station.isPin || station.properties?.isPin) return station;
+  const own = (station.properties?.lines || []).map(String);
+  const merged = (mapStation.properties?.lines || []).map(String);
+  if (merged.length === own.length && merged.every((l) => own.includes(l))) return station;
+  return { ...station, properties: { ...station.properties, lines: [...new Set([...own, ...merged])] } };
+};

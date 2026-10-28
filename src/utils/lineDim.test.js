@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  withMapLines,
   lineServesStation,
   lineOpacityExpression,
   dimmedVehicleOpacity,
@@ -107,5 +108,21 @@ describe('dimmedVehicleOpacity with an EMT stop selected (#114)', () => {
 
   it('with nothing selected nothing fades', () => {
     expect(dimmedVehicleOpacity(1, '7', null, false)).toBe(1);
+  });
+});
+
+describe('withMapLines', () => {
+  const raw = { properties: { name: 'Pl. Espanya', lines: ['3', '5'] } };
+  const mapSt = { properties: { name: 'Pl. Espanya', lines: ['3', '5', '9'] } };
+
+  it("lends a search-picked Station the map's merged Lines", () => {
+    expect(withMapLines(raw, mapSt).properties.lines).toEqual(['3', '5', '9']);
+  });
+
+  it('keeps the same object when the Lines agree, and passes pins and unknowns through', () => {
+    expect(withMapLines(mapSt, mapSt)).toBe(mapSt);
+    const pin = { isPin: true, properties: { name: 'Map Ping', lines: [] } };
+    expect(withMapLines(pin, mapSt)).toBe(pin);
+    expect(withMapLines(raw, undefined)).toBe(raw);
   });
 });
