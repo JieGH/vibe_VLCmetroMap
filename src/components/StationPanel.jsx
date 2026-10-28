@@ -740,7 +740,7 @@ const StationPanel = ({
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
                           background: lineColor(a.line), color: '#fff',
-                          fontSize: '.86rem', fontWeight: 900,
+                          fontSize: '1.1rem', fontWeight: 800, lineHeight: 1,
                         }}
                       >
                         {a.line}
