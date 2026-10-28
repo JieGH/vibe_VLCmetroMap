@@ -45,9 +45,10 @@ export const buildCentrePing = (coordinates, fetchedAt, nearestStation = null) =
  * @param {object} args.map - MapLibre-like (see visibleCentreLngLat)
  * @param {(coordinates: [number, number]) => void} args.publish
  * @param {() => [number, number] | null | undefined} args.getLast - current pin coordinates
+ * @param {() => void} [args.onSettle] - runs when the debounce fires, whether or not the pin moved
  * @returns {{ schedule: (opts?: { force?: boolean }) => void, cancel: () => void }}
  */
-export const createCentrePinSync = ({ map, publish, getLast }) => {
+export const createCentrePinSync = ({ map, publish, getLast, onSettle }) => {
   let timer = null;
   const cancel = () => {
     if (timer !== null) clearTimeout(timer);
@@ -59,6 +60,7 @@ export const createCentrePinSync = ({ map, publish, getLast }) => {
     cancel();
     timer = setTimeout(() => {
       timer = null;
+      onSettle?.();
       const centre = visibleCentreLngLat(map);
       if (force || movedEnough(getLast(), centre)) publish(centre);
     }, CENTRE_PIN_DEBOUNCE_MS);
@@ -91,10 +93,16 @@ export const shouldLeaveCentreMode = ({ centreMode, userLocation, selectedStatio
  *
  * @param {() => void} schedule - the debounced pin update
  */
-export const createUserGestureGate = (schedule) => {
+export const createUserGestureGate = (schedule, { onHandStart, onHandMove } = {}) => {
   let byHand = false;
   return {
-    onUserStart: (event) => { if (event?.originalEvent) byHand = true; },
+    onUserStart: (event) => {
+      if (!event?.originalEvent) return;
+      byHand = true;
+      onHandStart?.();
+    },
+    // Fires on every camera frame of a hand gesture (for the throttled mid-drag update).
+    onMove: () => { if (byHand) onHandMove?.(); },
     onMoveEnd: () => {
       const wasByHand = byHand;
       byHand = false;

@@ -15,6 +15,7 @@ vi.mock('react', async (importOriginal) => {
     useEffect: () => {},
     useMemo: (fn) => fn(),
     useRef: (v) => ({ current: v }),
+    useSyncExternalStore: (_sub, get) => get(),
   };
 });
 

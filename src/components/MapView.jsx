@@ -20,8 +20,10 @@ import {
   restingSheetRect,
   samePadding,
   recentreOnResize,
+  visibleCentreLngLat,
 } from '../utils/mapCamera';
-import { buildCentrePing, createCentrePinSync, createUserGestureGate, isCentrePinRefresh } from '../utils/centrePin';
+import { buildCentrePing, createCentrePinSync, createUserGestureGate, isCentrePinRefresh, movedEnough } from '../utils/centrePin';
+import { centreGesture, createThrottle } from '../utils/centrePinBuffer';
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -2054,25 +2056,43 @@ const MapView = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!centrePinActive || !map) return undefined;
+    const publishCentre = (centre) => {
+      const nearest = drawnStationsRef.current?.length ? nearestFeature(drawnStationsRef.current, centre) : null;
+      const { station, userLocation: pingLocation } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
+      selectStRef.current(station, { userLocation: { ...pingLocation, centrePin: true }, centrePin: true });
+    };
+    const getLast = () => userLocationRef.current?.coordinates;
+    centreGesture.setActive(true);
     const sync = createCentrePinSync({
       map,
-      getLast: () => userLocationRef.current?.coordinates,
-      publish: (centre) => {
-        const nearest = drawnStationsRef.current?.length ? nearestFeature(drawnStationsRef.current, centre) : null;
-        const { station, userLocation: pingLocation } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
-        selectStRef.current(station, { userLocation: { ...pingLocation, centrePin: true }, centrePin: true });
-      },
+      getLast,
+      publish: publishCentre,
+      // The gesture is over once the debounce fires: bus arrivals may be fetched for the final position (ADR-0013).
+      onSettle: () => centreGesture.setMoving(false),
+    });
+    // Mid-drag: republish on a throttle so the list, nodes and metro rows (local data) follow the pin live.
+    // This makes no network request: the bus section waits for `moving` to clear.
+    const midDrag = createThrottle(() => {
+      const centre = visibleCentreLngLat(map);
+      if (movedEnough(getLast(), centre)) publishCentre(centre);
     });
     centreSyncRef.current = sync;
     // Only hand gestures move the pin; the app's own camera eases (locate, selection focus) do not.
     // A hand gesture that interrupts an ease can show up as any of these starts, so all of them count.
-    const gate = createUserGestureGate(sync.schedule);
+    const gate = createUserGestureGate(sync.schedule, {
+      onHandStart: () => centreGesture.setMoving(true),
+      onHandMove: midDrag,
+    });
     const starts = ['movestart', 'dragstart', 'zoomstart', 'rotatestart', 'pitchstart'];
     starts.forEach((name) => map.on(name, gate.onUserStart));
+    map.on('move', gate.onMove);
     map.on('moveend', gate.onMoveEnd);
     return () => {
       starts.forEach((name) => map.off(name, gate.onUserStart));
+      map.off('move', gate.onMove);
       map.off('moveend', gate.onMoveEnd);
+      midDrag.cancel();
+      centreGesture.setActive(false);
       sync.cancel();
       centreSyncRef.current = null;
     };

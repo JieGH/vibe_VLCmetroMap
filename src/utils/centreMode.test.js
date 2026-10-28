@@ -180,7 +180,7 @@ describe('App and MapView wiring (by source: no DOM test env)', () => {
     expect(mapView).toContain('if (isCentrePinRefresh(userLocation)) return;');
   });
   it('gates the moveend sync on user gestures', () => {
-    expect(mapView).toContain('createUserGestureGate(sync.schedule)');
+    expect(mapView).toContain('createUserGestureGate(sync.schedule, {');
     expect(mapView).toContain("'dragstart'");
     expect(mapView).toContain('schedule({ force: true })');
   });

@@ -184,6 +184,12 @@ export function getEmtCachedArrivals(stopCode) {
   return null;
 }
 
+/** True while a request for this stop is already running (joining it costs no extra request). */
+export function isEmtInFlight(stopCode) {
+  const code = normalizeStopCode(stopCode);
+  return Boolean(code && inFlightRequests.has(code));
+}
+
 /**
  * Fetches real-time bus arrivals for a stop code from EMT's public SAE endpoint.
  * Enforces 20-second TTL caching, in-flight deduplication, and resilient error handling.

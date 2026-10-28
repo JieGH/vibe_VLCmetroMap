@@ -1,0 +1,28 @@
+# 13. The centre pin updates locally while dragging and fetches buses only once settled, within a budget
+
+Date: 2026-10-28
+
+## Status
+
+Accepted. Implements #133 (centre pin). Builds on [ADR-0011](0011-on-demand-realtime-bus-fetching-and-prototype-preservation.md) (on-demand bus arrivals, never poll all stops) and [ADR-0012](0012-battery-aware-live-location-tracking.md) (no extra GPS cost).
+
+## Context
+
+With the pin glued to the map centre, every pan changes the walk set. Refetching EMT arrivals around every intermediate position would hammer an unofficial API (1,155 stops) and the phone; updating only on gesture end made the list feel dead during a drag.
+
+## Decision
+
+`src/utils/centrePinBuffer.js` holds the policy; its constants are the source of truth.
+
+- **Mid-drag, local only.** While a hand gesture moves the map, the centre is republished on a leading+trailing throttle (`MID_DRAG_THROTTLE_MS` 350 ms), skipping moves under 15 m. The nearby list, map nodes and metro rows come from local data and Arrival Memory. This makes no request.
+- **Settle gate.** A gesture start marks the pin `moving`; the debounce (250 ms after the last move) clears it. The bus section fetches only while not `moving`.
+- **Fetch anchor.** The first fetch sets an anchor (pin and time). Later positions refetch only stops that were never requested from the anchor, until the pin is more than `REFETCH_MOVE_M` (100 m) from it or the anchor is older than `ANCHOR_MAX_AGE_MS` (60 s). Cached stops cost nothing; stops already in flight are joined for free.
+- **Prefetch buffer.** Stops within the bus walk radius plus `PREFETCH_BUFFER_M` (60 m), at most `PREFETCH_MAX_EXTRA` (4) beyond the visible batch, are fetched together, so a small pan is served from the 20 s cache.
+- **Hard budget.** At most `BUDGET_MAX` (12) network requests per `BUDGET_WINDOW_MS` (10 s). Nearest stops win; skipped stops are not recorded on the anchor and are retried after `BUDGET_RETRY_MS`. Stale responses are dropped by the existing latest-wins guard.
+- **No layout change.** Stops without data keep the existing placeholder rows; rows reused from the cache fill immediately. The policy is active only while the centre pin is (`centreGesture.active`); other hubs fetch as before.
+
+## Consequences
+
+- A long pan costs one burst after it ends (up to 12 requests), not one per position.
+- A burst right after another can be partly deferred by about 10 s; rows show placeholders meanwhile.
+- Verified by unit tests and a scripted simulation with a fake map. A real-browser run of the drags was not possible when this was written (browser extension not connected), so heat and frame rate are unmeasured.

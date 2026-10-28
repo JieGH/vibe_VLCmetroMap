@@ -1,6 +1,6 @@
 // ConnectingBusSection Component for Variant A (Multimodal Hub Feeder)
 // Shows street bus stops within 200m walking shed of the focused metro station.
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
@@ -9,8 +9,12 @@ import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles'
 import { FEEDER_FETCH_BATCH, visibleFeederCodes, fetchFeederArrivals, createLatestGuard } from '../services/feederArrivalFetch';
 import {
   getEmtCachedArrivals,
+  isEmtInFlight,
   normalizeStopCode,
 } from '../services/emtArrivalService';
+import { centreGesture, centreFetchPolicy, withPrefetchBuffer, PREFETCH_BUFFER_M, BUDGET_RETRY_MS } from '../utils/centrePinBuffer';
+import { pickWalkSet, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
+import { getAllBusStops } from '../data/emtData';
 
 function buildCachedArrivalsMap(codes) {
   const map = {};
@@ -31,7 +35,8 @@ export const ConnectingBusSection = ({
   compact = false,
   // False while the bus list is out of view (e.g. the metro-only tab): nothing fetches.
   active = true,
-  onSelectFeederStop
+  onSelectFeederStop,
+  stationCoords = null,
 }) => {
   const { t } = useTranslation();
   // Split view: N′ instead of "N min", short due label, no live dot.
@@ -91,22 +96,55 @@ export const ConnectingBusSection = ({
     return () => observer.disconnect();
   }, [active, hasMore, fetchLimit]);
 
+  // Centre pin (ADR-0013): while the pin follows the map, fetching waits for the gesture to settle, reuses
+  // the fetch anchor and prefetches a small buffer, all inside a hard request budget.
+  const gesture = useSyncExternalStore(centreGesture.subscribe, centreGesture.getState, centreGesture.getState);
+  const buffered = gesture.active && Array.isArray(stationCoords);
+  const moving = buffered && gesture.moving;
+  const [retryTick, setRetryTick] = useState(0);
+  const pinKey = buffered ? stationCoords.join(',') : '';
+
   // Non-blocking strictly on-demand arrival fetch adhering to "Train-First, Then Bus"
   useEffect(() => {
-    if (!fetchCodesKey) return undefined;
+    if (!fetchCodesKey || moving) return undefined;
     // Latest wins: an answer for a pin position the centre pin has left is dropped (#136).
     const guard = createLatestGuard();
     const ticket = guard.next();
+    let retry = null;
 
-    fetchFeederArrivals(fetchCodesKey.split(',')).then((fetched) => {
+    let codes = fetchCodesKey.split(',');
+    if (buffered) {
+      const bufferCodes = pickWalkSet(getAllBusStops(), stationCoords, {
+        getCoords: (stop) => stop.coordinates,
+        getKey: (stop) => String(stop.stopCode || stop.code || ''),
+        radiusMetres: WALK_RADIUS_BUS_METRES + PREFETCH_BUFFER_M,
+        allowFallback: false,
+      }).items.map(({ item }) => normalizeStopCode(item.stopCode || item.code)).filter(Boolean);
+      const plan = centreFetchPolicy.plan({
+        pin: stationCoords,
+        codes: withPrefetchBuffer(codes, bufferCodes),
+        isCached: (c) => getEmtCachedArrivals(c) !== null,
+        isInFlight: isEmtInFlight,
+      });
+      codes = plan.fetch;
+      // Rows whose data is already cached show it now (no skeleton flicker for reused stops).
+      setLiveArrivalsMap((prev) => ({ ...prev, ...buildCachedArrivalsMap(stopCodes) }));
+      if (plan.skipped.length) retry = setTimeout(() => setRetryTick((n) => n + 1), BUDGET_RETRY_MS);
+    }
+    if (codes.length === 0) return () => { guard.invalidate(); clearTimeout(retry); };
+
+    fetchFeederArrivals(codes).then((fetched) => {
       if (!guard.isCurrent(ticket)) return;
       setLiveArrivalsMap((prev) => ({ ...prev, ...fetched }));
     });
 
     return () => {
       guard.invalidate();
+      clearTimeout(retry);
     };
-  }, [fetchCodesKey]);
+    // pinKey/stationCoords belong to the same position as fetchCodesKey; moving and the retry tick re-run it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchCodesKey, moving, buffered, pinKey, retryTick]);
 
   if (!feeders || feeders.length === 0) {
     return (
