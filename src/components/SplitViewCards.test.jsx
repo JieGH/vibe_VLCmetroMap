@@ -72,7 +72,7 @@ describe('split-view cards', () => {
       .flatMap((e) => (Array.isArray(e.props.children) ? e.props.children : [e.props.children]))
       .filter((c) => typeof c === 'string');
 
-  it('compact metro card: prime mark, no dots, short due label, slim 16px badges', () => {
+  it('compact metro card: prime mark, no dots, short due label, row badges the size of the bus ones (18px)', () => {
     const nearbyMetro = [
       { feature: { properties: { name: 'A' } }, name: 'A', lines: ['3'], arrivals: [
         { line: '3', destination: 'X', seconds: 120 },
@@ -87,7 +87,7 @@ describe('split-view cards', () => {
     expect(t).not.toContain('common.due');
     expect(findAll(tree, (e) => e.props.className === 'station-arriving-dot pulse')).toHaveLength(0);
     expect(findAll(tree, (e) => e.props.title === 'Live FGV Telemetry')).toHaveLength(0);
-    const rowBadges = findAll(tree, (e) => e.props.style?.fontSize === '0.60rem' && e.props.style?.border);
+    const rowBadges = findAll(tree, (e) => e.props.style?.fontSize === '0.70rem' && e.props.style?.height === 18 && e.props.style?.border);
     expect(rowBadges.length).toBeGreaterThan(0);
   });
 

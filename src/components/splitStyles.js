@@ -33,5 +33,5 @@ export const timeUnitStyle = ({ compact, unit, baseFontSize, gap = 2 }) =>
 export function badgeGridStyle(compact, count) {
   if (!compact || count <= 2) return { display: 'flex', gap: 3, flexShrink: 0 };
   const columns = count <= 4 ? 2 : 3;
-  return { display: 'grid', gridTemplateColumns: `repeat(${columns}, 16px)`, gap: 3, flexShrink: 0 };
+  return { display: 'grid', gridTemplateColumns: `repeat(${columns}, 18px)`, gap: 3, flexShrink: 0 };
 }

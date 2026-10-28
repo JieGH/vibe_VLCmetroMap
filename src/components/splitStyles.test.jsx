@@ -81,16 +81,16 @@ describe('split-view station line badges', () => {
   it('badgeGridStyle: 1-2 lines in a row, 3-4 in a 2x2 grid, 5 or more in a 3x3 grid, never stacked outside the split view', () => {
     expect(badgeGridStyle(true, 1).display).toBe('flex');
     expect(badgeGridStyle(true, 2).display).toBe('flex');
-    expect(badgeGridStyle(true, 3)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
-    expect(badgeGridStyle(true, 4)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 16px)' });
-    expect(badgeGridStyle(true, 5)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(3, 16px)' });
-    expect(badgeGridStyle(true, 9)).toMatchObject({ gridTemplateColumns: 'repeat(3, 16px)' });
+    expect(badgeGridStyle(true, 3)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 18px)' });
+    expect(badgeGridStyle(true, 4)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(2, 18px)' });
+    expect(badgeGridStyle(true, 5)).toMatchObject({ display: 'grid', gridTemplateColumns: 'repeat(3, 18px)' });
+    expect(badgeGridStyle(true, 9)).toMatchObject({ gridTemplateColumns: 'repeat(3, 18px)' });
     expect(badgeGridStyle(false, 6).display).toBe('flex');
   });
 
   it('renders the grid in the compact split view and a row otherwise', () => {
-    expect(render(['5', '7', '6', '8'])).toContain('grid-template-columns:repeat(2, 16px)');
-    expect(render(['5', '7', '6', '8', '3'])).toContain('grid-template-columns:repeat(3, 16px)');
+    expect(render(['5', '7', '6', '8'])).toContain('grid-template-columns:repeat(2, 18px)');
+    expect(render(['5', '7', '6', '8', '3'])).toContain('grid-template-columns:repeat(3, 18px)');
     expect(render(['5', '7'])).not.toContain('grid-template-columns');
     expect(render(['5', '7', '6', '8'], false)).not.toContain('grid-template-columns');
   });
