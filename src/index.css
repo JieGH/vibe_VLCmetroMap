@@ -1695,22 +1695,22 @@ button:active {
    An odd last chip spans both columns and is centred, so there is never an empty cell. */
 .focus-chip-grid {
   display: grid;
-  grid-template-columns: repeat(var(--focus-cols, 1), 26px);
-  gap: 3.5px;
+  grid-template-columns: repeat(var(--focus-cols, 1), 22px);
+  gap: 3px;
   justify-content: center;
   align-items: center;
 }
 
 .focus-chip {
   box-sizing: border-box;
-  width: 26px;
-  height: 20px;
+  width: 22px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 3.5px;
-  font: 900 12px/1 var(--font-ui);
+  border-radius: 3px;
+  font: 800 15px/1 var(--font-ui);
   text-align: center;
 }
 
