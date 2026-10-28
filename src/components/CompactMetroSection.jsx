@@ -164,7 +164,12 @@ export const CompactMetroSection = ({
                   >
                     {stName}
                   </span>
-                  <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                  {/* Split view: the line badges stack in two rows so the station name gets the width. */}
+                  <div
+                    style={compact && stLines.length > 1
+                      ? { display: 'grid', gridTemplateRows: 'repeat(2, 16px)', gridAutoFlow: 'column', gap: 3, flexShrink: 0 }
+                      : { display: 'flex', gap: 3, flexShrink: 0 }}
+                  >
                     {stLines.map((l, lIdx) => {
                       const lineId = typeof l === 'object' && l !== null ? (l.line || l.id || '') : l;
                       return (

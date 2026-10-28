@@ -71,3 +71,19 @@ describe('metro walk radius wording', () => {
     expect(html).toContain('Also within 5 min walk');
   });
 });
+
+describe('split-view station line badges', () => {
+  const multi = [{ name: 'Marítim', walkMin: 3, lines: ['5', '7', '6', '8'], arrivals: [{ line: '7', destination: 'T', seconds: 120 }] }];
+
+  it('stack in two rows in the compact split view, so the station name gets the width', () => {
+    const html = renderToStaticMarkup(<CompactMetroSection nearbyMetro={multi} compact isPinMode theme="dark" />);
+    expect(html).toContain('display:grid;grid-template-rows:repeat(2, 16px);grid-auto-flow:column');
+  });
+
+  it('stay in one row outside the split view and for a single line', () => {
+    const wide = renderToStaticMarkup(<CompactMetroSection nearbyMetro={multi} isPinMode theme="dark" />);
+    expect(wide).not.toContain('grid-template-rows:repeat(2, 16px)');
+    const one = renderToStaticMarkup(<CompactMetroSection nearbyMetro={[{ ...multi[0], lines: ['5'] }]} compact isPinMode theme="dark" />);
+    expect(one).not.toContain('grid-template-rows:repeat(2, 16px)');
+  });
+});
