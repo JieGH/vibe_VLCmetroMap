@@ -6,7 +6,7 @@ import BusBadge from './BusBadge';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
 import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
-import { FEEDER_FETCH_BATCH, visibleFeederCodes, fetchFeederArrivals } from '../services/feederArrivalFetch';
+import { FEEDER_FETCH_BATCH, visibleFeederCodes, fetchFeederArrivals, createLatestGuard } from '../services/feederArrivalFetch';
 import {
   getEmtCachedArrivals,
   normalizeStopCode,
@@ -94,15 +94,17 @@ export const ConnectingBusSection = ({
   // Non-blocking strictly on-demand arrival fetch adhering to "Train-First, Then Bus"
   useEffect(() => {
     if (!fetchCodesKey) return undefined;
-    let isMounted = true;
+    // Latest wins: an answer for a pin position the centre pin has left is dropped (#136).
+    const guard = createLatestGuard();
+    const ticket = guard.next();
 
     fetchFeederArrivals(fetchCodesKey.split(',')).then((fetched) => {
-      if (!isMounted) return;
+      if (!guard.isCurrent(ticket)) return;
       setLiveArrivalsMap((prev) => ({ ...prev, ...fetched }));
     });
 
     return () => {
-      isMounted = false;
+      guard.invalidate();
     };
   }, [fetchCodesKey]);
 

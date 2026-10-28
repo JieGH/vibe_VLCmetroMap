@@ -21,7 +21,7 @@ import {
   samePadding,
   recentreOnResize,
 } from '../utils/mapCamera';
-import { buildCentrePing, createCentrePinSync, createUserGestureGate } from '../utils/centrePin';
+import { buildCentrePing, createCentrePinSync, createUserGestureGate, isCentrePinRefresh } from '../utils/centrePin';
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -1445,8 +1445,10 @@ const MapView = ({
     }
 
     // Live tracking refreshes the GPS hub in place (#104): same hub, new fix. Rebuild its pieces but leave the camera.
-    const isHubRefresh = prevStationRef.current?.properties?.apiId === 'user-location-gps' &&
-      selectedStation.properties?.apiId === 'user-location-gps';
+    const isHubRefresh = (prevStationRef.current?.properties?.apiId === 'user-location-gps' &&
+      selectedStation.properties?.apiId === 'user-location-gps') ||
+      // The centre pin moving (#136) refreshes the hub in place: no focus ease, so fast pans do not jump.
+      (isCentrePinRefresh(userLocation) && Boolean(prevStationRef.current?.isPin) && Boolean(selectedStation.isPin));
     prevStationRef.current = selectedStation;
 
     const isPinTarget = Boolean(
@@ -1858,6 +1860,8 @@ const MapView = ({
       return;
     }
     lastFramedFetchedAtRef.current = userLocation.fetchedAt;
+    // The centre pin sits at the map centre already; framing it would only fight the viewer's pan (#136).
+    if (isCentrePinRefresh(userLocation)) return;
 
     focusTarget(map, userLocation.coordinates, panelAwarePadding(map, { hasPanel: true }), {
       minZoom: STATION_FOCUS_ZOOM,
@@ -2051,7 +2055,7 @@ const MapView = ({
       publish: (centre) => {
         const nearest = drawnStationsRef.current?.length ? nearestFeature(drawnStationsRef.current, centre) : null;
         const { userLocation: pingLocation, ...ping } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
-        selectStRef.current(ping, { userLocation: pingLocation, centrePin: true });
+        selectStRef.current(ping, { userLocation: { ...pingLocation, centrePin: true }, centrePin: true });
       },
     });
     // Only hand gestures move the pin; the app's own camera eases (locate, selection focus) do not.

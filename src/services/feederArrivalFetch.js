@@ -30,3 +30,17 @@ export async function fetchFeederArrivals(codes, options = {}) {
   }
   return map;
 }
+
+/**
+ * Latest-wins guard for the hub's background bus fetch (#136): each pin position takes a ticket,
+ * and a response is applied only while its ticket is still the newest, so a slow answer for a
+ * position the pin has left never overwrites the current one.
+ */
+export function createLatestGuard() {
+  let latest = 0;
+  return {
+    next: () => ++latest,
+    isCurrent: (ticket) => ticket === latest,
+    invalidate: () => { latest += 1; },
+  };
+}

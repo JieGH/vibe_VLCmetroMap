@@ -96,3 +96,9 @@ export const createUserGestureGate = (schedule) => {
     },
   };
 };
+
+/**
+ * True when a selection/location change is only the centre pin moving (#136): the hub updates in
+ * place, so neither camera ease (selection focus, locate framing) may run for it.
+ */
+export const isCentrePinRefresh = (userLocation) => Boolean(userLocation?.centrePin);

@@ -88,6 +88,10 @@ describe('App and MapView wiring (by source: no DOM test env)', () => {
     expect(mapView).toContain('centrePin: true');
     expect(app).toContain('options.centrePin');
   });
+  it('refreshes the hub in place for a centre-pin move: no selection focus or framing ease (#136)', () => {
+    expect(mapView).toContain('isCentrePinRefresh(userLocation) && Boolean(prevStationRef.current?.isPin)');
+    expect(mapView).toContain('if (isCentrePinRefresh(userLocation)) return;');
+  });
   it('gates the moveend sync on user gestures', () => {
     expect(mapView).toContain('createUserGestureGate(sync.schedule)');
   });
