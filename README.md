@@ -18,7 +18,7 @@
       </p>
     </td>
     <td valign="middle" align="center" width="45%">
-      <img src="docs/demo-phone.gif" width="300" alt="Phone screen recording of Xarxa at Grau - La Marina: a pin dropped beside the station shows the live metro departures and nearby EMT bus stops, then the Grau - La Marina station opens, back to the pin, a bus stop opens, and a tap on line 19 shows its route"">
+      <img src="docs/demo-phone.gif" width="300" alt="Screen recording of Xarxa on a phone: the map with metro and EMT bus stops, the live train and bus departures for the spot in the middle of the screen, and a metro station opened for its next trains">
     </td>
   </tr>
 </table>
