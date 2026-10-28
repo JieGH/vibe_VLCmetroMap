@@ -119,7 +119,7 @@ describe('renderBusStopHighlight', () => {
   it('draws the same box whether or not the stop is flagged selected (one layout)', () => {
     const selected = renderBusStopHighlight(busStop, 'dark', true);
     expect(selected).toContain('is-selected');
-    expect(selected).toContain('border:2px solid rgba(255,255,255,0.7)');
+    expect(selected).toContain('border:1px solid rgba(255,255,255,0.7)');
     expect(selected).toContain('class="focus-chip-grid"');
   });
 });

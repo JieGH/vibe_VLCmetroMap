@@ -40,17 +40,17 @@
   --text-secondary: #b6bbc8;
   --border-color: rgba(255, 255, 255, 0.18);
   
-  /* Metro Valencia Official Colors */
-  --color-line-1: #FFD100; /* Yellow */
-  --color-line-2: #E3007E; /* Pink */
-  --color-line-3: #E2001A; /* Red */
-  --color-line-4: #004D99; /* Navy Blue */
-  --color-line-5: #00994D; /* Green */
-  --color-line-6: #8F6DB8; /* Purple (Tram) */
-  --color-line-7: #F37021; /* Orange */
-  --color-line-8: #00A3E0; /* Light Blue (Tram) */
-  --color-line-9: #996633; /* Brown */
-  --color-line-10: #A8C82B; /* Lime Green (Tram) */
+  /* Metro Valencia colours, read from the official zonal fare map (Plano zonal tarifario) */
+  --color-line-1: #E3AD43; /* Gold */
+  --color-line-2: #D2438C; /* Pink */
+  --color-line-3: #C22638; /* Red */
+  --color-line-4: #054F8C; /* Navy Blue */
+  --color-line-5: #008D62; /* Green */
+  --color-line-6: #7B66A4; /* Purple (Tram) */
+  --color-line-7: #DA852C; /* Orange */
+  --color-line-8: #39B3C9; /* Light Blue (Tram) */
+  --color-line-9: #A47852; /* Brown */
+  --color-line-10: #A8CB77; /* Lime Green (Tram) */
 
   /* Typography Scaling */
   --font-scale: 1;

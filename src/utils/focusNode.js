@@ -108,7 +108,7 @@ export const renderStationHighlight = (properties, theme, isSelected = false) =>
   const displayName = shortenStopName(rawName, 6);
 
   const lineBadges = chipGridMarkup(highlightChips(lines), (chip) => (
-    `background:${chip.isMore ? '#6b7280' : lineColor(chip.line)};color:${chip.isMore ? '#fff' : '#000'};`
+    `background:${chip.isMore ? '#6b7280' : lineColor(chip.line)};color:#fff;`
   ));
 
   return `
@@ -148,7 +148,7 @@ export const renderBusStopHighlight = (stop, theme, isSelected = false, lang = F
   return `
     <div class="bus-floating-chart${isSelected ? ' is-selected' : ''}" style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <!-- Compact bubble: line chips only (transport logo & stop ID omitted to save space) -->
-      <div style="display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:${panel};border:2px solid ${border};box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:${panel};border:1px solid ${border};box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;transform:translateZ(0);width:max-content;text-align:center;">
         ${content}
       </div>
     </div>`;

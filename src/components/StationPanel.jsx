@@ -523,7 +523,7 @@ const StationPanel = ({
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       minWidth: 20, height: 20, padding: '0 5px', borderRadius: 5,
-                      background: lineColor(lineId), color: '#000',
+                      background: lineColor(lineId), color: '#fff',
                       fontSize: '.72rem', fontWeight: 900, lineHeight: 1,
                     }}
                   >
@@ -739,7 +739,7 @@ const StationPanel = ({
                         style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           minWidth: 28, height: 28, padding: '0 6px', borderRadius: 8,
-                          background: lineColor(a.line), color: '#000',
+                          background: lineColor(a.line), color: '#fff',
                           fontSize: '.86rem', fontWeight: 900,
                         }}
                       >

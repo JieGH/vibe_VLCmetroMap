@@ -9,13 +9,6 @@ import { lineColor } from '../utils/lineColor';
 import { getRealBusLines } from '../data/emtData';
 import BusBadge from './BusBadge';
 
-// Black or white text, whichever reads better on a line's colour.
-const onColor = (hex) => {
-  const n = parseInt(String(hex).replace('#', ''), 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.6 ? '#1d1d29' : '#ffffff';
-};
-
 // gtfs_expanded.json is the canonical station set for the whole network; the
 // handful of points in metro_lines.json are a much older subset.
 const stations = gtfsData.features.filter(f => f.geometry.type === 'Point');
@@ -291,7 +284,7 @@ const SearchBar = ({
                   aria-label={t('searchBar.linePrefix', { line: line.properties.line })}
                   onClick={() => handleSelectLine(line)}
                 >
-                  <span style={{ background: lineColor(line.properties.line), color: onColor(lineColor(line.properties.line)) }}>
+                  <span style={{ background: lineColor(line.properties.line), color: '#ffffff' }}>
                     {line.properties.line}
                   </span>
                 </button>
