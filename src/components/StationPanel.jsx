@@ -298,7 +298,7 @@ const StationPanel = ({
             borderRadius: '50%',
             background: activeTab === 'metro' ? '#ffffff' : '#E2001A',
             color: activeTab === 'metro' ? '#E2001A' : '#ffffff',
-            fontSize: '0.66rem',
+            fontSize: '0.56rem',
             fontWeight: 900,
             display: 'inline-flex',
             alignItems: 'center',
@@ -459,7 +459,7 @@ const StationPanel = ({
             >
               <span
                 style={{
-                  fontSize: '1.18rem',
+                  fontSize: '1.02rem',
                   fontWeight: 900,
                   fontStyle: 'italic',
                   fontFamily: 'var(--font-ui)',

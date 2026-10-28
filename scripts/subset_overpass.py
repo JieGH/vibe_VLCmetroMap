@@ -29,6 +29,18 @@ UNICODES = (
 FEATURES = ['kern', 'liga', 'calt', 'ccmp', 'locl', 'mark', 'mkmk', 'case', 'tnum', 'pnum', 'zero']
 
 
+# Overpass centres its text box at 0.25 em above the baseline, but capitals and digits (badges, times, line
+# numbers) are centred at 0.35 em, so in any tight box they sit high. Move the box centre to about 0.37 em by
+# giving the ascent what the descent loses; the line height (ascent + descent = 2532 units) does not change.
+ASCENT, DESCENT = 2000, 532  # units per em 2000 (upstream: 1766 / 766)
+
+
+def set_vertical_metrics(font):
+    font['hhea'].ascent, font['hhea'].descent = ASCENT, -DESCENT
+    os2 = font['OS/2']
+    os2.sTypoAscender, os2.sTypoDescender = ASCENT, -DESCENT  # fsSelection USE_TYPO_METRICS is set upstream
+
+
 def main(src, dst):
     font = TTFont(src)
     font = instancer.instantiateVariableFont(font, {'wght': (400, 800)})
@@ -41,6 +53,7 @@ def main(src, dst):
     sub = subset.Subsetter(options)
     sub.populate(unicodes=UNICODES)
     sub.subset(font)
+    set_vertical_metrics(font)
     font.flavor = 'woff2'
     font.save(dst)
 

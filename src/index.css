@@ -10,13 +10,13 @@
 
 /* Arial stretched to Overpass's measured widths and vertical metrics, so the swap from fallback to Overpass
    moves the text as little as possible. Overpass lowercase+digits average 1.032x Arial's advance; its
-   ascent/descent (0.883/0.383 em) are divided by that size-adjust. */
+   ascent/descent (1.0/0.266 em, after the vertical-metrics shift in scripts/subset_overpass.py) are divided by that size-adjust. */
 @font-face {
   font-family: 'Overpass Fallback';
   src: local('Arial');
   size-adjust: 103.2%;
-  ascent-override: 85.6%;
-  descent-override: 37.1%;
+  ascent-override: 96.9%;
+  descent-override: 25.8%;
   line-gap-override: 0%;
 }
 

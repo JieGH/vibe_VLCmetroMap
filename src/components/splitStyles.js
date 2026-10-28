@@ -3,7 +3,7 @@
 // Before (#97): title 0.74rem, metro badge 15px / 0.60rem, EMT badge 0.58rem, padding 2px 4px 6px.
 export const SPLIT_HEADER = {
   titleFontSize: '0.64rem', // -13.5%
-  metroBadge: { size: 13, fontSize: '0.52rem' },
+  metroBadge: { size: 13, fontSize: '0.45rem' },
   emtBadge: { fontSize: '0.50rem', padding: '1px 3px' },
   padding: '1px 4px 4px',
   gap: 5,
