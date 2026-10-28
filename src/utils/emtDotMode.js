@@ -28,3 +28,38 @@ export const emtStage = (zoom, prev) => {
   if (prev === 'lines') return zoom >= EMT_LINES_EXIT_ZOOM ? 'lines' : 'logo';
   return zoom >= EMT_LINES_ENTER_ZOOM ? 'lines' : 'logo';
 };
+
+/** While dots show, one stop is drawn per cell this many screen pixels wide (#140). */
+export const EMT_DOT_CELL_PX = 28;
+
+/**
+ * Zoomed out, a street's five stops need only one dot. Below the logo zoom, keeps one stop per
+ * screen-space grid cell; from the logo zoom up, returns every stop. The cell is a fixed number of
+ * pixels, so it covers fewer metres as you zoom in and more stops appear gradually. The grid is
+ * anchored to world coordinates and the pick is deterministic (most lines, then lowest code), so
+ * panning never makes a dot swap. Display only: the stops themselves are untouched.
+ *
+ * @param {{ stopCode?: string, code?: string, coordinates: number[], lines?: unknown[] }[]} stops
+ * @param {number} zoom current map zoom
+ * @param {number} latitude map centre latitude, for metres per pixel
+ * @returns {typeof stops}
+ */
+export const thinStopsForZoom = (stops, zoom, latitude) => {
+  if (zoom >= EMT_DOT_ENTER_ZOOM) return stops;
+  const metresPerPixel = (156543.03 * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
+  const cellLat = (EMT_DOT_CELL_PX * metresPerPixel) / 111320;
+  const cellLng = cellLat / Math.cos((latitude * Math.PI) / 180);
+  const code = (s) => String(s.stopCode || s.code || '');
+  const better = (a, b) => {
+    const la = (a.lines || []).length;
+    const lb = (b.lines || []).length;
+    return la !== lb ? la > lb : code(a).localeCompare(code(b), undefined, { numeric: true }) < 0;
+  };
+  const best = new Map();
+  for (const stop of stops) {
+    const key = `${Math.floor(stop.coordinates[0] / cellLng)}:${Math.floor(stop.coordinates[1] / cellLat)}`;
+    const held = best.get(key);
+    if (!held || better(stop, held)) best.set(key, stop);
+  }
+  return [...best.values()];
+};

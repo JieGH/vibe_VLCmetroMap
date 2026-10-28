@@ -42,7 +42,7 @@ import { renderStationHighlight, renderBusStopHighlight } from '../utils/focusNo
 import { getDistance, nearestFeature, nearestPointOnPath, pathsOffReference } from '../utils/geoUtils';
 import { pickWalkSet, WALK_RADIUS_METRO_METRES, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import returnTrackData from '../data/return_tracks.json';
-import { emtStage, EMT_MARKER_MIN_ZOOM } from '../utils/emtDotMode';
+import { emtStage, EMT_MARKER_MIN_ZOOM, thinStopsForZoom } from '../utils/emtDotMode';
 import { markerSyncPlan } from '../utils/markerSync';
 import { lineOpacityExpression, dimmedVehicleOpacity, vehicleShouldPulse, withMapLines } from '../utils/lineDim';
 import {
@@ -1901,7 +1901,8 @@ const MapView = ({
         const minLat = bounds.getSouth() - latSpan * 0.3;
         const maxLat = bounds.getNorth() + latSpan * 0.3;
 
-        const visibleStops = allStops.filter((stop) => {
+        // Zoomed out one dot per street is enough (#140); the selected stop is added back below.
+        const visibleStops = thinStopsForZoom(allStops, currentZoom, map.getCenter().lat).filter((stop) => {
           const [lng, lat] = stop.coordinates;
           return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
         });
