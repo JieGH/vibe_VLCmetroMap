@@ -12,7 +12,8 @@ describe('#112 split-view headers', () => {
   it('are smaller than the old 0.74rem / 15px / 0.60rem / 0.58rem values', () => {
     expect(parseFloat(SPLIT_HEADER.titleFontSize)).toBeLessThan(0.74 * 0.9);
     expect(parseFloat(SPLIT_HEADER.titleFontSize)).toBeGreaterThan(0.74 * 0.8);
-    expect(SPLIT_HEADER.metroBadge.size).toBeLessThan(15);
+    // the header mark matches the one on the station cards (15 px, 0.52rem), so the two read as one logo
+    expect(SPLIT_HEADER.metroBadge).toEqual({ size: 15, fontSize: '0.52rem' });
     expect(parseFloat(SPLIT_HEADER.emtBadge.fontSize)).toBeLessThan(0.58);
   });
 

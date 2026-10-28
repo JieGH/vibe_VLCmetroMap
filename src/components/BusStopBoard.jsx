@@ -198,7 +198,7 @@ export const BusStopBoard = ({
             title={isExpanded ? t('stationPanel.collapseView') : t('stationPanel.expandView')}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 35, height: 18, minWidth: 35, borderRadius: 4,
+              width: 40, height: 20, minWidth: 40, borderRadius: 4,
               background: '#D62828', color: '#FFFFFF',
               boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
               flexShrink: 0,
@@ -207,8 +207,8 @@ export const BusStopBoard = ({
           >
             <span
               style={{
-                fontSize: '0.70rem',
-                fontWeight: 900,
+                fontSize: '0.60rem',
+                fontWeight: 800,
                 letterSpacing: '0.04em',
                 lineHeight: 1,
                 fontFamily: 'var(--font-ui)',
@@ -222,7 +222,7 @@ export const BusStopBoard = ({
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
               <h2 style={{
-                fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
+                fontSize: '1.02rem', fontWeight: 700, lineHeight: 1.15,
                 letterSpacing: '-.01em',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
@@ -440,7 +440,7 @@ export const BusStopBoard = ({
                       }}>
                         <span style={{
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',
+                          fontWeight: 600, fontSize: '0.98rem', color: 'var(--text-primary)',
                           minWidth: 0,
                         }}>
                           {a.destination}
@@ -463,7 +463,7 @@ export const BusStopBoard = ({
                       className="station-arrival-due"
                       style={{
                         padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
-                        fontWeight: 800, fontSize: '1.08rem', fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 700, fontSize: '1rem', fontVariantNumeric: 'tabular-nums',
                         color: heat,
                       }}
                     >

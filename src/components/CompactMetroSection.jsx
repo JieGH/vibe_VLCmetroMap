@@ -64,17 +64,18 @@ const CompactMetroSection = ({
           >
             <span
               style={{
-                width: compact ? SPLIT_HEADER.metroBadge.size : 15,
-                height: compact ? SPLIT_HEADER.metroBadge.size : 15,
+                width: SPLIT_HEADER.metroBadge.size,
+                height: SPLIT_HEADER.metroBadge.size,
                 borderRadius: '50%',
                 background: '#E2001A',
                 color: '#ffffff',
-                fontSize: compact ? SPLIT_HEADER.metroBadge.fontSize : '0.52rem',
+                fontSize: SPLIT_HEADER.metroBadge.fontSize,
                 fontWeight: 900,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 lineHeight: 1,
+                textTransform: 'none', // the label beside it is uppercase; the mark stays a lowercase m
               }}
             >
               m
@@ -397,6 +398,7 @@ const CompactMetroSection = ({
               alignItems: 'center',
               justifyContent: 'center',
               lineHeight: 1,
+              textTransform: 'none',
             }}
           >
             m

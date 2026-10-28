@@ -87,7 +87,7 @@ describe('BusStopBoard component', () => {
     );
 
     expect(html).toContain('data-testid="station-header-icon"');
-    expect(html).toMatch(/data-testid="station-header-icon"[^>]*width:35px;height:18px/);
+    expect(html).toMatch(/data-testid="station-header-icon"[^>]*width:40px;height:20px/);
     expect(html).toMatch(/data-testid="station-header-icon"[^>]*border-radius:4px/);
     expect(html).not.toMatch(/data-testid="station-header-icon"[^>]*border-radius:50%/);
   });
