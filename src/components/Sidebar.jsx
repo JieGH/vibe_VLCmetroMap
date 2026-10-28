@@ -314,7 +314,7 @@ const Sidebar = ({
 
           {/* Footer controls & info */}
           <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '4px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '4px 8px', fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '4px' }}>
               <span>{t('sidebar.systemLabel')}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <VersionPill onClick={onOpenWhatsNew} style={{ cursor: onOpenWhatsNew ? 'pointer' : undefined }} title={t('sidebar.whatsNew')} />
@@ -336,6 +336,7 @@ const Sidebar = ({
                       border: '1px solid rgba(0, 122, 255, 0.25)',
                       fontSize: '0.7rem',
                       fontWeight: 600,
+                      whiteSpace: 'nowrap',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
