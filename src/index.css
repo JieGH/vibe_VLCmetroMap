@@ -674,9 +674,11 @@ textarea {
   to { opacity: 1; }
 }
 
+/* Opacity only: the search input is focused while this runs, and a browser draws the caret where the input
+   was when focus landed. A transform here left the caret 8px off until the next tap (#141). */
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 

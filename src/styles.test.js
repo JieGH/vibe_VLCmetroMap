@@ -278,6 +278,14 @@ describe('Bottom sheet drag handle styles', () => {
   });
 });
 
+describe('Search overlay caret (#141)', () => {
+  it('opens with an opacity-only animation, so the focused input is never moving and the caret lands on it', () => {
+    const keyframes = css.match(/@keyframes slideDown\s*\{([\s\S]*?)\n\}/)?.[1] || '';
+    expect(keyframes).toContain('opacity');
+    expect(keyframes).not.toContain('transform');
+  });
+});
+
 describe('EMT zoomed-out dots and tight label (#108)', () => {
   const rule = (selector) => {
     const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
