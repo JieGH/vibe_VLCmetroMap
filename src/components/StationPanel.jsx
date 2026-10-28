@@ -722,18 +722,18 @@ const StationPanel = ({
               <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: shownName })}</caption>
               <thead>
                 <tr style={{
-                  fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                  fontSize: '.68rem', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                   position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
                 }}>
-                  <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                  <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '5px 2px 4px 6px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px 2px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
                   <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
                 </tr>
               </thead>
               <tbody>
                 {focus.arrivals.map((a, i) => (
                   <tr key={i} className="station-arrival-row" style={{ borderTop: '1px solid var(--border-color)', height: ROW_HEIGHT_PX }}>
-                    <td style={{ padding: '5px 6px', width: 1 }}>
+                    <td style={{ padding: '5px 2px 5px 6px', width: 1 }}>
                       <span
                         className="station-line-badge"
                         style={{
@@ -746,7 +746,7 @@ const StationPanel = ({
                         {a.line}
                       </span>
                     </td>
-                    <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                    <td style={{ padding: '5px 6px 5px 2px', maxWidth: 0 }}>
                       <div style={{
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         fontWeight: 600, fontSize: '1.08rem', color: 'var(--text-primary)',

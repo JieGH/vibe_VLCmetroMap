@@ -396,11 +396,11 @@ export const BusStopBoard = ({
             <caption className="visually-hidden">{t('stationPanel.laterArrivalsCaption', { station: displayName })}</caption>
             <thead>
               <tr style={{
-                fontSize: '.72rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-secondary)',
+                fontSize: '.68rem', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                 position: 'sticky', top: 0, background: 'var(--bg-panel-solid)', zIndex: 1,
               }}>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
-                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 2px 4px 6px', fontWeight: 700 }}>{t('stationPanel.line')}</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '5px 6px 4px 2px', fontWeight: 700 }}>{t('stationPanel.towards')}</th>
                 <th scope="col" style={{ textAlign: 'right', padding: '5px 6px 4px', fontWeight: 700 }}>{t('stationPanel.due')}</th>
               </tr>
             </thead>
@@ -419,7 +419,7 @@ export const BusStopBoard = ({
                     }}
                     onClick={() => onSelectLine && onSelectLine(a.line)}
                   >
-                    <td style={{ padding: '5px 6px', width: 1 }}>
+                    <td style={{ padding: '5px 2px 5px 6px', width: 1 }}>
                       <BusBadge
                         line={a.line}
                         className="station-line-badge"
@@ -431,7 +431,7 @@ export const BusStopBoard = ({
                         }}
                       />
                     </td>
-                    <td style={{ padding: '5px 6px', maxWidth: 0 }}>
+                    <td style={{ padding: '5px 6px 5px 2px', maxWidth: 0 }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
