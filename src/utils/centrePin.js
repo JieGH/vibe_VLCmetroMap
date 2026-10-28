@@ -1,5 +1,6 @@
 import { getDistance } from './geoUtils';
 import { visibleCentreLngLat } from './mapCamera';
+import { isHubStation } from './returnContext';
 
 export { visibleCentreLngLat };
 
@@ -61,4 +62,37 @@ export const createCentrePinSync = ({ map, publish, getLast, debounceMs = CENTRE
     }, debounceMs);
   };
   return { schedule, cancel };
+};
+
+/** The pin only follows the map while a hub/ping is the thing on screen (not a station or stop sheet). */
+export const isCentrePinActive = ({ centreMode, selectedStation, selectedBusStop }) =>
+  Boolean(centreMode && !selectedBusStop && isHubStation(selectedStation));
+
+/**
+ * True when centre mode should end: the location was cleared, or neither a hub nor a stop opened from
+ * one (return context) is showing, e.g. the hub was closed or a station was chosen from the map.
+ */
+export const shouldLeaveCentreMode = ({ centreMode, userLocation, selectedStation, selectedBusStop, hasReturnContext }) => {
+  if (!centreMode) return false;
+  if (!userLocation) return true;
+  if (isHubStation(selectedStation)) return false;
+  return !hasReturnContext;
+};
+
+/**
+ * Lets the centre pin follow only hand gestures. MapLibre sets `originalEvent` on drag/pinch/wheel moves
+ * and not on the app's own easeTo/fitBounds, whose moveend must not move the pin.
+ *
+ * @param {() => void} schedule - the debounced pin update
+ */
+export const createUserGestureGate = (schedule) => {
+  let byHand = false;
+  return {
+    onMoveStart: (event) => { if (event?.originalEvent) byHand = true; },
+    onMoveEnd: () => {
+      if (!byHand) return;
+      byHand = false;
+      schedule();
+    },
+  };
 };

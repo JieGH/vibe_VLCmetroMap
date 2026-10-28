@@ -46,6 +46,7 @@ import { isChunkLoadError, reloadOnceForNewBuild, setupChunkErrorRecovery } from
 import { startRegionCheck } from './services/regionCheck';
 import { useNetworkNotice } from './services/useNetworkNotice';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
+import { isCentrePinActive, shouldLeaveCentreMode } from './utils/centrePin';
 import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
@@ -136,6 +137,9 @@ function App() {
   const liveTrackerRef = useRef(null);
   // True while the camera follows the dot; broken by a manual pan or by choosing a stop, restored by locate.
   const [following, setFollowing] = useState(false);
+  // Centre-pin mode (#135): entered by a locate press; while on, a manual pan moves the pin to the map centre.
+  const [centreMode, setCentreMode] = useState(false);
+  const [centreGpsFix, setCentreGpsFix] = useState(null);
   useEffect(() => {
     if (variant === 'A') {
       setWalkTarget(null);
@@ -289,6 +293,8 @@ function App() {
     } else {
       setSelectedBusStop(null);
     }
+    // A map tap (Map Ping) ends centre mode; the centre pin's own republish (options.centrePin) does not.
+    if (options.userLocation?.isMapClick && !options.centrePin) setCentreMode(false);
     if (options.userLocation) {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
@@ -411,6 +417,11 @@ function App() {
   // the map. That rule is about incidental clicks; this is a single explicit
   // ask, and answering "where am I" without moving the map would answer
   // nothing. It is the only exception.
+  const enterCentreMode = (fix) => {
+    setCentreGpsFix(fix);
+    setCentreMode(true);
+  };
+
   const handleLocate = async () => {
     // A press while a fix is in flight is ignored rather than queued.
     if (locateState === 'locating') return;
@@ -432,6 +443,7 @@ function App() {
           initialNearestStation = interim.nearestStation;
           setLocateState('idle');
           applyUserLocation(interim, true);
+          enterCentreMode(interim);
         }
       },
     });
@@ -452,6 +464,7 @@ function App() {
         (initialNearestStation && selectedStationRef.current === initialNearestStation);
 
       applyUserLocation(result, canUpdateStation);
+      enterCentreMode(result);
     } else {
       setUserLocation(null);
       setLocateNotice({
@@ -594,6 +607,22 @@ function App() {
       setFollowing(false);
     }
   }, [liveEligible]);
+  // Centre mode ends with the hub it belongs to (closed, hidden, GPS mode dismissed, or a station chosen from the map).
+  useEffect(() => {
+    if (shouldLeaveCentreMode({
+      centreMode,
+      userLocation,
+      selectedStation,
+      selectedBusStop,
+      hasReturnContext: Boolean(returnCtxRef.current),
+    })) {
+      setCentreMode(false);
+      setCentreGpsFix(null);
+    }
+  }, [centreMode, userLocation, selectedStation, selectedBusStop]);
+  const centrePinActive = isCentrePinActive({ centreMode, selectedStation, selectedBusStop });
+  // The GPS dot stays where the fix was while the pin (a Map Ping) has taken over `userLocation`.
+  const centreGpsDot = centrePinActive && userLocation?.isMapClick ? centreGpsFix : null;
   // Choosing a station or bus stop is the viewer steering the camera elsewhere (#95): stop following.
   useEffect(() => {
     if (selectedBusStop || (selectedStation && !isHubStation(selectedStation))) setFollowing(false);
@@ -762,6 +791,8 @@ function App() {
           onUserInteract={() => { autoLocatorRef.current?.interrupt(); setFollowing(false); }}
           liveFixChannel={liveFixChannelRef.current}
           following={following}
+          centrePinActive={centrePinActive}
+          gpsFix={centreGpsDot}
           onZoomedOut={() => setWalkTarget(null)}
           variant={variant}
           activeBusLine={activeBusLine}

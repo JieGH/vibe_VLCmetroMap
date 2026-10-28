@@ -21,7 +21,7 @@ import {
   samePadding,
   recentreOnResize,
 } from '../utils/mapCamera';
-import { buildCentrePing, createCentrePinSync } from '../utils/centrePin';
+import { buildCentrePing, createCentrePinSync, createUserGestureGate } from '../utils/centrePin';
 import { MAP_REGION_BOUNDS, regionMinZoom } from '../utils/mapRegion';
 import { zoomCurve, dotScale, trainScale } from '../utils/zoomCurve';
 import { lineRanks, allowedRank } from '../utils/lineReveal';
@@ -623,6 +623,7 @@ const MapView = ({
   liveFixChannel = null,
   following = false,
   centrePinActive = false,
+  gpsFix = null,
 }) => {
   const { language } = useTranslation();
   const containerRef    = useRef(null);
@@ -1767,6 +1768,19 @@ const MapView = ({
     };
   }, [userLocation]);
 
+  // While the centre pin has replaced the GPS dot's location, keep the blue dot where the fix was (it moves
+  // with the map). Static: live tracking is stopped by then, and the dot is the same markup as the live one.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !gpsFix?.coordinates) return undefined;
+    const el = document.createElement('div');
+    el.className = 'user-location-marker';
+    el.style.cssText = 'position: relative; display: flex; align-items: center; justify-content: center; z-index: 35;';
+    el.innerHTML = '<div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>';
+    const marker = new Marker({ element: el, anchor: 'center' }).setLngLat(gpsFix.coordinates).addTo(map);
+    return () => marker.remove();
+  }, [gpsFix]);
+
   // ── Magnify the walk-radius stops in place when a pin or GPS fix is the focus ───────
   useEffect(() => {
     const map = mapRef.current;
@@ -2037,12 +2051,16 @@ const MapView = ({
       publish: (centre) => {
         const nearest = drawnStationsRef.current?.length ? nearestFeature(drawnStationsRef.current, centre) : null;
         const { userLocation: pingLocation, ...ping } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
-        selectStRef.current(ping, { userLocation: pingLocation });
+        selectStRef.current(ping, { userLocation: pingLocation, centrePin: true });
       },
     });
-    map.on('moveend', sync.schedule);
+    // Only hand gestures move the pin; the app's own camera eases (locate, selection focus) do not.
+    const gate = createUserGestureGate(sync.schedule);
+    map.on('movestart', gate.onMoveStart);
+    map.on('moveend', gate.onMoveEnd);
     return () => {
-      map.off('moveend', sync.schedule);
+      map.off('movestart', gate.onMoveStart);
+      map.off('moveend', gate.onMoveEnd);
       sync.cancel();
     };
   }, [centrePinActive]);
