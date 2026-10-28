@@ -174,6 +174,8 @@ function App() {
   const networkNotice = useNetworkNotice();
   const networkNoticeText = networkNotice ? t(`app.${networkNotice}Notice`) : '';
   const [regionDismissed, setRegionDismissed] = useState(false);
+  // A notice that comes back (VPN switched on again) or changes kind is news again, even if an earlier one was dismissed.
+  useEffect(() => { setRegionDismissed(false); }, [networkNotice]);
   useEffect(() => { startRegionCheck(); }, []);
   useEffect(() => arrivalStore.subscribe(() => {
     const refused = arrivalStore.isApiRefused();
