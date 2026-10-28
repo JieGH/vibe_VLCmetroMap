@@ -50,9 +50,8 @@ import {
   setBusRoutesData,
   setFeederWalkLinks,
   createFeederStopMarker,
-  createBusStopNodeMarker,
 } from '../utils/busMapLayers';
-import { getRealBusLines, getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
+import { getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -560,9 +559,6 @@ const TAP_RADIUS_PX = 22;
 // both ways of arriving at a platform land on the same view.
 const USER_FRAME_MAX_ZOOM = STATION_FOCUS_ZOOM;
 
-// Zooming out past this by hand puts the walking box away.
-const WALK_BANNER_MIN_ZOOM = 13;
-
 // With no Station to frame against, the zoom the camera moves to at least.
 const USER_ONLY_ZOOM = 13.8;
 
@@ -639,11 +635,6 @@ const MapView = ({
   userLocation,
   onReady,
   onUserInteract,
-  onZoomedOut,
-  variant = 'A',
-  activeBusLine = null,
-  onSelectBusLine = null,
-  activeMode = 'metro',
   selectedBusStop = null,
   onSelectBusStop = null,
   liveFixChannel = null,
@@ -717,8 +708,6 @@ const MapView = ({
   useEffect(() => { languageRef.current = language; }, [language]);
   useEffect(() => { filterRef.current = activeLineFilter; }, [activeLineFilter]);
   useEffect(() => { selectStRef.current = onSelectStation; }, [onSelectStation]);
-  const zoomedOutRef = useRef(onZoomedOut);
-  useEffect(() => { zoomedOutRef.current = onZoomedOut; }, [onZoomedOut]);
   const interactRef = useRef(onUserInteract);
   useEffect(() => { interactRef.current = onUserInteract; }, [onUserInteract]);
   useEffect(() => { selectedStationRef.current = selectedStation; }, [selectedStation]);
@@ -1223,11 +1212,6 @@ const MapView = ({
       // how auto-locate tells a viewer taking over from its own framing.
       map.on('movestart', (event) => {
         if (event.originalEvent && interactRef.current) interactRef.current();
-      });
-      // The viewer pulling out to the network overview is done with the walking box (a hand gesture only: closing
-      // the Station sheet eases out by itself and has its own way of clearing the box).
-      map.on('zoomend', (event) => {
-        if (event.originalEvent && map.getZoom() < WALK_BANNER_MIN_ZOOM && zoomedOutRef.current) zoomedOutRef.current();
       });
 
       const trainCount = document.createElement('div');
@@ -1900,131 +1884,58 @@ const MapView = ({
       styled(ensureBusLayers, map, theme);
       clearBusMarkers();
 
-      // VARIANT A: Multimodal Hub Feeder with Persistent EMT Bus Stops
-      if (variant === 'A') {
-        styled(setBusRoutesData, map, []);
+      // Multimodal Hub Feeder with Persistent EMT Bus Stops
+      styled(setBusRoutesData, map, []);
 
-        // 1. Persistent EMT bus stops across the map (rectangular EMT badges)
-        const allStops = getAllBusStops();
-        const currentZoom = map.getZoom();
+      // 1. Persistent EMT bus stops across the map (rectangular EMT badges)
+      const allStops = getAllBusStops();
+      const currentZoom = map.getZoom();
 
-        // Gated to EMT_MARKER_MIN_ZOOM (below the opening zoom, so the dots show on open) and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
-        if (currentZoom >= EMT_MARKER_MIN_ZOOM) {
-          const bounds = map.getBounds();
-          const lngSpan = bounds.getEast() - bounds.getWest();
-          const latSpan = bounds.getNorth() - bounds.getSouth();
-          const minLng = bounds.getWest() - lngSpan * 0.3;
-          const maxLng = bounds.getEast() + lngSpan * 0.3;
-          const minLat = bounds.getSouth() - latSpan * 0.3;
-          const maxLat = bounds.getNorth() + latSpan * 0.3;
+      // Gated to EMT_MARKER_MIN_ZOOM (below the opening zoom, so the dots show on open) and viewport-culled (+30% buffer) to ensure 60fps performance with 1,155 stops
+      if (currentZoom >= EMT_MARKER_MIN_ZOOM) {
+        const bounds = map.getBounds();
+        const lngSpan = bounds.getEast() - bounds.getWest();
+        const latSpan = bounds.getNorth() - bounds.getSouth();
+        const minLng = bounds.getWest() - lngSpan * 0.3;
+        const maxLng = bounds.getEast() + lngSpan * 0.3;
+        const minLat = bounds.getSouth() - latSpan * 0.3;
+        const maxLat = bounds.getNorth() + latSpan * 0.3;
 
-          const visibleStops = allStops.filter((stop) => {
-            const [lng, lat] = stop.coordinates;
-            return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
-          });
+        const visibleStops = allStops.filter((stop) => {
+          const [lng, lat] = stop.coordinates;
+          return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
+        });
 
-          // Always ensure selected bus stop is mounted if present
-          if (selectedBusStopRef.current?.coordinates) {
-            const selCode = String(selectedBusStopRef.current.stopCode);
-            if (!visibleStops.some((s) => String(s.stopCode) === selCode)) {
-              visibleStops.push(selectedBusStopRef.current);
-            }
+        // Always ensure selected bus stop is mounted if present
+        if (selectedBusStopRef.current?.coordinates) {
+          const selCode = String(selectedBusStopRef.current.stopCode);
+          if (!visibleStops.some((s) => String(s.stopCode) === selCode)) {
+            visibleStops.push(selectedBusStopRef.current);
           }
-
-          const selectedCode = selectedBusStopRef.current
-            ? String(selectedBusStopRef.current.stopCode || selectedBusStopRef.current.code || '')
-            : null;
-
-          visibleStops.forEach((stop) => {
-            const stopCode = String(stop.stopCode || stop.code || '');
-            const isSelected = Boolean(selectedCode && stopCode === selectedCode);
-            const marker = createFeederStopMarker(map, stop, () => {
-              if (onSelectBusStop) onSelectBusStop(stop);
-            }, isSelected, languageRef.current);
-            busMarkersRef.current.push(marker);
-          });
         }
 
-        // 2. When a station/ping is focused, draw the walk radius circle + dashed feeder walk links
-        if (selectedStation) {
-          const coords = snappedCoordinates(selectedStation);
-          const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;
-          const feeders = getStationBusFeeders(selectedStation.properties.name, centerCoords);
-          styled(setFeederWalkLinks, map, centerCoords, feeders);
-        } else {
-          styled(setFeederWalkLinks, map, null, []);
-        }
+        const selectedCode = selectedBusStopRef.current
+          ? String(selectedBusStopRef.current.stopCode || selectedBusStopRef.current.code || '')
+          : null;
+
+        visibleStops.forEach((stop) => {
+          const stopCode = String(stop.stopCode || stop.code || '');
+          const isSelected = Boolean(selectedCode && stopCode === selectedCode);
+          const marker = createFeederStopMarker(map, stop, () => {
+            if (onSelectBusStop) onSelectBusStop(stop);
+          }, isSelected, languageRef.current);
+          busMarkersRef.current.push(marker);
+        });
       }
 
-      // VARIANT B: Line-on-Demand Canvas
-      else if (variant === 'B') {
+      // 2. When a station/ping is focused, draw the walk radius circle + dashed feeder walk links
+      if (selectedStation) {
+        const coords = snappedCoordinates(selectedStation);
+        const centerCoords = (userLocation?.isMapClick && userLocation?.coordinates) || coords;
+        const feeders = getStationBusFeeders(selectedStation.properties.name, centerCoords);
+        styled(setFeederWalkLinks, map, centerCoords, feeders);
+      } else {
         styled(setFeederWalkLinks, map, null, []);
-
-        if (activeBusLine) {
-          styled(setBusRoutesData, map, [activeBusLine]);
-
-          // Zoom to route
-          if (activeBusLine.coordinates && activeBusLine.coordinates.length > 0) {
-            const bounds = activeBusLine.coordinates.reduce(
-              (b, c) => b.extend(c),
-              new LngLatBounds(activeBusLine.coordinates[0], activeBusLine.coordinates[0])
-            );
-            map.fitBounds(bounds, fitBoundsOptions(
-              { top: 120, bottom: 220, left: 60, right: 60 },
-              { duration: 900, maxZoom: 15 }
-            ));
-          }
-
-          // Route stops
-          const selectedCode = selectedBusStopRef.current
-            ? String(selectedBusStopRef.current.stopCode || selectedBusStopRef.current.code || '')
-            : null;
-
-          (activeBusLine.stops || []).forEach((st) => {
-            const stopCode = String(st.stopCode || st.code || '');
-            const isSelected = Boolean(selectedCode && stopCode === selectedCode);
-            const marker = createBusStopNodeMarker(map, st, (stop) => {
-              if (onSelectBusStop) onSelectBusStop(stop);
-            }, isSelected, languageRef.current);
-            busMarkersRef.current.push(marker);
-          });
-
-          // Live vehicles: none are invented; real ones would come from ArcGIS Layer 384 (ADR-0011).
-        } else {
-          styled(setBusRoutesData, map, []);
-        }
-      }
-
-      // VARIANT C: Dual-Lens Mode Switcher
-      else if (variant === 'C') {
-        styled(setFeederWalkLinks, map, null, []);
-
-        if (activeMode === 'bus') {
-          const primaryTrunks = getRealBusLines().slice(0, 5);
-          styled(setBusRoutesData, map, primaryTrunks);
-
-          if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.15);
-          if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.10);
-
-          primaryTrunks.forEach((line) => {
-            (line.stops || []).forEach((st) => {
-              const stopCode = String(st.stopCode || st.code || '');
-              const isSelected = Boolean(selectedCode && stopCode === selectedCode);
-              const marker = createBusStopNodeMarker(map, st, (stop) => {
-                if (onSelectBusStop) onSelectBusStop(stop);
-              }, isSelected, languageRef.current);
-              busMarkersRef.current.push(marker);
-            });
-          });
-
-        } else if (activeMode === 'all') {
-          styled(setBusRoutesData, map, getRealBusLines().slice(0, 3));
-          if (map.getLayer('metro-fill')) map.setPaintProperty('metro-fill', 'line-opacity', 0.85);
-          if (map.getLayer('metro-casing')) map.setPaintProperty('metro-casing', 'line-opacity', 0.35);
-        } else {
-          styled(setBusRoutesData, map, []);
-          applyLineDim(map, selectedStationRef.current);
-        }
       }
 
       updateStopHighlights();
@@ -2039,7 +1950,7 @@ const MapView = ({
       map.off('idle', syncBus);
       clearBusMarkers();
     };
-  }, [variant, selectedStation, activeBusLine, activeMode, theme, onSelectBusStop, onSelectBusLine]);
+  }, [selectedStation, theme, onSelectBusStop]);
 
   const hasPin = Boolean(
     userLocation?.isMapClick ||

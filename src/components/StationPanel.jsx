@@ -78,7 +78,6 @@ const StationPanel = ({
   station,
   theme,
   onClose,
-  _variant = 'default',
   onSelectFeederStop,
   onSelectStation,
   userLocation,

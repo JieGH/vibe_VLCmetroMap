@@ -8,7 +8,6 @@ import ConnectingBusSection from '../components/ConnectingBusSection';
 import BusStopBoard from '../components/BusStopBoard';
 import BusLineInspector from '../components/BusLineInspector';
 import ErrorBoundary from '../components/ErrorBoundary';
-import PrototypeSwitcher from '../components/PrototypeSwitcher';
 import CompactMetroSection from '../components/CompactMetroSection';
 import SearchBar from '../components/SearchBar';
 import WhatsNewModal from '../components/WhatsNewModal';
@@ -143,13 +142,6 @@ describe('components follow the language', () => {
       expect(html).toContain(esc(translate(lang, 'errorBoundary.reload')));
       expect(html).toContain(esc(translate(lang, 'errorBoundary.retry')));
     });
-  });
-
-  it('PrototypeSwitcher is translated', () => {
-    const es = withLanguage('es', <PrototypeSwitcher currentVariant="A" onSelectVariant={() => {}} />);
-    expect(es).toContain(esc(translate('es', 'prototype.A.label')));
-    expect(es).toContain(esc(translate('es', 'prototype.switcherAria')));
-    expect(es).not.toContain('Prototype Variant Switcher');
   });
 
   it('CompactMetroSection station chip, counts and telemetry hint are translated', () => {

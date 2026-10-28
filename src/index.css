@@ -2009,22 +2009,6 @@ button:active {
   color: #A15C00;
 }
 
-/* ── Walking box, portrait: above the Station list, left edges aligned ─── */
-.walk-dock {
-  position: fixed;
-  left: calc(12px + env(safe-area-inset-left, 0px));
-  /* Resting bottom is 38px (10px + 28px baseline lift); lifted further when sheet is open */
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 38px);
-  transform: translateY(calc(-1 * max(0px, var(--sheet-lift, 28px) - 28px)));
-  will-change: transform;
-  /* Leaves room on the right for the locate button (48px + its 12px margin + a gap). */
-  max-width: calc(100vw - 12px - 12px - 48px - 12px - 8px);
-  z-index: 26;
-  pointer-events: none;
-  transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
-}
-.walk-dock > * { pointer-events: auto; }
-
 /* Text size, appearance, and language sit on one row, each as a compact group of three elements. */
 .sidebar-settings-row {
   display: flex;

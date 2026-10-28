@@ -16,7 +16,6 @@ import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
 import LocateButton from './components/LocateButton';
 import HubChips from './components/HubChips';
-import WalkBanner from './components/WalkBanner';
 import WelcomeScreen from './components/WelcomeScreen';
 import { AppDownloadSheet } from './components/AppDownloadBanner';
 import { isIosDevice } from './utils/appDownload';
@@ -50,7 +49,6 @@ import { isCentrePinActive, shouldLeaveCentreMode } from './utils/centrePin';
 import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
-import BusBadge from './components/BusBadge';
 import { getRealBusLines } from './data/emtData';
 import './index.css';
 
@@ -65,15 +63,6 @@ const LOCATE_NOTICE_MS = 6000;
 const readMode = () =>
   new URLSearchParams(window.location.search).get('mode') === 'dashboard' ? 'dashboard' : 'map';
 
-const readVariant = () => {
-  if (typeof window === 'undefined') return 'A';
-  const param = new URLSearchParams(window.location.search).get('variant');
-  if (param && ['a', 'b', 'c'].includes(param.toLowerCase())) {
-    return param.toUpperCase();
-  }
-  return 'A';
-};
-
 function App() {
   const { t } = useTranslation();
   const android = isAndroid();
@@ -86,12 +75,10 @@ function App() {
   const [themeMode, setThemeMode] = useState(android ? 'system' : 'dark');
   const [rationale, setRationale] = useState(null);
   const [mode, setMode] = useState(readMode);
-  const [variant, setVariant] = useState(readVariant);
   const [activeBusLine, setActiveBusLine] = useState(null);
   const [selectedBusStop, setSelectedBusStop] = useState(null);
   const selectedBusStopRef = useRef(null);
   selectedBusStopRef.current = selectedBusStop;
-  const [activeMode, setActiveMode] = useState('bus'); // In Variant C, bus mode is default so differences are tactile
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
     getInitialSidebarOpen(getWindowScreenPreset(), { isNative: Capacitor.isNativePlatform() }),
   );
@@ -125,7 +112,6 @@ function App() {
   const [locateNotice, setLocateNotice] = useState(null);
   // The Station the floating walking box points at; null hides the box. The
   // distance is not stored: the box recomputes it from the latest fix.
-  const [walkTarget, setWalkTarget] = useState(null);
   const userLocationRef = useRef(null);
   useEffect(() => {
     userLocationRef.current = userLocation;
@@ -143,11 +129,6 @@ function App() {
   const centreMode = Boolean(centre);
   const centreModeRef = useRef(false);
   centreModeRef.current = centreMode;
-  useEffect(() => {
-    if (variant === 'A') {
-      setWalkTarget(null);
-    }
-  }, [variant]);
   // True while the search field has focus; the chip row steps aside then.
   const [searchFocused, setSearchFocused] = useState(false);
   // Where the sheet sits, so the bottom-right stack can ride above (portrait)
@@ -315,8 +296,6 @@ function App() {
         userLocationRef.current = null;
       }
     }
-    // With a fix in hand, say how far this Station is on foot (omitted in Variant A multimodal hub).
-    if (variant !== 'A' && userLocationRef.current && station) setWalkTarget({ station, _ts: Date.now() });
 
     const stName = station?.properties?.name || station?.name;
     if (stName) {
@@ -404,15 +383,12 @@ function App() {
       setFollowing(true);
     }
     if (fix.nearestStation) {
-      // The walking box answers a successful fix; the notice is for errors only (omitted in Variant A multimodal hub).
-      if (variant !== 'A') {
-        setWalkTarget({ station: fix.nearestStation, _ts: Date.now() });
-      }
+      // The multimodal hub answers a successful fix; the notice is for errors only.
     } else {
       setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
     }
     if (updateStation) {
-      const targetStation = (variant === 'A' && fix.coordinates)
+      const targetStation = fix.coordinates
         ? buildGpsHub(fix)
         : fix.nearestStation;
 
@@ -495,7 +471,6 @@ function App() {
   const handleHideLocation = () => {
     if (!userLocation) return;
     setUserLocation(null);
-    setWalkTarget(null);
     setLocateState('idle');
     setLocateNotice({ text: t('app.locationHidden'), _ts: Date.now() });
   };
@@ -538,33 +513,16 @@ function App() {
     return () => clearTimeout(id);
   }, [locateNotice]);
 
-  // The walking box stays until the viewer closes it, closes the Station panel, or zooms the map out (MapView
-  // calls onZoomedOut): it answers "how far is this platform", which stays true for as long as the panel is open.
-  useEffect(() => {
-    if (!selectedStation) setWalkTarget(null);
-  }, [selectedStation]);
-
   // Live tracking: once located, follow the viewer while the app is visible. The tracker (liveTracking.js) owns
   // cadence, gating and pausing; this wires its three outputs. Per fix: the dot only. Past ANCHOR_RECOMPUTE_M:
   // the nearest station, the walk-radius nodes and the "Where you're at" hub (all driven by `userLocation`,
   // whose `fetchedAt` is kept so the camera is not re-framed). No EMT request is made from here (ADR-0011).
-  const walkTargetRef = useRef(null);
-  walkTargetRef.current = walkTarget;
   const describeRef = useRef(null);
   describeRef.current = describeLocateResult;
   if (!liveTrackerRef.current) {
     liveTrackerRef.current = createLiveTracker({
       onFix: (fix) => {
         liveFixChannelRef.current.publish(fix);
-        // The legacy walking box (non-A variants) counts its distance down per fix.
-        if (walkTargetRef.current) {
-          setUserLocation((prev) => {
-            if (!prev || prev.status !== 'located') return prev;
-            const next = { ...prev, coordinates: fix.coordinates, accuracy: fix.accuracy, updatedAt: fix.updatedAt };
-            userLocationRef.current = next;
-            return next;
-          });
-        }
       },
       onAnchor: (fix) => {
         const nearest = findNearestStation(fix.coordinates);
@@ -807,11 +765,6 @@ function App() {
           following={following}
           centrePinActive={centrePinActive}
           gpsFix={gpsFix}
-          onZoomedOut={() => setWalkTarget(null)}
-          variant={variant}
-          activeBusLine={activeBusLine}
-          onSelectBusLine={handleSelectBusLine}
-          activeMode={activeMode}
           selectedBusStop={selectedBusStop}
           onSelectBusStop={handleSelectBusStop}
         />
@@ -863,119 +816,6 @@ function App() {
             className="search-bar-container glass-panel"
             style={{ padding: '8px 14px', display: 'flex', gap: '10px', alignItems: 'center' }}
           >
-            {variant === 'C' && (
-              <div
-                className="dual-lens-mode-control"
-                role="tablist"
-                aria-label={t('app.transitModeAria')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  padding: '2px 4px',
-                  background: 'rgba(0,0,0,0.18)',
-                  borderRadius: 999,
-                  border: '1px solid var(--border-color)',
-                  flexShrink: 0,
-                }}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeMode === 'metro'}
-                  onClick={() => setActiveMode('metro')}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: 999,
-                    border: 'none',
-                    background: activeMode === 'metro' ? '#E2001A' : 'transparent',
-                    color: activeMode === 'metro' ? '#ffffff' : 'var(--text-secondary)',
-                    fontWeight: 700,
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      background: activeMode === 'metro' ? '#ffffff' : '#E2001A',
-                      color: activeMode === 'metro' ? '#E2001A' : '#ffffff',
-                      fontSize: '0.58rem',
-                      fontWeight: 900,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      lineHeight: 1,
-                    }}
-                  >
-                    m
-                  </span>
-                  <span>{t('common.metro')}</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeMode === 'bus'}
-                  onClick={() => setActiveMode('bus')}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: 999,
-                    border: 'none',
-                    background: activeMode === 'bus' ? '#D62828' : 'transparent',
-                    color: activeMode === 'bus' ? '#ffffff' : 'var(--text-secondary)',
-                    fontWeight: 700,
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '0.54rem',
-                      fontWeight: 900,
-                      background: activeMode === 'bus' ? '#ffffff' : '#D62828',
-                      color: activeMode === 'bus' ? '#D62828' : '#ffffff',
-                      padding: '1px 3px',
-                      borderRadius: 2,
-                      letterSpacing: '0.04em',
-                      lineHeight: 1,
-                    }}
-                  >
-                    EMT
-                  </span>
-                  <span>{t('common.bus')}</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeMode === 'all'}
-                  onClick={() => setActiveMode('all')}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: 999,
-                    border: 'none',
-                    background: activeMode === 'all' ? '#1565C0' : 'transparent',
-                    color: activeMode === 'all' ? '#ffffff' : 'var(--text-secondary)',
-                    fontWeight: 700,
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                  }}
-                >
-                  <span>✨</span>
-                  <span>{t('common.all')}</span>
-                </button>
-              </div>
-            )}
             <SearchBar
               autoFocus
               onSelectStation={handleSelectStation}
@@ -1003,121 +843,13 @@ function App() {
       {/* On a retired address (Netlify, workers.dev): ask the visitor to move to xarxa.net */}
       {!showWelcome && <MovedNotice />}
 
-      {/* One dismissible chip per active Line filter (or bus trunks in prototype B/C) */}
-      {!isSearchOpen && !searchFocused && (variant === 'B' || (variant === 'C' && activeMode === 'bus') || activeLineFilter.length > 0) && (
+      {/* One dismissible chip per active Line filter */}
+      {!isSearchOpen && !searchFocused && activeLineFilter.length > 0 && (
         <div className={`hub-chips-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
-          {variant === 'B' ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                padding: '2px 4px',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.70rem',
-                  fontWeight: 800,
-                  color: '#ff6369',
-                  background: 'rgba(214, 40, 40, 0.2)',
-                  padding: '3px 8px',
-                  borderRadius: 999,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {t('app.emtTrunks')}
-              </span>
-              {getRealBusLines().slice(0, 12).map((line) => {
-                const isSelected = activeBusLine?.id === line.id;
-                return (
-                  <button
-                    key={line.id}
-                    type="button"
-                    onClick={() => handleSelectBusLine(isSelected ? null : line)}
-                    className="glass-panel"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '4px 10px',
-                      borderRadius: 999,
-                      border: isSelected ? `2px solid ${line.color}` : '1px solid var(--border-color)',
-                      background: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-panel)',
-                      color: 'var(--text-primary)',
-                      fontWeight: 700,
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <BusBadge line={line.id} color={line.color} type={line.type} size="sm" />
-                    <span>{line.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : variant === 'C' && activeMode === 'bus' ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                padding: '2px 4px',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.70rem',
-                  fontWeight: 800,
-                  color: '#ff6369',
-                  background: 'rgba(214, 40, 40, 0.2)',
-                  padding: '3px 8px',
-                  borderRadius: 999,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {t('app.busNetworkTrunks')}
-              </span>
-              {getRealBusLines().slice(0, 5).map((line) => {
-                const isSelected = activeBusLine?.id === line.id;
-                return (
-                  <button
-                    key={line.id}
-                    type="button"
-                    onClick={() => handleSelectBusLine(isSelected ? null : line)}
-                    className="glass-panel"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '4px 10px',
-                      borderRadius: 999,
-                      border: isSelected ? `2px solid ${line.color}` : '1px solid var(--border-color)',
-                      background: isSelected ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-panel)',
-                      color: 'var(--text-primary)',
-                      fontWeight: 700,
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <BusBadge line={line.id} color={line.color} type={line.type} size="sm" />
-                    <span>{line.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : activeLineFilter.length > 0 ? (
-            <HubChips
-              activeLines={activeLineFilter}
-              onClearLine={handleSelectLine}
-            />
-          ) : null}
+          <HubChips
+            activeLines={activeLineFilter}
+            onClearLine={handleSelectLine}
+          />
         </div>
       )}
 
@@ -1178,13 +910,6 @@ function App() {
         data-sheet={sheetBox ? (sheetBox.landscape ? 'landscape' : 'portrait') : 'none'}
         style={sheetBox && !sheetBox.landscape ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
       >
-        {variant !== 'A' && walkTarget && userLocation && sheetBox?.landscape && (
-          <WalkBanner
-            station={walkTarget.station}
-            userLocation={userLocation}
-            onDismiss={() => setWalkTarget(null)}
-          />
-        )}
         <LocateButton
           state={locateState}
           showingLocation={Boolean(userLocation)}
@@ -1192,20 +917,6 @@ function App() {
           onHide={handleHideLocation}
         />
       </div>
-
-      {/* The walking box, portrait: left-aligned with the Station list, just above it, clear of the locate button */}
-      {variant !== 'A' && walkTarget && userLocation && !sheetBox?.landscape && (
-        <div
-          className="walk-dock"
-          style={sheetBox ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
-        >
-          <WalkBanner
-            station={walkTarget.station}
-            userLocation={userLocation}
-            onDismiss={() => setWalkTarget(null)}
-          />
-        </div>
-      )}
 
       {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
@@ -1222,7 +933,6 @@ function App() {
               userLocationRef.current = null;
             }
           }}
-          variant={variant}
           onSelectFeederStop={handleSelectBusStopFromHub}
           onSelectStation={handleSelectStationFromHub}
           userLocation={userLocation}
