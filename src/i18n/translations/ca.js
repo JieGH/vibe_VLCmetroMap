@@ -111,6 +111,7 @@ export default {
     stations: 'Estacions',
     stationLines: 'Línies: {{lines}}',
     popularStations: 'Estacions populars',
+    popularBuses: 'Autobusos populars',
     linePrefix: 'Línia {{line}}',
   },
   stationPanel: {

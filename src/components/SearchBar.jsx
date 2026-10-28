@@ -8,6 +8,7 @@ import { COMMON_STOPS } from '../utils/commonStops';
 import { lineColor } from '../utils/lineColor';
 import { getRealBusLines, getAllBusStops } from '../data/emtData';
 import BusBadge from './BusBadge';
+import { POPULAR_BUS_LINE_IDS } from '../utils/popularBus';
 
 // gtfs_expanded.json is the canonical station set for the whole network; the
 // handful of points in metro_lines.json are a much older subset.
@@ -40,6 +41,11 @@ const SearchBar = ({
   }, [autoFocus]);
 
   // Filtered results with Valencian accent-insensitive fuzzy search
+  // The popular buses, as the real line objects a search result would hand on.
+  const popularBuses = onSelectBusLine
+    ? POPULAR_BUS_LINE_IDS.map(id => getRealBusLines().find(b => b.id === id)).filter(Boolean)
+    : [];
+
   const filteredLines = query.trim()
     ? searchFuzzy(lines, query, l => `${l.properties.name} Line ${l.properties.line} Linia ${l.properties.line}`)
     : [];
@@ -295,19 +301,17 @@ const SearchBar = ({
           </div>
           <div className="search-suggest-sep" aria-hidden="true" />
           <div className="search-suggest-col">
-            <div className="search-suggest-title">{t('searchBar.lines')}</div>
+            <div className="search-suggest-title">{t('searchBar.popularBuses')}</div>
             <div className="search-suggest-lines">
-              {lines.map((line) => (
+              {popularBuses.map((bus) => (
                 <button
-                  key={line.properties.line}
+                  key={bus.id}
                   type="button"
                   className="search-suggest-line"
-                  aria-label={t('searchBar.linePrefix', { line: line.properties.line })}
-                  onClick={() => handleSelectLine(line)}
+                  aria-label={t('bus.searchQuery', { line: bus.id, name: bus.name })}
+                  onClick={() => handleSelectBusLine(bus)}
                 >
-                  <span style={{ background: lineColor(line.properties.line), color: '#ffffff' }}>
-                    {line.properties.line}
-                  </span>
+                  <BusBadge line={bus.id} color={bus.color} type={bus.type} size="md" />
                 </button>
               ))}
             </div>
