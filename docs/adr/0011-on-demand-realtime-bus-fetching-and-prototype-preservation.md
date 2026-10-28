@@ -55,3 +55,7 @@ Concurrently, deep research on EMT València's data feeds confirmed:
 ## Follow-up (#109): visible stops only
 
 A locate or a 45 m tracking anchor used to fetch every feeder stop in range (about 34 `getSAE` requests in the centre). `ConnectingBusSection` now fetches only the nearest `FEEDER_FETCH_BATCH` (8) stops (`src/services/feederArrivalFetch.js`) and widens the batch by 8 when a sentinel after the last card scrolls into view. Nothing fetches while the bus list is not shown (metro-only tab) or the page is hidden. Stops still fresh in the 20 s cache cost no request, so an anchor refresh with an overlapping set fetches only new stops. Budget: at most 8 EMT requests per locate or anchor in a dense area, typically fewer.
+
+## Update
+
+The `?variant=A` address above is the prototype worktree's. Production no longer has a variant switch: Variant A is its only UI, and the B/C layouts, mode toggle and walking box were removed (commit `3599c8d`). The preservation rule is unchanged.

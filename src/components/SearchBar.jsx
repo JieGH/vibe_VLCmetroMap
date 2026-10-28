@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, MapPin, Navigation } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
-import { searchFuzzy } from '../utils/fuzzySearch';
+import { buildSearchResults, selectResult } from '../utils/searchResults';
 import { useTranslation } from '../i18n';
 import { COMMON_STOPS } from '../utils/commonStops';
 import { lineColor } from '../utils/lineColor';
@@ -14,6 +14,29 @@ import { POPULAR_BUS_LINE_IDS } from '../utils/popularBus';
 // handful of points in metro_lines.json are a much older subset.
 const stations = gtfsData.features.filter(f => f.geometry.type === 'Point');
 const lines    = metroData.features.filter(f => f.geometry.type === 'LineString');
+
+// One selectable row in the results list: shared option wiring and look, the content is the caller's.
+const ResultOption = ({ idx, highlighted, onPick, onHover, children }) => (
+  <div
+    id={`search-bar-option-${idx}`}
+    className="search-bar-option"
+    role="option"
+    aria-selected={highlighted}
+    onClick={onPick}
+    onMouseEnter={() => onHover(idx)}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '8px 14px',
+      cursor: 'pointer',
+      background: highlighted ? 'var(--bg-hover)' : 'transparent',
+      transition: 'background 0.1s',
+    }}
+  >
+    {children}
+  </div>
+);
 
 const SearchBar = ({
   onSelectStation,
@@ -45,31 +68,14 @@ const SearchBar = ({
     ? POPULAR_BUS_LINE_IDS.map(id => getRealBusLines().find(b => b.id === id)).filter(Boolean)
     : [];
 
-  // Filtered results with Valencian accent-insensitive fuzzy search
-  const filteredLines = query.trim()
-    ? searchFuzzy(lines, query, l => `${l.properties.name} Line ${l.properties.line} Linia ${l.properties.line}`)
-    : [];
-
-  const filteredBusLines = query.trim()
-    ? searchFuzzy(getRealBusLines(), query, b => `${b.id} ${b.name} Bus ${b.id} EMT ${b.id} Linia ${b.id}`)
-    : [];
-
-  const filteredStations = query.trim()
-    ? searchFuzzy(stations, query, st => st.properties.name)
-    : [];
-
-  // A stop code is a search key too; capped so a short query does not list hundreds.
-  const filteredBusStops = query.trim() && onSelectBusStop
-    ? searchFuzzy(getAllBusStops(), query, s => `${s.stopCode} ${s.stopName}`).slice(0, 8)
-    : [];
-
-  // Flat ordered list of all results for keyboard nav
-  const allItems = [
-    ...filteredLines.map(l  => ({ type: 'line',    data: l  })),
-    ...filteredBusLines.map(b => ({ type: 'busLine', data: b })),
-    ...filteredStations.map(st => ({ type: 'station', data: st })),
-    ...filteredBusStops.map(s => ({ type: 'busStop', data: s })),
-  ];
+  // Filtered results with Valencian accent-insensitive fuzzy search; bus stops only when the host can open them.
+  const { filteredLines, filteredBusLines, filteredStations, filteredBusStops, allItems } = buildSearchResults({
+    query,
+    lines,
+    busLines: getRealBusLines(),
+    stations,
+    busStops: onSelectBusStop ? getAllBusStops() : [],
+  });
 
   // The suggestions are wider than the search field, so place them inside the viewport.
   useEffect(() => {
@@ -194,10 +200,12 @@ const SearchBar = ({
       e.preventDefault();
       if (highlighted >= 0 && highlighted < allItems.length) {
         const item = allItems[highlighted];
-        if (item.type === 'station') handleSelectStation(item.data);
-        else if (item.type === 'busLine') handleSelectBusLine(item.data);
-        else if (item.type === 'busStop') handleSelectBusStop(item.data);
-        else handleSelectLine(item.data);
+        selectResult(item, {
+          station: handleSelectStation,
+          busLine: handleSelectBusLine,
+          busStop: handleSelectBusStop,
+          line: handleSelectLine,
+        });
       }
     }
   };
@@ -332,23 +340,12 @@ const SearchBar = ({
                 const idx = itemIdx++;
                 const isHl = highlighted === idx;
                 return (
-                  <div
+                  <ResultOption
                     key={`line-${line.properties.line}`}
-                    id={`search-bar-option-${idx}`}
-                    className="search-bar-option"
-                    role="option"
-                    aria-selected={isHl}
-                    onClick={() => handleSelectLine(line)}
-                    onMouseEnter={() => setHighlighted(idx)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 14px',
-                      cursor: 'pointer',
-                      background: isHl ? 'var(--bg-hover)' : 'transparent',
-                      transition: 'background 0.1s',
-                    }}
+                    idx={idx}
+                    highlighted={isHl}
+                    onPick={() => handleSelectLine(line)}
+                    onHover={setHighlighted}
                   >
                     <div style={{
                       width: '22px', height: '22px', borderRadius: '50%',
@@ -360,7 +357,7 @@ const SearchBar = ({
                       {line.properties.line}
                     </div>
                     <span style={{ fontSize: '0.88rem', fontWeight: 500 }}>{line.properties.name}</span>
-                  </div>
+                  </ResultOption>
                 );
               })}
             </div>
@@ -380,23 +377,12 @@ const SearchBar = ({
                 const idx = itemIdx++;
                 const isHl = highlighted === idx;
                 return (
-                  <div
+                  <ResultOption
                     key={`bus-${bus.id}`}
-                    id={`search-bar-option-${idx}`}
-                    className="search-bar-option"
-                    role="option"
-                    aria-selected={isHl}
-                    onClick={() => handleSelectBusLine(bus)}
-                    onMouseEnter={() => setHighlighted(idx)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 14px',
-                      cursor: 'pointer',
-                      background: isHl ? 'var(--bg-hover)' : 'transparent',
-                      transition: 'background 0.1s',
-                    }}
+                    idx={idx}
+                    highlighted={isHl}
+                    onPick={() => handleSelectBusLine(bus)}
+                    onHover={setHighlighted}
                   >
                     <BusBadge line={bus.id} color={bus.color} type={bus.type} size="sm" />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -407,7 +393,7 @@ const SearchBar = ({
                         {t('bus.headway', { value: bus.headway })} · {t('bus.activeBuses', { count: bus.activeVehicles })}
                       </div>
                     </div>
-                  </div>
+                  </ResultOption>
                 );
               })}
             </div>
@@ -426,23 +412,12 @@ const SearchBar = ({
                 const idx = itemIdx++;
                 const isHl = highlighted === idx;
                 return (
-                  <div
+                  <ResultOption
                     key={`st-${st.properties.name}`}
-                    id={`search-bar-option-${idx}`}
-                    className="search-bar-option"
-                    role="option"
-                    aria-selected={isHl}
-                    onClick={() => handleSelectStation(st)}
-                    onMouseEnter={() => setHighlighted(idx)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 14px',
-                      cursor: 'pointer',
-                      background: isHl ? 'var(--bg-hover)' : 'transparent',
-                      transition: 'background 0.1s',
-                    }}
+                    idx={idx}
+                    highlighted={isHl}
+                    onPick={() => handleSelectStation(st)}
+                    onHover={setHighlighted}
                   >
                     <MapPin size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -454,7 +429,7 @@ const SearchBar = ({
                       </div>
                     </div>
                     <Navigation size={12} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
-                  </div>
+                  </ResultOption>
                 );
               })}
             </div>
@@ -472,23 +447,12 @@ const SearchBar = ({
                 const idx = itemIdx++;
                 const isHl = highlighted === idx;
                 return (
-                  <div
+                  <ResultOption
                     key={`stop-${stop.stopCode}`}
-                    id={`search-bar-option-${idx}`}
-                    className="search-bar-option"
-                    role="option"
-                    aria-selected={isHl}
-                    onClick={() => handleSelectBusStop(stop)}
-                    onMouseEnter={() => setHighlighted(idx)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 14px',
-                      cursor: 'pointer',
-                      background: isHl ? 'var(--bg-hover)' : 'transparent',
-                      transition: 'background 0.1s',
-                    }}
+                    idx={idx}
+                    highlighted={isHl}
+                    onPick={() => handleSelectBusStop(stop)}
+                    onHover={setHighlighted}
                   >
                     <MapPin size={14} color="#ff6369" style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -499,7 +463,7 @@ const SearchBar = ({
                         {t('bus.stopResult', { code: stop.stopCode, lines: (stop.lines || []).join(', ') })}
                       </div>
                     </div>
-                  </div>
+                  </ResultOption>
                 );
               })}
             </div>

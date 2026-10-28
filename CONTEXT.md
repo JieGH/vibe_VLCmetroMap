@@ -179,7 +179,7 @@ _Avoid_: Bus timetable walk, GTFS bus estimate
 ### Workspace & Repository Heritage
 
 **Variant A Prototype**:
-The calibrated multimodal UX developed and fine-tuned by the user at commit `465201e` on branch `prototype/bus-roadmap` in repository `/Users/peterab/Documents/GitHub/vib_bus_prototype` (viewable at `http://localhost:5174/?variant=A`). Benchmark design for dedicated bus stop boards, 2-column stacked map bubbles, yellow selected station rim, and clean Metro-only station panels. Agents must never unilaterally redesign or discard this fine-tuned layout.
+The calibrated multimodal UX developed and fine-tuned by the user at commit `465201e` on branch `prototype/bus-roadmap` in repository `/Users/peterab/Documents/GitHub/vib_bus_prototype` (viewable at `http://localhost:5174/?variant=A`). Benchmark design for dedicated bus stop boards, 2-column stacked map bubbles, yellow selected station rim, and clean Metro-only station panels. Agents must never unilaterally redesign or discard this fine-tuned layout. The `?variant=` URL belongs to that prototype worktree only: the production app now ships Variant A as its sole UI, with the `?variant` switch and the B/C layouts removed (#139 branch, commit `3599c8d`).
 _Avoid_: Redesigned variant, experimental UI, tabbed metro sheet
 
 **Production Repo**:
