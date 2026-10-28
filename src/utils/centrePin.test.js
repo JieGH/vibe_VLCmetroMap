@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   CENTRE_PIN_DEBOUNCE_MS,
   CENTRE_PIN_MIN_MOVE_M,
-  visibleCentreLngLat,
   movedEnough,
   buildCentrePing,
   createCentrePinSync,
 } from './centrePin';
+import { visibleCentreLngLat } from './mapCamera';
 
 // A stand-in for MapLibre: a flat 1e-5 deg/px grid so unproject is easy to predict.
 const fakeMap = ({ width = 400, height = 800, padding = { top: 0, right: 0, bottom: 0, left: 0 } } = {}) => ({
@@ -52,7 +52,7 @@ describe('centrePin', () => {
 
   describe('buildCentrePing', () => {
     it('reuses the Map Ping shape so hub, nodes and walk radii work unchanged', () => {
-      const station = buildCentrePing([-0.37, 39.47], 1234);
+      const { station } = buildCentrePing([-0.37, 39.47], 1234);
       expect(station.isPin).toBe(true);
       expect(station.properties).toEqual({ name: 'Map Ping', lines: [], isPin: true });
       expect(station.geometry).toEqual({ type: 'Point', coordinates: [-0.37, 39.47] });
@@ -96,6 +96,24 @@ describe('centrePin', () => {
       sync.schedule();
       vi.advanceTimersByTime(CENTRE_PIN_DEBOUNCE_MS);
       expect(publish).not.toHaveBeenCalled();
+    });
+
+    it('force publishes a centre within the jitter threshold (the press-time pin)', () => {
+      const publish = vi.fn();
+      const centre = [200 * 1e-5, -400 * 1e-5];
+      const sync = createCentrePinSync({ map: fakeMap(), publish, getLast: () => centre });
+      sync.schedule({ force: true });
+      vi.advanceTimersByTime(CENTRE_PIN_DEBOUNCE_MS);
+      expect(publish).toHaveBeenCalledWith(centre);
+    });
+
+    it('compares against the last published pin, so a real first pan after the press pin is not swallowed', () => {
+      const publish = vi.fn();
+      const pin = [200 * 1e-5, -400 * 1e-5];
+      const sync = createCentrePinSync({ map: fakeMap(), publish, getLast: () => [pin[0], pin[1] + 0.0003] }); // ~33 m away
+      sync.schedule();
+      vi.advanceTimersByTime(CENTRE_PIN_DEBOUNCE_MS);
+      expect(publish).toHaveBeenCalledTimes(1);
     });
 
     it('cancel drops a pending update', () => {

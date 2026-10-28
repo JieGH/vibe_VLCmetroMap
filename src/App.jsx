@@ -138,8 +138,11 @@ function App() {
   // True while the camera follows the dot; broken by a manual pan or by choosing a stop, restored by locate.
   const [following, setFollowing] = useState(false);
   // Centre-pin mode (#135): entered by a locate press; while on, a manual pan moves the pin to the map centre.
-  const [centreMode, setCentreMode] = useState(false);
-  const [centreGpsFix, setCentreGpsFix] = useState(null);
+  // `{ fix }` (the GPS fix the dot stays at) while on, null otherwise.
+  const [centre, setCentre] = useState(null);
+  const centreMode = Boolean(centre);
+  const centreModeRef = useRef(false);
+  centreModeRef.current = centreMode;
   useEffect(() => {
     if (variant === 'A') {
       setWalkTarget(null);
@@ -214,14 +217,20 @@ function App() {
   // The split-view hub a stop/station was opened from; closing that view
   // returns to it (#105). Any other way of selecting something clears it.
   const returnCtxRef = useRef(null);
+  // State twin of the ref, so effects (centre-mode exit) derive from state rather than reading the ref.
+  const [hasReturnContext, setHasReturnContext] = useState(false);
+  const setReturnCtx = (ctx) => {
+    returnCtxRef.current = ctx;
+    setHasReturnContext(Boolean(ctx));
+  };
 
   // Drop the context once what it was opened from is no longer what is showing.
   useEffect(() => {
-    returnCtxRef.current = reconcileReturnContext(returnCtxRef.current, { selectedStation, selectedBusStop, activeBusLine });
+    setReturnCtx(reconcileReturnContext(returnCtxRef.current, { selectedStation, selectedBusStop, activeBusLine }));
   }, [selectedStation, selectedBusStop, activeBusLine]);
 
   const openBusStop = (busStop, ctx) => {
-    returnCtxRef.current = ctx || null;
+    setReturnCtx(ctx || null);
     setSelectedBusStop(busStop);
     if (busStop) {
       setSelectedStation(null);
@@ -241,7 +250,7 @@ function App() {
   // Leave the stop/station view: back to the remembered hub, else the map.
   const restoreReturnContext = () => {
     const back = resolveReturn(returnCtxRef.current, userLocationRef.current);
-    returnCtxRef.current = null;
+    setReturnCtx(null);
     if (!back) return false;
     setSelectedStation(back.selectedStation);
     setUserLocation(back.userLocation);
@@ -283,7 +292,7 @@ function App() {
   // Station click — opens the multimodal hub card with walking metrics
   const handleSelectStation = (station, options = {}, ctx = null) => {
     autoLocatorRef.current?.interrupt();
-    returnCtxRef.current = ctx;
+    setReturnCtx(ctx);
     setSelectedStation(station);
     if (!station) {
       if (userLocationRef.current?.isMapClick || userLocationRef.current?.status === 'located') {
@@ -294,7 +303,7 @@ function App() {
       setSelectedBusStop(null);
     }
     // A map tap (Map Ping) ends centre mode; the centre pin's own republish (options.centrePin) does not.
-    if (options.userLocation?.isMapClick && !options.centrePin) setCentreMode(false);
+    if (options.userLocation?.isMapClick && !options.centrePin) setCentre(null);
     if (options.userLocation) {
       setUserLocation(options.userLocation);
       userLocationRef.current = options.userLocation;
@@ -374,6 +383,9 @@ function App() {
   };
   const beforePrompt = () => requestRationaleRef.current?.() ?? Promise.resolve(true);
 
+  // A locate press enters centre-pin mode (#135), keeping the fix so the blue dot stays where it was.
+  const enterCentreMode = (fix) => setCentre({ fix });
+
   // Applies a User Location fix to the state. Does not displace a Station
   // the viewer has chosen manually while a background refinement was in flight.
   const applyUserLocation = (fix, updateStation = true) => {
@@ -417,11 +429,6 @@ function App() {
   // the map. That rule is about incidental clicks; this is a single explicit
   // ask, and answering "where am I" without moving the map would answer
   // nothing. It is the only exception.
-  const enterCentreMode = (fix) => {
-    setCentreGpsFix(fix);
-    setCentreMode(true);
-  };
-
   const handleLocate = async () => {
     // A press while a fix is in flight is ignored rather than queued.
     if (locateState === 'locating') return;
@@ -568,7 +575,7 @@ function App() {
         setUserLocation(next);
         // Refresh the GPS hub (geometry, nearest station) in place; fetchedAt is untouched so the camera is not
         // re-framed. Only when the hub itself is showing; a stop opened from it is refreshed on return.
-        if (shouldRefreshGpsHub({ selectedStation: selectedStationRef.current, selectedBusStop: selectedBusStopRef.current })) {
+        if (shouldRefreshGpsHub({ selectedStation: selectedStationRef.current, selectedBusStop: selectedBusStopRef.current, centreMode: centreModeRef.current })) {
           setSelectedStation(buildGpsHub(next));
         }
       },
@@ -614,15 +621,14 @@ function App() {
       userLocation,
       selectedStation,
       selectedBusStop,
-      hasReturnContext: Boolean(returnCtxRef.current),
+      hasReturnContext,
     })) {
-      setCentreMode(false);
-      setCentreGpsFix(null);
+      setCentre(null);
     }
-  }, [centreMode, userLocation, selectedStation, selectedBusStop]);
+  }, [centreMode, userLocation, selectedStation, selectedBusStop, hasReturnContext]);
   const centrePinActive = isCentrePinActive({ centreMode, selectedStation, selectedBusStop });
   // The GPS dot stays where the fix was while the pin (a Map Ping) has taken over `userLocation`.
-  const centreGpsDot = centrePinActive && userLocation?.isMapClick ? centreGpsFix : null;
+  const gpsFix = centrePinActive && userLocation?.isMapClick ? centre.fix : null;
   // Choosing a station or bus stop is the viewer steering the camera elsewhere (#95): stop following.
   useEffect(() => {
     if (selectedBusStop || (selectedStation && !isHubStation(selectedStation))) setFollowing(false);
@@ -792,7 +798,7 @@ function App() {
           liveFixChannel={liveFixChannelRef.current}
           following={following}
           centrePinActive={centrePinActive}
-          gpsFix={centreGpsDot}
+          gpsFix={gpsFix}
           onZoomedOut={() => setWalkTarget(null)}
           variant={variant}
           activeBusLine={activeBusLine}
@@ -1200,7 +1206,7 @@ function App() {
           theme={theme}
           onClose={() => {
             if (returnCtxRef.current && !isHubStation(selectedStation) && restoreReturnContext()) return;
-            returnCtxRef.current = null;
+            setReturnCtx(null);
             setSelectedStation(null);
             if (userLocationRef.current?.isMapClick || selectedStation?.isPin || selectedStation?.properties?.name === "Where you're at") {
               setUserLocation(null);

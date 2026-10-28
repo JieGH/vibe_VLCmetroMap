@@ -604,6 +604,25 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   });
 };
 
+// The viewer's blue dot, shared by the live marker (with its accuracy ring) and the static one that
+// stays at the GPS fix while the centre pin has taken over `userLocation`.
+const createUserDot = ({ accuracyRing = false } = {}) => {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'user-location-marker';
+  wrapper.style.cssText = `
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 35;
+  `;
+  wrapper.innerHTML = `
+    ${accuracyRing ? '<div class="user-location-accuracy" style="display:none;"></div>' : ''}
+    <div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>
+  `;
+  return wrapper;
+};
+
 const MapView = ({
   theme,
   selectedStation,
@@ -1447,8 +1466,9 @@ const MapView = ({
     // Live tracking refreshes the GPS hub in place (#104): same hub, new fix. Rebuild its pieces but leave the camera.
     const isHubRefresh = (prevStationRef.current?.properties?.apiId === 'user-location-gps' &&
       selectedStation.properties?.apiId === 'user-location-gps') ||
-      // The centre pin moving (#136) refreshes the hub in place: no focus ease, so fast pans do not jump.
-      (isCentrePinRefresh(userLocation) && Boolean(prevStationRef.current?.isPin) && Boolean(selectedStation.isPin));
+      // A centre-pin publish (#136) refreshes the hub in place whatever was selected before (the first pan
+      // after a GPS press comes from the GPS hub): no focus ease, so the camera never fights a pan.
+      (isCentrePinRefresh(userLocation) && Boolean(selectedStation.isPin));
     prevStationRef.current = selectedStation;
 
     const isPinTarget = Boolean(
@@ -1668,10 +1688,10 @@ const MapView = ({
     if (!map || !userLocation || userLocation.status !== 'located') return undefined;
 
     const isPing = Boolean(userLocation.isMapClick);
-    const wrapper = document.createElement('div');
-    wrapper.className = isPing ? 'user-ping-marker' : 'user-location-marker';
+    const wrapper = isPing ? document.createElement('div') : createUserDot({ accuracyRing: true });
 
     if (isPing) {
+      wrapper.className = 'user-ping-marker';
       wrapper.style.cssText = `
         position: relative;
         display: flex;
@@ -1692,18 +1712,6 @@ const MapView = ({
           essential: false,
         });
       };
-    } else {
-      wrapper.style.cssText = `
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 35;
-      `;
-      wrapper.innerHTML = `
-        <div class="user-location-accuracy" style="display:none;"></div>
-        <div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>
-      `;
     }
 
     const marker = new Marker({ element: wrapper, anchor: isPing ? 'bottom' : 'center' })
@@ -1775,11 +1783,7 @@ const MapView = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !gpsFix?.coordinates) return undefined;
-    const el = document.createElement('div');
-    el.className = 'user-location-marker';
-    el.style.cssText = 'position: relative; display: flex; align-items: center; justify-content: center; z-index: 35;';
-    el.innerHTML = '<div class="user-location-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #3B82F6; box-sizing: border-box;"></div>';
-    const marker = new Marker({ element: el, anchor: 'center' }).setLngLat(gpsFix.coordinates).addTo(map);
+    const marker = new Marker({ element: createUserDot(), anchor: 'center' }).setLngLat(gpsFix.coordinates).addTo(map);
     return () => marker.remove();
   }, [gpsFix]);
 
@@ -2045,7 +2049,8 @@ const MapView = ({
 
   // Centre pin (#134): while active, the pin is the middle of the visible map. Each gesture end
   // (debounced) republishes the centre as a Map Ping, so hub, nodes and walk radii follow it.
-  // Inert until centrePinActive is switched on; nothing is drawn here, the ping marker is reused.
+  // Nothing is drawn here: the ping marker is reused.
+  const centreSyncRef = useRef(null);
   useEffect(() => {
     const map = mapRef.current;
     if (!centrePinActive || !map) return undefined;
@@ -2054,20 +2059,40 @@ const MapView = ({
       getLast: () => userLocationRef.current?.coordinates,
       publish: (centre) => {
         const nearest = drawnStationsRef.current?.length ? nearestFeature(drawnStationsRef.current, centre) : null;
-        const { userLocation: pingLocation, ...ping } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
-        selectStRef.current(ping, { userLocation: { ...pingLocation, centrePin: true }, centrePin: true });
+        const { station, userLocation: pingLocation } = buildCentrePing(centre, Date.now(), nearest?.feature || null);
+        selectStRef.current(station, { userLocation: { ...pingLocation, centrePin: true }, centrePin: true });
       },
     });
+    centreSyncRef.current = sync;
     // Only hand gestures move the pin; the app's own camera eases (locate, selection focus) do not.
+    // A hand gesture that interrupts an ease can show up as any of these starts, so all of them count.
     const gate = createUserGestureGate(sync.schedule);
-    map.on('movestart', gate.onMoveStart);
+    const starts = ['movestart', 'dragstart', 'zoomstart', 'rotatestart', 'pitchstart'];
+    starts.forEach((name) => map.on(name, gate.onUserStart));
     map.on('moveend', gate.onMoveEnd);
     return () => {
-      map.off('movestart', gate.onMoveStart);
+      starts.forEach((name) => map.off(name, gate.onUserStart));
       map.off('moveend', gate.onMoveEnd);
       sync.cancel();
+      centreSyncRef.current = null;
     };
   }, [centrePinActive]);
+
+  // A locate press (a fresh, non-ping fix) drops the pin at the visible centre once the camera has settled
+  // on the fix, so the green dot exists immediately without a pan. Declared after the framing effect, so
+  // that ease has started (isMoving) by the time this runs.
+  const pressFixKey = userLocation?.status === 'located' && !userLocation.isMapClick ? userLocation.fetchedAt : null;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!centrePinActive || !map || pressFixKey == null) return undefined;
+    const drop = () => centreSyncRef.current?.schedule({ force: true });
+    if (map.isMoving()) {
+      map.once('moveend', drop);
+      return () => map.off('moveend', drop);
+    }
+    drop();
+    return undefined;
+  }, [centrePinActive, pressFixKey]);
 
   return (
     <div

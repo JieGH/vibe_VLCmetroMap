@@ -41,9 +41,10 @@ export const buildGpsHub = (fix) => ({
 /**
  * Live tracking (#104) refreshes the hub only while it is the thing showing: not under a stop opened from it
  * (that stop is the selection, and the remembered hub is refreshed on return by resolveReturn).
+ * Never while centre mode is on: the centre pin (a Map Ping) owns the selection then.
  */
-export const shouldRefreshGpsHub = ({ selectedStation, selectedBusStop }) =>
-  Boolean(isGpsHub(selectedStation) && !selectedBusStop);
+export const shouldRefreshGpsHub = ({ selectedStation, selectedBusStop, centreMode = false }) =>
+  Boolean(isGpsHub(selectedStation) && !selectedBusStop && !centreMode);
 
 /**
  * What to select when a stop view closes: the hub, or null for the bare map.

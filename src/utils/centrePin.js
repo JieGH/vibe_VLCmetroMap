@@ -2,8 +2,6 @@ import { getDistance } from './geoUtils';
 import { visibleCentreLngLat } from './mapCamera';
 import { isHubStation } from './returnContext';
 
-export { visibleCentreLngLat };
-
 /** Wait this long after the last gesture end before moving the centre pin. */
 export const CENTRE_PIN_DEBOUNCE_MS = 250;
 /** A centre that moved less than this from the current pin is jitter, not a pan. */
@@ -20,12 +18,14 @@ export const movedEnough = (prev, next, minMoveM = CENTRE_PIN_MIN_MOVE_M) =>
  * @param {[number, number]} coordinates - lng/lat
  * @param {number} fetchedAt
  * @param {object | null} [nearestStation]
- * @returns {{ properties: object, geometry: object, isPin: true, userLocation: object }}
+ * @returns {{ station: object, userLocation: object }}
  */
 export const buildCentrePing = (coordinates, fetchedAt, nearestStation = null) => ({
-  properties: { name: 'Map Ping', lines: [], isPin: true },
-  geometry: { type: 'Point', coordinates },
-  isPin: true,
+  station: {
+    properties: { name: 'Map Ping', lines: [], isPin: true },
+    geometry: { type: 'Point', coordinates },
+    isPin: true,
+  },
   userLocation: {
     coordinates,
     accuracy: 15,
@@ -45,21 +45,23 @@ export const buildCentrePing = (coordinates, fetchedAt, nearestStation = null) =
  * @param {object} args.map - MapLibre-like (see visibleCentreLngLat)
  * @param {(coordinates: [number, number]) => void} args.publish
  * @param {() => [number, number] | null | undefined} args.getLast - current pin coordinates
- * @returns {{ schedule: () => void, cancel: () => void }}
+ * @returns {{ schedule: (opts?: { force?: boolean }) => void, cancel: () => void }}
  */
-export const createCentrePinSync = ({ map, publish, getLast, debounceMs = CENTRE_PIN_DEBOUNCE_MS }) => {
+export const createCentrePinSync = ({ map, publish, getLast }) => {
   let timer = null;
   const cancel = () => {
     if (timer !== null) clearTimeout(timer);
     timer = null;
   };
-  const schedule = () => {
+  // `force` publishes even when the centre is within the jitter threshold (the press-time pin, which
+  // sits on the fix by design).
+  const schedule = ({ force = false } = {}) => {
     cancel();
     timer = setTimeout(() => {
       timer = null;
       const centre = visibleCentreLngLat(map);
-      if (movedEnough(getLast(), centre)) publish(centre);
-    }, debounceMs);
+      if (force || movedEnough(getLast(), centre)) publish(centre);
+    }, CENTRE_PIN_DEBOUNCE_MS);
   };
   return { schedule, cancel };
 };
@@ -83,16 +85,20 @@ export const shouldLeaveCentreMode = ({ centreMode, userLocation, selectedStatio
  * Lets the centre pin follow only hand gestures. MapLibre sets `originalEvent` on drag/pinch/wheel moves
  * and not on the app's own easeTo/fitBounds, whose moveend must not move the pin.
  *
+ * `onUserStart` is for the gesture-start events (movestart, dragstart, zoomstart, rotatestart, ...): a
+ * hand gesture that interrupts a programmatic ease still counts even if only one of them carries the
+ * original event. Every moveend resets the flag, so one gesture never leaks into a later ease.
+ *
  * @param {() => void} schedule - the debounced pin update
  */
 export const createUserGestureGate = (schedule) => {
   let byHand = false;
   return {
-    onMoveStart: (event) => { if (event?.originalEvent) byHand = true; },
+    onUserStart: (event) => { if (event?.originalEvent) byHand = true; },
     onMoveEnd: () => {
-      if (!byHand) return;
+      const wasByHand = byHand;
       byHand = false;
-      schedule();
+      if (wasByHand) schedule();
     },
   };
 };
