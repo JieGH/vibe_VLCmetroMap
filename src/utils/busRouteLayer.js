@@ -71,7 +71,7 @@ export function ensureBusRouteLayer(map, theme = 'dark') {
   ];
   if (hasChevron) {
     layers.push({ id: BUS_HL_LAYERS[2], type: 'symbol', filter: isRoute,
-      layout: { 'symbol-placement': 'line', 'symbol-spacing': 80, 'icon-image': BUS_HL_ARROW_IMAGE, 'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.4, 14, 0.6, 17, 0.8], 'icon-rotation-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true },
+      layout: { 'symbol-placement': 'line', 'symbol-spacing': 160, 'icon-image': BUS_HL_ARROW_IMAGE, 'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.4, 14, 0.6, 17, 0.8], 'icon-rotation-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true },
       paint: { 'icon-opacity': 1 } });
   }
   for (const l of layers) {
