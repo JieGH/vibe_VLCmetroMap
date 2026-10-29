@@ -65,9 +65,9 @@ export function ensureBusRouteLayer(map, theme = 'dark') {
   const isRoute = ['==', ['get', 'kind'], 'route'];
   const layers = [
     { id: BUS_HL_LAYERS[0], type: 'line', filter: isRoute, layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': casing, 'line-width': widthExpr(7, 12, 19), 'line-opacity': 0.92 } },
+      paint: { 'line-color': casing, 'line-width': widthExpr(5.6, 9.6, 15.2), 'line-opacity': 0.92 } },
     { id: BUS_HL_LAYERS[1], type: 'line', filter: isRoute, layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': LINE19_COLOR, 'line-width': widthExpr(4, 7.5, 12), 'line-opacity': 1 } },
+      paint: { 'line-color': LINE19_COLOR, 'line-width': widthExpr(3.2, 6, 9.6), 'line-opacity': 1 } },
   ];
   if (hasChevron) {
     layers.push({ id: BUS_HL_LAYERS[2], type: 'symbol', filter: isRoute,
