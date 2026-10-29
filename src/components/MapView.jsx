@@ -53,6 +53,9 @@ import {
   createFeederStopMarker,
 } from '../utils/busMapLayers';
 import { getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
+import { createLiveBusLayer } from '../utils/liveBusLayer';
+import { isLine19Focused } from '../utils/busFocus';
+import { useBusFleet } from '../services/useBusFleet';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -639,6 +642,8 @@ const MapView = ({
   onUserInteract,
   selectedBusStop = null,
   onSelectBusStop = null,
+  activeBusLine = null,
+  onSelectLiveBus = null,
   liveFixChannel = null,
   following = false,
   centrePinActive = false,
@@ -675,6 +680,28 @@ const MapView = ({
   const nearbyKeysRef = useRef(new Set()); // m:/b: keys of the walk-radius stops whose base markers are magnified
   const selectedBusStopRef = useRef(selectedBusStop);
   useEffect(() => { selectedBusStopRef.current = selectedBusStop; }, [selectedBusStop]);
+
+  // Live line 19 buses (#151): polled only while a line 19 stop or its chip is in focus (ADR-0011/0014).
+  // Buses go straight to the marker layer, never through React state.
+  const liveBusLayerRef = useRef(null);
+  const onSelectLiveBusRef = useRef(onSelectLiveBus);
+  useEffect(() => { onSelectLiveBusRef.current = onSelectLiveBus; }, [onSelectLiveBus]);
+  const line19Focused = useMemo(() => isLine19Focused(
+    { selectedBusStop, activeBusLine },
+    new globalThis.Map(getAllBusStops().map((s) => [String(s.stopCode), s]))
+  ), [selectedBusStop, activeBusLine]);
+  useBusFleet({
+    focused: line19Focused,
+    onBuses: (buses) => {
+      const map = mapRef.current;
+      if (!liveBusLayerRef.current) {
+        if (!map || buses.length === 0) return;
+        liveBusLayerRef.current = createLiveBusLayer(map, { onSelect: (bus) => onSelectLiveBusRef.current?.(bus) });
+      }
+      liveBusLayerRef.current.setBuses(buses);
+    },
+  });
+  useEffect(() => () => { liveBusLayerRef.current?.destroy(); liveBusLayerRef.current = null; }, []);
   const onSelectBusStopRef = useRef(onSelectBusStop);
   useEffect(() => { onSelectBusStopRef.current = onSelectBusStop; }, [onSelectBusStop]);
   // What the camera is centring on and the padding it was centred under, so a resized sheet or window

@@ -771,6 +771,7 @@ function App() {
           gpsFix={gpsFix}
           selectedBusStop={selectedBusStop}
           onSelectBusStop={handleSelectBusStop}
+          activeBusLine={activeBusLine}
         />
       </Suspense>
 

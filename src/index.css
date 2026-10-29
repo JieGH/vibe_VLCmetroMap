@@ -189,6 +189,7 @@ textarea {
    zoom is applied to the inner visual, never to the MapLibre-positioned marker element, and it
    scales layout so the centre/bottom anchors keep every marker on its coordinate. */
 .live-bus-pill,
+.live-bus-fleet-inner,
 .station-floating-chart,
 .bus-floating-chart {
   zoom: var(--font-scale, 1);
