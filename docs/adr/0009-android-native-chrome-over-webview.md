@@ -32,3 +32,5 @@ A Kotlin rewrite is rejected for now because:
 
 The separate native Kotlin app (`android-native/`) was removed from `main` in 1.8.1; its source stays, frozen, on the branch `native/kotlin-app` (commit 308e47c). It had fallen behind the web app, and everything it did could be had by packaging the website with Capacitor, which this ADR had already chosen to keep. The APK on GitHub releases is now built from `android/` (`scripts/release-apk.sh`) and is named `Xarxa-capacitor.apk`. The Android behaviours above (back button, system theme, location rationale, Material 3 chrome) are unchanged and still gated by `isAndroid()`.
 
+The Material 3 skin (`src/android.css`) is also switched off: the Capacitor app draws the same interface as the website and the iOS app, and defaults to the dark theme like them. The website is the reference; the other platforms follow it. The back button, the location rationale and the settings shortcut remain Android-only behaviour. `android.css` is kept in the repository, unused, for anyone who wants the skin back (re-import it from `main.jsx` and add the `android` class to the root).
+

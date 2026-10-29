@@ -6,20 +6,13 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { I18nProvider } from './i18n'
 import { Capacitor } from '@capacitor/core'
 import { applyUiZoom } from './utils/uiScale'
-import { isAndroid } from './utils/platform'
 // Before the first render, so the layout is measured at its final size.
 applyUiZoom(Capacitor.getPlatform())
 
-// The Material 3 design belongs to the Capacitor app alone. The stylesheet is a
-// dynamic import so the web and iOS bundles never load it, and the class goes
-// on first so the first paint is already Material.
-let designReady = Promise.resolve()
-if (isAndroid()) {
-  document.documentElement.classList.add('android')
-  designReady = import('./android.css').catch(() => {})
-}
-
-designReady.then(() => createRoot(document.getElementById('root')).render(
+// The Capacitor app draws the same interface as the website and the iOS app. The Material 3 skin
+// (src/android.css, ADR-0009) is no longer loaded or applied; the Android-only behaviour (back button,
+// location rationale, settings shortcut) stays, gated by isAndroid() where it is used.
+createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <I18nProvider>
@@ -27,4 +20,4 @@ designReady.then(() => createRoot(document.getElementById('root')).render(
       </I18nProvider>
     </ErrorBoundary>
   </StrictMode>,
-))
+)

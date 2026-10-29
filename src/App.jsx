@@ -72,8 +72,9 @@ function App() {
   // because the OS system window splash already covers it.
   const [showWelcome, setShowWelcome] = useState(() => !android);
   const [mapReady, setMapReady] = useState(false);
-  const [theme, setTheme] = useState(() => initialTheme(android));
-  const [themeMode, setThemeMode] = useState(android ? 'system' : 'dark');
+  // Same default on every platform: dark, until the viewer picks Light or Auto.
+  const [theme, setTheme] = useState(() => initialTheme(false));
+  const [themeMode, setThemeMode] = useState('dark');
   const [rationale, setRationale] = useState(null);
   const [mode, setMode] = useState(readMode);
   const [activeBusLine, setActiveBusLine] = useState(null);

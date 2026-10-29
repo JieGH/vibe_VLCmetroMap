@@ -99,8 +99,8 @@ For publishing to Google Play see [`docs/capacitor/`](capacitor/): [release chec
 Android-only behaviour, all gated by `isAndroid()` in `src/utils/platform.js` so the web and iOS are unchanged (see [ADR-0009](adr/0009-android-native-chrome-over-webview.md)):
 
 - **Back button** (`@capacitor/app`): `src/utils/androidBack.js` decides, as a pure function, which layer to close (location dialog, About, welcome, dashboard, search keyboard, drawer, station sheet, line filter) and exits the app when none is open. `App.jsx` registers the listener.
-- **System theme:** `src/utils/systemTheme.js`. Android starts in, and follows, the phone's dark/light setting until the viewer taps the theme button.
-- **Location rationale:** `src/components/LocationRationale.jsx` (class names `md-*`, styled by `android.css`) is shown before the first system location prompt via `locate({ beforePrompt })`; declining returns status `declined` and no prompt. A refusal shows a snackbar whose **Open settings** action calls the `AppSettings.open()` native plugin (`src/services/openSettings.js`).
+- **Look and theme:** the same as the website and iOS. The Material 3 skin (`src/android.css`, ADR-0009) is no longer loaded, and the theme defaults to dark on every platform (`src/utils/systemTheme.js` still offers Auto).
+- **Location rationale:** `src/components/LocationRationale.jsx` (class names `md-*`) is shown before the first system location prompt via `locate({ beforePrompt })`; declining returns status `declined` and no prompt. A refusal shows a snackbar whose **Open settings** action calls the `AppSettings.open()` native plugin (`src/services/openSettings.js`).
 - **No animated welcome screen** on Android.
 
 Five things exist purely to make Android work, and are easy to break by "cleaning up" without knowing why:
