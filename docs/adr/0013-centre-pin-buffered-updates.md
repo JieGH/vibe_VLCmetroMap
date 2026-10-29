@@ -41,3 +41,10 @@ A recording showed the bus column on placeholders for seconds after a pin drop w
 - **Nearest first, capped concurrency.** Requests start in nearest-first order with at most `FEEDER_FETCH_CONCURRENCY` (4) in flight. The prefetch buffer comes last in that order, so it only gets what the budget leaves after the visible stops.
 - **Waiting is visible.** A stop in the fetch batch with no answer yet pulses its placeholder rows (opacity only, no layout change, off under reduced motion). A stop that answered with nothing keeps the existing no-data marker.
 - The budget (`BUDGET_MAX` per `BUDGET_WINDOW_MS`) and anchor rules are unchanged. Re-check the numbers on a device against the same drag pattern before touching them.
+
+### Follow-up: the budget was spent on stops nobody could see (#144)
+
+A device re-check still showed 5 s+ waits for the top three stops, although EMT answers in 0.1 to 0.3 s even with 8 requests at once. Cause: each drop asked for 8 stops plus up to 4 prefetched, which is the whole `BUDGET_MAX`, so any second drag within `BUDGET_WINDOW_MS` was deferred until the first drop's requests aged out (7.5 s or more). Tapping a stop costs one request and is outside this budget, which is why it was instant.
+
+- `FEEDER_FETCH_BATCH` is 4 (the cards on screen plus one) and `PREFETCH_MAX_EXTRA` is 0. A drop costs at most 4 requests, so three drags fit in one window. Cards below the first screen still fetch as they scroll into view.
+- The budget numbers are unchanged; only what is asked of it changed. A jitter of a few metres can swap the last stop of the batch, costing at most one request.

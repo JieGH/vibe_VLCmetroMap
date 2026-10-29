@@ -13,7 +13,7 @@ export const ANCHOR_MAX_AGE_MS = 60000;
 /** Stops this far beyond the walk radius are prefetched, so a small pan is served from the cache. */
 export const PREFETCH_BUFFER_M = 60;
 /** At most this many buffer-only stops are added to a fetch. */
-export const PREFETCH_MAX_EXTRA = 4;
+export const PREFETCH_MAX_EXTRA = 0;
 /** Hard EMT request budget: at most BUDGET_MAX network requests per BUDGET_WINDOW_MS. */
 export const BUDGET_MAX = 12;
 export const BUDGET_WINDOW_MS = 10000;

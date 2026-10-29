@@ -4,7 +4,7 @@
 import { fetchStopArrivals } from './emtArrivalService';
 
 // Cards that fit on screen without scrolling, with a little slack.
-export const FEEDER_FETCH_BATCH = 8;
+export const FEEDER_FETCH_BATCH = 4;
 
 /**
  * Stop codes (nearest first) that may fetch now. Nothing while the bus list is out of

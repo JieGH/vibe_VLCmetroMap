@@ -1,7 +1,7 @@
 // #136: the centre pin moving refreshes the walk set and fetches bus arrivals within budget.
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { clearEmtCache } from './emtArrivalService';
-import { fetchFeederArrivals, visibleFeederCodes, createLatestGuard } from './feederArrivalFetch';
+import { fetchFeederArrivals, visibleFeederCodes, createLatestGuard, FEEDER_FETCH_BATCH } from './feederArrivalFetch';
 import { createCentrePinSync, isCentrePinRefresh, buildCentrePing } from '../utils/centrePin';
 import { pickWalkSet, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 
@@ -49,8 +49,9 @@ describe('#136 centre pin fetches', () => {
     spy.mockRestore();
     expect(published).toHaveLength(1);
     await fetchFeederArrivals(visibleFeederCodes(walkCodes(published[0])), { fetchFn });
-    expect(fetchFn).toHaveBeenCalledTimes(walkCodes([-0.375, 39.48]).length);
-    expect(fetchFn.mock.calls.length).toBeLessThanOrEqual(8);
+    // Only the nearest batch (what the split view shows) is fetched; the rest waits for a scroll.
+    expect(fetchFn).toHaveBeenCalledTimes(visibleFeederCodes(walkCodes([-0.375, 39.48])).length);
+    expect(fetchFn.mock.calls.length).toBeLessThanOrEqual(FEEDER_FETCH_BATCH);
   });
 
   it('never fetches a stop outside the pin radius, and nothing when far from every stop', async () => {
@@ -58,7 +59,7 @@ describe('#136 centre pin fetches', () => {
     const pin = [-0.375, 39.47];
     const codes = walkCodes(pin);
     expect(codes.length).toBeGreaterThan(0);
-    await fetchFeederArrivals(visibleFeederCodes(codes), { fetchFn });
+    await fetchFeederArrivals(visibleFeederCodes(codes, { limit: codes.length }), { fetchFn });
     const called = fetchFn.mock.calls.map(([url]) => String(url).match(/parada=(\d+)/)[1]);
     expect(called.sort()).toEqual([...codes].sort());
     fetchFn.mockClear();

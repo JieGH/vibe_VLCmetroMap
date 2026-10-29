@@ -97,7 +97,27 @@ describe('gesture store and buffer', () => {
     s.setActive(false);
     expect(s.getState()).toEqual({ active: false, moving: false });
   });
-  it('adds at most a few buffer stops beyond the radius', () => {
-    expect(withPrefetchBuffer(['a', 'b'], ['b', 'c', 'd', 'e', 'f', 'g'])).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+  it('adds at most maxExtra buffer stops beyond the radius', () => {
+    expect(withPrefetchBuffer(['a', 'b'], ['b', 'c', 'd', 'e', 'f', 'g'], 4)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+  });
+  it('prefetches nothing by default: a drag costs only the stops on screen (#144)', () => {
+    expect(withPrefetchBuffer(['a', 'b'], ['c', 'd'])).toEqual(['a', 'b']);
+  });
+});
+
+describe('#144 repeated drags stay inside the budget without waiting', () => {
+  it('a drag every 4 s in a dense area never defers the visible stops', async () => {
+    const { FEEDER_FETCH_BATCH } = await import('../services/feederArrivalFetch');
+    let t = 0;
+    const now = () => t;
+    const policy = createFetchPolicy({ budget: createBudget({ now }), now });
+    for (let drag = 0; drag < 6; drag += 1) {
+      t = drag * 4000;
+      const pin = [-0.375, 39.45 + drag * 0.00135]; // ~150 m further each time: a fresh anchor
+      const nearest = Array.from({ length: 34 }, (_, i) => `d${drag}s${i}`).slice(0, FEEDER_FETCH_BATCH);
+      const plan = policy.plan({ pin, codes: withPrefetchBuffer(nearest, []) });
+      expect(plan.skipped).toEqual([]);
+      expect(plan.fetch).toEqual(nearest);
+    }
   });
 });
