@@ -311,6 +311,8 @@ export default {
     stopsAwayNext: 'Siguiente parada',
     stopsAwayOne: 'a 1 parada',
     stopsAwayOther: 'a {{count}} paradas',
+    liveBusAgeSeconds: 'Posición de hace {{seconds}} s',
+    liveBusAgeMinutes: 'Posición de hace {{minutes}} min',
     nearestBusAria: 'Autobús más cercano de la línea 19: {{away}}',
     liveBusAria: 'Autobús de la línea {{line}} hacia {{destination}}',
     liveBusTowards: 'Hacia {{destination}}',

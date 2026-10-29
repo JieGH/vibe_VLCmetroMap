@@ -652,6 +652,7 @@ const MapView = ({
   onSelectBusStop = null,
   activeBusLine = null,
   onSelectLiveBus = null,
+  selectedLiveBusId = null,
   liveFixChannel = null,
   following = false,
   centrePinActive = false,
@@ -694,6 +695,11 @@ const MapView = ({
   const liveBusLayerRef = useRef(null);
   const onSelectLiveBusRef = useRef(onSelectLiveBus);
   useEffect(() => { onSelectLiveBusRef.current = onSelectLiveBus; }, [onSelectLiveBus]);
+  const selectedLiveBusIdRef = useRef(selectedLiveBusId);
+  useEffect(() => {
+    selectedLiveBusIdRef.current = selectedLiveBusId;
+    liveBusLayerRef.current?.setSelected(selectedLiveBusId);
+  }, [selectedLiveBusId]);
   const line19Focused = useMemo(
     () => isLine19Focused({ selectedBusStop, activeBusLine }, getStopsByCode()),
     [selectedBusStop, activeBusLine]
@@ -720,6 +726,7 @@ const MapView = ({
       if (!liveBusLayerRef.current) {
         if (!map || buses.length === 0) return;
         liveBusLayerRef.current = createLiveBusLayer(map, { onSelect: (bus) => onSelectLiveBusRef.current?.(bus) });
+        liveBusLayerRef.current.setSelected(selectedLiveBusIdRef.current);
       }
       liveBusLayerRef.current.setBuses(buses);
     },

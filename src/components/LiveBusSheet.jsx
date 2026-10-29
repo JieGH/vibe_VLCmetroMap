@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { useTranslation } from '../i18n';
 import { useLiveBus } from '../services/useBusFleet';
-import { describeLiveBus, stopsAwayLabel } from '../utils/liveBusInfo';
+import { describeLiveBus, stopsAwayLabel, liveFixAgeSeconds, fixAgeLabel } from '../utils/liveBusInfo';
 import { LANDSCAPE_BREAKPOINT_PX, lineViewFrame } from '../utils/layout';
 
 const useIsLandscape = () => {
@@ -28,6 +28,11 @@ const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose, sidebarO
   const { t } = useTranslation();
   const bus = useLiveBus(busId);
   useIsLandscape(); // re-render on resize/rotation so the frame is recomputed
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 5000); // keeps "Position N s ago" honest between polls
+    return () => clearInterval(id);
+  }, []);
   const gone = !bus;
 
   useEffect(() => {
@@ -76,6 +81,11 @@ const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose, sidebarO
         ) : info.nextStopName ? (
           <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
             {t('bus.nextStop', { stop: info.nextStopName })}
+          </span>
+        ) : null}
+        {fixAgeLabel(t, liveFixAgeSeconds(bus, nowMs)) ? (
+          <span data-testid="live-bus-age" style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+            {fixAgeLabel(t, liveFixAgeSeconds(bus, nowMs))}
           </span>
         ) : null}
       </div>

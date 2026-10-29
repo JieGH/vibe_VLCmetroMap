@@ -8,31 +8,38 @@ import { LINE19_COLOR } from './busRouteLayer';
 
 export const LIVE_BUS_COLOR = LINE19_COLOR; // the one EMT red every bus badge uses (BusBadge.jsx)
 
-// Live bus marker: a plain round badge in the line colour with the line number, a soft
-// pulsing "live" halo behind it and a heading chevron outside it. Only the chevron rotates, so the number
-// always stays upright. Visibly unlike the small rectangular EMT stop badges.
+// Live bus marker: a 40px white disc with a thick line-colour ring and the bold line number (no bus icon),
+// a pulsing "live" halo behind it and a large WHITE heading arrow outside it (dark outline so it reads on
+// light and dark basemaps). Only the arrow rotates, so the number stays upright. Unmistakably unlike the
+// small rectangular EMT stop chips, and drawn above them (z-index 70 vs 26/50 for stops).
+const SHADOW = 'drop-shadow(0 0 1px rgba(0,0,0,0.95)) drop-shadow(0 0 1px rgba(0,0,0,0.95)) drop-shadow(0 1px 2px rgba(0,0,0,0.6))';
 function buildElement(doc, bus) {
   const el = doc.createElement('div');
   el.className = 'live-bus-fleet-marker';
-  el.style.cssText = 'z-index: 24; cursor: pointer;';
+  el.style.cssText = 'z-index: 70; cursor: pointer;';
   el.title = `EMT ${bus.linea || ''}`.trim();
   // The visual lives in the inner element so Text Size zoom (index.css) never touches the map transform.
   const inner = doc.createElement('div');
   inner.className = 'live-bus-fleet-inner';
-  inner.style.cssText = 'position:relative;width:60px;height:60px;display:flex;align-items:center;justify-content:center;';
+  inner.style.cssText = 'position:relative;width:84px;height:84px;display:flex;align-items:center;justify-content:center;';
   const halo = doc.createElement('div');
   halo.className = 'live-bus-fleet-halo';
-  halo.style.cssText = `position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:${LIVE_BUS_COLOR};pointer-events:none;`;
+  halo.style.cssText = `position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:${LIVE_BUS_COLOR};pointer-events:none;`;
   const arrow = doc.createElement('div');
   arrow.className = 'live-bus-fleet-arrow';
   arrow.style.cssText = 'position:absolute;inset:0;display:none;transform-origin:50% 50%;transition:transform 0.4s linear;pointer-events:none;';
   const tip = doc.createElement('div');
   tip.className = 'live-bus-fleet-chevron';
-  tip.style.cssText = `position:absolute;left:50%;top:0;margin-left:-9px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid ${LIVE_BUS_COLOR};filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 2px rgba(0,0,0,0.55));`;
-  arrow.appendChild(tip);
+  tip.style.cssText = `position:absolute;left:50%;top:2px;margin-left:-13px;width:26px;height:20px;background:#ffffff;clip-path:polygon(50% 0,100% 100%,50% 68%,0 100%);`;
+  // clip-path would also clip the filter, so the outline sits on a wrapper
+  const tipWrap = doc.createElement('div');
+  tipWrap.className = 'live-bus-fleet-chevron-wrap';
+  tipWrap.style.cssText = `position:absolute;left:0;top:0;width:100%;height:100%;filter:${SHADOW};`;
+  tipWrap.appendChild(tip);
+  arrow.appendChild(tipWrap);
   const badge = doc.createElement('div');
   badge.className = 'live-bus-fleet-badge';
-  badge.style.cssText = `position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;width:32px;height:32px;border-radius:50%;background:${LIVE_BUS_COLOR};color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);font:800 14px/1 var(--font-ui);user-select:none;`;
+  badge.style.cssText = `position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;width:40px;height:40px;border-radius:50%;background:#ffffff;color:${LIVE_BUS_COLOR};border:4px solid ${LIVE_BUS_COLOR};box-shadow:0 0 0 1.5px rgba(0,0,0,0.35),0 4px 10px rgba(0,0,0,0.65);font:900 17px/1 var(--font-ui);user-select:none;`;
   const num = doc.createElement('span');
   num.className = 'live-bus-fleet-line';
   num.textContent = String(bus.linea || '');
@@ -41,8 +48,12 @@ function buildElement(doc, bus) {
   inner.appendChild(arrow);
   inner.appendChild(badge);
   el.appendChild(inner);
-  return { el, arrow };
+  return { el, arrow, inner, badge };
 }
+
+const RING = `0 0 0 3px #ffffff, 0 0 0 6px ${LIVE_BUS_COLOR}, 0 6px 14px rgba(0,0,0,0.7)`;
+const BASE_SHADOW = '0 0 0 1.5px rgba(0,0,0,0.35),0 4px 10px rgba(0,0,0,0.65)';
+
 
 /**
  * @param {object} map MapLibre map
@@ -61,6 +72,14 @@ export function createLiveBusLayer(map, opts = {}) {
   /** @type {Map<string, {marker: object, arrow: object, lng: number, lat: number, rot: number|null, bus: object}>} */
   const markers = new Map();
   let frame = null;
+  let selectedId = null;
+
+  function applySelection(id, m) {
+    const on = id != null && id === selectedId;
+    m.el.style.zIndex = on ? '80' : '70';
+    m.inner.style.transform = on ? 'scale(1.25)' : '';
+    m.badge.style.boxShadow = on ? RING : BASE_SHADOW;
+  }
 
   function paint(t) {
     markers.forEach((m, id) => {
@@ -97,8 +116,8 @@ export function createLiveBusLayer(map, opts = {}) {
       if (!alive.has(bus.id)) continue;
       const known = markers.get(bus.id);
       if (known) { known.bus = bus; continue; }
-      const { el, arrow } = buildElement(doc, bus);
-      const entry = { marker: null, arrow, lng: null, lat: null, rot: null, bus };
+      const { el, arrow, inner, badge } = buildElement(doc, bus);
+      const entry = { marker: null, arrow, el, inner, badge, lng: null, lat: null, rot: null, bus };
       if (onSelect) {
         el.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -110,9 +129,16 @@ export function createLiveBusLayer(map, opts = {}) {
       entry.lng = start.lonLat[0];
       entry.lat = start.lonLat[1];
       markers.set(bus.id, entry);
+      applySelection(bus.id, entry);
     }
     paint(t);
     if (frame == null && markers.size > 0 && !motion.isSettled(t)) frame = raf(loop);
+  }
+
+  /** Ring the bus whose details are open (null clears). */
+  function setSelected(id) {
+    selectedId = id ?? null;
+    markers.forEach((m, key) => applySelection(key, m));
   }
 
   function destroy() {
@@ -123,5 +149,5 @@ export function createLiveBusLayer(map, opts = {}) {
     motion.clear();
   }
 
-  return { setBuses, destroy, count: () => markers.size, markerFor: (id) => markers.get(id)?.marker };
+  return { setBuses, setSelected, destroy, count: () => markers.size, markerFor: (id) => markers.get(id)?.marker };
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getLine19Route, pointAtAlongM } from './busRoute';
-import { describeLiveBus, headsignDestination, liveBusSheetBox } from './liveBusInfo';
+import { describeLiveBus, headsignDestination, liveBusSheetBox, liveFixAgeSeconds, fixAgeLabel } from './liveBusInfo';
 
 const dir = getLine19Route().directions[0]; // to-malvarosa
 const busAt = (alongM, extra = {}) => ({
@@ -56,5 +56,20 @@ describe('liveBusSheetBox', () => {
     const box = liveBusSheetBox(true);
     expect(box.right).toBe('auto');
     expect(box.width).toBe('min(380px, calc(66vw - 40px))');
+  });
+});
+
+describe('fix age', () => {
+  it('measures the age from the fix time, falls back to the polled age, else null', () => {
+    expect(liveFixAgeSeconds({ fixTimeMs: 1000 }, 13000)).toBe(12);
+    expect(liveFixAgeSeconds({ fixTimeMs: 5000 }, 1000)).toBe(0);
+    expect(liveFixAgeSeconds({ ageSeconds: 7 }, 1000)).toBe(7);
+    expect(liveFixAgeSeconds({}, 1000)).toBeNull();
+  });
+  it('words seconds, then minutes, and nothing when unknown', () => {
+    const t = (k, v) => `${k}:${JSON.stringify(v)}`;
+    expect(fixAgeLabel(t, 12)).toBe('bus.liveBusAgeSeconds:{"seconds":12}');
+    expect(fixAgeLabel(t, 125)).toBe('bus.liveBusAgeMinutes:{"minutes":2}');
+    expect(fixAgeLabel(t, null)).toBe('');
   });
 });

@@ -315,6 +315,8 @@ export default {
     stopsAwayNext: 'Next stop',
     stopsAwayOne: '1 stop away',
     stopsAwayOther: '{{count}} stops away',
+    liveBusAgeSeconds: 'Position {{seconds}} s ago',
+    liveBusAgeMinutes: 'Position {{minutes}} min ago',
     nearestBusAria: 'Nearest line 19 bus: {{away}}',
     liveBusAria: 'Line {{line}} bus towards {{destination}}',
     liveBusTowards: 'Towards {{destination}}',

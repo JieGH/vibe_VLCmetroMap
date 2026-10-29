@@ -786,6 +786,7 @@ function App() {
           onSelectBusStop={handleSelectBusStop}
           activeBusLine={activeBusLine}
           onSelectLiveBus={(bus) => setLiveBusId(bus.id)}
+          selectedLiveBusId={liveBusId}
         />
       </Suspense>
 

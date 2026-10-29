@@ -32,6 +32,19 @@ export function stopsAwayLabel(t, stopsAway) {
   return t('bus.stopsAwayOther', { count: stopsAway });
 }
 
+/** Age in seconds of the bus's last GPS fix at nowMs, or null when unknown. Pure. */
+export function liveFixAgeSeconds(bus, nowMs = Date.now()) {
+  if (Number.isFinite(bus?.fixTimeMs)) return Math.max(0, Math.round((nowMs - bus.fixTimeMs) / 1000));
+  return Number.isFinite(bus?.ageSeconds) ? bus.ageSeconds : null;
+}
+
+/** "Position 12 s ago" / "Position 2 min ago" in the active language; '' when the age is unknown. */
+export function fixAgeLabel(t, ageSeconds) {
+  if (!Number.isFinite(ageSeconds)) return '';
+  if (ageSeconds < 60) return t('bus.liveBusAgeSeconds', { seconds: Math.max(0, Math.round(ageSeconds)) });
+  return t('bus.liveBusAgeMinutes', { minutes: Math.floor(ageSeconds / 60) });
+}
+
 /**
  * Placement of the live bus sheet. In landscape the stop board sits at the right (top 84, right 16, 34vw wide),
  * so the sheet stays left of it instead of spanning the width.

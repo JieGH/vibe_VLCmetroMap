@@ -78,6 +78,14 @@ describe('liveBusLayer', () => {
     expect(body.style.cssText).toContain('border-radius:50%');
     expect(body.children.map((c) => c.className)).toEqual(['live-bus-fleet-line']);
     expect(body.children[0].textContent).toBe('19');
+    // 40px white disc, thick red ring, red number; the arrow is white with a dark outline; above the stop chips
+    expect(body.style.cssText).toContain('width:40px');
+    expect(body.style.cssText).toContain('background:#ffffff');
+    expect(body.style.cssText).toContain('border:4px solid #D62828');
+    const chevron = inner.children[1].children[0].children[0];
+    expect(chevron.style.cssText).toContain('background:#ffffff');
+    expect(inner.children[1].children[0].style.cssText).toContain('drop-shadow');
+    expect(layer.markerFor('a').getElement().style.cssText).toContain('z-index: 70');
     // the heading rotates the arrow only, never the body
     stepFrame();
     expect(inner.children[1].style.transform).toBe('rotate(90deg)');
@@ -96,5 +104,26 @@ describe('liveBusLayer', () => {
     const layer = make();
     layer.setBuses([bus('a', [-0.37, 39.47], null)]);
     expect(layer.markerFor('a').getElement().children[0].children[1].style.display).not.toBe('block');
+  });
+
+  it('rings and raises the selected bus only, and clears it', () => {
+    const layer = make();
+    layer.setBuses([bus('a', [-0.37, 39.47]), bus('b', [-0.36, 39.47])]);
+    layer.setSelected('a');
+    const a = layer.markerFor('a').getElement();
+    const b = layer.markerFor('b').getElement();
+    expect(a.style.zIndex).toBe('80');
+    expect(a.children[0].style.transform).toBe('scale(1.25)');
+    expect(a.children[0].children[2].style.boxShadow).toContain('#ffffff');
+    expect(b.style.zIndex).toBe('70');
+    layer.setSelected(null);
+    expect(a.style.zIndex).toBe('70');
+    expect(a.children[0].style.transform).toBe('');
+  });
+  it('applies a selection made before the marker existed', () => {
+    const layer = make();
+    layer.setSelected('a');
+    layer.setBuses([bus('a', [-0.37, 39.47])]);
+    expect(layer.markerFor('a').getElement().style.zIndex).toBe('80');
   });
 });

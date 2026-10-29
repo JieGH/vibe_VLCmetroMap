@@ -10,7 +10,7 @@ import LiveBusSheet from './LiveBusSheet';
 const dir = getLine19Route().directions[0];
 const bus = (alongM) => ({
   id: 'bus-1', linea: '19', trayecto: dir.trayecto, directionKey: dir.id, alongM,
-  snappedLonLat: pointAtAlongM(dir, alongM).lonLat,
+  snappedLonLat: pointAtAlongM(dir, alongM).lonLat, fixTimeMs: Date.now() - 12000,
 });
 
 describe('LiveBusSheet', () => {
@@ -24,6 +24,7 @@ describe('LiveBusSheet', () => {
     expect(html).toContain('from Regne de València - Peris i Valero');
     expect(html).toContain('aria-label="Line 19 bus towards La Malva-rosa"');
     expect(html).toContain('aria-label="Close bus details"');
+    expect(html).toMatch(/Position 1[0-9] s ago/);
   });
   it('without a selected stop shows the next stop', () => {
     live.current = bus(500);
