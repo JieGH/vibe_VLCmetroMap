@@ -33,6 +33,11 @@ export function directionForTrayecto(trayecto, data = route) {
   return data.directions.find((d) => d.trayecto === t) || null;
 }
 
+/** The direction with this id (as in a bus view's directionKey), or null. */
+export function directionById(id, data = route) {
+  return data.directions.find((d) => d.id === id) || null;
+}
+
 const cumCache = new WeakMap();
 
 function cumulative(polyline) {

@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fixture from '../data/fixtures/emt_line19_recording.json';
 import { normalizeFecha } from './busFleetService';
-import { directionForTrayecto, projectOnShape } from '../utils/busRoute';
-import { createBusTracker, MATCH_GATE_M, DROP_AFTER_MS, HIDE_AGE_S, HEADING_MIN_MOVE_M } from './busTracker';
+import { directionForTrayecto, projectOnShape, pointAtAlongM, findStop } from '../utils/busRoute';
+import * as busRoute from '../utils/busRoute';
+import { createBusTracker, MATCH_GATE_M, DROP_AFTER_MS, HIDE_AGE_S, HEADING_MIN_MOVE_M, BACKWARD_TOLERANCE_M } from './busTracker';
+
+vi.mock('../utils/busRoute', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, projectOnShape: vi.fn(actual.projectOnShape) };
+});
 
 const T0 = 1793308537000;
 const NORTH = 'Est.del Nord - La Malva-rosa';
@@ -126,7 +132,9 @@ describe('identity', () => {
 
   it('breaks distance ties by lower previous gid, then lower new gid', () => {
     const t = createBusTracker();
-    const [a, b] = t.update([rec(7, at(-100, 0)), rec(3, at(100, 0))], T0); // b has lower gid 3
+    const first = t.update([rec(7, at(-100, 0)), rec(3, at(100, 0))], T0);
+    const a = first.find((x) => x.sourceGid === 7);
+    const b = first.find((x) => x.sourceGid === 3); // b has lower gid 3
     // one new fix at the centre, equidistant from both
     const out = t.update([rec(9, at(0, 0), { fixTimeMs: T0 + 20000 })], T0 + 30000);
     const moved = out.find((o) => o.fixTimeMs === T0 + 20000);
@@ -295,5 +303,116 @@ describe('recording replay (ADR-0014)', () => {
     expect(wrong).toBe(0);
     expect(unmatched + turnarounds).toBeLessThanOrEqual(1);
     expect(turnarounds).toBe(1);
+  });
+});
+
+describe('review fixes', () => {
+  const dir = directionForTrayecto(NORTH);
+  const routePt = (m) => pointAtAlongM(dir, m).lonLat;
+
+  it('A, empty, A does not re-match A as new nor reset its age', () => {
+    const t = createBusTracker();
+    const snapA = [rec(1, at(0, 0), { ageSeconds: 10 }), rec(2, at(3000, 0))];
+    const [a] = t.update(snapA, T0);
+    t.update([], T0 + 15000);
+    const out = t.update(snapA, T0 + 30000);
+    expect(out.map((b) => b.id)).toContain(a.id);
+    expect(t.getBuses(T0 + 30000, { includeStale: true })).toHaveLength(2);
+    expect(out.find((b) => b.id === a.id).ageSeconds).toBe(40);
+  });
+
+  it('keeps a last-good hint across an off-route fix', () => {
+    const t = createBusTracker();
+    const base = 1500;
+    const [b0] = t.update([rec(1, routePt(base))], T0);
+    t.update([rec(2, at(0, 0, [b0.lonLat[0], b0.lonLat[1] + 0.002]), { fixTimeMs: T0 + 10000 })], T0 + 15000);
+    busRoute.projectOnShape.mockClear();
+    t.update([rec(3, routePt(base + 40), { fixTimeMs: T0 + 30000 })], T0 + 35000);
+    const call = busRoute.projectOnShape.mock.calls.at(-1);
+    expect(call[2]).toEqual({ hintAlongM: b0.alongM });
+  });
+
+  it('holds small backward steps and accepts larger ones', () => {
+    expect(BACKWARD_TOLERANCE_M).toBe(25);
+    const t = createBusTracker();
+    const [b0] = t.update([rec(1, routePt(1500))], T0);
+    const b1 = t.update([rec(2, routePt(b0.alongM - 10), { fixTimeMs: T0 + 10000 })], T0 + 15000)[0];
+    expect(b1.alongM).toBeCloseTo(b0.alongM, 6);
+    expect(b1.snappedLonLat[0]).toBeCloseTo(b0.snappedLonLat[0], 8);
+    expect(b1.snappedLonLat[1]).toBeCloseTo(b0.snappedLonLat[1], 8);
+    const b2 = t.update([rec(3, routePt(b0.alongM - 100), { fixTimeMs: T0 + 30000 })], T0 + 35000)[0];
+    expect(b2.alongM).toBeCloseTo(b0.alongM - 100, 0);
+  });
+
+  it('exposes the previous fix and positions, null on the first fix', () => {
+    const t = createBusTracker();
+    const [a] = t.update([rec(1, routePt(1500), { fixTimeMs: T0 })], T0);
+    expect(a.prevLonLat).toBeNull();
+    expect(a.prevSnappedLonLat).toBeNull();
+    expect(a.prevFixTimeMs).toBeNull();
+    const [b] = t.update([rec(2, routePt(1560), { fixTimeMs: T0 + 20000 })], T0 + 30000);
+    expect(b.prevLonLat).toEqual(a.lonLat);
+    expect(b.prevSnappedLonLat).toEqual(a.snappedLonLat);
+    expect(b.prevFixTimeMs).toBe(T0);
+  });
+
+  describe('nearestApproaching', () => {
+    const stop = dir.stops[10];
+    const stopAfter = dir.stops[12];
+    it('returns the nearest approaching bus with stops away and distance', () => {
+      const t = createBusTracker();
+      t.update([
+        rec(1, routePt(stop.alongM - 300)),
+        rec(2, routePt(stop.alongM - 900)),
+        rec(3, routePt(stop.alongM + 200)),
+      ], T0);
+      const r = t.nearestApproaching(stop.stopCode, T0);
+      expect(r.bus.alongM).toBeCloseTo(stop.alongM - 300, 0);
+      expect(r.distanceM).toBeCloseTo(300, 0);
+      expect(r.stopsAway).toBeGreaterThanOrEqual(0);
+      expect(t.nearestApproaching(stopAfter.stopCode, T0).distanceM).toBeCloseTo(stopAfter.alongM - (stop.alongM + 200), 0);
+    });
+    it('ignores passed, off-route, stale and wrong-direction buses, and unknown stops', () => {
+      const t = createBusTracker();
+      t.update([
+        rec(1, routePt(stop.alongM + 200)),
+        rec(2, at(0, 0, [routePt(stop.alongM - 300)[0], routePt(stop.alongM - 300)[1] + 0.003])),
+        rec(3, routePt(stop.alongM - 400), { ageSeconds: 200 }),
+        rec(4, routePt(stop.alongM - 500), { trayecto: SOUTH }),
+      ], T0);
+      expect(findStop(dir, stop.stopCode)).toBeTruthy();
+      expect(t.nearestApproaching(stop.stopCode, T0)).toBeNull();
+      expect(t.nearestApproaching('nope', T0)).toBeNull();
+    });
+  });
+
+  it('assigns new-track ids independent of input order', () => {
+    const recs = [rec(3, at(0, 0)), rec(1, at(3000, 0)), rec(2, at(6000, 0))];
+    const t1 = createBusTracker();
+    const t2 = createBusTracker();
+    const o1 = t1.update(recs, T0);
+    const o2 = t2.update([...recs].reverse(), T0);
+    const idByGid = (o) => Object.fromEntries(o.map((b) => [b.sourceGid, b.id]));
+    expect(idByGid(o2)).toEqual(idByGid(o1));
+  });
+
+  it('a missing or NaN age is stale, not immortal', () => {
+    const t = createBusTracker();
+    t.update([rec(1, at(0, 0), { ageSeconds: undefined }), rec(2, at(3000, 0), { ageSeconds: NaN })], T0);
+    expect(t.getBuses(T0)).toHaveLength(0);
+    const all = t.getBuses(T0 + 60000, { includeStale: true });
+    expect(all).toHaveLength(2);
+    expect(all.every((b) => b.stale)).toBe(true);
+  });
+
+  it('the partial check counts only live tracks, not ghosts', () => {
+    const t = createBusTracker();
+    t.update([rec(1, at(0, 0)), rec(2, at(3000, 0)), rec(3, at(6000, 0)), rec(4, at(9000, 0))], T0);
+    t.update([rec(5, at(0, 10), { fixTimeMs: T0 + 20000 }), rec(6, at(3000, 10), { fixTimeMs: T0 + 20000 })], T0 + 30000);
+    const [moved] = t.update([rec(7, at(0, 40), { fixTimeMs: T0 + 50000 })], T0 + 60000);
+    const all = t.getBuses(T0 + 60000, { includeStale: true });
+    expect(all).toHaveLength(4);
+    expect(all.find((b) => b.sourceGid === 7).fixTimeMs).toBe(T0 + 50000);
+    expect(moved).toBeTruthy();
   });
 });

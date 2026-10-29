@@ -15,7 +15,9 @@
 // the record arrived, so a device clock skew never enters. A Track is dropped when
 // its last matched snapshot is more than DROP_AFTER_MS of poll time old.
 
-import { distanceM, directionForTrayecto, projectOnShape, OFF_ROUTE_M } from '../utils/busRoute';
+import {
+  distanceM, directionForTrayecto, directionById, projectOnShape, pointAtAlongM, findStop, OFF_ROUTE_M, PASSED_HYSTERESIS_M,
+} from '../utils/busRoute';
 
 export const MATCH_GATE_M = 400;
 export const DROP_AFTER_MS = 120000;
@@ -23,6 +25,9 @@ export const HIDE_AGE_S = 120;
 export const HEADING_MIN_MOVE_M = 10;
 /** Fewer than this share of the tracked buses is a rewrite in progress, not buses vanishing. */
 export const PARTIAL_SHARE = 0.5;
+
+/** A fix this close behind the previous alongM is GPS jitter: hold the previous position. */
+export const BACKWARD_TOLERANCE_M = 25;
 
 const RAD = Math.PI / 180;
 const TIE_EPS_M = 1e-6;
@@ -41,19 +46,27 @@ function snapshotKey(records) {
   return records.map((r) => r.gid).sort((a, b) => a - b).join(',');
 }
 
-function snap(track, hint) {
+function snap(track) {
   const direction = directionForTrayecto(track.trayecto);
   track.directionKey = direction ? direction.id : null;
   track.alongM = null;
   track.offsetM = null;
   track.snappedLonLat = [...track.lonLat];
   if (!direction) return;
+  // First fix: unhinted, which picks the stretch nearest the raw fix (offset gate below still applies).
+  const hint = track.hintAlongM;
   const proj = projectOnShape(direction, track.lonLat, hint == null ? {} : { hintAlongM: hint });
   if (!proj) return;
   track.offsetM = proj.offsetM;
   if (proj.offsetM > OFF_ROUTE_M) return;
-  track.alongM = proj.alongM;
-  track.snappedLonLat = [...proj.point];
+  if (hint != null && proj.alongM < hint && hint - proj.alongM <= BACKWARD_TOLERANCE_M) {
+    track.alongM = hint;
+    track.snappedLonLat = [...pointAtAlongM(direction, hint).lonLat];
+  } else {
+    track.alongM = proj.alongM;
+    track.snappedLonLat = [...proj.point];
+  }
+  track.hintAlongM = track.alongM;
 }
 
 export function createBusTracker() {
@@ -61,8 +74,10 @@ export function createBusTracker() {
   let nextId = 1;
   let lastKey = null;
   let lastNowMs = 0;
+  let lastMatchPollMs = null;
 
   function fixAgeS(t, nowMs) {
+    if (!Number.isFinite(t.ageSeconds0)) return Infinity; // unknown age: never trust it as fresh
     return Math.max(0, t.ageSeconds0 + (nowMs - t.seenPollMs) / 1000);
   }
 
@@ -80,7 +95,10 @@ export function createBusTracker() {
       offsetM: t.offsetM,
       headingDeg: t.headingDeg,
       fixTimeMs: t.fixTimeMs,
-      ageSeconds: Math.round(age),
+      ageSeconds: Number.isFinite(age) ? Math.round(age) : null,
+      prevLonLat: t.prevLonLat ? [...t.prevLonLat] : null,
+      prevSnappedLonLat: t.prevSnappedLonLat ? [...t.prevSnappedLonLat] : null,
+      prevFixTimeMs: t.prevFixTimeMs,
       stale: age > HIDE_AGE_S,
     };
   }
@@ -97,6 +115,10 @@ export function createBusTracker() {
       trayecto: String(r.trayecto ?? '').trim(),
       refLonLat: [...r.lonLat],
       headingDeg: null,
+      hintAlongM: null,
+      prevLonLat: null,
+      prevSnappedLonLat: null,
+      prevFixTimeMs: null,
     };
     t.lonLat = [...r.lonLat];
     t.gid = r.gid;
@@ -104,7 +126,7 @@ export function createBusTracker() {
     t.ageSeconds0 = r.ageSeconds;
     t.seenPollMs = nowMs;
     t.lastMatchedMs = nowMs;
-    snap(t, null);
+    snap(t);
     tracks.push(t);
   }
 
@@ -119,9 +141,12 @@ export function createBusTracker() {
       t.headingDeg = bearingDeg(t.refLonLat, r.lonLat);
       t.refLonLat = [...r.lonLat];
     }
+    t.prevLonLat = t.lonLat;
+    t.prevSnappedLonLat = t.snappedLonLat;
+    t.prevFixTimeMs = t.fixTimeMs;
     t.lonLat = [...r.lonLat];
     t.fixTimeMs = r.fixTimeMs;
-    snap(t, t.alongM);
+    snap(t);
   }
 
   function match(records, nowMs) {
@@ -147,9 +172,11 @@ export function createBusTracker() {
       usedRecs.add(p.ri);
       apply(p.t, p.r, nowMs);
     }
-    records.forEach((r, ri) => {
-      if (!usedRecs.has(ri)) newTrack(r, nowMs);
-    });
+    records
+      .filter((r, ri) => !usedRecs.has(ri))
+      .sort((a, b) => (a.gid - b.gid) || (a.lonLat[0] - b.lonLat[0]) || (a.lonLat[1] - b.lonLat[1]))
+      .forEach((r) => newTrack(r, nowMs));
+    lastMatchPollMs = nowMs;
   }
 
   function update(records, nowMs) {
@@ -157,19 +184,43 @@ export function createBusTracker() {
     const recs = Array.isArray(records) ? records : [];
     const key = snapshotKey(recs);
     const isNewSnapshot = key !== lastKey;
-    lastKey = key;
-    const partial = recs.length === 0 || recs.length < tracks.length * PARTIAL_SHARE;
+    if (recs.length > 0) lastKey = key; // an empty poll must not make the next real one look new
+    // Ghosts (tracks unseen in the last matched poll) do not count towards the expected bus count.
+    const live = tracks.filter((t) => t.lastMatchedMs === lastMatchPollMs).length;
+    const partial = recs.length === 0 || recs.length < live * PARTIAL_SHARE;
     if (isNewSnapshot && !partial) match(recs, nowMs);
     tracks = tracks.filter((t) => nowMs - t.lastMatchedMs <= DROP_AFTER_MS);
     return getBuses(nowMs);
   }
 
+  /**
+   * The nearest bus approaching `stopCode`: same direction as the stop, on route,
+   * not stale, not yet passed. { bus, stopsAway, distanceM } or null.
+   */
+  function nearestApproaching(stopCode, nowMs = lastNowMs) {
+    let best = null;
+    for (const t of tracks) {
+      if (t.alongM == null || fixAgeS(t, nowMs) > HIDE_AGE_S) continue;
+      const direction = directionById(t.directionKey);
+      const target = direction && findStop(direction, stopCode);
+      if (!target || t.alongM > target.alongM + PASSED_HYSTERESIS_M) continue;
+      const distance = Math.max(0, target.alongM - t.alongM);
+      if (best && (distance > best.distanceM || (distance === best.distanceM && t.id > best.t.id))) continue;
+      best = { t, distanceM: distance, direction, target };
+    }
+    if (!best) return null;
+    const { t, direction, target, distanceM: distance } = best;
+    const stopsAway = direction.stops.filter((s) => s.alongM < target.alongM && t.alongM <= s.alongM + PASSED_HYSTERESIS_M).length;
+    return { bus: view(t, nowMs), stopsAway, distanceM: distance };
+  }
+
   function reset() {
+    lastMatchPollMs = null;
     tracks = [];
     nextId = 1;
     lastKey = null;
     lastNowMs = 0;
   }
 
-  return { update, getBuses, reset };
+  return { update, getBuses, nearestApproaching, reset };
 }

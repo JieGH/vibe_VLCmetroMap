@@ -284,3 +284,13 @@ function alongToPoint(direction, alongM) {
   }
   return polyline.at(-1);
 }
+
+describe('directionById', () => {
+  it('finds a direction by id, or null', async () => {
+    const { directionById, getLine19Route } = await import('./busRoute');
+    const d = getLine19Route().directions[0];
+    expect(directionById(d.id)).toBe(d);
+    expect(directionById('nope')).toBeNull();
+    expect(directionById(null)).toBeNull();
+  });
+});
