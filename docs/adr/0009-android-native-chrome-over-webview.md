@@ -30,5 +30,5 @@ A Kotlin rewrite is rejected for now because:
 
 ## Addendum (1.8.1): the Capacitor build is the only APK
 
-The separate native Kotlin app (`android-native/`) was removed in 1.8.1. It had fallen behind the web app, and everything it did could be had by packaging the website with Capacitor, which this ADR had already chosen to keep. The APK on GitHub releases is now built from `android/` (`scripts/release-apk.sh`) and is named `Xarxa-capacitor.apk`. The Android behaviours above (back button, system theme, location rationale, Material 3 chrome) are unchanged and still gated by `isAndroid()`.
+The separate native Kotlin app (`android-native/`) was removed from `main` in 1.8.1; its source stays, frozen, on the branch `native/kotlin-app` (commit 308e47c). It had fallen behind the web app, and everything it did could be had by packaging the website with Capacitor, which this ADR had already chosen to keep. The APK on GitHub releases is now built from `android/` (`scripts/release-apk.sh`) and is named `Xarxa-capacitor.apk`. The Android behaviours above (back button, system theme, location rationale, Material 3 chrome) are unchanged and still gated by `isAndroid()`.
 
