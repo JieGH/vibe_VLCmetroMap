@@ -29,7 +29,7 @@
 - **Nearest station in one tap**, with walk time (location never leaves your phone)
 - **Live countdowns** for any station
 - **City buses too**: live EMT València arrivals at any stop, loaded when you tap it
-- **Metro and bus side by side**: drop a pin or find yourself and see the nearby trains (within 450 m) and buses (within 300 m) in one view, a few soonest departures per stop
+- **Metro and bus side by side**: drop a pin or find yourself and see the nearby trains (within 450 m) and buses (within 300 m) in one view, a few soonest departures per stop; bus times fill in nearest stop first with a small wave of dots while they load, and the map opens close enough that one tap drops a pin
 - **Follows you as you walk**: while the app is open your position keeps updating, kept gentle on the battery (nothing runs in the background)
 - **Clearer bus stops**: stops for each direction are drawn apart, and thin out to one small dot per street when you zoom out, and show the EMT logo and line numbers as you zoom in
 - **Search stations and bus stops** by name or stop number; before you type it suggests the buses that run between the main train stations and the city centre, and picking a result opens it just like tapping it on the map
