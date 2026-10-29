@@ -263,7 +263,7 @@ export default {
     itemZoomTitle: 'Bus Stops That Grow as You Zoom',
     itemZoomDesc: 'Bus stops show as dots, then the EMT logo, then their line numbers.',
     itemNearTitle: 'Closer Nearby Stops',
-    itemNearDesc: 'Pins and your location show metro within 320 m and buses within 280 m.',
+    itemNearDesc: 'Pins and your location show metro within 450 m and buses within 300 m.',
     itemBigTitle: 'Bigger Text, Roomier Desktop',
     itemBigDesc: 'New XXL text size, and a wider, open sidebar on large screens.',
     itemNetTitle: 'Train Service Notice',

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
+import WaveDots from './WaveDots';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { useTranslation } from '../i18n';
 import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
@@ -335,7 +336,6 @@ export const ConnectingBusSection = ({
                   return (
                     <div
                       key={bIdx}
-                      className={waiting && busObj.dueSeconds == null ? 'feeder-row-waiting' : undefined}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -392,7 +392,9 @@ export const ConnectingBusSection = ({
                           }}
                         >
                           {dueSec === null || dueSec === undefined ? (
-                            <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>···</span>
+                            waiting
+                              ? <WaveDots size={4} />
+                              : <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>···</span>
                           ) : dueSec <= 30 ? (
                             countdownLabel(dueSec, dueLabel)
                           ) : (

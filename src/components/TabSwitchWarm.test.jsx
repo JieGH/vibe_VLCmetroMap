@@ -22,7 +22,7 @@ describe('#107 tab switching stays warm', () => {
     await fetchStopArrivals('2261', { fetchFn });
     const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeders} compact />);
     expect(html).toContain('Torrefiel');
-    expect(html).not.toContain('···');
+    expect(html).not.toContain('wave-dots');
     expect(html).not.toContain('>...<');
     // remounting must not need another request (cache + dedupe)
     await fetchStopArrivals('2261', { fetchFn });
@@ -31,7 +31,7 @@ describe('#107 tab switching stays warm', () => {
 
   it('an unknown stop still shows a placeholder', () => {
     const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeders} />);
-    expect(html).toContain('···');
+    expect(html).toContain('wave-dots');
   });
 
   it('StationPanel keeps exactly one instance of each section whatever the tab (no remount on switch)', () => {

@@ -7,10 +7,10 @@
 import { getDistance } from './geoUtils';
 import { walkingMinutes } from './walking';
 
-export const WALK_RADIUS_METRO_METRES = 320;
-export const WALK_RADIUS_BUS_METRES = 280;
+export const WALK_RADIUS_METRO_METRES = 450;
+export const WALK_RADIUS_BUS_METRES = 300;
 // Whole minutes (rounded up, like every other walk time) to cross a radius:
-// 320 m is 5, 280 m is 4 at 1.25 m/s.
+// 450 m is 6, 300 m is 4 at 1.25 m/s.
 export const walkRadiusMinutes = (metres) => walkingMinutes(metres);
 // A stop already shown stays until it is this much past the radius, so live
 // tracking (#104) does not flicker nodes at the boundary.
@@ -23,7 +23,7 @@ export const WALK_RADIUS_HYSTERESIS_METRES = 20;
  * The items within the walking radius of `origin`, nearest first, each with its
  * real distance and displayed walk minutes. Distance is to the item's real
  * coordinate (`getCoords`), never a display offset. `radiusMetres` is the
- * mode's radius (metro 320 m by default, pass WALK_RADIUS_BUS_METRES for bus). `keep` is a Set of keys
+ * mode's radius (metro 450 m by default, pass WALK_RADIUS_BUS_METRES for bus). `keep` is a Set of keys
  * shown last time. When nothing is inside, the single nearest item is returned
  * with `fallback: true` if it is within `fallbackMaxMetres` (default 600 m) and
  * `allowFallback` is not false (a map ping passes false); otherwise nothing.

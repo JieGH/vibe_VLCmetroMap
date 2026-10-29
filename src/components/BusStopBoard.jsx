@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Accessibility, X, Radio, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
 import BusBadge from './BusBadge';
+import WaveDots from './WaveDots';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -376,7 +377,7 @@ export const BusStopBoard = ({
               margin: 0,
             }}
           >
-            {t('stationPanel.loadingArrivals')}
+            <WaveDots size={6} />
           </p>
         ) : arrivals.length === 0 ? (
           <p

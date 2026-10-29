@@ -42,7 +42,7 @@ describe('EMT data (real stops only, #122)', () => {
     });
   });
 
-  it('uses the bus radius: a stop 270 m away is offered, one 290 m away is not', () => {
+  it('uses the bus radius: a stop 290 m away is offered, one 310 m away is not', () => {
     const stop = REAL_EMT_STOPS[0];
     const [lng, lat] = stop.coordinates;
     // A point due west of the stop, `metres` away by the repo's own distance function.
@@ -52,8 +52,8 @@ describe('EMT data (real stops only, #122)', () => {
       return [x, lat];
     };
     const codes = (m) => getStationBusFeeders('Pin', westOf(m)).map((f) => f.stopCode);
-    expect(codes(270)).toContain(String(stop.stopCode));
-    expect(codes(290)).not.toContain(String(stop.stopCode));
+    expect(codes(290)).toContain(String(stop.stopCode));
+    expect(codes(310)).not.toContain(String(stop.stopCode));
   });
 
   it('a stop with no line data yields no chips (no default 19 / C1)', () => {

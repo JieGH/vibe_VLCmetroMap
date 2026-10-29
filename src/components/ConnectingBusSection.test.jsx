@@ -117,7 +117,8 @@ describe('ConnectingBusSection component', () => {
     expect(html).toContain('Colón');
     expect(html).toContain('19');
     expect(html).toContain('C1');
-    expect(html).toContain('···');
+    // Waiting for its first answer: the wave-dots loading mark, not the bare placeholder.
+    expect(html).toContain('wave-dots');
   });
 
   it('shows a short single-line label for an empty stop in compact mode only', () => {
@@ -180,20 +181,20 @@ describe('ConnectingBusSection countdown formatting and states (#90)', () => {
 
     it('a stop still being fetched shimmers its placeholder rows', () => {
       const html = renderToStaticMarkup(<ConnectingBusSection feeders={lineOnly} compact />);
-      expect(html).toContain('feeder-row-waiting');
+      expect(html).toContain('wave-dots');
     });
 
     it('a stop that answered with nothing shows no-data, not loading', async () => {
       const empty = "<?xml version='1.0'?><estimacion><solo_parada></solo_parada></estimacion>";
       await fetchStopArrivals('2261', { fetchFn: vi.fn(async () => ({ ok: true, text: async () => empty })) });
       const html = renderToStaticMarkup(<ConnectingBusSection feeders={lineOnly} compact />);
-      expect(html).not.toContain('feeder-row-waiting');
+      expect(html).not.toContain('wave-dots');
       expect(html).toContain('feeder-no-arrivals');
     });
 
     it('a stop outside the fetch batch is not shown as loading', () => {
       const html = renderToStaticMarkup(<ConnectingBusSection feeders={lineOnly} compact active={false} />);
-      expect(html).not.toContain('feeder-row-waiting');
+      expect(html).not.toContain('wave-dots');
     });
   });
 });

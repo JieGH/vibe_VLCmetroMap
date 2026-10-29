@@ -259,7 +259,7 @@ export default {
     itemZoomTitle: 'Parades d\'autobús segons el zoom',
     itemZoomDesc: 'Les parades passen de punts al logo de l\'EMT i després als seus números de línia.',
     itemNearTitle: 'Parades properes més ajustades',
-    itemNearDesc: 'Amb un punt o la teua ubicació veus metro a menys de 320 m i autobús a menys de 280 m.',
+    itemNearDesc: 'Amb un punt o la teua ubicació veus metro a menys de 450 m i autobús a menys de 300 m.',
     itemBigTitle: 'Text més gran, escriptori més ampli',
     itemBigDesc: 'Nova mida de text XXL i barra lateral oberta i més ampla en pantalles grans.',
     itemNetTitle: 'Avís del servei de trens',

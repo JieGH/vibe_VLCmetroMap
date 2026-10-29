@@ -27,7 +27,7 @@ Single-context (`CONTEXT.md` and `docs/adr/` at repo root). See `docs/agents/dom
 2. **EMT Bus Real-Time API Architecture (ADR-0011):**
    - **Live Arrivals Endpoint:** EMT SAE `https://geoportal.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php?sec=getSAE&parada={stopCode}&adaptados=false&idioma=va`.
    - **User-Agent Gate:** Standard browser `User-Agent` (`Mozilla/5.0...`) is mandatory. Default CLI scrapers (`curl`) receive a decoy error.
-   - **Rate Budget & On-Demand Only:** EMT has 1,155 stops. **DO NOT background-poll all stops.** Fetch arrival predictions strictly **on-demand** when a user clicks a stop/station or drops a pin within range (Metro stations <320 m, EMT bus stops <280 m, `src/utils/walkRadius.js`).
+   - **Rate Budget & On-Demand Only:** EMT has 1,155 stops. **DO NOT background-poll all stops.** Fetch arrival predictions strictly **on-demand** when a user clicks a stop/station or drops a pin within range (Metro stations <450 m, EMT bus stops <300 m, `src/utils/walkRadius.js`).
    - **Caching & Deduping:** 20-second in-memory TTL cache with in-flight request deduplication (`src/services/emtArrivalService.js`).
    - **"Train-First, Then Bus" Async Pattern:** Metro train arrivals render instantly (0ms) from local Arrival Memory; bus arrivals load in the background and pop in when ready.
    - **Live Fleet GPS:** If plotting buses on the map, query municipal ArcGIS Layer 384 (`Seguimiento_EMT`), which returns all active bus coordinates in 1 request (~130ms), rather than using timetable walks.

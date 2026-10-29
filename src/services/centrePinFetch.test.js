@@ -80,7 +80,7 @@ describe('#136 centre pin fetches', () => {
 
   it('keeps a stop just past the radius via the 20 m hysteresis', () => {
     const pin = [-0.375, 39.45];
-    const edge = { stopCode: 'E', coordinates: [-0.375, 39.45 + 290 / 111320] };
+    const edge = { stopCode: 'E', coordinates: [-0.375, 39.45 + 310 / 111320] };
     const opts = (keep) => ({ getCoords: (s) => s.coordinates, getKey: (s) => `b:${s.stopCode}`, keep, radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false });
     expect(pickWalkSet([edge], pin, opts(new Set())).items).toHaveLength(0);
     expect(pickWalkSet([edge], pin, opts(new Set(['b:E']))).items).toHaveLength(1);

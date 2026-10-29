@@ -268,3 +268,15 @@ describe('BusStopBoard countdown formatting and states (#90)', () => {
   });
 
 });
+
+describe('#144 loading mark', () => {
+  it('the loading state shows the six-dot wave with an accessible label', async () => {
+    const React = (await import('react')).default;
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { WaveDots } = await import('./WaveDots');
+    const html = renderToStaticMarkup(<WaveDots />);
+    expect((html.match(/class="wave-dot"/g) || []).length).toBe(6);
+    expect(html).toContain('role="status"');
+    expect(html).toContain('Loading arrivals');
+  });
+});

@@ -259,7 +259,7 @@ export default {
     itemZoomTitle: 'Paradas de bus según el zoom',
     itemZoomDesc: 'Las paradas pasan de puntos al logo de la EMT y luego a sus números de línea.',
     itemNearTitle: 'Paradas cercanas más ajustadas',
-    itemNearDesc: 'Con un punto o tu ubicación ves metro a menos de 320 m y bus a menos de 280 m.',
+    itemNearDesc: 'Con un punto o tu ubicación ves metro a menos de 450 m y bus a menos de 300 m.',
     itemBigTitle: 'Texto más grande, escritorio más amplio',
     itemBigDesc: 'Nuevo tamaño de texto XXL y barra lateral abierta y más ancha en pantallas grandes.',
     itemNetTitle: 'Aviso del servicio de trenes',

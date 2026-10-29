@@ -1249,7 +1249,7 @@ const MapView = ({
 
         // Multimodal Walk Radius click on the map:
         // When zoomed in (MAP_PIN_MIN_ZOOM), clicking any point explores all transit
-        // (Metro stations and EMT bus stops) within the walk radius (metro 320 m, bus 280 m, see walkRadius.js).
+        // (Metro stations and EMT bus stops) within the walk radius (metro 450 m, bus 300 m, see walkRadius.js).
         if (currentZoom >= MAP_PIN_MIN_ZOOM) {
           const nearestToPing = drawnStationsRef.current && drawnStationsRef.current.length > 0
             ? nearestFeature(drawnStationsRef.current, [lng, lat])

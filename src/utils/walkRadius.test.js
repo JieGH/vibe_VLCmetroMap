@@ -21,21 +21,21 @@ const at = (key, metres) => ({ key, coordinates: eastOf(metres) });
 const opts = (extra = {}) => ({ getCoords: (i) => i.coordinates, getKey: (i) => i.key, ...extra });
 
 describe('walk radius constants', () => {
-  it('detects Metro stations within 320 m and EMT stops within 280 m', () => {
-    expect(WALK_RADIUS_METRO_METRES).toBe(320);
-    expect(WALK_RADIUS_BUS_METRES).toBe(280);
+  it('detects Metro stations within 450 m and EMT stops within 300 m', () => {
+    expect(WALK_RADIUS_METRO_METRES).toBe(450);
+    expect(WALK_RADIUS_BUS_METRES).toBe(300);
   });
 
   it('derives the displayed minutes from the distance with the one walking speed (rounded up)', () => {
-    expect(walkRadiusMinutes(WALK_RADIUS_METRO_METRES)).toBe(walkingMinutes(320));
-    expect(walkRadiusMinutes(WALK_RADIUS_METRO_METRES)).toBe(5);
+    expect(walkRadiusMinutes(WALK_RADIUS_METRO_METRES)).toBe(walkingMinutes(450));
+    expect(walkRadiusMinutes(WALK_RADIUS_METRO_METRES)).toBe(6);
     expect(walkRadiusMinutes(WALK_RADIUS_BUS_METRES)).toBe(4);
   });
 });
 
 describe('pickWalkSet', () => {
   it('keeps what is inside, drops what is outside, and sorts nearest first', () => {
-    const { items, fallback } = pickWalkSet([at('far', 400), at('b', 200), at('a', 50)], ORIGIN, opts());
+    const { items, fallback } = pickWalkSet([at('far', 700), at('b', 200), at('a', 50)], ORIGIN, opts());
     expect(items.map((r) => r.item.key)).toEqual(['a', 'b']);
     expect(fallback).toBe(false);
   });
@@ -47,18 +47,18 @@ describe('pickWalkSet', () => {
     expect(items.map((r) => r.item.key)).toEqual(['in']);
   });
 
-  it('metro radius: a station at 300 m is included, one at 330 m excluded', () => {
-    const { items } = pickWalkSet([at('s300', 300), at('s330', 330)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_METRO_METRES, allowFallback: false }));
-    expect(items.map((r) => r.item.key)).toEqual(['s300']);
+  it('metro radius: a station just inside 450 m is included, one just past it excluded', () => {
+    const { items } = pickWalkSet([at('s440', WALK_RADIUS_METRO_METRES - 10), at('s470', WALK_RADIUS_METRO_METRES + 20)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_METRO_METRES, allowFallback: false }));
+    expect(items.map((r) => r.item.key)).toEqual(['s440']);
   });
 
-  it('bus radius: a stop at 270 m is included, one at 290 m excluded', () => {
-    const { items } = pickWalkSet([at('b270', 270), at('b290', 290)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false }));
-    expect(items.map((r) => r.item.key)).toEqual(['b270']);
+  it('bus radius: a stop just inside 300 m is included, one just past it excluded', () => {
+    const { items } = pickWalkSet([at('b290', WALK_RADIUS_BUS_METRES - 10), at('b320', WALK_RADIUS_BUS_METRES + 20)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false }));
+    expect(items.map((r) => r.item.key)).toEqual(['b290']);
   });
 
   it('a far ping still spawns no bus stop, even one inside the metro radius but past the bus radius', () => {
-    const r = pickWalkSet([at('b300', 300), at('b700', 700)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false }));
+    const r = pickWalkSet([at('b320', 320), at('b700', 700)], ORIGIN, opts({ radiusMetres: WALK_RADIUS_BUS_METRES, allowFallback: false }));
     expect(r).toEqual({ items: [], fallback: false });
   });
 
@@ -69,7 +69,7 @@ describe('pickWalkSet', () => {
   });
 
   it('falls back to the single nearest item, flagged, when nothing is inside', () => {
-    const { items, fallback } = pickWalkSet([at('far', 700), at('near', 400)], ORIGIN, opts());
+    const { items, fallback } = pickWalkSet([at('far', 700), at('near', 500)], ORIGIN, opts());
     expect(fallback).toBe(true);
     expect(items).toHaveLength(1);
     expect(items[0].item.key).toBe('near');
@@ -113,7 +113,7 @@ describe('pickWalkSet', () => {
   });
 
   it('never falls back when allowFallback is false (map ping)', () => {
-    expect(pickWalkSet([at('near', 400)], ORIGIN, opts({ allowFallback: false }))).toEqual({ items: [], fallback: false });
+    expect(pickWalkSet([at('near', 500)], ORIGIN, opts({ allowFallback: false }))).toEqual({ items: [], fallback: false });
     const inside = pickWalkSet([at('in', 100)], ORIGIN, opts({ allowFallback: false }));
     expect(inside.items).toHaveLength(1);
   });
