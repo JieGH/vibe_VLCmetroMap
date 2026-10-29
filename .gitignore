@@ -56,3 +56,7 @@ public/basemap/
 *.pass
 **/keystore.properties
 .wrangler/
+
+# Screen recordings used for bug reports stay local (they are tens of MB)
+docs/*.mov
+docs/*.MOV
