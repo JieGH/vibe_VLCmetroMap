@@ -15,10 +15,10 @@ export const PREFETCH_BUFFER_M = 60;
 /** At most this many buffer-only stops are added to a fetch. */
 export const PREFETCH_MAX_EXTRA = 0;
 /** Hard EMT request budget: at most BUDGET_MAX network requests per BUDGET_WINDOW_MS. */
-export const BUDGET_MAX = 12;
-export const BUDGET_WINDOW_MS = 10000;
+export const BUDGET_MAX = 24;
+export const BUDGET_WINDOW_MS = 6000;
 /** When the budget skipped stops, look again after this long. */
-export const BUDGET_RETRY_MS = 2500;
+export const BUDGET_RETRY_MS = 1500;
 
 /** Leading + trailing throttle: the first call runs now, calls inside the window collapse to one trailing run. */
 export const createThrottle = (fn, ms = MID_DRAG_THROTTLE_MS, now = () => Date.now()) => {

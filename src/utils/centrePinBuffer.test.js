@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   createThrottle, createBudget, createFetchPolicy, createGestureStore, withPrefetchBuffer,
-  BUDGET_MAX, REFETCH_MOVE_M, ANCHOR_MAX_AGE_MS, MID_DRAG_THROTTLE_MS,
+  BUDGET_MAX, BUDGET_WINDOW_MS, REFETCH_MOVE_M, ANCHOR_MAX_AGE_MS, MID_DRAG_THROTTLE_MS,
 } from './centrePinBuffer';
 
 afterEach(() => vi.useRealTimers());
@@ -31,9 +31,9 @@ describe('createBudget', () => {
   it('grants at most max per window and refills after it', () => {
     const c = clock();
     const b = createBudget({ now: c.now });
-    expect(b.take(20)).toBe(BUDGET_MAX);
+    expect(b.take(BUDGET_MAX + 8)).toBe(BUDGET_MAX);
     expect(b.take(1)).toBe(0);
-    c.tick(10001);
+    c.tick(BUDGET_WINDOW_MS + 1);
     expect(b.take(5)).toBe(5);
   });
 });
@@ -78,12 +78,13 @@ describe('createFetchPolicy', () => {
   });
   it('beyond the budget nearest stops win and the rest are skipped, then retried later', () => {
     const { c, p } = mk();
-    const codes = Array.from({ length: 15 }, (_, i) => String(i));
+    const codes = Array.from({ length: BUDGET_MAX + 3 }, (_, i) => String(i));
+    const last3 = codes.slice(BUDGET_MAX);
     const r = p.plan({ pin, codes });
     expect(r.fetch).toHaveLength(BUDGET_MAX);
-    expect(r.skipped).toEqual(['12', '13', '14']);
-    c.tick(10001);
-    expect(p.plan({ pin, codes }).fetch).toEqual(['12', '13', '14']);
+    expect(r.skipped).toEqual(last3);
+    c.tick(BUDGET_WINDOW_MS + 1);
+    expect(p.plan({ pin, codes }).fetch).toEqual(last3);
   });
 });
 
