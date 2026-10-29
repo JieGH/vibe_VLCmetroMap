@@ -1,18 +1,33 @@
 // BusLineInspector Component for Variant B (Line-on-Demand Canvas)
 // Bottom card displaying inspected bus route ribbon details, headway, and active live vehicle telemetry.
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import BusBadge from './BusBadge';
 import { X, Radio, MapPin, ArrowRight } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { lineViewFrame } from '../utils/layout';
 
 export const BusLineInspector = ({
   line,
   liveBuses = [],
   onClose,
-  onSelectStop
+  onSelectStop,
+  sidebarOpen = false,
+  chipsShown = false,
 }) => {
   const { t } = useTranslation();
+  const [viewportW, setViewportW] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 390));
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
   if (!line) return null;
+  const frame = lineViewFrame({ viewportW, sidebarOpen, chipsShown, maxWidth: 520 });
+  if (frame.sidebarCovers) return null; // the open phone sidebar sheet owns the strip
 
   const relevantBuses = liveBuses.filter(
     (b) => String(b.line).toLowerCase() === String(line.id).toLowerCase()
@@ -24,11 +39,13 @@ export const BusLineInspector = ({
       style={{
         position: 'absolute',
         bottom: 'max(70px, calc(14px + env(safe-area-inset-bottom, 14px) + 56px))',
-        left: 12,
-        right: 12,
-        maxWidth: 520,
-        margin: '0 auto',
-        zIndex: 40,
+        left: frame.left,
+        width: frame.width,
+        boxSizing: 'border-box',
+        // never grow up into the tapped-bus sheet / chips at the top
+        maxHeight: `calc(100dvh - ${frame.top + 76}px - 80px - env(safe-area-inset-top, 0px))`,
+        overflowY: 'auto',
+        zIndex: 32, // under the sidebar (40) and the top bar; above the stop board (30) it never coexists with
         borderRadius: 16,
         padding: '12px 16px',
         display: 'flex',

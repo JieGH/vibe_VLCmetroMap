@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createLiveBusLayer } from './liveBusLayer';
 
 const makeEl = () => {
-  const el = { style: {}, className: '', children: [], listeners: {}, dataset: {} };
+  const el = { innerHTML: '', textContent: '', style: {}, className: '', children: [], listeners: {}, dataset: {} };
   el.appendChild = (c) => { el.children.push(c); };
   el.addEventListener = (t, fn) => { el.listeners[t] = fn; };
   el.setAttribute = () => {};
@@ -67,5 +67,35 @@ describe('liveBusLayer', () => {
     layer.destroy();
     expect(m.remove).toHaveBeenCalled();
     expect(layer.count()).toBe(0);
+  });
+
+  it('builds a distinct round marker: halo, rotating chevron, upright body with glyph and line number', () => {
+    const layer = make();
+    layer.setBuses([bus('a', [-0.37, 39.47])]);
+    const inner = layer.markerFor('a').getElement().children[0];
+    expect(inner.children.map((c) => c.className)).toEqual(['live-bus-fleet-halo', 'live-bus-fleet-arrow', 'live-bus-fleet-badge']);
+    const body = inner.children[2];
+    expect(body.style.cssText).toContain('border-radius:50%');
+    expect(body.children.map((c) => c.className)).toEqual(['live-bus-fleet-glyph', 'live-bus-fleet-line']);
+    expect(body.children[1].textContent).toBe('19');
+    expect(body.children[0].innerHTML).toContain('<svg');
+    // the heading rotates the arrow only, never the body
+    stepFrame();
+    expect(inner.children[1].style.transform).toBe('rotate(90deg)');
+    expect(body.style.transform).toBeUndefined();
+  });
+
+  it('shows the arrow from the route bearing when the tracker has no heading yet', () => {
+    const layer = make();
+    layer.setBuses([{ ...bus('a', [-0.37, 39.47], null), directionKey: 'to-malvarosa', alongM: 500, snappedLonLat: [-0.3769, 39.4672] }]);
+    const arrow = layer.markerFor('a').getElement().children[0].children[1];
+    expect(arrow.style.display).toBe('block');
+    expect(arrow.style.transform).toMatch(/^rotate\(-?[\d.]+deg\)$/);
+  });
+
+  it('hides the arrow when neither a heading nor a route is known', () => {
+    const layer = make();
+    layer.setBuses([bus('a', [-0.37, 39.47], null)]);
+    expect(layer.markerFor('a').getElement().children[0].children[1].style.display).not.toBe('block');
   });
 });

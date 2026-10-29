@@ -12,7 +12,8 @@
 //  - Never backwards: a fix behind the marker holds it until the bus passes that point.
 //  - Linear speed, no overshoot, clamped to the target; once there it holds on the latest fix.
 //  - A gap above MAX_SNAP_GAP_M is a re-identification or a glitch, not travel: snap.
-//  - Heading is the tracker's (successive fixes); null holds the last one. The returned heading is
+//  - Heading is the tracker's (successive fixes); null holds the last one, and before any exists it falls
+//    back to the route bearing at the bus's position. The returned heading is
 //    unwrapped (may exceed 360 or go negative) so a CSS rotation takes the short way round north.
 
 import { directionById, pointAtAlongM, distanceM } from './busRoute';
@@ -112,7 +113,12 @@ export function createBusMotion() {
   function sample(id, nowMs) {
     const st = states.get(id);
     if (!st) return null;
-    return { lonLat: current(st, nowMs).lonLat, headingDeg: st.heading };
+    const cur = current(st, nowMs);
+    // No tracker heading yet (first fix): use the route direction at the bus's position so it always has an arrow.
+    if (st.heading == null && st.direction && cur.along != null) {
+      st.heading = pointAtAlongM(st.direction, cur.along).bearingDeg;
+    }
+    return { lonLat: cur.lonLat, headingDeg: st.heading };
   }
 
   function isSettled(nowMs) {

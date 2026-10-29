@@ -970,12 +970,18 @@ function App() {
           stopCode={selectedBusStop ? String(selectedBusStop.stopCode ?? selectedBusStop.code ?? '') : null}
           stopName={selectedBusStop?.stopName || selectedBusStop?.name || ''}
           onClose={closeLiveBus}
+          sidebarOpen={isSidebarOpen}
+          chipsShown={!isSearchOpen && !searchFocused && activeLineFilter.length > 0}
         />
       )}
 
       {/* Bus Line Inspector Card (Variant B & C) */}
-      {activeBusLine && (
+      {/* A stop board or station panel in the same area wins: the inspector yields while one is open
+          (the line stays in focus, so the route highlight and live buses stay). */}
+      {activeBusLine && !selectedBusStop && !selectedStation && (
         <BusLineInspector
+          sidebarOpen={isSidebarOpen}
+          chipsShown={!isSearchOpen && !searchFocused && activeLineFilter.length > 0}
           line={activeBusLine}
           onClose={() => setActiveBusLine(null)}
           onSelectStop={handleSelectBusStop}

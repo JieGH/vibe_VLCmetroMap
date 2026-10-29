@@ -83,10 +83,12 @@ describe('busMarkerMotion', () => {
   it('holds the last heading when the new one is null and has no arrow before the first heading', () => {
     const m = createBusMotion();
     m.update([bus('a', 0, 0, null, { headingDeg: null })], 0);
-    expect(m.sample('a', 0).headingDeg).toBeNull();
+    const fb = m.sample('a', 0).headingDeg; // route bearing fallback, never a marker without an arrow
+    expect(fb).toBeGreaterThanOrEqual(0);
+    expect(fb).toBeLessThan(360);
     m.update([bus('a', 100, 30000, 0, { headingDeg: 45 })], 0);
     m.update([bus('a', 150, 60000, 30000, { headingDeg: null })], 0);
-    expect(m.sample('a', 0).headingDeg).toBe(45);
+    expect((((m.sample('a', 0).headingDeg % 360) + 360) % 360)).toBeCloseTo(45, 5);
   });
 
   it('turns the short way round north (no spin)', () => {

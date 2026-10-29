@@ -4,11 +4,15 @@
 // busMarkerMotion; this file is only the DOM.
 import { Marker } from 'maplibre-gl';
 import { createBusMotion } from './busMarkerMotion';
-import { busBadgeBox } from './busBadgeStyle';
+import { LINE19_COLOR } from './busRouteLayer';
 
-export const LIVE_BUS_COLOR = '#D62828'; // the one EMT red every bus badge uses (BusBadge.jsx)
-const BADGE_H = 18;
+export const LIVE_BUS_COLOR = LINE19_COLOR; // the one EMT red every bus badge uses (BusBadge.jsx)
 
+const BUS_GLYPH = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="display:block"><path fill="currentColor" d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1.5h-7V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 4 16V5a2 2 0 0 1 1-2zm0 3v5h14V6H5zm2.5 8.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm9 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z"/></svg>';
+
+// Live bus marker: a white round body with a line coloured ring, bus glyph over the line number, a soft
+// pulsing "live" halo behind it and a heading chevron outside it. Only the chevron rotates, so the number
+// always stays upright. Visibly unlike the small rectangular EMT stop badges.
 function buildElement(doc, bus) {
   const el = doc.createElement('div');
   el.className = 'live-bus-fleet-marker';
@@ -17,18 +21,30 @@ function buildElement(doc, bus) {
   // The visual lives in the inner element so Text Size zoom (index.css) never touches the map transform.
   const inner = doc.createElement('div');
   inner.className = 'live-bus-fleet-inner';
-  const box = busBadgeBox(BADGE_H);
-  inner.style.cssText = 'position:relative;width:34px;height:34px;display:flex;align-items:center;justify-content:center;';
+  inner.style.cssText = 'position:relative;width:60px;height:60px;display:flex;align-items:center;justify-content:center;';
+  const halo = doc.createElement('div');
+  halo.className = 'live-bus-fleet-halo';
+  halo.style.cssText = `position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:${LIVE_BUS_COLOR};pointer-events:none;`;
   const arrow = doc.createElement('div');
   arrow.className = 'live-bus-fleet-arrow';
   arrow.style.cssText = 'position:absolute;inset:0;display:none;transform-origin:50% 50%;transition:transform 0.4s linear;pointer-events:none;';
   const tip = doc.createElement('div');
-  tip.style.cssText = `position:absolute;left:50%;top:0;margin-left:-5px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid ${LIVE_BUS_COLOR};`;
+  tip.className = 'live-bus-fleet-chevron';
+  tip.style.cssText = `position:absolute;left:50%;top:0;margin-left:-9px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid ${LIVE_BUS_COLOR};filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 2px rgba(0,0,0,0.55));`;
   arrow.appendChild(tip);
   const badge = doc.createElement('div');
   badge.className = 'live-bus-fleet-badge';
-  badge.style.cssText = `display:flex;align-items:center;justify-content:center;box-sizing:border-box;height:${box.height}px;min-width:${box.minWidth}px;padding:${box.padding};background:${LIVE_BUS_COLOR};color:#fff;border:1.5px solid #fff;border-radius:5px;box-shadow:0 2px 6px rgba(0,0,0,0.45);font:800 11px/1 var(--font-ui);user-select:none;`;
-  badge.textContent = String(bus.linea || '');
+  badge.style.cssText = `position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;width:36px;height:36px;border-radius:50%;background:#fff;color:#1a1a1a;border:3px solid ${LIVE_BUS_COLOR};box-shadow:0 3px 8px rgba(0,0,0,0.5);font:800 11px/1 var(--font-ui);user-select:none;`;
+  const glyph = doc.createElement('div');
+  glyph.className = 'live-bus-fleet-glyph';
+  glyph.style.cssText = `color:${LIVE_BUS_COLOR};display:flex;`;
+  glyph.innerHTML = BUS_GLYPH;
+  const num = doc.createElement('span');
+  num.className = 'live-bus-fleet-line';
+  num.textContent = String(bus.linea || '');
+  badge.appendChild(glyph);
+  badge.appendChild(num);
+  inner.appendChild(halo);
   inner.appendChild(arrow);
   inner.appendChild(badge);
   el.appendChild(inner);

@@ -54,6 +54,7 @@ import {
 } from '../utils/busMapLayers';
 import { getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from '../data/emtData';
 import { createLiveBusLayer } from '../utils/liveBusLayer';
+import { ensureBusRouteLayer, removeBusRouteLayer } from '../utils/busRouteLayer';
 import { isLine19Focused } from '../utils/busFocus';
 import { useBusFleet } from '../services/useBusFleet';
 
@@ -697,6 +698,21 @@ const MapView = ({
     () => isLine19Focused({ selectedBusStop, activeBusLine }, getStopsByCode()),
     [selectedBusStop, activeBusLine]
   );
+  // Highlighted line 19 route while the line is in focus; style.load re-adds it after a basemap/theme swap.
+  const line19FocusedRef = useRef(line19Focused);
+  useEffect(() => {
+    line19FocusedRef.current = line19Focused;
+    const map = mapRef.current;
+    if (!map) return undefined;
+    const sync = () => {
+      if (mapRef.current !== map) return;
+      if (!line19FocusedRef.current) { removeBusRouteLayer(map); return; }
+      if (map.isStyleLoaded()) ensureBusRouteLayer(map, themeRef.current);
+      else map.once('idle', sync);
+    };
+    sync();
+    return () => { map.off?.('idle', sync); if (!line19FocusedRef.current) removeBusRouteLayer(map); };
+  }, [line19Focused, theme]);
   useBusFleet({
     focused: line19Focused,
     onBuses: (buses) => {
@@ -1338,6 +1354,7 @@ const MapView = ({
         applyLineFilter(map, filterRef.current);
         applyLineDim(map);
         ensureBusLayers(map, themeRef.current);
+        if (line19FocusedRef.current) ensureBusRouteLayer(map, themeRef.current);
       });
 
       map.on('webglcontextlost', (e) => {
@@ -1356,6 +1373,7 @@ const MapView = ({
         applyLineFilter(map, filterRef.current);
         applyLineDim(map);
         ensureBusLayers(map, themeRef.current);
+        if (line19FocusedRef.current) ensureBusRouteLayer(map, themeRef.current);
       });
 
       const stopTracker = startTrainTracker();

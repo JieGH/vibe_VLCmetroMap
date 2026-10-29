@@ -6,8 +6,8 @@ import { X } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { useTranslation } from '../i18n';
 import { useLiveBus } from '../services/useBusFleet';
-import { describeLiveBus, stopsAwayLabel, liveBusSheetBox } from '../utils/liveBusInfo';
-import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
+import { describeLiveBus, stopsAwayLabel } from '../utils/liveBusInfo';
+import { LANDSCAPE_BREAKPOINT_PX, lineViewFrame } from '../utils/layout';
 
 const useIsLandscape = () => {
   const read = () => typeof window !== 'undefined' && window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
@@ -24,10 +24,10 @@ const useIsLandscape = () => {
   return landscape;
 };
 
-const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose }) => {
+const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose, sidebarOpen = false, chipsShown = false }) => {
   const { t } = useTranslation();
   const bus = useLiveBus(busId);
-  const landscape = useIsLandscape();
+  useIsLandscape(); // re-render on resize/rotation so the frame is recomputed
   const gone = !bus;
 
   useEffect(() => {
@@ -47,6 +47,7 @@ const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose }) => {
   }, [gone, onClose]);
 
   if (gone) return null;
+  const frame = lineViewFrame({ viewportW: typeof window !== 'undefined' ? window.innerWidth : 390, sidebarOpen, chipsShown });
   const info = describeLiveBus(bus, stopCode);
 
   return (
@@ -56,7 +57,8 @@ const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose }) => {
       aria-label={t('bus.liveBusAria', { line: bus.linea, destination: info.destination })}
       style={{
         position: 'absolute', zIndex: 31,
-        top: 'calc(76px + env(safe-area-inset-top, 0px))', ...liveBusSheetBox(landscape),
+        top: `calc(${frame.top}px + env(safe-area-inset-top, 0px))`, left: frame.left, right: 'auto', width: frame.width,
+        boxSizing: 'border-box',
         borderRadius: 16, padding: '10px 12px',
         display: 'flex', alignItems: 'center', gap: 10,
       }}
