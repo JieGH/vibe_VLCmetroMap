@@ -10,6 +10,7 @@ import {
   BUS_FLEET_CACHE_TTL_MS,
   BUS_FLEET_TIMEOUT_MS,
   BUS_FLEET_BASE_URL,
+  BUS_FLEET_LAST_GOOD_MAX_MS,
   isPartialSnapshot,
 } from './busFleetService';
 import { getApiDiagnostics } from '../utils/diagnostics';
@@ -304,5 +305,74 @@ describe('getLineFleet', () => {
       await getLineFleet('19', { fetchFn: fetchOf(polls[0]), force: true });
       expect(busFleetRefusal.isRefused()).toBe(false);
     });
+  });
+});
+
+describe('Date header not readable (CORS): skewed device clocks', () => {
+  const noDate = (poll) => vi.fn(async () => {
+    const r = response(poll);
+    return { ...r, headers: new Headers() };
+  });
+  // polls 0 (+1 h responses) and 16, 25 (offset-0 responses) with known truth from the Date header
+  const sample = [0, 5, 16, 25, 27, 33, 34, 36];
+  const skews = [-600000, -120000, 0, 120000, 600000];
+
+  beforeEach(() => { vi.useFakeTimers(); clearBusFleetCache(); });
+  afterEach(() => { vi.useRealTimers(); clearBusFleetCache(); });
+
+  for (const skew of skews) {
+    it(`matches the Date-header result with the device clock ${skew / 1000} s off`, async () => {
+      for (const i of sample) {
+        const poll = polls[i];
+        clearBusFleetCache();
+        vi.setSystemTime(poll.serverDateMs);
+        const truth = await getLineFleet('19', { fetchFn: fetchOf(poll) });
+        clearBusFleetCache();
+        vi.setSystemTime(poll.serverDateMs + skew);
+        const fleet = await getLineFleet('19', { fetchFn: noDate(poll) });
+        expect(fleet.map((b) => b.fixTimeMs)).toEqual(truth.map((b) => b.fixTimeMs));
+        fleet.forEach((b, k) => expect(Math.abs(b.ageSeconds - truth[k].ageSeconds)).toBeLessThanOrEqual(36));
+      }
+    });
+  }
+
+  it('keeps the device clock when it is consistent with the freshest fix', async () => {
+    const poll = polls[0];
+    vi.setSystemTime(poll.serverDateMs + 5000);
+    const fleet = await getLineFleet('19', { fetchFn: noDate(poll) });
+    const newest = Math.max(...fleet.map((b) => b.fixTimeMs));
+    expect(fleet.find((b) => b.fixTimeMs === newest).ageSeconds).toBe(Math.round((poll.serverDateMs + 5000 - newest) / 1000));
+  });
+
+  it('still prefers a readable Date header over a skewed device clock', async () => {
+    vi.setSystemTime(polls[0].serverDateMs + 600000);
+    const fleet = await getLineFleet('19', { fetchFn: fetchOf(polls[0]) });
+    expect(fleet[0].ageSeconds).toBe(Math.round((polls[0].serverDateMs - fleet[0].fixTimeMs) / 1000));
+  });
+});
+
+describe('last good snapshot expiry', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(polls[0].serverDateMs); clearBusFleetCache(); });
+  afterEach(() => { vi.useRealTimers(); clearBusFleetCache(); });
+
+  it('exports the max age', () => {
+    expect(BUS_FLEET_LAST_GOOD_MAX_MS).toBe(180000);
+  });
+
+  it('falls back to the snapshot before 3 min and to [] after', async () => {
+    await getLineFleet('19', { fetchFn: fetchOf(polls[0]) });
+    vi.advanceTimersByTime(120000);
+    const failing = vi.fn(async () => { throw new Error('offline'); });
+    expect(await getLineFleet('19', { fetchFn: failing })).toHaveLength(6);
+    vi.advanceTimersByTime(60001);
+    expect(await getLineFleet('19', { fetchFn: failing, force: true })).toEqual([]);
+  });
+
+  it('accepts a partial response as the new snapshot once the old one expired', async () => {
+    await getLineFleet('19', { fetchFn: fetchOf(polls[0]) });
+    vi.advanceTimersByTime(180001);
+    const next = await getLineFleet('19', { fetchFn: fetchOf(polls[2]) });
+    expect(next.map((b) => b.gid)).toEqual(polls[2].buses.map((b) => b.gid));
+    expect(polls[2].buses).toHaveLength(1);
   });
 });

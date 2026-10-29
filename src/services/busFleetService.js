@@ -3,6 +3,11 @@
 // getLineFleet(line) and gets plain records. Layer 384 (Seguimiento_EMT) is
 // rewritten about every 30 s, so responses are cached 30 s and concurrent
 // calls share one request.
+//
+// The HTTP Date header is NOT readable cross-origin (layer 384 exposes only
+// Access-Control-Allow-Origin/Credentials), so on the web and in Capacitor the
+// clock is anchored per response by resolveSnapshotClock (see below), and Date
+// is used only when it can be read (Node, tests).
 
 import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
 import { recordApiFailure, recordApiRequest, recordApiSuccess } from '../utils/diagnostics';
@@ -19,6 +24,15 @@ export const BUS_FLEET_BASE_URL = 'https://geoportal.valencia.es/server/rest/ser
 export const BUS_FLEET_ALLOWED_LINES = {
   19: { name: 'Line 19' },
 };
+
+/** A last good snapshot older than this is no longer served as a fallback nor used to judge a partial response. */
+export const BUS_FLEET_LAST_GOOD_MAX_MS = 180000;
+
+// Without a readable Date header: the freshest row of a response is 3 to 36 s old
+// in the recording (median 18 s). The device clock is trusted only while it puts
+// the freshest fix inside that window (plus slack); otherwise now is derived from the fixes.
+const FRESHEST_MAX_AGE_MS = 40000;
+const FRESHEST_TYPICAL_AGE_MS = 18000;
 
 /** Fewer than this share of the last good snapshot's buses means a rewrite in progress (ADR-0014). */
 export const PARTIAL_SHARE = 0.5;
@@ -83,23 +97,56 @@ function isLinePlausible(line) {
   return Object.prototype.hasOwnProperty.call(BUS_FLEET_ALLOWED_LINES, line);
 }
 
-function parseBuses(json, line, nowMs) {
+/**
+ * Date header NOT readable (it is not CORS-exposed by layer 384, so in the web
+ * app and Capacitor this is the normal case). All rows of one response share one
+ * offset (ADR-0014), so the offset is decided once from the median row against
+ * the device clock (tolerant to about 25 min of skew), and now is then anchored
+ * to the snapshot: the device clock only when it is consistent with the freshest
+ * fix, else freshest fix + 18 s. Pure.
+ *
+ * @param {number[]} fechas raw `fecha` values of one response
+ * @param {number} deviceNowMs Date.now()
+ * @returns {{ nowMs: number, fixTimes: number[] }} fixTimes in input order
+ */
+export function resolveSnapshotClock(fechas, deviceNowMs) {
+  const sorted = [...fechas].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const offsetOf = (fecha) => madridOffsetMs(fecha - madridOffsetMs(deviceNowMs));
+  const flipped = deviceNowMs - median < -(offsetOf(median) / 2);
+  const raw = fechas.map((fecha) => (flipped ? fecha - offsetOf(fecha) : fecha));
+  const newest = Math.max(...raw);
+  const gap = deviceNowMs - newest;
+  const nowMs = gap >= 0 && gap <= FRESHEST_MAX_AGE_MS ? deviceNowMs : newest + FRESHEST_TYPICAL_AGE_MS;
+  return { nowMs, fixTimes: raw.map((t) => Math.min(t, nowMs)) };
+}
+
+/** Rows of the line with valid fields; fixTimeMs is filled in by the caller. */
+function parseRows(json, line) {
   const features = Array.isArray(json?.features) ? json.features : [];
-  const buses = [];
+  const rows = [];
   for (const f of features) {
     const p = f?.properties;
     const c = f?.geometry?.coordinates;
     if (!p || String(p.linea).trim() !== line) continue;
     if (!Number.isFinite(p.fecha) || !Array.isArray(c) || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) continue;
-    buses.push({
-      gid: p.gid,
-      linea: line,
-      trayecto: String(p.trayecto ?? '').trim(),
-      lonLat: [c[0], c[1]],
-      fixTimeMs: normalizeFecha(p.fecha, nowMs),
+    rows.push({
+      fecha: p.fecha,
+      bus: { gid: p.gid, linea: line, trayecto: String(p.trayecto ?? '').trim(), lonLat: [c[0], c[1]] },
     });
   }
-  return buses;
+  return rows;
+}
+
+/** Buses with true-UTC fix times, and the `now` their ages are measured against. */
+function parseBuses(json, line, dateHeaderMs) {
+  const rows = parseRows(json, line);
+  if (Number.isFinite(dateHeaderMs)) {
+    return { nowMs: dateHeaderMs, buses: rows.map((r) => ({ ...r.bus, fixTimeMs: normalizeFecha(r.fecha, dateHeaderMs) })) };
+  }
+  if (!rows.length) return { nowMs: Date.now(), buses: [] };
+  const { nowMs, fixTimes } = resolveSnapshotClock(rows.map((r) => r.fecha), Date.now());
+  return { nowMs, buses: rows.map((r, i) => ({ ...r.bus, fixTimeMs: fixTimes[i] })) };
 }
 
 function toRecords(snapshot) {
@@ -114,8 +161,17 @@ function toRecords(snapshot) {
   }));
 }
 
-function fallback(line) {
+function freshSnapshot(line) {
   const snap = lastGood.get(line);
+  if (snap && Date.now() - snap.fetchedAt > BUS_FLEET_LAST_GOOD_MAX_MS) {
+    lastGood.delete(line);
+    return undefined;
+  }
+  return snap;
+}
+
+function fallback(line) {
+  const snap = freshSnapshot(line);
   return snap ? toRecords(snap) : [];
 }
 
@@ -181,9 +237,7 @@ export async function getLineFleet(line, options = {}) {
       const response = await fetchFn(url, { signal: controller.signal, headers });
       const text = await response.text?.().catch(() => '') ?? '';
 
-      const verdict = response.ok
-        ? classifyFetchFailure({ status: response.status ?? 200, body: text, headers: response.headers })
-        : classifyFetchFailure({ status: response.status, body: text, headers: response.headers });
+      const verdict = classifyFetchFailure({ status: response.status ?? (response.ok ? 200 : undefined), body: text, headers: response.headers });
       if (verdict) {
         noteFailure(verdict);
         return fallback(key);
@@ -202,9 +256,8 @@ export async function getLineFleet(line, options = {}) {
       lastAnswerAt.set(key, Date.now());
 
       const dateHeader = Date.parse(response.headers?.get?.('date') ?? '');
-      const serverNowMs = Number.isFinite(dateHeader) ? dateHeader : Date.now();
-      const buses = parseBuses(json, key, serverNowMs);
-      const previous = lastGood.get(key);
+      const { nowMs: serverNowMs, buses } = parseBuses(json, key, dateHeader);
+      const previous = freshSnapshot(key);
       if (isPartialSnapshot(buses.length, previous?.buses.length ?? 0)) return fallback(key);
       if (!buses.length) return [];
 
