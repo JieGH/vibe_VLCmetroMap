@@ -239,6 +239,35 @@ export async function reportIncident(incidentData) {
 }
 
 /**
+ * Reports that a live-data API (EMT bus, FGV train) is refusing or failing, or has recovered, to Telegram.
+ * Goes out even from the owner's own device: that is where the request rate is being tested. Only the
+ * API, the failure class, counts and the platform are sent, never a station, stop or location.
+ */
+export async function reportApiTrouble(alert) {
+  if (typeof window === 'undefined') return;
+  try {
+    const targetUrl = Capacitor.isNativePlatform()
+      ? 'https://xarxa.net/api/telemetry'
+      : '/api/telemetry';
+    let platform = 'Web';
+    if (Capacitor.isNativePlatform()) platform = isAndroid() ? 'Android Native' : 'iOS Native';
+    await fetch(targetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'api_trouble',
+        ...alert,
+        platform,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    // Non-fatal: the watcher must never break the app
+  }
+}
+
+/**
  * Initializes global uncaught error listeners for incident reporting.
  */
 export function setupIncidentReporting() {

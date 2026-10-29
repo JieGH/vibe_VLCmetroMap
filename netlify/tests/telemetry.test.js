@@ -5,6 +5,8 @@ import telemetryHandler, {
   formatVisitTelegramMessage,
   formatIncidentTelegramMessage,
   formatStationAccessTelegramMessage,
+  formatApiTroubleTelegramMessage,
+  isTroubleThrottled,
 } from '../functions/telemetry.js';
 
 describe('telemetry serverless function', () => {
@@ -166,5 +168,55 @@ describe('telemetry serverless function', () => {
     expect(html).toContain('MAJOR INCIDENT REPORT');
     expect(html).toContain('MapLibre failed to compile shader');
     expect(html).toContain('MapView.jsx:100');
+  });
+});
+
+describe('#144 api_trouble alerts', () => {
+  const post = (body, ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 Version/18.2 Mobile/15E148 Safari/604.1') =>
+    telemetryHandler(new Request('https://xarxa.net/api/telemetry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'user-agent': ua, 'x-nf-client-connection-ip': '79.117.186.128' },
+      body: JSON.stringify(body),
+    }), { NODE_ENV: 'test' });
+
+  it('formats a refusal with the failure class and the request rate', () => {
+    const html = formatApiTroubleTelegramMessage({
+      clientInfo: { ip: '85.50.12.34', city: 'Valencia' },
+      data: { api: 'bus', kind: 'blocked', status: 403, failuresInARow: 3, requestsLast10s: 14, requestsLast60s: 40, platform: 'iOS Native' },
+      timestamp: '2026-10-29T10:00:00.000Z',
+    });
+    expect(html).toContain('EMT bus (SAE)');
+    expect(html).toContain('REFUSED');
+    expect(html).toContain('HTTP 403');
+    expect(html).toContain('14 in 10 s, 40 in 60 s');
+    expect(html).toContain('iOS Native');
+  });
+
+  it('formats rate limiting and recovery', () => {
+    expect(formatApiTroubleTelegramMessage({ clientInfo: {}, data: { api: 'train', kind: 'rate-limited', status: 429 }, timestamp: 't' })).toContain('RATE-LIMITED');
+    const rec = formatApiTroubleTelegramMessage({ clientInfo: {}, data: { api: 'bus', recovered: true, downForMs: 42000 }, timestamp: 't' });
+    expect(rec).toContain('answering again');
+    expect(rec).toContain('~42 s');
+  });
+
+  it('escapes anything the client sent', () => {
+    const html = formatApiTroubleTelegramMessage({ clientInfo: {}, data: { api: 'bus', kind: 'blocked', platform: '<b>x</b>' }, timestamp: 't' });
+    expect(html).not.toContain('<b>x</b>');
+  });
+
+  it('is delivered even from the owner\'s own device (the dev filter does not apply)', async () => {
+    const res = await post({ type: 'api_trouble', api: 'train', kind: 'blocked', isDev: true });
+    expect(await res.json()).toEqual({ ok: true, type: 'api_trouble' });
+  });
+
+  it('still drops bots, and ignores an unknown API', async () => {
+    expect((await (await post({ type: 'api_trouble', api: 'bus', kind: 'blocked' }, 'curl/8.4.0')).json()).filtered).toBe('bot');
+    expect((await (await post({ type: 'api_trouble', api: 'nope', kind: 'blocked' })).json()).throttled).toBe(true);
+  });
+
+  it('sends one alert per API and kind per 10 minutes', () => {
+    expect(isTroubleThrottled('bus:test-kind', 1000)).toBe(false);
+    expect(isTroubleThrottled('bus:test-kind', 1000 + 60_000)).toBe(true);
+    expect(isTroubleThrottled('bus:test-kind', 1000 + 11 * 60_000)).toBe(false);
   });
 });

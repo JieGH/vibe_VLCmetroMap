@@ -173,6 +173,56 @@ export function formatIncidentTelegramMessage({ clientInfo, data, timestamp }) {
   return lines.join('\n');
 }
 
+const TROUBLE_APIS = { bus: 'EMT bus (SAE)', train: 'FGV metro' };
+const TROUBLE_KINDS = new Set(['blocked', 'rate-limited', 'server-error', 'unreachable']);
+const TROUBLE_REPEAT_MS = 10 * 60 * 1000;
+const recentTrouble = new Map();
+
+const count = (n) => (Number.isFinite(Number(n)) ? Math.max(0, Math.min(Math.trunc(Number(n)), 100000)) : '?');
+
+/** One alert per API and kind per 10 minutes (per server instance), so a block does not flood the chat. */
+export function isTroubleThrottled(key, now = Date.now()) {
+  if (recentTrouble.size > 100) {
+    for (const [k, at] of recentTrouble.entries()) if (now - at > TROUBLE_REPEAT_MS) recentTrouble.delete(k);
+  }
+  const last = recentTrouble.get(key);
+  if (last !== undefined && now - last < TROUBLE_REPEAT_MS) return true;
+  recentTrouble.set(key, now);
+  return false;
+}
+
+export function formatApiTroubleTelegramMessage({ clientInfo, data, timestamp }) {
+  const name = TROUBLE_APIS[data?.api] || 'Unknown API';
+  const geoParts = [clientInfo?.city, clientInfo?.region, clientInfo?.country].filter(Boolean);
+  const geoStr = geoParts.length > 0 ? ` (${escapeHtml(geoParts.join(', '))})` : '';
+  const ipStr = clientInfo?.ip ? `<code>${escapeHtml(clientInfo.ip)}</code>${geoStr}` : '<code>Unknown</code>';
+
+  if (data?.recovered) {
+    const secs = Math.round(Number(data.downForMs) / 1000);
+    return [
+      `✅ <b>${escapeHtml(name)} is answering again</b>\n`,
+      Number.isFinite(secs) ? `⏳ <b>Trouble lasted:</b> ~${secs} s` : null,
+      `👤 <b>Client:</b> ${ipStr}`,
+      `⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`,
+    ].filter(Boolean).join('\n');
+  }
+
+  const kind = TROUBLE_KINDS.has(data?.kind) ? data.kind : 'unknown';
+  const status = data?.status ? ` (HTTP ${count(data.status)})` : '';
+  const verdict = kind === 'blocked'
+    ? 'REFUSED this client (blocked / decoy page)'
+    : kind === 'rate-limited' ? 'RATE-LIMITED this client (HTTP 429)' : `failing: ${kind}`;
+  const lines = [
+    `🛑 <b>${escapeHtml(name)} ${verdict}</b>${status}\n`,
+    `📉 <b>Failures in a row:</b> ${count(data?.failuresInARow)}`,
+    `📈 <b>Requests from this client:</b> ${count(data?.requestsLast10s)} in 10 s, ${count(data?.requestsLast60s)} in 60 s`,
+    `👤 <b>Client:</b> ${ipStr}`,
+  ];
+  if (data?.platform) lines.push(`📱 <b>Platform:</b> ${escapeHtml(String(data.platform).slice(0, 40))}`);
+  lines.push(`⏱ <b>Time:</b> <code>${escapeHtml(timestamp)}</code>`);
+  return lines.join('\n');
+}
+
 async function forwardTelegram(env, messageHtml) {
   if (
     (typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST)) ||
@@ -217,6 +267,23 @@ export default async (req, env) => {
     // Filter strange bots and automated crawlers
     if (isBot(userAgent)) {
       return new Response(JSON.stringify({ ok: true, filtered: 'bot' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // An API refusing a client is exactly what the owner tests from their own device, so these skip the dev filter.
+    if (data?.type === 'api_trouble') {
+      const timestamp = new Date().toISOString();
+      const key = `${data?.api}:${data?.recovered ? 'recovered' : data?.kind}`;
+      if (!TROUBLE_APIS[data?.api] || isTroubleThrottled(key)) {
+        return new Response(JSON.stringify({ ok: true, throttled: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      await forwardTelegram(env, formatApiTroubleTelegramMessage({ clientInfo, data, timestamp }));
+      return new Response(JSON.stringify({ ok: true, type: 'api_trouble' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });

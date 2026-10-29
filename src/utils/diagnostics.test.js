@@ -59,3 +59,16 @@ describe('API failure diagnostics (#123)', () => {
     expect(getClientDiagnostics('es').apiFailures).toMatch(/bus: unreachable/);
   });
 });
+
+describe('#144 request counter', () => {
+  it('counts requests per API inside the window and forgets older ones', async () => {
+    const { recordApiRequest, getRecentRequestCount } = await import('./diagnostics');
+    const base = 5_000_000;
+    recordApiRequest('train', base);
+    recordApiRequest('train', base + 5_000);
+    recordApiRequest('train', base + 62_000);
+    expect(getRecentRequestCount('train', 10_000, base + 63_000)).toBe(1);
+    expect(getRecentRequestCount('train', 60_000, base + 63_000)).toBe(2);
+    expect(getRecentRequestCount('bus', 60_000, base + 63_000)).toBe(0);
+  });
+});

@@ -44,7 +44,8 @@ import setupInputScrollDragPrevention from './utils/preventInputScrollDrag';
 import { isChunkLoadError, reloadOnceForNewBuild, setupChunkErrorRecovery } from './utils/chunkReload';
 import { startRegionCheck } from './services/regionCheck';
 import { useNetworkNotice } from './services/useNetworkNotice';
-import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess } from './utils/telemetry';
+import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess, reportApiTrouble } from './utils/telemetry';
+import { watchApiTrouble } from './services/apiTroubleWatch';
 import { isCentrePinActive, shouldLeaveCentreMode } from './utils/centrePin';
 import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
@@ -175,11 +176,13 @@ function App() {
   useEffect(() => {
     setupIncidentReporting();
     setupChunkErrorRecovery();
+    // Telegram alert when EMT or FGV starts refusing this client (#144).
+    const stopApiWatch = watchApiTrouble({ report: reportApiTrouble });
     const timer = setTimeout(() => {
       const initialStation = selectedStationRef.current?.properties?.name || selectedStationRef.current?.name;
       reportNormalUserVisit({ station: initialStation });
     }, 2000);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); stopApiWatch(); };
   }, []);
 
   useEffect(() => {

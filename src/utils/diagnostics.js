@@ -23,6 +23,23 @@ export function recordApiSuccess(api) {
   if (hadTrouble) emit();
 }
 
+// Network requests sent per API in the last minute. Only the count is kept, never what was asked for. An API alert
+// carries it so a block can be read against the rate that preceded it.
+const REQUEST_LOG_WINDOW_MS = 60_000;
+const requestLog = { train: [], bus: [] };
+
+export function recordApiRequest(api, now = Date.now()) {
+  const log = requestLog[api];
+  if (!log) return;
+  log.push(now);
+  while (log.length && now - log[0] > REQUEST_LOG_WINDOW_MS) log.shift();
+}
+
+/** Requests sent to `api` in the last `windowMs` (at most one minute is remembered). */
+export function getRecentRequestCount(api, windowMs = REQUEST_LOG_WINDOW_MS, now = Date.now()) {
+  return (requestLog[api] || []).filter((t) => now - t <= windowMs).length;
+}
+
 export function subscribeApiStatus(listener) {
   listeners.add(listener);
   return () => listeners.delete(listener);

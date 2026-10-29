@@ -2,7 +2,7 @@
 // ADR-0011 & Issue #87: On-demand stop arrival predictions with 20s TTL caching & deduplication.
 
 import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
-import { recordApiFailure, recordApiSuccess } from '../utils/diagnostics';
+import { recordApiFailure, recordApiRequest, recordApiSuccess } from '../utils/diagnostics';
 
 export const EMT_CACHE_TTL_MS = 20000;
 export const EMT_TIMEOUT_MS = 4500;
@@ -245,6 +245,7 @@ export async function fetchStopArrivals(stopCode, options = {}) {
     }
 
     try {
+      recordApiRequest('bus');
       const response = await fetchFn(url, {
         signal: controller.signal,
         headers,
