@@ -56,7 +56,8 @@ import { getStationBusFeeders, getAllBusStops, getStopDisplayCoordinates } from 
 import { createLiveBusLayer } from '../utils/liveBusLayer';
 import { ensureBusRouteLayer, removeBusRouteLayer } from '../utils/busRouteLayer';
 import { isLine19Focused } from '../utils/busFocus';
-import { useBusFleet } from '../services/useBusFleet';
+import { useBusFleet, useNextBusMark } from '../services/useBusFleet';
+import { stopsAwayLabel } from '../utils/liveBusInfo';
 
 // Line 4's OSM-derived geometry is fetched rather than imported, so its 209 KB
 // stays out of the JS chunk. It lives in public/ because that is the only
@@ -663,7 +664,7 @@ const MapView = ({
     () => withMapLines(selectedStationProp, snappedByName.get(selectedStationProp?.properties?.name)),
     [selectedStationProp]
   );
-  const { language } = useTranslation();
+  const { language, t: tr } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
   const stMarkersRef    = useRef([]);
@@ -700,6 +701,16 @@ const MapView = ({
     selectedLiveBusIdRef.current = selectedLiveBusId;
     liveBusLayerRef.current?.setSelected(selectedLiveBusId);
   }, [selectedLiveBusId]);
+  // The bus the open stop's board row counts down gets a distinct green ring + "N stops away" chip.
+  const nextBusMark = useNextBusMark();
+  const nextBusInfo = nextBusMark ? { id: nextBusMark.busId, label: stopsAwayLabel(tr, nextBusMark.stopsAway) } : null;
+  const nextBusInfoRef = useRef(nextBusInfo);
+  const nextBusKey = nextBusInfo ? `${nextBusInfo.id}|${nextBusInfo.label}` : '';
+  useEffect(() => {
+    nextBusInfoRef.current = nextBusInfo;
+    liveBusLayerRef.current?.setNextBus(nextBusInfo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextBusKey]);
   const line19Focused = useMemo(
     () => isLine19Focused({ selectedBusStop, activeBusLine }, getStopsByCode()),
     [selectedBusStop, activeBusLine]
@@ -727,6 +738,7 @@ const MapView = ({
         if (!map || buses.length === 0) return;
         liveBusLayerRef.current = createLiveBusLayer(map, { onSelect: (bus) => onSelectLiveBusRef.current?.(bus) });
         liveBusLayerRef.current.setSelected(selectedLiveBusIdRef.current);
+        liveBusLayerRef.current.setNextBus(nextBusInfoRef.current);
       }
       liveBusLayerRef.current.setBuses(buses);
     },

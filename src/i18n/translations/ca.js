@@ -314,6 +314,7 @@ export default {
     liveBusAgeSeconds: 'Posició de fa {{seconds}} s',
     liveBusAgeMinutes: 'Posició de fa {{minutes}} min',
     nearestBusAria: 'Autobús més proper de la línia 19: {{away}}',
+    noLiveBuses: 'Sense busos en directe',
     liveBusAria: 'Autobús de la línia {{line}} cap a {{destination}}',
     liveBusTowards: 'Cap a {{destination}}',
     liveBusFromStop: 'de {{stop}}',

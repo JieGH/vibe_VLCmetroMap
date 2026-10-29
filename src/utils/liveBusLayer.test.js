@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createLiveBusLayer } from './liveBusLayer';
+import { createLiveBusLayer, busNumberFontPx } from './liveBusLayer';
 
 const makeEl = () => {
   const el = { innerHTML: '', textContent: '', style: {}, className: '', children: [], listeners: {}, dataset: {} };
@@ -73,15 +73,16 @@ describe('liveBusLayer', () => {
     const layer = make();
     layer.setBuses([bus('a', [-0.37, 39.47])]);
     const inner = layer.markerFor('a').getElement().children[0];
-    expect(inner.children.map((c) => c.className)).toEqual(['live-bus-fleet-halo', 'live-bus-fleet-arrow', 'live-bus-fleet-badge']);
+    expect(inner.children.map((c) => c.className)).toEqual(['live-bus-fleet-halo', 'live-bus-fleet-arrow', 'live-bus-fleet-badge', 'live-bus-fleet-next-ring', 'live-bus-fleet-next-chip']);
     const body = inner.children[2];
     expect(body.style.cssText).toContain('border-radius:50%');
     expect(body.children.map((c) => c.className)).toEqual(['live-bus-fleet-line']);
     expect(body.children[0].textContent).toBe('19');
-    // 40px white disc, thick red ring, red number; the arrow is white with a dark outline; above the stop chips
-    expect(body.style.cssText).toContain('width:40px');
+    // 20px white disc, thick red ring, red number; the arrow is white with a dark outline; above the stop chips
+    expect(body.style.cssText).toContain('width:20px');
     expect(body.style.cssText).toContain('background:#ffffff');
-    expect(body.style.cssText).toContain('border:4px solid #D62828');
+    expect(body.style.cssText).toContain('font:900 12px');
+    expect(body.style.cssText).toContain('border:2px solid #D62828');
     const chevron = inner.children[1].children[0].children[0];
     expect(chevron.style.cssText).toContain('background:#ffffff');
     expect(inner.children[1].children[0].style.cssText).toContain('drop-shadow');
@@ -125,5 +126,61 @@ describe('liveBusLayer', () => {
     layer.setSelected('a');
     layer.setBuses([bus('a', [-0.37, 39.47])]);
     expect(layer.markerFor('a').getElement().style.zIndex).toBe('80');
+  });
+
+  it('dims a bus whose fix is over 60 s old and hides its halo; a fresh fix restores it', () => {
+    let t = 0;
+    const layer = make({ now: () => t });
+    t = 80000;
+    layer.setBuses([{ ...bus('a', [-0.37, 39.47]), fixTimeMs: 0 }, { ...bus('b', [-0.36, 39.47]), fixTimeMs: 70000 }]);
+    const a = layer.markerFor('a').getElement();
+    const b = layer.markerFor('b').getElement();
+    expect(a.style.filter).toBe('opacity(0.55)');
+    expect(a.children[0].children[0].style.display).toBe('none');
+    expect(b.style.filter).toBe('');
+    expect(b.children[0].children[0].style.display).toBe('');
+    t = 100000;
+    layer.setBuses([{ ...bus('a', [-0.37, 39.47]), fixTimeMs: 99000 }]);
+    expect(a.style.filter).toBe('');
+    expect(a.children[0].children[0].style.display).toBe('');
+  });
+
+  it('does not dim exactly 60 s', () => {
+    const layer = make({ now: () => 60000 });
+    layer.setBuses([{ ...bus('a', [-0.37, 39.47]), fixTimeMs: 0 }]);
+    expect(layer.markerFor('a').getElement().style.filter).toBe('');
+  });
+
+  it('emphasises only the next bus for the stop, with its label chip, and clears it', () => {
+    const layer = make();
+    layer.setBuses([bus('a', [-0.37, 39.47]), bus('b', [-0.36, 39.47])]);
+    layer.setNextBus({ id: 'b', label: '3 stops away' });
+    const inner = (id) => layer.markerFor(id).getElement().children[0];
+    const [ringB, chipB] = [inner('b').children[3], inner('b').children[4]];
+    expect(ringB.style.display).toBe('block');
+    expect(chipB.style.display).toBe('block');
+    expect(chipB.textContent).toBe('3 stops away');
+    expect(inner('a').children[3].style.display).toBe('none');
+    expect(inner('a').children[4].style.display).toBe('none');
+    layer.setNextBus({ id: 'a', label: 'Next stop' });
+    expect(inner('b').children[3].style.display).toBe('none');
+    expect(inner('a').children[4].textContent).toBe('Next stop');
+    layer.setNextBus(null);
+    expect(inner('a').children[3].style.display).toBe('none');
+  });
+
+  it('applies a next-bus emphasis set before the marker existed, and keeps it separate from the selection ring', () => {
+    const layer = make();
+    layer.setNextBus({ id: 'a', label: 'Next stop' });
+    layer.setBuses([bus('a', [-0.37, 39.47])]);
+    const inner = layer.markerFor('a').getElement().children[0];
+    expect(inner.children[3].style.display).toBe('block');
+    expect(inner.children[2].style.boxShadow).not.toContain('#ffffff');
+  });
+
+  it('number font: big for 1-2 characters, smaller for 3+ so it never touches the ring', () => {
+    expect(busNumberFontPx('19')).toBe(12);
+    expect(busNumberFontPx('7')).toBe(12);
+    expect(busNumberFontPx('192')).toBe(9);
   });
 });

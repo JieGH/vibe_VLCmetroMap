@@ -2,7 +2,7 @@
 // line 19 stop selected, or its chip tapped); nothing is fetched while it is false. Buses go to `onBuses`
 // (a ref'd callback that feeds the map layer), never through React state, so a poll does not re-render
 // the app. The board and the bus sheet read the same store through their own small hooks below.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { busFleet } from './busFleetStore';
@@ -76,4 +76,40 @@ export function useLiveBus(id, store = busFleet) {
   }, [id, store]);
   if (!id) return null;
   return snap.id === id ? snap.bus : pickBus(store.getBuses(), id);
+}
+
+/**
+ * True only after a good fleet response with no live line 19 bus (or all hidden as stale). False before the
+ * first response, while any bus is tracked and after a failed poll, so the quiet "no live buses" note is
+ * never shown on guesswork.
+ */
+export function useLiveFleetEmpty(store = busFleet) {
+  const [empty, setEmpty] = useState(() => store.getStatus().empty);
+  useEffect(() => {
+    setEmpty(store.getStatus().empty);
+    return store.subscribeStatus((s) => setEmpty(s.empty));
+  }, [store]);
+  return empty;
+}
+
+/** A board row tells the map which bus it shows (and releases it on change/unmount, i.e. when the stop closes). */
+export function useClaimNextBus(found, store = busFleet) {
+  const owner = useId();
+  const busId = found?.bus?.id ?? null;
+  const stopsAway = found?.stopsAway ?? null;
+  useEffect(() => {
+    if (busId == null) return undefined;
+    store.setNextBus(owner, { busId, stopsAway });
+    return () => store.setNextBus(owner, null);
+  }, [owner, busId, stopsAway, store]);
+}
+
+/** { busId, stopsAway } of the bus the open stop's board row refers to, or null. Updates with the tracker. */
+export function useNextBusMark(store = busFleet) {
+  const [mark, setMark] = useState(() => store.getNextBus());
+  useEffect(() => {
+    setMark(store.getNextBus());
+    return store.subscribeNextBus(setMark);
+  }, [store]);
+  return mark;
 }

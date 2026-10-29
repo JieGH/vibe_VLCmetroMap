@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getLine19Route, pointAtAlongM } from './busRoute';
-import { describeLiveBus, headsignDestination, liveBusSheetBox, liveFixAgeSeconds, fixAgeLabel } from './liveBusInfo';
+import { describeLiveBus, headsignDestination, liveBusSheetBox, liveFixAgeSeconds, fixAgeLabel, isFixDimmed, STALE_DIM_AFTER_S } from './liveBusInfo';
 
 const dir = getLine19Route().directions[0]; // to-malvarosa
 const busAt = (alongM, extra = {}) => ({
@@ -71,5 +71,19 @@ describe('fix age', () => {
     expect(fixAgeLabel(t, 12)).toBe('bus.liveBusAgeSeconds:{"seconds":12}');
     expect(fixAgeLabel(t, 125)).toBe('bus.liveBusAgeMinutes:{"minutes":2}');
     expect(fixAgeLabel(t, null)).toBe('');
+  });
+});
+
+describe('isFixDimmed', () => {
+  it('dims only fixes older than 60 s', () => {
+    expect(STALE_DIM_AFTER_S).toBe(60);
+    expect(isFixDimmed(0)).toBe(false);
+    expect(isFixDimmed(60)).toBe(false);
+    expect(isFixDimmed(61)).toBe(true);
+    expect(isFixDimmed(119)).toBe(true);
+  });
+  it('never dims an unknown age', () => {
+    expect(isFixDimmed(null)).toBe(false);
+    expect(isFixDimmed(undefined)).toBe(false);
   });
 });

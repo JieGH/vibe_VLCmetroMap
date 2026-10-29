@@ -66,4 +66,82 @@ describe('busFleetStore', () => {
     store.setForeground(false);
     expect(p.foreground).toEqual([false]);
   });
+
+  describe('empty state (issue: quiet note when no line 19 buses)', () => {
+    const live = () => {
+      const p = fakePoller();
+      const store = createBusFleetStore({ createPoller: p.factory, tracker: tracker(), now: () => 5000 });
+      store.setFocused(true);
+      return { p, store };
+    };
+    it('is silent before the first response', () => {
+      const { store } = live();
+      expect(store.getStatus()).toEqual({ lastResponseAt: null, error: false, empty: false });
+    });
+    it('is empty once a response arrived with zero buses (or all hidden as stale)', () => {
+      const { p, store } = live();
+      p.handlers.onBuses([]);
+      p.handlers.onResponse();
+      expect(store.getStatus()).toEqual({ lastResponseAt: 5000, error: false, empty: true });
+    });
+    it('is not empty while a bus is tracked', () => {
+      const { p, store } = live();
+      p.handlers.onBuses([{ id: 'bus-1' }]);
+      p.handlers.onResponse();
+      expect(store.getStatus().empty).toBe(false);
+    });
+    it('stays silent after an error, and recovers on the next good response', () => {
+      const { p, store } = live();
+      p.handlers.onBuses([]);
+      p.handlers.onResponse();
+      p.handlers.onError();
+      expect(store.getStatus()).toMatchObject({ error: true, empty: false });
+      p.handlers.onResponse();
+      expect(store.getStatus()).toMatchObject({ error: false, empty: true });
+    });
+    it('resets on blur so the next focus starts silent', () => {
+      const { p, store } = live();
+      p.handlers.onResponse();
+      store.setFocused(false);
+      expect(store.getStatus()).toEqual({ lastResponseAt: null, error: false, empty: false });
+    });
+    it('notifies status subscribers only when something changes', () => {
+      const { p, store } = live();
+      const fn = vi.fn();
+      const off = store.subscribeStatus(fn);
+      p.handlers.onResponse();
+      expect(fn).toHaveBeenLastCalledWith(expect.objectContaining({ empty: true }));
+      off();
+      p.handlers.onError();
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('next bus claim (the bus the board row refers to)', () => {
+    it('exposes the claimed bus and clears it when the claim is released', () => {
+      const store = createBusFleetStore({ createPoller: fakePoller().factory, tracker: tracker() });
+      const fn = vi.fn();
+      store.subscribeNextBus(fn);
+      store.setNextBus('row-a', { busId: 'bus-2', stopsAway: 3 });
+      expect(store.getNextBus()).toEqual({ busId: 'bus-2', stopsAway: 3 });
+      store.setNextBus('row-a', null);
+      expect(store.getNextBus()).toBeNull();
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+    it('the latest claim wins and a released older claim does not clear it', () => {
+      const store = createBusFleetStore({ createPoller: fakePoller().factory, tracker: tracker() });
+      store.setNextBus('a', { busId: 'bus-1', stopsAway: 1 });
+      store.setNextBus('b', { busId: 'bus-2', stopsAway: 2 });
+      store.setNextBus('a', null);
+      expect(store.getNextBus()).toEqual({ busId: 'bus-2', stopsAway: 2 });
+    });
+    it('ignores identical re-claims (no notification churn)', () => {
+      const store = createBusFleetStore({ createPoller: fakePoller().factory, tracker: tracker() });
+      const fn = vi.fn();
+      store.subscribeNextBus(fn);
+      store.setNextBus('a', { busId: 'bus-1', stopsAway: 1 });
+      store.setNextBus('a', { busId: 'bus-1', stopsAway: 1 });
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+  });
 });

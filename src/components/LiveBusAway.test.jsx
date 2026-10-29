@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi } from 'vitest';
 
 const found = { current: null };
-vi.mock('../services/useBusFleet', () => ({ useNearestApproachingBus: () => found.current }));
+const empty = { current: false };
+vi.mock('../services/useBusFleet', () => ({ useNearestApproachingBus: () => found.current, useClaimNextBus: () => {}, useLiveFleetEmpty: () => empty.current }));
 import LiveBusAway from './LiveBusAway';
 
 describe('LiveBusAway', () => {
@@ -43,5 +44,24 @@ describe('LiveBusAway', () => {
     const full = renderToStaticMarkup(<LiveBusAway stopCode="722" reserve compact />);
     expect(box(empty)).toEqual(box(full));
     expect(full).toContain('3 stops away');
+  });
+
+  it('shows a quiet no-live-buses note in the reserved slot only when the fleet answered empty', () => {
+    found.current = null;
+    empty.current = false;
+    expect(renderToStaticMarkup(<LiveBusAway stopCode="722" reserve />)).not.toContain('live-bus-empty');
+    empty.current = true;
+    const html = renderToStaticMarkup(<LiveBusAway stopCode="722" reserve />);
+    expect(html).toContain('data-testid="live-bus-empty"');
+    expect(html).toContain('No live buses now');
+    // same box as the silent slot
+    expect(html).toContain('min-height:14px');
+    // never while a bus is tracked, never on rows without a mapped direction or without the reserved slot
+    found.current = { bus: { id: 'bus-1' }, stopsAway: 2, distanceM: 600 };
+    expect(renderToStaticMarkup(<LiveBusAway stopCode="722" reserve />)).not.toContain('live-bus-empty');
+    found.current = null;
+    expect(renderToStaticMarkup(<LiveBusAway stopCode="18" destination="Aeroport" reserve />)).toBe('');
+    expect(renderToStaticMarkup(<LiveBusAway stopCode="722" />)).toBe('');
+    empty.current = false;
   });
 });

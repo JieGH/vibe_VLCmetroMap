@@ -314,6 +314,7 @@ export default {
     liveBusAgeSeconds: 'Posición de hace {{seconds}} s',
     liveBusAgeMinutes: 'Posición de hace {{minutes}} min',
     nearestBusAria: 'Autobús más cercano de la línea 19: {{away}}',
+    noLiveBuses: 'Sin buses en directo',
     liveBusAria: 'Autobús de la línea {{line}} hacia {{destination}}',
     liveBusTowards: 'Hacia {{destination}}',
     liveBusFromStop: 'de {{stop}}',

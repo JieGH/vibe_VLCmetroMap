@@ -17,6 +17,8 @@ export function createBusFleetPoller({
   fetchFleet = getLineFleet,
   tracker = createBusTracker(),
   onBuses = () => {},
+  onResponse = () => {},
+  onError = () => {},
   intervalMs = BUS_POLL_INTERVAL_MS,
   now = Date.now,
   setTimer = (fn, ms) => setTimeout(fn, ms),
@@ -37,8 +39,10 @@ export function createBusFleetPoller({
       const records = await fetchFleet(line);
       if (myEpoch !== epoch) return; // stopped meanwhile: drop the answer
       onBuses(tracker.update(Array.isArray(records) ? records : [], now()));
+      onResponse();
     } catch {
       // A failed poll keeps the markers as they are; the next interval retries.
+      if (myEpoch === epoch) onError();
     }
     if (myEpoch === epoch && polling) timer = setTimer(() => poll(myEpoch), intervalMs);
   }

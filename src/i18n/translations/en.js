@@ -318,6 +318,7 @@ export default {
     liveBusAgeSeconds: 'Position {{seconds}} s ago',
     liveBusAgeMinutes: 'Position {{minutes}} min ago',
     nearestBusAria: 'Nearest line 19 bus: {{away}}',
+    noLiveBuses: 'No live buses now',
     liveBusAria: 'Line {{line}} bus towards {{destination}}',
     liveBusTowards: 'Towards {{destination}}',
     liveBusFromStop: 'from {{stop}}',

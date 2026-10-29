@@ -54,3 +54,11 @@ export function liveBusSheetBox(landscape) {
     ? { left: 12, right: 'auto', width: 'min(380px, calc(66vw - 40px))' }
     : { left: 12, right: 12, maxWidth: 380 };
 }
+
+/** A fix older than this (but still under the tracker's 120 s hide limit) is drawn dimmed on the map. */
+export const STALE_DIM_AFTER_S = 60;
+
+/** True when a bus's last fix is old enough to draw at reduced opacity without a halo. Unknown age: no. */
+export function isFixDimmed(ageSeconds) {
+  return Number.isFinite(ageSeconds) && ageSeconds > STALE_DIM_AFTER_S;
+}

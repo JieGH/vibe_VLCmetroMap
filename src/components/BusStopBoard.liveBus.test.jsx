@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi } from 'vitest';
 
 const found = { current: null };
-vi.mock('../services/useBusFleet', () => ({ useNearestApproachingBus: () => found.current }));
+const empty = { current: false };
+vi.mock('../services/useBusFleet', () => ({ useNearestApproachingBus: () => found.current, useClaimNextBus: () => {}, useLiveFleetEmpty: () => empty.current }));
 vi.mock('../services/emtArrivalService', async (orig) => ({
   ...(await orig()),
   getEmtCachedArrivals: () => [

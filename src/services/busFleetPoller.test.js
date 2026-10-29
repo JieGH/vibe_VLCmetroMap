@@ -17,8 +17,10 @@ const setup = (over = {}) => {
   const fetchFleet = vi.fn(async () => [{ gid: 1 }]);
   const tracker = { update: vi.fn((recs) => recs.map((r) => ({ id: `b${r.gid}` }))), reset: vi.fn() };
   const onBuses = vi.fn();
-  const poller = createBusFleetPoller({ fetchFleet, tracker, onBuses, doc, now: () => 1000, ...over });
-  return { doc, fetchFleet, tracker, onBuses, poller };
+  const onResponse = vi.fn();
+  const onError = vi.fn();
+  const poller = createBusFleetPoller({ fetchFleet, tracker, onBuses, onResponse, onError, doc, now: () => 1000, ...over });
+  return { doc, fetchFleet, tracker, onBuses, onResponse, onError, poller };
 };
 const flush = () => vi.advanceTimersByTimeAsync(0);
 
@@ -137,5 +139,16 @@ describe('busFleetPoller', () => {
     expect(doc.count()).toBe(0);
     await vi.advanceTimersByTimeAsync(120000);
     expect(fetchFleet).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a good response after the buses, and an error on a failed fetch', async () => {
+    const fetchFleet = vi.fn().mockRejectedValueOnce(new Error('refused')).mockResolvedValue([]);
+    const { poller, onResponse, onError } = setup({ fetchFleet });
+    poller.setFocused(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onResponse).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(BUS_POLL_INTERVAL_MS);
+    expect(onResponse).toHaveBeenCalledTimes(1);
   });
 });
