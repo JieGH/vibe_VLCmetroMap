@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 // Early preload: initiates MapView bundle fetch immediately on module evaluation
 const mapViewPromise = import('./components/MapView');
 // A chunk that 404s after a deploy reloads once to pick up the new build; the pending promise keeps the
@@ -83,6 +83,15 @@ function App() {
   const [liveBusId, setLiveBusId] = useState(null); // a tapped line 19 bus marker (#152)
   const selectedBusStopRef = useRef(null);
   selectedBusStopRef.current = selectedBusStop;
+  const closeLiveBus = useCallback(() => setLiveBusId(null), []);
+  // The sheet words itself against the selected stop, so it closes when that stop closes or changes (adjusted
+  // during render, no extra pass).
+  const liveBusStopKey = selectedBusStop ? String(selectedBusStop.stopCode ?? selectedBusStop.code ?? '') : '';
+  const [prevLiveBusStopKey, setPrevLiveBusStopKey] = useState(liveBusStopKey);
+  if (prevLiveBusStopKey !== liveBusStopKey) {
+    setPrevLiveBusStopKey(liveBusStopKey);
+    if (liveBusId) setLiveBusId(null);
+  }
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
     getInitialSidebarOpen(getWindowScreenPreset(), { isNative: Capacitor.isNativePlatform() }),
   );
@@ -664,6 +673,7 @@ function App() {
     welcomeVisible: showWelcome,
     dashboardMode: mode === 'dashboard',
     sidebarOpen: isSidebarOpen,
+    liveBusOpen: Boolean(liveBusId),
     busStopOpen: Boolean(selectedBusStop),
     stationOpen: Boolean(selectedStation),
     lineFilterActive: Array.isArray(activeLineFilter) && activeLineFilter.length > 0,
@@ -688,6 +698,7 @@ function App() {
         case 'exit-dashboard': selectModeRef.current('map'); break;
         case 'close-search': active?.blur?.(); setIsSearchOpen(false); break;
         case 'close-sidebar': setIsSidebarOpen(false); break;
+        case 'close-live-bus': setLiveBusId(null); break;
         case 'close-bus-stop': setSelectedBusStop(null); restoreReturnContext(); break;
         case 'close-station': if (!restoreReturnContext()) setSelectedStation(null); break;
         case 'clear-filter': setActiveLineFilter([]); break;
@@ -958,7 +969,7 @@ function App() {
           busId={liveBusId}
           stopCode={selectedBusStop ? String(selectedBusStop.stopCode ?? selectedBusStop.code ?? '') : null}
           stopName={selectedBusStop?.stopName || selectedBusStop?.name || ''}
-          onClose={() => setLiveBusId(null)}
+          onClose={closeLiveBus}
         />
       )}
 

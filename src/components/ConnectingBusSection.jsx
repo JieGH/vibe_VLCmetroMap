@@ -373,7 +373,7 @@ export const ConnectingBusSection = ({
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
-                        {bIdx === liveBusRow && <LiveBusAway stopCode={cleanCode} compact={compact} />}
+                        {bIdx === liveBusRow && <LiveBusAway stopCode={cleanCode} destination={busObj.destination} compact={compact} reserve />}
                         {busObj.isLive && !compact && (
                           <span
                             title={t('bus.liveGpsTelemetry')}

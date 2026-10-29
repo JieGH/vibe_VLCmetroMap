@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import fixture from '../data/fixtures/emt_line19_recording.json';
 import { normalizeFecha } from './busFleetService';
-import { directionForTrayecto, projectOnShape, pointAtAlongM, findStop } from '../utils/busRoute';
+import { directionForTrayecto, getLine19Route, projectOnShape, pointAtAlongM, findStop } from '../utils/busRoute';
 import * as busRoute from '../utils/busRoute';
 import { createBusTracker, MATCH_GATE_M, DROP_AFTER_MS, HIDE_AGE_S, HEADING_MIN_MOVE_M, BACKWARD_TOLERANCE_M } from './busTracker';
 
@@ -383,6 +383,24 @@ describe('review fixes', () => {
       expect(findStop(dir, stop.stopCode)).toBeTruthy();
       expect(t.nearestApproaching(stop.stopCode, T0)).toBeNull();
       expect(t.nearestApproaching('nope', T0)).toBeNull();
+    });
+  });
+
+  describe('nearestApproaching with a direction', () => {
+    const other = getLine19Route().directions.find((d) => d.id !== dir.id);
+    const shared = dir.stops.find((st) => st.alongM >= 800 && findStop(other, st.stopCode));
+    it('only considers buses of the requested direction', () => {
+      if (!shared) return;
+      const otherStop = findStop(other, shared.stopCode);
+      const t = createBusTracker();
+      t.update([
+        rec(1, routePt(shared.alongM - 800)),
+        rec(2, pointAtAlongM(other, Math.max(0, otherStop.alongM - 200)).lonLat, { trayecto: other.trayecto }),
+      ], T0);
+      expect(t.nearestApproaching(shared.stopCode, T0).bus.directionKey).toBe(other.id);
+      expect(t.nearestApproaching(shared.stopCode, T0, dir.id).bus.directionKey).toBe(dir.id);
+      expect(t.nearestApproaching(shared.stopCode, T0, other.id).bus.directionKey).toBe(other.id);
+      expect(t.nearestApproaching(shared.stopCode, T0, 'nope')).toBeNull();
     });
   });
 

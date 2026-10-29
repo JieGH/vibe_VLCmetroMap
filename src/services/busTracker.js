@@ -194,13 +194,14 @@ export function createBusTracker() {
   }
 
   /**
-   * The nearest bus approaching `stopCode`: same direction as the stop, on route,
+   * The nearest bus approaching `stopCode`: same direction as the stop (and `directionId`, when given), on route,
    * not stale, not yet passed. { bus, stopsAway, distanceM } or null.
    */
-  function nearestApproaching(stopCode, nowMs = lastNowMs) {
+  function nearestApproaching(stopCode, nowMs = lastNowMs, directionId = null) {
     let best = null;
     for (const t of tracks) {
       if (t.alongM == null || fixAgeS(t, nowMs) > HIDE_AGE_S) continue;
+      if (directionId && t.directionKey !== directionId) continue;
       const direction = directionById(t.directionKey);
       const target = direction && findStop(direction, stopCode);
       if (!target || t.alongM > target.alongM + PASSED_HYSTERESIS_M) continue;

@@ -3,7 +3,7 @@ import emtStops from '../data/emt_stops.json';
 import recording from '../data/fixtures/emt_line19_recording.json';
 import {
   distanceM, getLine19Route, directionForTrayecto, projectOnShape, alongShapeM, findStop, stopsAway,
-  pointAtAlongM, nextStop, OFF_ROUTE_M, PASSED_HYSTERESIS_M,
+  pointAtAlongM, nextStop, OFF_ROUTE_M, PASSED_HYSTERESIS_M, directionForDestination, resolveStopDirection,
 } from './busRoute';
 
 const route = getLine19Route();
@@ -292,5 +292,42 @@ describe('directionById', () => {
     expect(directionById(d.id)).toBe(d);
     expect(directionById('nope')).toBeNull();
     expect(directionById(null)).toBeNull();
+  });
+});
+
+describe('directionForDestination (getSAE destino -> trayecto direction)', () => {
+  it('maps normalised terminus names to the direction ending there', () => {
+    expect(directionForDestination('La Malva-rosa')).toBe(toMalva);
+    expect(directionForDestination('LA MALVA-ROSA')).toBe(toMalva);
+    expect(directionForDestination('Malvarrosa')).toBe(toMalva);
+    expect(directionForDestination('  la  malvarrosa ')).toBe(toMalva);
+    expect(directionForDestination('Est.del Nord')).toBe(toNord);
+    expect(directionForDestination('ESTACIÓ DEL NORD')).toBe(toNord);
+    expect(directionForDestination('Estación del Norte')).toBe(toNord);
+  });
+  it('returns null for unknown, empty and ambiguous destinations', () => {
+    expect(directionForDestination('Aeroport')).toBeNull();
+    expect(directionForDestination('')).toBeNull();
+    expect(directionForDestination(null)).toBeNull();
+    expect(directionForDestination('Nord - Malva-rosa')).toBeNull();
+  });
+});
+
+describe('resolveStopDirection', () => {
+  const nordOnly = toNord.stops.find((s) => !toMalva.stops.some((m) => m.stopCode === s.stopCode));
+  const both = toMalva.stops.find((s) => toNord.stops.some((m) => m.stopCode === s.stopCode));
+  it('uses the destination when it maps', () => {
+    if (both) {
+      expect(resolveStopDirection(both.stopCode, 'La Malva-rosa')).toBe(toMalva.id);
+      expect(resolveStopDirection(both.stopCode, 'Est.del Nord')).toBe(toNord.id);
+    }
+  });
+  it('an unmappable destination falls back only when a single direction serves the stop', () => {
+    if (nordOnly) expect(resolveStopDirection(nordOnly.stopCode, 'Somewhere')).toBe(toNord.id);
+    if (both) expect(resolveStopDirection(both.stopCode, 'Somewhere')).toBeNull();
+    expect(resolveStopDirection('nope', 'La Malva-rosa')).toBeNull();
+  });
+  it('a mapped destination for a direction that does not serve the stop gives null', () => {
+    if (nordOnly) expect(resolveStopDirection(nordOnly.stopCode, 'La Malva-rosa')).toBeNull();
   });
 });

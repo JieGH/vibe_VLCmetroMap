@@ -33,6 +33,63 @@ export function directionForTrayecto(trayecto, data = route) {
   return data.directions.find((d) => d.trayecto === t) || null;
 }
 
+const FILLER = new Set(['est', 'estacio', 'estacion', 'estacao', 'del', 'de', 'la', 'el', 'les', 'los', 'las', 'l', 'a']);
+
+/** Lowercase, accent-free words; repeated letters collapsed so Malvarrosa and Malva-rosa agree. */
+function destinationWords(text) {
+  return String(text ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.replace(/(.)\1+/g, '$1'))
+    .map((w) => (w === 'norte' ? 'nord' : w));
+}
+
+/** The terminus of a trayecto headsign ("A - B" -> "B"). */
+function terminusOf(trayecto) {
+  const parts = String(trayecto || '').split(' - ');
+  return parts[parts.length - 1];
+}
+
+function matchesTerminus(destination, terminus) {
+  const dest = destinationWords(destination);
+  const term = destinationWords(terminus);
+  if (dest.length === 0 || term.length === 0) return false;
+  if (dest.join('') === term.join('')) return true;
+  const key = term.filter((w) => !FILLER.has(w));
+  const destKey = dest.filter((w) => !FILLER.has(w));
+  if (key.length === 0 || destKey.length === 0) return false;
+  if (destKey.join('') === key.join('')) return true;
+  // Any distinctive word of the terminus (Nord, Malvarosa) appearing as a word of the destination.
+  return key.some((w) => w.length >= 4 && destKey.includes(w));
+}
+
+/**
+ * The direction a getSAE `destino` string heads to, by comparing it (accent-,
+ * case-, punctuation- and doubled-letter-insensitive) with the terminus of each
+ * direction's trayecto headsign. null when nothing or more than one direction matches.
+ */
+export function directionForDestination(destination, data = route) {
+  const hits = data.directions.filter((d) => matchesTerminus(destination, terminusOf(d.trayecto)));
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/**
+ * The direction id to use for a stop's getSAE row: the one its destination maps
+ * to if that direction serves the stop; if the destination cannot be mapped, the
+ * only direction serving the stop; otherwise null (show no bus).
+ */
+export function resolveStopDirection(stopCode, destination, data = route) {
+  const code = String(stopCode ?? '');
+  const serving = data.directions.filter((d) => findStop(d, code));
+  const mapped = directionForDestination(destination, data);
+  if (mapped) return serving.includes(mapped) ? mapped.id : null;
+  return serving.length === 1 ? serving[0].id : null;
+}
+
 /** The direction with this id (as in a bus view's directionKey), or null. */
 export function directionById(id, data = route) {
   return data.directions.find((d) => d.id === id) || null;

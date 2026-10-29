@@ -31,3 +31,13 @@ export function stopsAwayLabel(t, stopsAway) {
   if (stopsAway === 1) return t('bus.stopsAwayOne');
   return t('bus.stopsAwayOther', { count: stopsAway });
 }
+
+/**
+ * Placement of the live bus sheet. In landscape the stop board sits at the right (top 84, right 16, 34vw wide),
+ * so the sheet stays left of it instead of spanning the width.
+ */
+export function liveBusSheetBox(landscape) {
+  return landscape
+    ? { left: 12, right: 'auto', width: 'min(380px, calc(66vw - 40px))' }
+    : { left: 12, right: 12, maxWidth: 380 };
+}

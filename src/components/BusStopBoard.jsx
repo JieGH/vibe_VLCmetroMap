@@ -451,7 +451,7 @@ export const BusStopBoard = ({
                           }}>
                             {a.destination}
                           </span>
-                          {i === liveBusRow && <LiveBusAway stopCode={cleanCode} />}
+                          {i === liveBusRow && <LiveBusAway stopCode={cleanCode} destination={a.destination} reserve />}
                         </div>
                         {a.wheelchair && (
                           <Accessibility

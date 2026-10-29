@@ -24,4 +24,24 @@ describe('LiveBusAway', () => {
     found.current = { bus: { id: 'bus-1' }, stopsAway: 0, distanceM: 50 };
     expect(renderToStaticMarkup(<LiveBusAway stopCode="18" />)).toContain('Next stop');
   });
+  it('reserves a quiet, text-free slot for line 19 rows when there is no bus', () => {
+    found.current = null;
+    const html = renderToStaticMarkup(<LiveBusAway stopCode="722" reserve />);
+    expect(html).toContain('data-testid="live-bus-slot"');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).not.toMatch(/>[^<]+</);
+  });
+  it('does not reserve a slot when the row cannot be mapped to a direction', () => {
+    found.current = null;
+    expect(renderToStaticMarkup(<LiveBusAway stopCode="18" destination="Aeroport" reserve />)).toBe('');
+  });
+  it('the reserved slot has the same box with or without a bus', () => {
+    const box = (h) => h.match(/(?:min-height|width):[^;"]+/g);
+    found.current = null;
+    const empty = renderToStaticMarkup(<LiveBusAway stopCode="722" reserve compact />);
+    found.current = { bus: { id: 'bus-1' }, stopsAway: 3, distanceM: 900 };
+    const full = renderToStaticMarkup(<LiveBusAway stopCode="722" reserve compact />);
+    expect(box(empty)).toEqual(box(full));
+    expect(full).toContain('3 stops away');
+  });
 });

@@ -36,38 +36,44 @@ export function useBusFleet({ focused, onBuses }) {
   }, [focused]);
 }
 
-/** The nearest approaching line 19 bus for a stop ({ bus, stopsAway, distanceM }) or null. Re-reads on each poll. */
-export function useNearestApproachingBus(stopCode, store = busFleet) {
+/**
+ * The nearest approaching line 19 bus for a stop ({ bus, stopsAway, distanceM }) or null. Re-reads on each poll.
+ * `directionId` limits it to buses heading the same way as the stop's row (resolveStopDirection); null shows none.
+ */
+export function useNearestApproachingBus(stopCode, directionId = null, store = busFleet) {
   const code = stopCode ? String(stopCode) : '';
-  const read = () => (code ? store.nearestApproaching(code) : null);
+  const dir = directionId || null;
+  const key = `${code}|${dir ?? ''}`;
+  const read = () => (code && dir ? store.nearestApproaching(code, dir) : null);
   const [found, setFound] = useState(read);
-  const [prevCode, setPrevCode] = useState(code);
-  if (prevCode !== code) {
-    setPrevCode(code);
+  const [prevKey, setPrevKey] = useState(key);
+  if (prevKey !== key) {
+    setPrevKey(key);
     setFound(read());
   }
   useEffect(() => {
-    if (!code) return undefined;
+    if (!code || !dir) return undefined;
     return store.subscribe(() => {
-      const next = store.nearestApproaching(code);
+      const next = store.nearestApproaching(code, dir);
       setFound((prev) => (
         (prev?.bus.id ?? null) === (next?.bus.id ?? null) && (prev?.stopsAway ?? null) === (next?.stopsAway ?? null)
           ? prev
           : next
       ));
     });
-  }, [code, store]);
-  return found;
+  }, [code, dir, store]);
+  return code && dir ? found : null;
 }
 
-/** The live bus with this id from the latest poll, or null once it is gone. */
+const pickBus = (buses, id) => buses.find((b) => b.id === id) || null;
+
+/** The live bus with this id from the latest poll, or null once it is gone. Never another bus's state. */
 export function useLiveBus(id, store = busFleet) {
-  const pick = (buses) => buses.find((b) => b.id === id) || null;
-  const [bus, setBus] = useState(() => (id ? pick(store.getBuses()) : null));
+  const [snap, setSnap] = useState(() => ({ id, bus: id ? pickBus(store.getBuses(), id) : null }));
   useEffect(() => {
     if (!id) return undefined;
-    return store.subscribe((buses) => setBus(pick(buses)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return store.subscribe((buses) => setSnap({ id, bus: pickBus(buses, id) }));
   }, [id, store]);
-  return id ? bus : null;
+  if (!id) return null;
+  return snap.id === id ? snap.bus : pickBus(store.getBuses(), id);
 }

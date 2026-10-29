@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getLine19Route, pointAtAlongM } from './busRoute';
-import { describeLiveBus, headsignDestination } from './liveBusInfo';
+import { describeLiveBus, headsignDestination, liveBusSheetBox } from './liveBusInfo';
 
 const dir = getLine19Route().directions[0]; // to-malvarosa
 const busAt = (alongM, extra = {}) => ({
@@ -45,5 +45,16 @@ describe('describeLiveBus', () => {
   it('unknown direction still returns the headsign', () => {
     const info = describeLiveBus({ id: 'x', trayecto: 'A - B', directionKey: 'nope', alongM: 0, snappedLonLat: [0, 0] }, null);
     expect(info).toMatchObject({ destination: 'B', stopsAway: null, nextStopName: null });
+  });
+});
+
+describe('liveBusSheetBox', () => {
+  it('spans the width in portrait', () => {
+    expect(liveBusSheetBox(false)).toMatchObject({ left: 12, right: 12, maxWidth: 380 });
+  });
+  it('stops short of the right-hand stop board (34vw wide at right 16) in landscape', () => {
+    const box = liveBusSheetBox(true);
+    expect(box.right).toBe('auto');
+    expect(box.width).toBe('min(380px, calc(66vw - 40px))');
   });
 });

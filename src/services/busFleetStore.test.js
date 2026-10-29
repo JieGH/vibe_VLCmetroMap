@@ -55,7 +55,9 @@ describe('busFleetStore', () => {
     const tr = tracker(() => ({ stopsAway: 3 }));
     const store = createBusFleetStore({ createPoller: fakePoller().factory, tracker: tr });
     expect(store.nearestApproaching('18')).toEqual({ stopsAway: 3 });
-    expect(tr.nearestApproaching).toHaveBeenCalledWith('18', expect.any(Number));
+    expect(tr.nearestApproaching).toHaveBeenCalledWith('18', expect.any(Number), null);
+    store.nearestApproaching('18', 'to-nord');
+    expect(tr.nearestApproaching).toHaveBeenLastCalledWith('18', expect.any(Number), 'to-nord');
   });
 
   it('forwards foreground changes', () => {

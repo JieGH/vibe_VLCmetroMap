@@ -1,16 +1,33 @@
 // Small card for a tapped live bus marker (issue #152): its direction (trayecto headsign) and how many
 // stops away it is from the selected stop, or its next stop when no stop is selected. Same glass-panel
 // sheet look as the stop board; sits at the top so it never covers the board's countdown rows.
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import BusBadge from './BusBadge';
 import { useTranslation } from '../i18n';
 import { useLiveBus } from '../services/useBusFleet';
-import { describeLiveBus, stopsAwayLabel } from '../utils/liveBusInfo';
+import { describeLiveBus, stopsAwayLabel, liveBusSheetBox } from '../utils/liveBusInfo';
+import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
+
+const useIsLandscape = () => {
+  const read = () => typeof window !== 'undefined' && window.innerWidth >= LANDSCAPE_BREAKPOINT_PX;
+  const [landscape, setLandscape] = useState(read);
+  useEffect(() => {
+    const onResize = () => setLandscape(read());
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+  return landscape;
+};
 
 const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose }) => {
   const { t } = useTranslation();
   const bus = useLiveBus(busId);
+  const landscape = useIsLandscape();
   const gone = !bus;
 
   useEffect(() => {
@@ -39,8 +56,8 @@ const LiveBusSheet = ({ busId, stopCode = null, stopName = '', onClose }) => {
       aria-label={t('bus.liveBusAria', { line: bus.linea, destination: info.destination })}
       style={{
         position: 'absolute', zIndex: 31,
-        top: 'calc(76px + env(safe-area-inset-top, 0px))', left: 12, right: 12,
-        maxWidth: 380, borderRadius: 16, padding: '10px 12px',
+        top: 'calc(76px + env(safe-area-inset-top, 0px))', ...liveBusSheetBox(landscape),
+        borderRadius: 16, padding: '10px 12px',
         display: 'flex', alignItems: 'center', gap: 10,
       }}
     >

@@ -5,11 +5,17 @@ import { Radio } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useNearestApproachingBus } from '../services/useBusFleet';
 import { stopsAwayLabel } from '../utils/liveBusInfo';
+import { resolveStopDirection } from '../utils/busRoute';
 
-const LiveBusAway = ({ stopCode, compact = false }) => {
+const LiveBusAway = ({ stopCode, destination = '', compact = false, reserve = false }) => {
   const { t } = useTranslation();
-  const found = useNearestApproachingBus(stopCode);
-  if (!found) return null;
+  const directionId = resolveStopDirection(stopCode, destination);
+  const found = useNearestApproachingBus(stopCode, directionId);
+  // `reserve` (line 19 rows) keeps a fixed, empty, silent slot so the row never changes size when a bus pops in.
+  const slot = compact ? { width: 76, minHeight: 12 } : { minHeight: 14 };
+  if (!found) {
+    return reserve && directionId ? <span data-testid="live-bus-slot" aria-hidden="true" style={{ display: 'inline-block', ...slot }} /> : null;
+  }
   const label = stopsAwayLabel(t, found.stopsAway);
   return (
     <span
@@ -17,7 +23,7 @@ const LiveBusAway = ({ stopCode, compact = false }) => {
       className="live-bus-away"
       aria-label={t('bus.nearestBusAria', { away: label })}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
+        display: 'inline-flex', alignItems: 'center', gap: 4, ...(reserve ? { ...slot, justifyContent: 'flex-end', boxSizing: 'border-box' } : null),
         fontSize: compact ? '0.62rem' : '0.72rem', fontWeight: 700, lineHeight: 1.1,
         color: '#4CAF50', whiteSpace: 'nowrap',
       }}

@@ -35,7 +35,7 @@ export function createBusFleetStore({
       return () => { listeners.delete(fn); };
     },
     getBuses: () => buses,
-    nearestApproaching: (stopCode) => tracker.nearestApproaching(stopCode, now()),
+    nearestApproaching: (stopCode, directionId = null) => tracker.nearestApproaching(stopCode, now(), directionId),
   };
 }
 
