@@ -155,10 +155,15 @@ describe('ConnectingBusSection countdown formatting and states (#90)', () => {
     expect(html).toContain('>s<');
   });
 
-  it('shows no unit for a due (30 s) departure', () => {
-    const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({ dueSeconds: 30 })])} theme="dark" />);
+  it('shows no unit for a due (20 s) departure', () => {
+    const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({ dueSeconds: 20 })])} theme="dark" />);
     expect(html).not.toContain('>min<');
     expect(html).not.toContain('>s<');
+  });
+
+  it('reads 30 s as seconds, not Arriving (Arriving is 20 s or less)', () => {
+    const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([arr({ dueSeconds: 30 })])} theme="dark" />);
+    expect(html).toContain('30');
   });
 
   it('shows the live indicator only for live rows and hides it in compact mode', () => {

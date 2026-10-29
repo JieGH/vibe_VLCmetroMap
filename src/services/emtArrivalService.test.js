@@ -59,15 +59,15 @@ describe('EMT Arrival Service (ADR-0011 / Issue #87)', () => {
   });
 
   describe('calculateDueSeconds', () => {
-    it('handles Pròxim / Próximo as 30s isDue', () => {
+    it('handles Pròxim / Próximo as 20s isDue', () => {
       const p1 = calculateDueSeconds('Pròxim');
-      expect(p1).toEqual({ dueSeconds: 30, minutes: 0, isDue: true });
+      expect(p1).toEqual({ dueSeconds: 20, minutes: 0, isDue: true });
 
       const p2 = calculateDueSeconds('Próximo');
-      expect(p2).toEqual({ dueSeconds: 30, minutes: 0, isDue: true });
+      expect(p2).toEqual({ dueSeconds: 20, minutes: 0, isDue: true });
 
       const p3 = calculateDueSeconds('proxim');
-      expect(p3).toEqual({ dueSeconds: 30, minutes: 0, isDue: true });
+      expect(p3).toEqual({ dueSeconds: 20, minutes: 0, isDue: true });
     });
 
     it('handles X min. / X min formats', () => {
@@ -163,7 +163,7 @@ describe('EMT Arrival Service (ADR-0011 / Issue #87)', () => {
       expect(arrivals[0]).toEqual({
         line: '6',
         destination: 'Torrefiel',
-        dueSeconds: 30,
+        dueSeconds: 20,
         minutes: 0,
         isDue: true,
         isLive: true,
@@ -215,7 +215,7 @@ describe('EMT Arrival Service (ADR-0011 / Issue #87)', () => {
 
       const arrivals = parseEmtArrivalXml(unsortedXml);
       expect(arrivals.map((a) => a.line)).toEqual(['31', '11', '72']);
-      expect(arrivals.map((a) => a.dueSeconds)).toEqual([30, 120, 720]);
+      expect(arrivals.map((a) => a.dueSeconds)).toEqual([20, 120, 720]);
     });
 
     it('ignores bus entries with errors or missing line numbers', () => {

@@ -33,7 +33,7 @@ describe('countdown parsing variations (#90)', () => {
     const xml = wrap(busXml('9', '15 min.'), busXml('7', '', '16:25'), busXml('6', 'Pròxim'));
     const res = parseEmtArrivalXml(xml, at(16, 10));
     expect(res.map((a) => [a.line, a.dueSeconds, a.minutes])).toEqual([
-      ['6', 30, 0],
+      ['6', 20, 0],
       ['9', 900, 15],
       ['7', 900, 15],
     ]);
@@ -52,7 +52,7 @@ describe('countdown parsing variations (#90)', () => {
 
   it('accepts "Próximo" and "Proxima" spellings', () => {
     expect(calculateDueSeconds('Próximo').isDue).toBe(true);
-    expect(calculateDueSeconds('Proxima').dueSeconds).toBe(30);
+    expect(calculateDueSeconds('Proxima').dueSeconds).toBe(20);
   });
 
   it('isDue flips just above one minute', () => {

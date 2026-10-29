@@ -118,7 +118,7 @@ describe('BusStopBoard component', () => {
         {
           line: '6',
           destination: 'Torrefiel',
-          dueSeconds: 30,
+          dueSeconds: 20,
           minutes: 0,
           isDue: true,
           isLive: true,
@@ -228,13 +228,19 @@ describe('BusStopBoard countdown formatting and states (#90)', () => {
     expect(html).toContain('>s<');
   });
 
-  it('shows the due dot (no unit) for Pròxim-style 30 s arrivals and pulses only when live', () => {
-    const live = board([row({ dueSeconds: 30, isDue: true })]);
+  it('shows the due dot (no unit) for Pròxim-style 20 s arrivals and pulses only when live', () => {
+    const live = board([row({ dueSeconds: 20, isDue: true })]);
     expect(live).toContain('station-arriving-dot pulse');
     expect(live).not.toContain('>min<');
-    const sched = board([row({ dueSeconds: 30, isLive: false })]);
+    const sched = board([row({ dueSeconds: 20, isLive: false })]);
     expect(sched).toContain('station-arriving-dot ');
     expect(sched).not.toContain('station-arriving-dot pulse');
+  });
+
+  it('shows Arriving only at 20 s or less: 21 to 59 s read as seconds without the due dot', () => {
+    const html = board([row({ dueSeconds: 30, isLive: true })]);
+    expect(html).not.toContain('station-arriving-dot');
+    expect(html).toContain('>30<');
   });
 
   it('omits the accessible icon for non-wheelchair buses', () => {

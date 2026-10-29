@@ -6,7 +6,8 @@ import BusBadge from './BusBadge';
 import WaveDots from './WaveDots';
 import LiveBusAway from './LiveBusAway';
 import { LIVE_BUS_LINE } from '../utils/busFocus';
-import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
+import { countdownHeat } from '../utils/countdownHeat';
+import { isBusArriving, busCountdownLabel, busCountdownUnit } from '../utils/busCountdown';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
@@ -475,7 +476,7 @@ export const BusStopBoard = ({
                         color: heat,
                       }}
                     >
-                      {dueSec <= 30 ? (
+                      {isBusArriving(dueSec) ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
                           <span
                             className={`station-arriving-dot ${a.isLive ? 'pulse' : ''}`}
@@ -485,16 +486,16 @@ export const BusStopBoard = ({
                               background: heat, display: 'inline-block',
                             }}
                           />
-                          {countdownLabel(dueSec, t('common.due'))}
+                          {busCountdownLabel(dueSec, t('common.due'))}
                         </span>
                       ) : (
                         <>
                           <span className="station-arrival-num">
-                            {countdownLabel(dueSec, t('common.due'))}
+                            {busCountdownLabel(dueSec, t('common.due'))}
                           </span>
-                          {countdownUnit(dueSec) && (
+                          {busCountdownUnit(dueSec) && (
                             <span style={{ fontSize: '.74rem', fontWeight: 600, marginLeft: 2, color: 'var(--text-secondary)' }}>
-                              {t(`common.${countdownUnit(dueSec)}`)}
+                              {t(`common.${busCountdownUnit(dueSec)}`)}
                             </span>
                           )}
                         </>

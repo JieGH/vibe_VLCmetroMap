@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } fro
 import { Footprints } from 'lucide-react';
 import BusBadge from './BusBadge';
 import WaveDots from './WaveDots';
-import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
+import { countdownHeat } from '../utils/countdownHeat';
+import { isBusArriving, busCountdownLabel, busCountdownUnit } from '../utils/busCountdown';
 import { useTranslation } from '../i18n';
 import { SPLIT_HEADER, splitHeaderBoxStyle, timeUnitStyle } from './splitStyles';
 import { FEEDER_FETCH_BATCH, visibleFeederCodes, fetchFeederArrivals, createLatestGuard } from '../services/feederArrivalFetch';
@@ -400,14 +401,14 @@ export const ConnectingBusSection = ({
                             waiting
                               ? <WaveDots size={4} />
                               : <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>···</span>
-                          ) : dueSec <= 30 ? (
-                            countdownLabel(dueSec, dueLabel)
+                          ) : isBusArriving(dueSec) ? (
+                            busCountdownLabel(dueSec, dueLabel)
                           ) : (
                             <>
-                              {countdownLabel(dueSec, dueLabel)}
-                              {countdownUnit(dueSec) && (
-                                <span style={timeUnitStyle({ compact, unit: countdownUnit(dueSec), baseFontSize: '0.70rem' })}>
-                                  {compact && countdownUnit(dueSec) === 'min' ? '′' : t(`common.${countdownUnit(dueSec)}`)}
+                              {busCountdownLabel(dueSec, dueLabel)}
+                              {busCountdownUnit(dueSec) && (
+                                <span style={timeUnitStyle({ compact, unit: busCountdownUnit(dueSec), baseFontSize: '0.70rem' })}>
+                                  {compact && busCountdownUnit(dueSec) === 'min' ? '′' : t(`common.${busCountdownUnit(dueSec)}`)}
                                 </span>
                               )}
                             </>

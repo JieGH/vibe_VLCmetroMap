@@ -3,6 +3,7 @@
 
 import { classifyFetchFailure, createRefusalTracker } from '../utils/apiRefusal';
 import { recordApiFailure, recordApiRequest, recordApiSuccess } from '../utils/diagnostics';
+import { BUS_ARRIVING_MAX_SECONDS } from '../utils/busCountdown';
 
 export const EMT_CACHE_TTL_MS = 20000;
 export const EMT_TIMEOUT_MS = 4500;
@@ -64,7 +65,7 @@ function getFallbackArrivals(code) {
 
 /**
  * Converts EMT wait-time representations into normalized countdown seconds.
- * - "Pròxim" / "Próximo" -> 30 seconds (isDue: true)
+ * - "Pròxim" / "Próximo" -> BUS_ARRIVING_MAX_SECONDS, 20 seconds (isDue: true)
  * - "X min." / "X min" / "X" -> X * 60 seconds
  * - "HH:MM" -> delta seconds until target time (handling midnight crossover vs delayed arrivals)
  */
@@ -74,7 +75,7 @@ export function calculateDueSeconds(minutos, horaLlegada, now = new Date()) {
 
   // 1. "Pròxim" / "Próximo" check
   if (/^pr[oòó]xim[oa]?$/i.test(cleanMin)) {
-    return { dueSeconds: 30, minutes: 0, isDue: true };
+    return { dueSeconds: BUS_ARRIVING_MAX_SECONDS, minutes: 0, isDue: true };
   }
 
   // 2. "X min.", "X min" or plain integer "X"
