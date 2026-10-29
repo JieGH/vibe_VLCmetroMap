@@ -33,8 +33,9 @@
     "build:line4": "node scripts/convert_line4_osm_to_geojson.cjs",
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
-    "android:sync": "npm run build && npx cap sync android",
-    "android:open": "npx cap open android",
+    "capacitor:sync": "npm run build && npx cap sync android",
+    "capacitor:open": "npx cap open android",
+    "apk": "NO_UPLOAD=1 scripts/release-apk.sh",
     "fetch:basemap": "node scripts/fetch_basemap.cjs",
     "sweep": "node scripts/sweep_coverage.cjs",
     "measure": "node scripts/measure_latency.cjs"

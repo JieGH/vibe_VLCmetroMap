@@ -134,7 +134,7 @@ body {
   user-select: none;
 }
 
-/* The Android app draws its interface a little smaller (see utils/uiScale.js).
+/* The Capacitor app draws its interface a little smaller (see utils/uiScale.js).
    Zoom scales lengths but not viewport units, so the full-screen containers
    are stretched by the same factor to keep filling the screen. */
 html.ui-zoomed {
@@ -1078,7 +1078,7 @@ button:active {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Top-bar icon buttons (language, theme, Android app) and the app sheet ── */
+/* ── Top-bar icon buttons (language, theme, Capacitor app) and the app sheet ── */
 
 .topbar-icon-btn {
   min-width: 34px;

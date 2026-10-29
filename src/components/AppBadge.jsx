@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from '../i18n';
 
-// The launcher icon (same mark as the Android apps) on its dark tile, for the
+// The launcher icon (same mark as the Capacitor apps) on its dark tile, for the
 // sidebar and About headers.
 // `bare` drops the dark tile and draws the mark directly on whatever is behind it (the centre dot then follows the
 // text colour so it shows on both themes).

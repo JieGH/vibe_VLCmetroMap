@@ -10,7 +10,7 @@ import { isAndroid } from './utils/platform'
 // Before the first render, so the layout is measured at its final size.
 applyUiZoom(Capacitor.getPlatform())
 
-// The Material 3 design belongs to the Android app alone. The stylesheet is a
+// The Material 3 design belongs to the Capacitor app alone. The stylesheet is a
 // dynamic import so the web and iOS bundles never load it, and the class goes
 // on first so the first paint is already Material.
 let designReady = Promise.resolve()

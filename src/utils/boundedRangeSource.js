@@ -1,6 +1,6 @@
 // A PMTiles source that reads exactly the bytes it asks for.
 //
-// The Android app serves the basemap archive through Capacitor's local web
+// The Capacitor app serves the basemap archive through Capacitor's local web
 // server, which answers a Range request with `206` and a correct
 // `Content-Range`, starts the body at the right offset, and then never stops:
 // the body runs on to the end of the 36 MB file. PMTiles takes those bytes as

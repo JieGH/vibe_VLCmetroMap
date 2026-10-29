@@ -37,7 +37,7 @@ The absolute wall-clock epoch timestamp (`fetchedAt + seconds * 1000`) when a ve
 _Avoid_: Due date, deadline, scheduled epoch
 
 **Rate Budget**:
-The restraint the app keeps on requests to FGV's live feed, managed by client-side TTL caching, request deduplication, a bounded number of requests in flight at once (8 on the web build behind the local server's shared cache, 4 on the native iOS and Android apps), and cooldown throttling. FGV has shown no rate limit (ADR-0005), so the budget is courtesy and headroom rather than a known ceiling; a hung request spends one hedged duplicate from it on the local server, or one retry on the native apps, which call FGV directly (ADR-0006).
+The restraint the app keeps on requests to FGV's live feed, managed by client-side TTL caching, request deduplication, a bounded number of requests in flight at once (8 on the web build behind the local server's shared cache, 4 on the Capacitor apps), and cooldown throttling. FGV has shown no rate limit (ADR-0005), so the budget is courtesy and headroom rather than a known ceiling; a hung request spends one hedged duplicate from it on the local server, or one retry on the native apps, which call FGV directly (ADR-0006).
 _Avoid_: Request ceiling, throttle counter
 
 **Timetable Walk**:
@@ -142,9 +142,9 @@ _Avoid_: Map extract, raw coordinates
 The synchronization of compiled web distribution assets (`dist/`) into the native Capacitor iOS container (`ios/App/App/public`). Configured as an automatic `postbuild` lifecycle step so every local production build (`npm run build`) automatically updates the native iOS app bundle without a separate manual step. Skipped on CI build hosts (`CI=true`, e.g. Netlify) since those environments deploy the web build only and have no iOS toolchain to sync into.
 _Avoid_: Manual sync, Xcode copy
 
-**Android Sync**:
-The synchronization of compiled web distribution assets (`dist/`) into the native Capacitor Android container (`android/app/src/main/assets/public`), triggered on demand via `npm run android:sync` (`npm run build && npx cap sync android`) before building an APK (`./gradlew assembleDebug`) or running from Android Studio.
-_Avoid_: Manual Android copy
+**Capacitor Sync**:
+The synchronization of compiled web distribution assets (`dist/`) into the Capacitor container (`android/app/src/main/assets/public`), triggered on demand via `npm run capacitor:sync` (`npm run build && npx cap sync android`) before building the APK (`npm run apk`) or running from Android Studio.
+_Avoid_: Manual copy, Android Sync
 
 **Test & Sync Protocol**:
 The required completion protocol whenever an agent finishes changes: run tests, execute an **iOS Sync** via `npm run build`, and declare `test done` to the user. The user then launches or updates the native app on their physical phone using Xcode's Run (Play) button.

@@ -1,4 +1,4 @@
-/* Material 3 design for the Android app.
+/* Material 3 design for the Capacitor app.
  *
  * Loaded only when Capacitor reports the android platform (main.jsx adds
  * `html.android` and dynamically imports this file), so the web and iOS builds

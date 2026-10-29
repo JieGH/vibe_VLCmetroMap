@@ -17,16 +17,16 @@ describe('AppDownloadButton', () => {
     asUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 8)');
     const html = renderToStaticMarkup(<AppDownloadButton className="topbar-icon-btn" />);
     expect(html).toContain('topbar-icon-btn');
-    expect(html).toContain('aria-label="Get the Android app"');
+    expect(html).toContain('aria-label="Get the Capacitor app"');
     expect(html).toContain('<svg');
     expect(html).not.toContain('app-banner-sheet');
   });
 
   it('is shown to an iPhone and to a desktop browser too', () => {
     asUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-    expect(renderToStaticMarkup(<AppDownloadButton />)).toContain('Get the Android app');
+    expect(renderToStaticMarkup(<AppDownloadButton />)).toContain('Get the Capacitor app');
     asUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
-    expect(renderToStaticMarkup(<AppDownloadButton />)).toContain('Get the Android app');
+    expect(renderToStaticMarkup(<AppDownloadButton />)).toContain('Get the Capacitor app');
   });
 });
 

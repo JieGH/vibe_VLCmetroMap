@@ -27,8 +27,7 @@ npm test -- --run && npm run lint
 | Self-hosted | `npm run build && npm run serve` (port 8080, LAN, no auth: trusted networks only) |
 | Public site | https://xarxa.net, on Cloudflare Workers (`wrangler.jsonc`; see [docs/hosting-cloudflare.md](docs/hosting-cloudflare.md)). The old Netlify address only shows a "we have moved" notice |
 | iOS | `npm run build` (also syncs iOS), then `npm run ios:open` and press Run in Xcode with your Apple ID as the team |
-| Android (native app) | in `android-native/`: `./gradlew assembleDebug`; release APK for GitHub: `android-native/tools/release-apk.sh <tag>` ([native README](android-native/README.md)) |
-| Android (web wrapper) | `npm run android:sync`, then `npm run android:open` and press Run |
+| Capacitor app (APK) | `npm run capacitor:sync`, then `npm run capacitor:open` and press Run; `npm run apk` builds a signed APK to `android/build/` without uploading |
 
 Run the checks in this order before handing work over: `npm test -- --run && npm run lint`, then `npm run build` (which also syncs the iOS app).
 
@@ -55,13 +54,13 @@ The website and the native apps all read FGV's own keyless arrivals feed. A brow
 
 ## Releasing
 
-1. Bump `android-native/version.properties` (`versionCode` up by at least 1, then `versionName`).
+1. Bump `android/version.properties` (`versionCode` up by at least 1, then `versionName`).
 2. Commit, then push `main`.
-3. `gh release create vX.Y.Z --title "..." --notes "..."`, then `android-native/tools/release-apk.sh vX.Y.Z`. It signs the APK with the sideload key in `~/.android/xarxa-sideload.jks` (back it up; losing it means installed copies cannot update) and attaches two files: `Xarxa-vX.Y.Z-android.apk` and `Xarxa-android.apk`. The README and the website link to the latter through `releases/latest/download/Xarxa-android.apk`, so they always get the newest.
-4. Play Store steps, when relevant: [`docs/android/release-checklist.md`](docs/android/release-checklist.md).
+3. `gh release create vX.Y.Z --title "..." --notes "..."`, then `scripts/release-apk.sh vX.Y.Z`. It signs the APK with the sideload key in `~/.android/xarxa-sideload.jks` (back it up; losing it means installed copies cannot update) and attaches two files: `Xarxa-vX.Y.Z-capacitor.apk` and `Xarxa-capacitor.apk`. The README and the website link to the latter through `releases/latest/download/Xarxa-capacitor.apk`, so they always get the newest.
+4. Play Store steps, when relevant: [`docs/capacitor/release-checklist.md`](docs/capacitor/release-checklist.md).
 
 ## Privacy, trademarks, license
 
-An independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data, nor by EMT València, whose public bus arrival service it reads on demand (ADR-0011, ADR-0012). No analytics, no accounts, no tracking; the privacy policy is in [`docs/android/privacy-policy.md`](docs/android/privacy-policy.md).
+An independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data, nor by EMT València, whose public bus arrival service it reads on demand (ADR-0011, ADR-0012). No analytics, no accounts, no tracking; the privacy policy is in [`docs/capacitor/privacy-policy.md`](docs/capacitor/privacy-policy.md).
 
 Code: source-available, all rights reserved ([LICENSE](LICENSE)); reuse, redistribution or modification needs written permission. FGV's data, OpenStreetMap's and the Metrovalencia brand carry their own terms.

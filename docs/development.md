@@ -4,7 +4,7 @@ The detail behind the [README](../README.md): how each build works, what exists 
 
 ## Running the app
 
-The same React app ships three ways: as a website, and as native iOS and Android apps via [Capacitor](https://capacitorjs.com). Both build from the same `src/`; nothing in the app code branches on which one you're using except `arrivalStore.js`'s fetch, explained below.
+The same React app ships three ways: as a website, and as Capacitor apps (iOS, and an APK) via [Capacitor](https://capacitorjs.com). Both build from the same `src/`; nothing in the app code branches on which one you're using except `arrivalStore.js`'s fetch, explained below.
 
 ### Web
 
@@ -16,7 +16,7 @@ npm run build      # production bundle → dist/
 npm run preview    # serves dist/ as it would be deployed
 ```
 
-`npm run dev` and `dev:phone` proxy `/api/metro/*` to FGV's live arrivals feed through Vite's dev server. This isn't optional plumbing — FGV's CORS policy admits only FGV's own sites, so a browser cannot call the feed directly; a same-origin proxy can. The native iOS and Android apps have no such limit and call FGV directly. See [ADR-0005](adr/0005-live-arrivals-come-straight-from-fgv.md).
+`npm run dev` and `dev:phone` proxy `/api/metro/*` to FGV's live arrivals feed through Vite's dev server. This isn't optional plumbing — FGV's CORS policy admits only FGV's own sites, so a browser cannot call the feed directly; a same-origin proxy can. The Capacitor apps have no such limit and call FGV directly. See [ADR-0005](adr/0005-live-arrivals-come-straight-from-fgv.md).
 
 ### Self-hosting on your network
 
@@ -42,7 +42,7 @@ The live site above runs on [Netlify](https://netlify.com), auto-rebuilding and 
 
 A static host has no dev server, so two things exist purely to cover what the dev proxy above did, and are easy to break by "cleaning up" without knowing why:
 
-- **[`netlify/functions/metro-proxy.js`](../netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production, forwarding `/api/metro/*` to FGV's live feed so the browser build stays same-origin. FGV does not answer Netlify's servers, so the public website uses the earlier relay (reshaped to FGV's format) by default; the iOS and Android apps and `npm run dev` use FGV. Set the Netlify environment variable `METRO_SOURCE` to `auto` (FGV first, relay if unreachable) or `fgv` to change that; see [`docs/fgv-api.md`](fgv-api.md). Its FGV target must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
+- **[`netlify/functions/metro-proxy.js`](../netlify/functions/metro-proxy.js)** replaces the Vite dev proxy in production, forwarding `/api/metro/*` to FGV's live feed so the browser build stays same-origin. FGV does not answer Netlify's servers, so the public website uses the earlier relay (reshaped to FGV's format) by default; the Capacitor apps and `npm run dev` use FGV. Set the Netlify environment variable `METRO_SOURCE` to `auto` (FGV first, relay if unreachable) or `fgv` to change that; see [`docs/fgv-api.md`](fgv-api.md). Its FGV target must be kept in sync with `vite.config.js`'s dev proxy by hand — nothing enforces the two match.
 - **`fetch:basemap` runs as part of the Netlify build command**, not just locally: the offline PMTiles archive is gitignored (see [Data pipeline](#data-pipeline)) and 404s in production without it. The `go-pmtiles` CLI it downloads publishes differently-named release assets per OS — hyphenated `.zip` on Darwin, underscored `.tar.gz` on Linux — so the script picks the filename and extraction method for whichever platform the build runs on, Netlify's Linux build image included.
 
 Free-hosting options considered (GitHub Pages, Netlify, Vercel, Cloudflare Pages) and why Netlify won: [`docs/research/free-github-hosting.md`](research/free-github-hosting.md).
@@ -75,11 +75,11 @@ First launch, iOS blocks the app as an "Untrusted Developer": on the phone, go t
 
 **After any code change**, re-run `npm run ios:sync` (or `npm run build`, which runs `npx cap sync ios` in `postbuild`) before hitting Run again in Xcode — it rebuilds the web bundle and re-copies it into the native project. Xcode doesn't watch `src/` itself.
 
-### Android (native app)
+### Capacitor app (APK)
 
 The same Capacitor wrapper, in [`android/`](../android/), packaged as an `.apk`. Like the iOS app it calls FGV directly from the phone (4 requests in flight, Strategic Hubs first), with no server and no proxy, completing the first full Network Sync in about 5 seconds.
 
-**Just want to install it?** Download `Xarxa-v*-android-debug.apk` from the [latest release](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest) and open it on an Android 7.0 or newer phone. It is a debug-signed build, not a Play Store release, so Android asks you to allow installs from your browser and may warn that the app is unverified. The release notes carry its SHA-256. It has been run on an Android emulator and on a physical phone; FGV has to answer your connection, which it does in Spain and may not elsewhere.
+**Just want to install it?** Download `Xarxa-capacitor.apk` from the [latest release](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest) and open it on an Android 7.0 or newer phone. It is a debug-signed build, not a Play Store release, so Android asks you to allow installs from your browser and may warn that the app is unverified. The release notes carry its SHA-256. It has been run on an Android emulator and on a physical phone; FGV has to answer your connection, which it does in Spain and may not elsewhere.
 
 **Build it yourself**
 
@@ -88,13 +88,13 @@ The same Capacitor wrapper, in [`android/`](../android/), packaged as an `.apk`.
 
 ```bash
 npm install
-npm run android:sync   # npm run build, then copies dist/ into the Android project
-npm run android:open   # opens android/ in Android Studio, then press Run (▶)
+npm run capacitor:sync   # npm run build, then copies dist/ into the Capacitor project
+npm run capacitor:open   # opens android/ in Android Studio, then press Run (▶)
 ```
 
-Without Android Studio: `cd android && ./gradlew assembleDebug` writes `app/build/outputs/apk/debug/app-debug.apk`, and `adb install -r` puts it on a connected phone. After any code change, re-run `npm run android:sync`.
+Without Android Studio: `cd android && ./gradlew assembleDebug` writes `app/build/outputs/apk/debug/app-debug.apk`, and `adb install -r` puts it on a connected phone. After any code change, re-run `npm run capacitor:sync`. `npm run apk` builds and signs the release APK (`android/build/Xarxa-capacitor.apk`) with the sideload key; `scripts/release-apk.sh <tag>` also attaches it to a GitHub release.
 
-For publishing to Google Play see [`docs/android/`](android/): [release checklist](android/release-checklist.md) (keystore, `./gradlew bundleRelease`, 16 KB alignment, target SDK, pre-launch report), [store listing](android/play-listing.md), [Data safety answers](android/data-safety.md), [privacy policy](android/privacy-policy.md) and [permissions](android/permissions-rationale.md). The version lives only in `android/version.properties`; release signing reads the untracked `android/keystore.properties` (template: `keystore.properties.example`).
+For publishing to Google Play see [`docs/capacitor/`](capacitor/): [release checklist](capacitor/release-checklist.md) (keystore, `./gradlew bundleRelease`, 16 KB alignment, target SDK, pre-launch report), [store listing](capacitor/play-listing.md), [Data safety answers](capacitor/data-safety.md), [privacy policy](capacitor/privacy-policy.md) and [permissions](capacitor/permissions-rationale.md). The version lives only in `android/version.properties`; release signing reads the untracked `android/keystore.properties` (template: `keystore.properties.example`).
 
 Android-only behaviour, all gated by `isAndroid()` in `src/utils/platform.js` so the web and iOS are unchanged (see [ADR-0009](adr/0009-android-native-chrome-over-webview.md)):
 
@@ -180,5 +180,5 @@ npm test               # confirm the network still looks sane
 - **The public website cannot reach FGV.** FGV never answers connections from Netlify's servers: a diagnostic from the deployed function (AWS us-east-2) timed out on FGV's API, with plain and browser-like headers alike, and on the FGV homepage, while the old relay answered in 1.8 s. So the public website serves live arrivals from that relay ([`netlify/functions/metro-proxy.js`](../netlify/functions/metro-proxy.js)), with its rate limits and thinner coverage, while the iOS and Android apps, `npm run dev`, and `npm run serve` (from a Spanish connection) use FGV directly. Set `METRO_SOURCE` to switch the Netlify function over if hosted where FGV answers. Details in [`docs/fgv-api.md`](fgv-api.md), [ADR-0005](adr/0005-live-arrivals-come-straight-from-fgv.md), and [ADR-0006](adr/0006-self-host-on-the-lan-with-a-prevision-only-proxy.md).
 - **Station ids.** The GTFS `stop_id` space and the live API's id space disagree for most stations; `/api/metro/horarios-prevision-3/<id>` uses the API's. Never hand-write one — derive it from `paradas_api.json`. A wrong id fails silently, and `npm test` guards the ones we hardcode.
 - **The eastern stations have no arrival endpoint.** Ayora, Amistat and Aragó carry trains and appear in search, but the API exposes no station id for them, so they have no arrivals card of their own.
-- **The Android release path is new.** The GitHub APK is still debug-signed, so Android warns it is unverified; the Play Store route (signed `.aab`, R8 on) is described in [`docs/android/release-checklist.md`](android/release-checklist.md) and has not yet been through a Play pre-launch report. High-density screens log a missing `@2x` icon sheet (`basemap/sprites/dark@2x.json`, only 1x ships), so a few small map icons (park, university, marina) are absent; the map and trains are unaffected. On Android 7, "round" launcher icons show the square art rather than a circle crop.
+- **The APK release path is new.** The GitHub APK is still debug-signed, so Android warns it is unverified; the Play Store route (signed `.aab`, R8 on) is described in [`docs/android/release-checklist.md`](android/release-checklist.md) and has not yet been through a Play pre-launch report. High-density screens log a missing `@2x` icon sheet (`basemap/sprites/dark@2x.json`, only 1x ships), so a few small map icons (park, university, marina) are absent; the map and trains are unaffected. On Android 7, "round" launcher icons show the square art rather than a circle crop.
 - **Markers sometimes never appear in `npm run dev`.** A `StrictMode` double-mount races MapLibre's `style.load` over shared marker refs, so the map can load with no stations and no trains at all. It looks exactly like broken data and it is not — it does not happen in a production build. Reload, or see [#8](https://github.com/JieGH/vib_metroValencia/issues/8). Check `vite preview` or `npm run serve` before believing a rendering bug is real.

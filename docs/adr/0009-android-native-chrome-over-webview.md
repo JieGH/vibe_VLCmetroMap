@@ -27,3 +27,8 @@ A Kotlin rewrite is rejected for now because:
 - The Android feel depends on CSS and the WebView; scrolling, text rendering and the keyboard are the WebView's, not Compose's. This is accepted and is why chrome details are done carefully in `android.css`.
 - Any Android-only code must stay behind `isAndroid()`, and web/iOS behaviour is covered by the existing tests.
 - Revisit if the WebView proves unable to meet a Play policy or a performance bar on target devices, or if the map moves to MapLibre Native for other reasons.
+
+## Addendum (1.8.1): the Capacitor build is the only APK
+
+The separate native Kotlin app (`android-native/`) was removed in 1.8.1. It had fallen behind the web app, and everything it did could be had by packaging the website with Capacitor, which this ADR had already chosen to keep. The APK on GitHub releases is now built from `android/` (`scripts/release-apk.sh`) and is named `Xarxa-capacitor.apk`. The Android behaviours above (back button, system theme, location rationale, Material 3 chrome) are unchanged and still gated by `isAndroid()`.
+

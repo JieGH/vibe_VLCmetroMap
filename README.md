@@ -5,7 +5,7 @@
       <p>
         <a href="https://xarxa.net"><img src="https://img.shields.io/badge/Open%20the%20map-xarxa.net-2563EB?style=for-the-badge&logo=googlemaps&logoColor=white" alt="Open the live map at xarxa.net"></a>
         &nbsp;
-        <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk"><img src="https://img.shields.io/badge/Android-Download%20the%20app-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app"></a>
+        <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-capacitor.apk"><img src="https://img.shields.io/badge/Capacitor-Download%20the%20app-119EFF?style=for-the-badge&logo=capacitor&logoColor=white" alt="Download the Capacitor app"></a>
       </p>
       <p>
         <a href="https://github.com/JieGH/vibe_VLCmetroMap/releases/latest"><img src="https://img.shields.io/github/v/release/JieGH/vibe_VLCmetroMap?label=release" alt="Latest release"></a>
@@ -46,16 +46,16 @@
 | | |
 |---|---|
 | **On the web** | Go to **[xarxa.net](https://xarxa.net)**. Nothing to install: it works in any phone or computer browser, in English, Spanish and Valencian. |
-| **On Android** | **[Download the app](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk)** (a free APK file). The app is not on Google Play yet, so Android will ask you to allow the install. Steps below. |
+| **The Capacitor app** | **[Download the app](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-capacitor.apk)** (a free APK file). The app is not on Google Play yet, so Android will ask you to allow the install. Steps below. |
 | **On iPhone** | There is no iPhone app yet. Open [xarxa.net](https://xarxa.net) in Safari, tap Share, then **Add to Home Screen**: it then opens like an app. |
 
-## Installing the Android app
+## Installing the Capacitor app
 
-1. On your phone, open the **[download link](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-android.apk)**.
+1. On your phone, open the **[download link](https://github.com/JieGH/vibe_VLCmetroMap/releases/latest/download/Xarxa-capacitor.apk)**.
 2. When it has finished downloading, open the file.
 3. If Android asks, allow installing from your browser. You only do this once.
 
-It needs Android 8 or newer. It follows your phone's light or dark theme, and asks before using your location. Prefer automatic updates? [Obtainium](https://obtainium.imranr.dev) can install and update it straight from this page: add `https://github.com/JieGH/vibe_VLCmetroMap` and set the APK filter to `.*android\.apk`.
+It needs Android 7 or newer. It follows your phone's light or dark theme, and asks before using your location. Prefer automatic updates? [Obtainium](https://obtainium.imranr.dev) can install and update it straight from this page: add `https://github.com/JieGH/vibe_VLCmetroMap` and set the APK filter to `.*capacitor\.apk`.
 
 What changed in each version: **[Releases](https://github.com/JieGH/vibe_VLCmetroMap/releases)**.
 
@@ -67,7 +67,7 @@ Metrovalencia publishes when a train is due at a station, but not where it is. X
 
 - **Is it official?** No. It is an independent project, not affiliated with or endorsed by [FGV](https://www.fgv.es), which owns the Metrovalencia name, brand and data, nor by EMT València, whose public bus arrival times it shows.
 - **How does it get the bus times?** Only when you ask: tapping a stop, or opening a pin or your own location, fetches that stop's arrivals from EMT València's public service, briefly cached. Xarxa never polls all 1,155 stops in the background.
-- **What about my privacy?** No accounts, no analytics, no tracking. Your location is only used on your device to find the nearby stations and stops, and to follow you while the app is open. See the [privacy policy](docs/android/privacy-policy.md).
+- **What about my privacy?** No accounts, no analytics, no tracking. Your location is only used on your device to find the nearby stations and stops, and to follow you while the app is open. See the [privacy policy](docs/capacitor/privacy-policy.md).
 - **Something is wrong or missing?** [Open an issue](https://github.com/JieGH/vibe_VLCmetroMap/issues), or write to the author from the menu inside the app.
 - **Where is the old address?** The previous site (`tangerine-panda-1aeea5.netlify.app`) now just points visitors to xarxa.net.
 

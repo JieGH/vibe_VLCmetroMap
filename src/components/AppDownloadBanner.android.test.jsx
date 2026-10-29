@@ -9,11 +9,11 @@ import AppDownloadButton from './AppDownloadBanner';
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('AppDownloadButton inside the Android app', () => {
-  it('never offers the Android app to someone already using it', () => {
+describe('AppDownloadButton inside the Capacitor app', () => {
+  it('never offers the Capacitor app to someone already using it', () => {
     vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8)', maxTouchPoints: 5 });
     const html = renderToStaticMarkup(<AppDownloadButton />);
     expect(html).toBe('');
-    expect(html).not.toContain('Get the Android app');
+    expect(html).not.toContain('Get the Capacitor app');
   });
 });
