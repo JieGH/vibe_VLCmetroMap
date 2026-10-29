@@ -133,9 +133,13 @@ export const ConnectingBusSection = ({
     }
     if (codes.length === 0) return () => { guard.invalidate(); clearTimeout(retry); };
 
-    fetchFeederArrivals(codes).then((fetched) => {
-      if (!guard.isCurrent(ticket)) return;
-      setLiveArrivalsMap((prev) => ({ ...prev, ...fetched }));
+    // Each stop fills its own card the moment it answers; a slow stop never holds the others back.
+    fetchFeederArrivals(codes, {
+      shouldContinue: () => guard.isCurrent(ticket),
+      onArrivals: (code, arrivals) => {
+        if (!guard.isCurrent(ticket)) return;
+        setLiveArrivalsMap((prev) => ({ ...prev, [code]: arrivals }));
+      },
     });
 
     return () => {
@@ -201,6 +205,10 @@ export const ConnectingBusSection = ({
       {feeders.map((stop, sIdx) => {
         const cleanCode = normalizeStopCode(stop.stopCode || stop.code || stop.id);
         const liveArrivals = cleanCode ? liveArrivalsMap[cleanCode] : null;
+
+        // Still waiting for this stop's answer: shown on the placeholder rows only, so a stop that
+        // answered with nothing reads as "no data", not as loading.
+        const waiting = !liveArrivals && fetchCodes.includes(cleanCode);
 
         const itemsToRender = (liveArrivals !== null && liveArrivals !== undefined)
           ? liveArrivals
@@ -327,6 +335,7 @@ export const ConnectingBusSection = ({
                   return (
                     <div
                       key={bIdx}
+                      className={waiting && busObj.dueSeconds == null ? 'feeder-row-waiting' : undefined}
                       style={{
                         display: 'flex',
                         alignItems: 'center',

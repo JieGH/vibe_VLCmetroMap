@@ -32,3 +32,12 @@ With the pin glued to the map centre, every pan changes the walk set. Refetching
 - Centre mode now starts from a map tap (Map Ping) as well as from a locate press and the launch auto-locate fix. A tap needs no GPS fix and shows no blue dot. The tap's own camera focus already puts the pin at the visible-map centre, so the first drag does not make the screen-fixed overlay jump.
 - Closing the sheet (X, back, closing the hub, opening the menu) removes the pin and ends centre mode; dragging with no sheet open spawns no pin until the next tap, or locate press.
 - The pin is a green ball on a green stick (`src/utils/pinIcon.js`), the same for the overlay and the geographic marker. The blue GPS dot is 19 px (was 14 px), static halo, no animation.
+
+## Addendum: bus cards fill per stop, nearest first (#144, #145)
+
+A recording showed the bus column on placeholders for seconds after a pin drop while tapping one stop was instant. The batch applied its results only once every stop had answered, so one slow stop held every card, and 8 to 12 simultaneous requests queued behind the browser's per-host connection limit.
+
+- **Per-stop apply.** Each stop fills its own card the moment it answers. The latest-wins guard still drops answers for a position the pin has left.
+- **Nearest first, capped concurrency.** Requests start in nearest-first order with at most `FEEDER_FETCH_CONCURRENCY` (4) in flight. The prefetch buffer comes last in that order, so it only gets what the budget leaves after the visible stops.
+- **Waiting is visible.** A stop in the fetch batch with no answer yet pulses its placeholder rows (opacity only, no layout change, off under reduced motion). A stop that answered with nothing keeps the existing no-data marker.
+- The budget (`BUDGET_MAX` per `BUDGET_WINDOW_MS`) and anchor rules are unchanged. Re-check the numbers on a device against the same drag pattern before touching them.

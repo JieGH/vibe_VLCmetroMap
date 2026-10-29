@@ -1,6 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clearEmtCache, fetchStopArrivals } from '../services/emtArrivalService';
 import ConnectingBusSection from './ConnectingBusSection';
 
 describe('ConnectingBusSection component', () => {
@@ -171,5 +172,28 @@ describe('ConnectingBusSection countdown formatting and states (#90)', () => {
   it('shows the no-arrivals state for an empty arrival list', () => {
     const html = renderToStaticMarkup(<ConnectingBusSection feeders={feeder([])} theme="dark" />);
     expect(html).toContain('data-testid="feeder-no-arrivals"');
+  });
+
+  describe('#144 waiting rows differ from no-data rows', () => {
+    beforeEach(() => clearEmtCache());
+    const lineOnly = [{ stopCode: '2261', stopName: 'Xàtiva', walkMin: 2, lines: ['6', '8'] }];
+
+    it('a stop still being fetched shimmers its placeholder rows', () => {
+      const html = renderToStaticMarkup(<ConnectingBusSection feeders={lineOnly} compact />);
+      expect(html).toContain('feeder-row-waiting');
+    });
+
+    it('a stop that answered with nothing shows no-data, not loading', async () => {
+      const empty = "<?xml version='1.0'?><estimacion><solo_parada></solo_parada></estimacion>";
+      await fetchStopArrivals('2261', { fetchFn: vi.fn(async () => ({ ok: true, text: async () => empty })) });
+      const html = renderToStaticMarkup(<ConnectingBusSection feeders={lineOnly} compact />);
+      expect(html).not.toContain('feeder-row-waiting');
+      expect(html).toContain('feeder-no-arrivals');
+    });
+
+    it('a stop outside the fetch batch is not shown as loading', () => {
+      const html = renderToStaticMarkup(<ConnectingBusSection feeders={lineOnly} compact active={false} />);
+      expect(html).not.toContain('feeder-row-waiting');
+    });
   });
 });

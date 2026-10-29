@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { clearEmtCache } from './emtArrivalService';
-import { FEEDER_FETCH_BATCH, visibleFeederCodes, fetchFeederArrivals } from './feederArrivalFetch';
+import { FEEDER_FETCH_BATCH, FEEDER_FETCH_CONCURRENCY, visibleFeederCodes, fetchFeederArrivals } from './feederArrivalFetch';
 
 const xml = `<?xml version='1.0' encoding='UTF-8'?>
 <estimacion><solo_parada>
@@ -62,5 +62,90 @@ describe('#109 lazy-load sentinel', () => {
     const mk = (n) => Array.from({ length: n }, (_, i) => ({ stopCode: String(3000 + i), stopName: 'S', walkMin: 1, lines: ['6'] }));
     expect(renderToStaticMarkup(<Section feeders={mk(FEEDER_FETCH_BATCH + 1)} />)).toContain('feeder-more-sentinel');
     expect(renderToStaticMarkup(<Section feeders={mk(FEEDER_FETCH_BATCH)} />)).not.toContain('feeder-more-sentinel');
+  });
+});
+
+describe('#144 feeder arrivals fill per stop, nearest first', () => {
+  beforeEach(() => clearEmtCache());
+
+  // A fetch whose per-stop answer time is controlled by the test.
+  const gated = () => {
+    const gates = {};
+    const started = [];
+    const fetchFn = vi.fn((url) => {
+      const code = new URL(url).searchParams.get('parada');
+      started.push(code);
+      return new Promise((resolve, reject) => {
+        gates[code] = {
+          ok: () => resolve({ ok: true, text: async () => xml }),
+          fail: () => reject(new Error('network')),
+        };
+      });
+    });
+    return { fetchFn, gates, started };
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  it('a stop fills as soon as it answers, without waiting for a slower one', async () => {
+    const { fetchFn, gates } = gated();
+    const seen = [];
+    const done = fetchFeederArrivals(['1000', '1001'], { fetchFn, onArrivals: (c) => seen.push(c) });
+    await tick();
+    gates['1001'].ok();
+    await tick();
+    expect(seen).toEqual(['1001']);
+    gates['1000'].ok();
+    await done;
+    expect(seen).toEqual(['1001', '1000']);
+  });
+
+  it('a failed stop is reported with no arrivals and does not stop the others', async () => {
+    const { fetchFn, gates } = gated();
+    const seen = {};
+    const done = fetchFeederArrivals(['1000', '1001'], { fetchFn, onArrivals: (c, a) => { seen[c] = a.length; } });
+    await tick();
+    gates['1000'].fail();
+    gates['1001'].ok();
+    await done;
+    expect(seen['1000']).toBe(0);
+    expect(seen['1001']).toBe(1);
+  });
+
+  it('requests start nearest first with a capped number in flight', async () => {
+    const { fetchFn, gates, started } = gated();
+    const codes = dense.slice(0, 10);
+    const done = fetchFeederArrivals(codes, { fetchFn });
+    await tick();
+    expect(started).toEqual(codes.slice(0, FEEDER_FETCH_CONCURRENCY));
+    gates[codes[0]].ok();
+    await tick();
+    expect(started).toEqual(codes.slice(0, FEEDER_FETCH_CONCURRENCY + 1));
+    for (const c of codes) {
+      while (!gates[c]) await tick();
+      gates[c].ok();
+    }
+    await done;
+    expect(started).toEqual(codes);
+  });
+});
+
+describe('#144 a caller that moved on stops queueing old stops', () => {
+  beforeEach(() => clearEmtCache());
+
+  it('requests not yet started are dropped once shouldContinue turns false', async () => {
+    const started = [];
+    const fetchFn = vi.fn(async (url) => {
+      started.push(new URL(url).searchParams.get('parada'));
+      return { ok: true, text: async () => xml };
+    });
+    let go = true;
+    const codes = dense.slice(0, 10);
+    await fetchFeederArrivals(codes, {
+      fetchFn,
+      concurrency: 1,
+      shouldContinue: () => go,
+      onArrivals: (c) => { if (c === codes[1]) go = false; },
+    });
+    expect(started).toEqual(codes.slice(0, 2));
   });
 });

@@ -15,19 +15,37 @@ export function visibleFeederCodes(codes, { limit = FEEDER_FETCH_BATCH, active =
   return codes.slice(0, Math.max(0, limit));
 }
 
+// Requests in flight at once, so the nearest stops are not queued behind far ones (browsers
+// allow about 6 connections per host, and the rest of the app shares them).
+export const FEEDER_FETCH_CONCURRENCY = 4;
+
 /**
- * Fetches arrivals for the given stops through the shared 20 s cache and in-flight dedupe,
- * so stops still fresh from an earlier anchor cost no request.
- * @returns {Promise<Object>} map of stop code -> arrivals (failed stops are left out)
+ * Fetches arrivals for the given stops (nearest first) through the shared 20 s cache and
+ * in-flight dedupe, so stops still fresh from an earlier anchor cost no request. At most
+ * `concurrency` requests run at once, started in the order given. `onArrivals(code, arrivals)`
+ * fires as each stop answers, so a slow stop never holds the others back. `shouldContinue()` is
+ * checked before each request starts, so a caller whose position moved on stops queueing old stops.
+ * A stop that fails normally answers with its cached or empty arrivals; one that throws is left out.
+ * @returns {Promise<Object>} map of stop code -> arrivals
  */
 export async function fetchFeederArrivals(codes, options = {}) {
-  const results = await Promise.allSettled(
-    codes.map(async (code) => [code, await fetchStopArrivals(code, options)])
-  );
+  const { onArrivals, shouldContinue = () => true, concurrency = FEEDER_FETCH_CONCURRENCY, ...fetchOptions } = options;
   const map = {};
-  for (const res of results) {
-    if (res.status === 'fulfilled') map[res.value[0]] = res.value[1];
-  }
+  let next = 0;
+  const worker = async () => {
+    while (next < codes.length && shouldContinue()) {
+      const code = codes[next];
+      next += 1;
+      try {
+        const arrivals = await fetchStopArrivals(code, fetchOptions);
+        map[code] = arrivals;
+        if (onArrivals) onArrivals(code, arrivals);
+      } catch {
+        // a failed stop is left out; the others carry on
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, concurrency), codes.length) }, worker));
   return map;
 }
 

@@ -76,7 +76,9 @@ export const createFetchPolicy = ({ budget = createBudget(), now = () => Date.no
       const network = wanted.slice(0, granted);
       const skipped = wanted.slice(granted);
       network.forEach((c) => anchor.requested.add(c));
-      return { fetch: [...join, ...network], skipped, anchorReset: !valid };
+      // Keep the caller's nearest-first order: a joined (in-flight) stop is free but must not jump the queue.
+      const take = new Set([...join, ...network]);
+      return { fetch: codes.filter((c) => take.has(c)), skipped, anchorReset: !valid };
     },
     reset() { anchor = null; },
   };

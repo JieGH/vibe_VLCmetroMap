@@ -2022,3 +2022,15 @@ button:active {
     animation: none;
   }
 }
+
+/* A bus stop card row whose arrivals are still being fetched (split view). Opacity only, so no layout shift. */
+.feeder-row-waiting {
+  animation: feederRowWaiting 1.2s ease-in-out infinite;
+}
+@keyframes feederRowWaiting {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feeder-row-waiting { animation: none; }
+}
