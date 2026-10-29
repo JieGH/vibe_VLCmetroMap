@@ -551,7 +551,8 @@ const stationBorderColor = (st) => {
 // which one you meant. Resolving the tap to the *nearest* Station within the
 // radius settles it by distance instead, which is the thing the finger was
 // actually aiming at.
-const TAP_RADIUS_PX = 22;
+// 17.6 px: 22 px reduced by 20% so a tap near a station but meant for the map no longer snaps to it.
+const TAP_RADIUS_PX = 17.6;
 
 // How close framing the viewer against their Nearest Station is allowed to get.
 // Without a cap, standing 40 m from a platform fills the screen with one
