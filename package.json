@@ -27,6 +27,7 @@
     "build:segments": "node scripts/build_segment_times.cjs",
     "build:stations": "node scripts/generate_gtfs_geojson.cjs",
     "fetch:line4": "node --no-warnings scripts/fetch_line4_overpass.cjs",
+    "fetch:line19": "node scripts/fetch_line19_route.cjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "serve": "node server/index.js",

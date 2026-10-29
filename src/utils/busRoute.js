@@ -21,7 +21,13 @@ export function getLine19Route() {
   return route;
 }
 
-/** The direction whose `trayecto` equals the given Bus GPS Stream string (trimmed), or null. */
+/**
+ * The direction whose `trayecto` equals the given Bus GPS Stream string
+ * (trimmed, exact match), or null for anything else (unknown, reversed or
+ * non-string values). This is the only safe way to pick the direction to
+ * project onto: the line is a loop and the shapes of the two directions run
+ * close together.
+ */
 export function directionForTrayecto(trayecto, data = route) {
   const t = String(trayecto || '').trim();
   return data.directions.find((d) => d.trayecto === t) || null;
@@ -45,6 +51,12 @@ function cumulative(polyline) {
  * the nearest point on it, the distance from `lonLat` to that point, and the
  * point itself. `opts.hintAlongM` with `opts.windowM` (default 500) restricts
  * the search to that stretch, which disambiguates streets used twice.
+ *
+ * Reliability: without a hint the projection is NOT reliable on this loop (16%
+ * of the recorded fixes are closer to the opposite direction's shape, and
+ * streets are used twice within one direction). Callers must (1) take the
+ * direction from `directionForTrayecto`, never by nearest shape, and (2) pass
+ * `hintAlongM` (the previous fix's alongM) whenever a previous fix exists.
  */
 export function projectOnShape(direction, lonLat, opts = {}) {
   const { polyline } = direction;
@@ -81,22 +93,71 @@ export function findStop(direction, stopCode) {
   return direction.stops.find((s) => s.stopCode === String(stopCode)) || null;
 }
 
-/** A bus within this many metres past a stop still counts as at it (GPS jitter). */
-export const AT_STOP_TOLERANCE_M = 15;
+/** A bus farther than this from its direction's shape is off route (detour, wrong direction): no stops-away. */
+export const OFF_ROUTE_M = 50;
+
+/** A stop counts as passed only once the bus is more than this many metres beyond it (GPS jitter). */
+export const PASSED_HYSTERESIS_M = 10;
+
+/** True when a bus at `busAlongM` has passed a stop at `stopAlongM`: strictly more than the hysteresis beyond it. */
+function isPassed(busAlongM, stopAlongM) {
+  return busAlongM > stopAlongM + PASSED_HYSTERESIS_M;
+}
 
 /**
  * How far a bus at `lonLat` is from `stopCode` along the direction.
- * Returns { stopsAway, distanceM } or null when the stop is not on this
- * direction or the bus has already passed it. `stopsAway` is the number of
- * stops the bus still serves before the target: 0 means the target is the
- * next (or current) stop, 1 means one stop in between.
+ * - null: unknown stop code for this direction, or the bus is off route
+ *   (projection farther than OFF_ROUTE_M from the shape).
+ * - { passed: true, stopsAway: null, distanceM: 0 }: the bus is already more
+ *   than PASSED_HYSTERESIS_M beyond the target stop.
+ * - { passed: false, stopsAway, distanceM }: `stopsAway` is the number of
+ *   not-yet-passed stops strictly before the target, so 0 means the target is
+ *   the bus's next stop (or the bus is at it, within the hysteresis) and 1
+ *   means one more stop is served first. A bus exactly at stop N is 0 from N
+ *   and 1 from N+1. `distanceM` is metres along the shape to the target (>= 0).
+ * Monotonic: as the bus advances along the shape, stopsAway never increases
+ * and `passed` never reverts. Pass `opts.hintAlongM` (see projectOnShape).
  */
 export function stopsAway(direction, lonLat, stopCode, opts) {
   const target = findStop(direction, stopCode);
+  if (!target) return null;
   const proj = projectOnShape(direction, lonLat, opts);
-  if (!target || !proj) return null;
-  const from = proj.alongM - AT_STOP_TOLERANCE_M;
-  if (target.alongM < from) return null;
-  const between = direction.stops.filter((s) => s.alongM >= from && s.alongM < target.alongM).length;
-  return { stopsAway: between, distanceM: Math.max(0, target.alongM - proj.alongM) };
+  if (!proj || proj.offsetM > OFF_ROUTE_M) return null;
+  if (isPassed(proj.alongM, target.alongM)) return { passed: true, stopsAway: null, distanceM: 0 };
+  const between = direction.stops.filter((s) => s.alongM < target.alongM && !isPassed(proj.alongM, s.alongM)).length;
+  return { passed: false, stopsAway: between, distanceM: Math.max(0, target.alongM - proj.alongM) };
+}
+
+/**
+ * The point `m` metres along the direction's polyline (clamped to its ends)
+ * and the bearing of the segment it lies on, degrees clockwise from north
+ * [0, 360). For drawing/smoothing only; heading of a live bus never comes from
+ * here (ADR-0014).
+ */
+export function pointAtAlongM(direction, m) {
+  const { polyline } = direction;
+  const cum = cumulative(polyline);
+  const x = Math.max(0, Math.min(cum[cum.length - 1], m));
+  let i = 1;
+  while (i < polyline.length - 1 && cum[i] < x) i++;
+  const a = polyline[i - 1];
+  const b = polyline[i];
+  const seg = cum[i] - cum[i - 1];
+  const t = seg === 0 ? 0 : (x - cum[i - 1]) / seg;
+  const dx = (b[0] - a[0]) * Math.cos(a[1] * RAD);
+  const dy = b[1] - a[1];
+  const bearingDeg = (Math.atan2(dx, dy) / RAD + 360) % 360;
+  return { lonLat: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], bearingDeg };
+}
+
+/**
+ * The next stop for a bus `alongM` metres along the direction: the first stop
+ * not yet passed (same rule and hysteresis as stopsAway). Returns
+ * { stop, index, distanceM } or null when every stop is passed.
+ */
+export function nextStop(direction, alongM) {
+  const index = direction.stops.findIndex((s) => !isPassed(alongM, s.alongM));
+  if (index < 0) return null;
+  const stop = direction.stops[index];
+  return { stop, index, distanceM: Math.max(0, stop.alongM - alongM) };
 }
