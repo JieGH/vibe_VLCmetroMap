@@ -176,6 +176,18 @@ _Avoid_: Buffer zone, catchment area, 1km radius
 Municipal ArcGIS MapServer Layer 384 (`Seguimiento_EMT`) broadcasting live coordinates for all active buses in the city in a single periodic query (~130ms). Buses are positioned directly from this fix rather than walked along timetables.
 _Avoid_: Bus timetable walk, GTFS bus estimate
 
+**Fix**:
+One position report for a bus from the Bus GPS Stream: `{gid, trayecto, fecha, lon, lat}`, with `fecha` normalised to true UTC. A `gid` identifies a table row of one snapshot, not a bus. See ADR-0014.
+_Avoid_: Bus id, vehicle id
+
+**Track**:
+The client-side identity of one bus across polls, rebuilt by matching Fixes on line, Trayecto and nearest prior position (greedy, one-to-one, 400 m gate). Dropped when unmatched for more than 120 s of poll time. See ADR-0014.
+_Avoid_: Bus id, session
+
+**Trayecto**:
+The direction headsign on a Fix (for example "Est.del Nord - La Malva-rosa"). A change of Trayecto (terminus turnaround) starts a new Track; never relax this check.
+_Avoid_: Route, direction id
+
 ### Workspace & Repository Heritage
 
 **Variant A Prototype**:
