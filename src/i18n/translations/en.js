@@ -268,6 +268,8 @@ export default {
     itemFastBusDesc: 'After you drop a pin, bus times fill in stop by stop, nearest first, with a small wave of dots while they load.',
     itemPinZoomTitle: 'Drop a Pin Right Away',
     itemPinZoomDesc: 'The map now opens a little closer, so you can tap to drop a pin without zooming in first.',
+    itemCapacitorTitle: 'Capacitor-Based App',
+    itemCapacitorDesc: 'The phone app (APK) is now Capacitor-based: the same app as this website.',
     itemBigTitle: 'Bigger Text, Roomier Desktop',
     itemBigDesc: 'New XXL text size, and a wider, open sidebar on large screens.',
     itemNetTitle: 'Train Service Notice',

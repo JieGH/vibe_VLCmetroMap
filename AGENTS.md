@@ -37,6 +37,8 @@ Single-context (`CONTEXT.md` and `docs/adr/` at repo root). See `docs/agents/dom
 
 When returning completed work to the user:
 1. Run all tests and verify linting passes (`npm test -- --run && npm run lint`).
-2. Run `npm run build` to compile production assets and automatically trigger an **iOS Sync** (`postbuild: npx cap sync ios`).
-3. Always include `test done` in the final response to the user.
+2. Run `npm run build` to compile production assets and automatically trigger the **iOS Sync** and the **Capacitor Sync** (`postbuild: npx cap sync ios && npx cap sync android`).
+3. Run `npm run apk` to build and sign the Capacitor APK (`android/build/Xarxa-capacitor.apk`). If an Android phone is listed by `adb devices` (`/opt/homebrew/share/android-commandlinetools/platform-tools/adb`), install it with `adb -s <serial> install -r`; this keeps the app's data. Never delete the user's other installed apps.
+4. Always include `test done` in the final response to the user.
+The website is the reference version: iOS and the Capacitor app must look and behave like it (no platform-specific skins or themes); platform code is only for what the OS needs.
 The user runs the native app on their connected device directly via Xcode's Run (Play) button.

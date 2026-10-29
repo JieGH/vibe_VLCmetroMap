@@ -32,6 +32,7 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
     { title: t('whatsNew.itemNearTitle'), desc: t('whatsNew.itemNearDesc') },
     { title: t('whatsNew.itemFastBusTitle'), desc: t('whatsNew.itemFastBusDesc') },
     { title: t('whatsNew.itemPinZoomTitle'), desc: t('whatsNew.itemPinZoomDesc') },
+    { title: t('whatsNew.itemCapacitorTitle'), desc: t('whatsNew.itemCapacitorDesc') },
     { title: t('whatsNew.itemBigTitle'), desc: t('whatsNew.itemBigDesc') },
     { title: t('whatsNew.itemNetTitle'), desc: t('whatsNew.itemNetDesc') },
     { title: t('whatsNew.itemVpnTitle'), desc: t('whatsNew.itemVpnDesc') },

@@ -264,6 +264,8 @@ export default {
     itemFastBusDesc: 'En deixar un punt, els horaris d\'autobús es completen parada a parada, començant per la més propera, amb una xicoteta ona de punts mentre carreguen.',
     itemPinZoomTitle: 'Deixa un punt a l\'instant',
     itemPinZoomDesc: 'El mapa ara s\'obri una mica més a prop, així pots tocar per deixar un punt sense acostar-te abans.',
+    itemCapacitorTitle: 'App basada en Capacitor',
+    itemCapacitorDesc: 'L\'app del mòbil (APK) ara està basada en Capacitor: la mateixa app que esta web.',
     itemBigTitle: 'Text més gran, escriptori més ampli',
     itemBigDesc: 'Nova mida de text XXL i barra lateral oberta i més ampla en pantalles grans.',
     itemNetTitle: 'Avís del servei de trens',

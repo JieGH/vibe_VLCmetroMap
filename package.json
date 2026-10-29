@@ -15,7 +15,7 @@
     "dev:phone": "vite --host",
     "prebuild": "node scripts/sync_maplibre_worker.cjs && node scripts/prepare_basemap.cjs",
     "build": "vite build",
-    "postbuild": "[ \"$CI\" = true ] || npx cap sync ios",
+    "postbuild": "[ \"$CI\" = true ] || (npx cap sync ios && npx cap sync android)",
     "test": "vitest run",
     "test:integrity": "node scripts/sync_maplibre_worker.cjs && vitest run src/utils/mapIntegrity.test.js",
     "notify:deploy": "node scripts/notify_telegram.cjs deploy",

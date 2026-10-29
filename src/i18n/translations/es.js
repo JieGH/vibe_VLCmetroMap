@@ -264,6 +264,8 @@ export default {
     itemFastBusDesc: 'Al soltar un punto, los horarios de bus se completan parada a parada, empezando por la más cercana, con una pequeña ola de puntos mientras cargan.',
     itemPinZoomTitle: 'Suelta un punto al instante',
     itemPinZoomDesc: 'El mapa ahora se abre un poco más cerca, así puedes tocar para soltar un punto sin acercarte antes.',
+    itemCapacitorTitle: 'App basada en Capacitor',
+    itemCapacitorDesc: 'La app del móvil (APK) ahora está basada en Capacitor: la misma app que esta web.',
     itemBigTitle: 'Texto más grande, escritorio más amplio',
     itemBigDesc: 'Nuevo tamaño de texto XXL y barra lateral abierta y más ancha en pantallas grandes.',
     itemNetTitle: 'Aviso del servicio de trenes',
