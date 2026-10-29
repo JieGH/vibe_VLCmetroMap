@@ -23,6 +23,7 @@ import FeedbackModal from './components/FeedbackModal';
 import WhatsNewModal from './components/WhatsNewModal';
 import { markWhatsNewSeen } from './utils/whatsNew';
 import MovedNotice from './components/MovedNotice';
+import LiveBusSheet from './components/LiveBusSheet';
 import { locate, findNearestStation, NEAREST_STATION_RANGE_M } from './services/userLocation';
 import { createLiveTracker, createLiveFixChannel } from './services/liveTracking';
 import { createAutoLocator } from './services/autoLocate';
@@ -79,6 +80,7 @@ function App() {
   const [mode, setMode] = useState(readMode);
   const [activeBusLine, setActiveBusLine] = useState(null);
   const [selectedBusStop, setSelectedBusStop] = useState(null);
+  const [liveBusId, setLiveBusId] = useState(null); // a tapped line 19 bus marker (#152)
   const selectedBusStopRef = useRef(null);
   selectedBusStopRef.current = selectedBusStop;
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
@@ -772,6 +774,7 @@ function App() {
           selectedBusStop={selectedBusStop}
           onSelectBusStop={handleSelectBusStop}
           activeBusLine={activeBusLine}
+          onSelectLiveBus={(bus) => setLiveBusId(bus.id)}
         />
       </Suspense>
 
@@ -947,6 +950,15 @@ function App() {
             selectedStation?.properties?.name === 'Map Ping' ||
             selectedStation?.properties?.name === "Where you're at"
           )}
+        />
+      )}
+
+      {liveBusId && (
+        <LiveBusSheet
+          busId={liveBusId}
+          stopCode={selectedBusStop ? String(selectedBusStop.stopCode ?? selectedBusStop.code ?? '') : null}
+          stopName={selectedBusStop?.stopName || selectedBusStop?.name || ''}
+          onClose={() => setLiveBusId(null)}
         />
       )}
 

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Accessibility, X, Radio, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
 import BusBadge from './BusBadge';
 import WaveDots from './WaveDots';
+import LiveBusAway from './LiveBusAway';
+import { LIVE_BUS_LINE } from '../utils/busFocus';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
 import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
@@ -129,6 +131,8 @@ export const BusStopBoard = ({
       ? stop.lines
       : null;
   const arrivals = (liveArrivals !== null) ? liveArrivals : (handedIn || []);
+  // The nearest tracked bus sits under the soonest line 19 row only (issue #152).
+  const liveBusRow = arrivals.findIndex((a) => String(a.line) === LIVE_BUS_LINE);
   const isLoading = liveArrivals === null && handedIn === null && !hasAttemptedFetch;
 
   return (
@@ -439,13 +443,16 @@ export const BusStopBoard = ({
                         gap: 6,
                         minWidth: 0,
                       }}>
-                        <span style={{
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          fontWeight: 600, fontSize: '0.98rem', color: 'var(--text-primary)',
-                          minWidth: 0,
-                        }}>
-                          {a.destination}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                          <span style={{
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            fontWeight: 600, fontSize: '0.98rem', color: 'var(--text-primary)',
+                            minWidth: 0,
+                          }}>
+                            {a.destination}
+                          </span>
+                          {i === liveBusRow && <LiveBusAway stopCode={cleanCode} />}
+                        </div>
                         {a.wheelchair && (
                           <Accessibility
                             size={14}

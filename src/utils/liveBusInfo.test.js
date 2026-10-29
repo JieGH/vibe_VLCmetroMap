@@ -1,0 +1,49 @@
+import { describe, it, expect } from 'vitest';
+import { getLine19Route, pointAtAlongM } from './busRoute';
+import { describeLiveBus, headsignDestination } from './liveBusInfo';
+
+const dir = getLine19Route().directions[0]; // to-malvarosa
+const busAt = (alongM, extra = {}) => ({
+  id: 'bus-1', linea: '19', trayecto: dir.trayecto, directionKey: dir.id,
+  alongM, snappedLonLat: pointAtAlongM(dir, alongM).lonLat, ...extra,
+});
+
+describe('headsignDestination', () => {
+  it('takes the part after the origin, keeping hyphens inside names', () => {
+    expect(headsignDestination('Est.del Nord - La Malva-rosa')).toBe('La Malva-rosa');
+    expect(headsignDestination('La Malva-rosa')).toBe('La Malva-rosa');
+    expect(headsignDestination('')).toBe('');
+  });
+});
+
+describe('describeLiveBus', () => {
+  const stop = dir.stops[5]; // 1702 m
+  it('gives stops away to the selected stop when the bus is approaching', () => {
+    const info = describeLiveBus(busAt(500), stop.stopCode);
+    expect(info.destination).toBe('La Malva-rosa');
+    expect(info.stopsAway).toBe(3); // stops at 746, 905, 1232 are before the 1702 stop and still ahead
+    expect(info.nextStopName).toBeNull();
+  });
+  it('0 means the selected stop is the next one', () => {
+    expect(describeLiveBus(busAt(1500), stop.stopCode).stopsAway).toBe(0);
+  });
+  it('a bus that already passed the selected stop shows its next stop instead', () => {
+    const info = describeLiveBus(busAt(2000), stop.stopCode);
+    expect(info.stopsAway).toBeNull();
+    expect(info.nextStopName).toBe(dir.stops[6].stopName);
+  });
+  it('with no stop selected it shows the next stop', () => {
+    const info = describeLiveBus(busAt(500), null);
+    expect(info.stopsAway).toBeNull();
+    expect(info.nextStopName).toBe(dir.stops[2].stopName);
+  });
+  it('a stop that is not on the bus direction falls back to the next stop', () => {
+    const info = describeLiveBus(busAt(500), '99999');
+    expect(info.stopsAway).toBeNull();
+    expect(info.nextStopName).toBe(dir.stops[2].stopName);
+  });
+  it('unknown direction still returns the headsign', () => {
+    const info = describeLiveBus({ id: 'x', trayecto: 'A - B', directionKey: 'nope', alongM: 0, snappedLonLat: [0, 0] }, null);
+    expect(info).toMatchObject({ destination: 'B', stopsAway: null, nextStopName: null });
+  });
+});

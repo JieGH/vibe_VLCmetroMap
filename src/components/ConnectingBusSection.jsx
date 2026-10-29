@@ -16,6 +16,8 @@ import {
 import { centreGesture, centreFetchPolicy, withPrefetchBuffer, PREFETCH_BUFFER_M, BUDGET_RETRY_MS } from '../utils/centrePinBuffer';
 import { pickWalkSet, WALK_RADIUS_BUS_METRES } from '../utils/walkRadius';
 import { getAllBusStops } from '../data/emtData';
+import LiveBusAway from './LiveBusAway';
+import { LIVE_BUS_LINE } from '../utils/busFocus';
 
 function buildCachedArrivalsMap(codes) {
   const map = {};
@@ -226,6 +228,8 @@ export const ConnectingBusSection = ({
                   }))
                 : [];
 
+        const liveBusRow = itemsToRender.findIndex((b) => String(b.line) === LIVE_BUS_LINE);
+
         return (
           <div
             key={stop.stopCode || sIdx}
@@ -369,6 +373,7 @@ export const ConnectingBusSection = ({
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                        {bIdx === liveBusRow && <LiveBusAway stopCode={cleanCode} compact={compact} />}
                         {busObj.isLive && !compact && (
                           <span
                             title={t('bus.liveGpsTelemetry')}

@@ -631,6 +631,13 @@ const createUserDot = ({ accuracyRing = false } = {}) => {
   return wrapper;
 };
 
+// All 1,155 stops by code, built once on first use (not on every selection change).
+let stopsByCode = null;
+const getStopsByCode = () => {
+  if (!stopsByCode) stopsByCode = new globalThis.Map(getAllBusStops().map((s) => [String(s.stopCode), s]));
+  return stopsByCode;
+};
+
 const MapView = ({
   theme,
   selectedStation: selectedStationProp,
@@ -686,10 +693,10 @@ const MapView = ({
   const liveBusLayerRef = useRef(null);
   const onSelectLiveBusRef = useRef(onSelectLiveBus);
   useEffect(() => { onSelectLiveBusRef.current = onSelectLiveBus; }, [onSelectLiveBus]);
-  const line19Focused = useMemo(() => isLine19Focused(
-    { selectedBusStop, activeBusLine },
-    new globalThis.Map(getAllBusStops().map((s) => [String(s.stopCode), s]))
-  ), [selectedBusStop, activeBusLine]);
+  const line19Focused = useMemo(
+    () => isLine19Focused({ selectedBusStop, activeBusLine }, getStopsByCode()),
+    [selectedBusStop, activeBusLine]
+  );
   useBusFleet({
     focused: line19Focused,
     onBuses: (buses) => {
