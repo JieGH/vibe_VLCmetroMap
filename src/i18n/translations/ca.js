@@ -256,6 +256,8 @@ export default {
     item3Desc: 'Estimació de temps a peu i guiatge a la teua estació propera.',
     item4Title: 'Aparença i accessibilitat',
     item4Desc: 'Modes clar i fosc i mida de text ajustable que també escala els marcadors del mapa.',
+    itemBusTrackTitle: 'Autobusos de la línia 19 en directe',
+    itemBusTrackDesc: "Selecciona una parada de la línia 19 de l'EMT i els seus autobusos apareixen al mapa amb el seu GPS real; el tauler de la parada mostra l'autobús més proper que s'apropa i a quantes parades està. Toca un autobús per veure'n la direcció. Només la línia 19 per ara; les posicions s'actualitzen cada 30 s aproximadament, i només mentre la línia 19 està seleccionada.",
     itemZoomTitle: 'Parades d\'autobús segons el zoom',
     itemZoomDesc: 'Les parades passen de punts al logo de l\'EMT i després als seus números de línia.',
     itemNearTitle: 'Parades properes més ajustades',

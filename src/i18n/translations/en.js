@@ -260,6 +260,8 @@ export default {
     item3Desc: 'Live walking estimates and guidance to nearest stations.',
     item4Title: 'Appearance & Accessibility',
     item4Desc: 'Dark/light themes and adjustable text size that also scales the map markers.',
+    itemBusTrackTitle: 'Live Line 19 Buses',
+    itemBusTrackDesc: 'Select a stop on EMT line 19 and its buses appear on the map from their real GPS, and the stop board shows the nearest approaching bus and how many stops away it is. Tap a bus to see its direction. Line 19 only for now; positions refresh about every 30 s, and only while line 19 is focused.',
     itemZoomTitle: 'Bus Stops That Grow as You Zoom',
     itemZoomDesc: 'Bus stops show as dots, then the EMT logo, then their line numbers.',
     itemNearTitle: 'Closer Nearby Stops',

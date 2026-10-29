@@ -256,6 +256,8 @@ export default {
     item3Desc: 'Estimación de tiempo a pie y guiado a tu estación cercana.',
     item4Title: 'Apariencia y accesibilidad',
     item4Desc: 'Modos claro y oscuro y tamaño de texto ajustable que también escala los marcadores del mapa.',
+    itemBusTrackTitle: 'Autobuses de la línea 19 en vivo',
+    itemBusTrackDesc: 'Selecciona una parada de la línea 19 de la EMT y sus autobuses aparecen en el mapa con su GPS real; el panel de la parada muestra el autobús más cercano que se aproxima y a cuántas paradas está. Toca un autobús para ver su dirección. Solo la línea 19 por ahora; las posiciones se actualizan cada 30 s aproximadamente, y solo mientras la línea 19 está seleccionada.',
     itemZoomTitle: 'Paradas de bus según el zoom',
     itemZoomDesc: 'Las paradas pasan de puntos al logo de la EMT y luego a sus números de línea.',
     itemNearTitle: 'Paradas cercanas más ajustadas',

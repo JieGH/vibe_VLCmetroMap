@@ -1,5 +1,5 @@
 // Bump the version suffix every release so people who dismissed an older What's New see the new bullets.
-export const WHATS_NEW_STORAGE_KEY = 'xarxa_whats_new_seen_1.8.1';
+export const WHATS_NEW_STORAGE_KEY = 'xarxa_whats_new_seen_1.9.0';
 
 const defaultStorage = () => {
   try {
