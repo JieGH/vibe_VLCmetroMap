@@ -69,16 +69,15 @@ describe('liveBusLayer', () => {
     expect(layer.count()).toBe(0);
   });
 
-  it('builds a distinct round marker: halo, rotating chevron, upright body with glyph and line number', () => {
+  it('builds a distinct round marker: halo, rotating chevron, upright body with the line number only', () => {
     const layer = make();
     layer.setBuses([bus('a', [-0.37, 39.47])]);
     const inner = layer.markerFor('a').getElement().children[0];
     expect(inner.children.map((c) => c.className)).toEqual(['live-bus-fleet-halo', 'live-bus-fleet-arrow', 'live-bus-fleet-badge']);
     const body = inner.children[2];
     expect(body.style.cssText).toContain('border-radius:50%');
-    expect(body.children.map((c) => c.className)).toEqual(['live-bus-fleet-glyph', 'live-bus-fleet-line']);
-    expect(body.children[1].textContent).toBe('19');
-    expect(body.children[0].innerHTML).toContain('<svg');
+    expect(body.children.map((c) => c.className)).toEqual(['live-bus-fleet-line']);
+    expect(body.children[0].textContent).toBe('19');
     // the heading rotates the arrow only, never the body
     stepFrame();
     expect(inner.children[1].style.transform).toBe('rotate(90deg)');

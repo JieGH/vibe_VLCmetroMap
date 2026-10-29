@@ -8,9 +8,7 @@ import { LINE19_COLOR } from './busRouteLayer';
 
 export const LIVE_BUS_COLOR = LINE19_COLOR; // the one EMT red every bus badge uses (BusBadge.jsx)
 
-const BUS_GLYPH = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="display:block"><path fill="currentColor" d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1.5h-7V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 4 16V5a2 2 0 0 1 1-2zm0 3v5h14V6H5zm2.5 8.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm9 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z"/></svg>';
-
-// Live bus marker: a white round body with a line coloured ring, bus glyph over the line number, a soft
+// Live bus marker: a plain round badge in the line colour with the line number, a soft
 // pulsing "live" halo behind it and a heading chevron outside it. Only the chevron rotates, so the number
 // always stays upright. Visibly unlike the small rectangular EMT stop badges.
 function buildElement(doc, bus) {
@@ -34,15 +32,10 @@ function buildElement(doc, bus) {
   arrow.appendChild(tip);
   const badge = doc.createElement('div');
   badge.className = 'live-bus-fleet-badge';
-  badge.style.cssText = `position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;width:36px;height:36px;border-radius:50%;background:#fff;color:#1a1a1a;border:3px solid ${LIVE_BUS_COLOR};box-shadow:0 3px 8px rgba(0,0,0,0.5);font:800 11px/1 var(--font-ui);user-select:none;`;
-  const glyph = doc.createElement('div');
-  glyph.className = 'live-bus-fleet-glyph';
-  glyph.style.cssText = `color:${LIVE_BUS_COLOR};display:flex;`;
-  glyph.innerHTML = BUS_GLYPH;
+  badge.style.cssText = `position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;width:32px;height:32px;border-radius:50%;background:${LIVE_BUS_COLOR};color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);font:800 14px/1 var(--font-ui);user-select:none;`;
   const num = doc.createElement('span');
   num.className = 'live-bus-fleet-line';
   num.textContent = String(bus.linea || '');
-  badge.appendChild(glyph);
   badge.appendChild(num);
   inner.appendChild(halo);
   inner.appendChild(arrow);
