@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_MAP_ZOOM,
+  MAP_PIN_MIN_ZOOM,
   DEFAULT_MAP_CENTER,
   STATION_FOCUS_ZOOM,
   ZERO_PADDING,
@@ -20,7 +21,9 @@ import {
 describe('mapCamera', () => {
   describe('constants', () => {
     it('defines expected default zoom and center', () => {
-      expect(DEFAULT_MAP_ZOOM).toBe(12.3);
+      expect(DEFAULT_MAP_ZOOM).toBe(12.7);
+      // The opening view must allow a tap to set a pin (#144).
+      expect(DEFAULT_MAP_ZOOM).toBeGreaterThanOrEqual(MAP_PIN_MIN_ZOOM);
       expect(DEFAULT_MAP_CENTER).toEqual([-0.3763, 39.4699]);
       expect(STATION_FOCUS_ZOOM).toBe(15.0);
       expect(ZERO_PADDING).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });

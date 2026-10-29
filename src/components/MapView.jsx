@@ -11,6 +11,7 @@ import imageLineColors from '../data/line_colors_from_image.json';
 import lineRenderConfig from '../data/line_render_config.js';
 import {
   DEFAULT_MAP_ZOOM,
+  MAP_PIN_MIN_ZOOM,
   DEFAULT_MAP_CENTER,
   STATION_FOCUS_ZOOM,
   CAMERA_EASE_MS,
@@ -1173,9 +1174,9 @@ const MapView = ({
         container: containerRef.current,
         style: styleFor(theme),
         center: DEFAULT_MAP_CENTER,
-        // 12.3 is where updateZoomScale's formula below caps marker scale at its
-        // 1.2x maximum, so the default view opens with stations already at their
-        // largest, easiest-to-tap size rather than the network's full extent.
+        // Opens past the zoom where updateZoomScale's formula below caps marker scale at its
+        // 1.2x maximum (12.3), so stations are already at their largest, easiest-to-tap size,
+        // and past MAP_PIN_MIN_ZOOM, so a tap on the opening view sets a pin.
         zoom: DEFAULT_MAP_ZOOM,
         // The map never shows anything beyond the Metrovalencia region (#118): MapLibre clamps pans to the
         // box, and the minimum zoom is the one at which this viewport still fits inside it.
@@ -1247,9 +1248,9 @@ const MapView = ({
         }
 
         // Multimodal Walk Radius click on the map:
-        // When zoomed in (zoom >= 12.5), clicking any point explores all transit
+        // When zoomed in (MAP_PIN_MIN_ZOOM), clicking any point explores all transit
         // (Metro stations and EMT bus stops) within the walk radius (metro 320 m, bus 280 m, see walkRadius.js).
-        if (currentZoom >= 12.5) {
+        if (currentZoom >= MAP_PIN_MIN_ZOOM) {
           const nearestToPing = drawnStationsRef.current && drawnStationsRef.current.length > 0
             ? nearestFeature(drawnStationsRef.current, [lng, lat])
             : null;

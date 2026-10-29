@@ -116,7 +116,7 @@ describe('idempotent centring (#95)', () => {
   it('zooms in from far out even when already centred, never zooms out', () => {
     const far = makeMap({ zoom: 10 });
     expect(focusTarget(far, [0, 0], PADDING)).toBe(true);
-    expect(far.calls[0][1].zoom).toBe(12.3);
+    expect(far.calls[0][1].zoom).toBe(12.7);
     const near = makeMap({ zoom: 17 });
     focusTarget(near, [30, 30], PADDING);
     expect(near.calls[0][1].zoom).toBe(17);

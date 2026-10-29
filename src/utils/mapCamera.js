@@ -1,6 +1,9 @@
 import { LANDSCAPE_BREAKPOINT_PX } from './layout';
 
-export const DEFAULT_MAP_ZOOM = 12.3;
+/** A map tap sets a pin (Map Ping) from this zoom up; below it a tap only closes the sheet. */
+export const MAP_PIN_MIN_ZOOM = 12.5;
+/** Opens above MAP_PIN_MIN_ZOOM, so a tap on the opening view can set a pin without zooming in first (#144). */
+export const DEFAULT_MAP_ZOOM = 12.7;
 export const DEFAULT_MAP_CENTER = [-0.3763, 39.4699];
 export const STATION_FOCUS_ZOOM = 15.0;
 /** Every camera ease lasts this long (matches the native app). */
