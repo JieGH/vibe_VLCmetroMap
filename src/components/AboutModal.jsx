@@ -57,7 +57,7 @@ const AboutModal = ({ isOpen, onClose, trainStats = { live: 0, confirmed: 0 } })
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 'min(480px, 100%)',
-          maxHeight: 'calc(100vh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+          maxHeight: 'calc(100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',

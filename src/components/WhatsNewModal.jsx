@@ -73,7 +73,7 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 'min(480px, 100%)',
-          maxHeight: 'calc(100vh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+          maxHeight: 'calc(100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
           borderRadius: '16px',
           background: 'var(--bg-glass, rgba(30, 30, 30, 0.85))',
           border: '1px solid var(--border-color)',
