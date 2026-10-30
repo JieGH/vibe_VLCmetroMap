@@ -79,9 +79,9 @@ const AboutModal = ({ isOpen, onClose, trainStats = { live: 0, confirmed: 0 } })
             flexShrink: 0,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             <AppBadge size={44} />
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h2
                 id="about-modal-title"
                 style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}
@@ -111,6 +111,7 @@ const AboutModal = ({ isOpen, onClose, trainStats = { live: 0, confirmed: 0 } })
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <X size={18} />

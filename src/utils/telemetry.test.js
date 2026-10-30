@@ -211,4 +211,15 @@ describe('reportIncident noise filter', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
+
+  it('does not send an error thrown by a wallet browser\'s injected script', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { sessionStorage: { getItem: () => null, setItem: () => {} }, location: { href: 'https://xarxa.net/' } });
+    await reportIncident({
+      error: "TypeError: undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });

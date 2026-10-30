@@ -208,6 +208,8 @@ export async function reportIncident(incidentData) {
   if (typeof window === 'undefined') return;
   // A stale build asking for a chunk that a deploy removed: a reload fixes it, nothing to alert on.
   if (isChunkLoadError(incidentData.error)) return;
+  // Wallet browsers (Brave, MetaMask) inject a script that touches window.ethereum; it is not our code.
+  if (/window\.(ethereum|solana)\b/.test(String(incidentData.error))) return;
 
   try {
     const errorKey = `xarxa_incident_${incidentData.error || ''}`.slice(0, 100);
