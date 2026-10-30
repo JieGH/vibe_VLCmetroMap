@@ -51,12 +51,12 @@ const VISIBLE_ROWS = 4;
 const TABLE_HEAD_PX = 30;
 
 // Portrait expanded sheet: bottom edge is 12px + bottom inset, so its top edge
-// is 100vh - 12 - bottom - height. Subtracting both insets plus 84px keeps that
+// is 100dvh - 12 - bottom - height. Subtracting both insets plus 84px keeps that
 // top at (top inset + 72px), just below the top bar row (12px offset, ~52px
 // tall, 8px gap), including Dynamic Island devices.
 // Collapsed split-view sheet sits 8px lower than the default 12px gap.
 // #107: the collapsed multimodal body uses one height on every tab so switching never resizes the sheet.
-export const MULTIMODAL_BODY_HEIGHT = 'min(50vh, 400px)';
+export const MULTIMODAL_BODY_HEIGHT = 'min(50dvh, 400px)';
 
 /** Collapsed-sheet geometry for a multimodal tab (identical across All/Metro/EMT). */
 export function multimodalSheetGeometry(_tab, isExpanded) {
@@ -72,7 +72,7 @@ export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 0, sidePadding: 6, met
 
 export const SPLIT_SHEET_BOTTOM = 'calc(4px + env(safe-area-inset-bottom, 0px))';
 export const EXPANDED_SHEET_HEIGHT =
-  'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 84px))';
+  'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 84px))';
 
 const StationPanel = ({
   station,
@@ -397,8 +397,8 @@ const StationPanel = ({
           ? {
               top: 84,
               right: 16,
-              maxHeight: isExpanded ? 'calc(100vh - 40px)' : 'calc(100vh - 100px)',
-              height: isExpanded ? 'calc(100vh - 100px)' : 'auto',
+              maxHeight: isExpanded ? 'calc(100dvh - 40px)' : 'calc(100dvh - 100px)',
+              height: isExpanded ? 'calc(100dvh - 100px)' : 'auto',
               width: isExpanded
                 ? 'min(820px, 68vw)'
                 : (isMultimodal && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
@@ -410,7 +410,7 @@ const StationPanel = ({
               bottom: (isMultimodal && !isExpanded)
                 ? SPLIT_SHEET_BOTTOM
                 : 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58vh, calc(100vh - 120px))',
+              maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58dvh, calc(100dvh - 120px))',
               height: isExpanded ? EXPANDED_SHEET_HEIGHT : 'auto',
               transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }),
@@ -697,7 +697,7 @@ const StationPanel = ({
         <div
           className="station-panel-body"
           style={{
-            maxHeight: isExpanded ? 'calc(78vh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
+            maxHeight: isExpanded ? 'calc(78dvh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
             overflowY: 'auto',
             padding: '0 10px 8px',
             transition: 'max-height 0.22s ease',

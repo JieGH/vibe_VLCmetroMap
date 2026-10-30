@@ -147,8 +147,8 @@ export const BusStopBoard = ({
           ? {
               top: 84,
               right: 16,
-              maxHeight: isExpanded ? 'calc(100vh - 40px)' : 'calc(100vh - 100px)',
-              height: isExpanded ? 'calc(100vh - 100px)' : 'auto',
+              maxHeight: isExpanded ? 'calc(100dvh - 40px)' : 'calc(100dvh - 100px)',
+              height: isExpanded ? 'calc(100dvh - 100px)' : 'auto',
               width: isExpanded ? 'min(820px, 68vw)' : 'min(380px, 34vw)',
               transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }
@@ -157,10 +157,10 @@ export const BusStopBoard = ({
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
               maxHeight: isExpanded
-                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
-                : 'min(58vh, calc(100vh - 120px))',
+                ? 'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 96px))'
+                : 'min(58dvh, calc(100dvh - 120px))',
               height: isExpanded
-                ? 'min(82vh, calc(100vh - env(safe-area-inset-top, 0px) - 96px))'
+                ? 'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 96px))'
                 : 'auto',
               transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
             }),
@@ -360,7 +360,7 @@ export const BusStopBoard = ({
       <div
         className="station-panel-body"
         style={{
-          maxHeight: isExpanded ? 'calc(78vh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
+          maxHeight: isExpanded ? 'calc(78dvh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
           overflowY: 'auto',
           padding: '0 10px 8px',
           transition: 'max-height 0.22s ease',

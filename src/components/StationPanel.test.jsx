@@ -349,7 +349,7 @@ describe('StationPanel component', () => {
     expect(g[1]).toEqual(g[0]);
     expect(g[2]).toEqual(g[0]);
     expect(g[0].bottom).toBe(SPLIT_SHEET_BOTTOM);
-    expect(g[0].bodyHeight).toBe('min(50vh, 400px)');
+    expect(g[0].bodyHeight).toBe('min(50dvh, 400px)');
   });
 
   it('#111: split layout trims dead space so bus cards start further left', () => {
