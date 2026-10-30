@@ -72,9 +72,9 @@ function App() {
   // because the OS system window splash already covers it.
   const [showWelcome, setShowWelcome] = useState(() => !android);
   const [mapReady, setMapReady] = useState(false);
-  // Same default on every platform: dark, until the viewer picks Light or Auto.
-  const [theme, setTheme] = useState(() => initialTheme(false));
-  const [themeMode, setThemeMode] = useState('dark');
+  // Same default on every platform: Auto, following the OS dark/light setting until the viewer picks Light or Dark.
+  const [theme, setTheme] = useState(() => initialTheme(true));
+  const [themeMode, setThemeMode] = useState('system');
   const [rationale, setRationale] = useState(null);
   const [mode, setMode] = useState(readMode);
   const [activeBusLine, setActiveBusLine] = useState(null);
@@ -257,8 +257,8 @@ function App() {
     setStoredFontSize(newSize);
   };
 
-  // Auto follows the phone's dark/light setting; Android starts there, web and iOS
-  // start dark. Picking Light or Dark (sidebar or top-bar toggle) stops following.
+  // Auto follows the OS dark/light setting on every platform and is the default.
+  // Picking Light or Dark (sidebar or top-bar toggle) stops following.
   const applyTheme = (next) => {
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);

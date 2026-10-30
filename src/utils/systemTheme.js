@@ -1,5 +1,5 @@
-// Android follows the phone's dark/light setting until the viewer picks a
-// theme in the app; the web and iOS keep their dark default.
+// Every platform follows the OS dark/light setting until the viewer picks a
+// theme in the app.
 const QUERY = '(prefers-color-scheme: dark)';
 
 const defaultMatchMedia = () =>
