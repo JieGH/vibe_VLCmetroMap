@@ -34,7 +34,7 @@
 - **Clearer bus stops**: stops for each direction are drawn apart, and thin out to one small dot per street when you zoom out, and show the EMT logo and line numbers as you zoom in
 - **Search stations and bus stops** by name or stop number; before you type it suggests the buses that run between the main train stations and the city centre, and picking a result opens it just like tapping it on the map
 - **Follow one line** to highlight it on the map
-- **Light, dark or auto**, bigger text (up to XXL) that scales the map markers too; on a wide desktop window the sidebar opens by default, wider, with Large text
+- **Light, dark or auto** (auto by default, following your device), bigger text (up to XXL) that scales the map markers too; on a wide desktop window the sidebar opens by default, wider, with Large text
 - **Departures board** for a spare screen: [?mode=dashboard](https://xarxa.net/?mode=dashboard)
 - **3 languages**: English, Español, Valencià
 - **Poor connection OK**: the map is stored with the app

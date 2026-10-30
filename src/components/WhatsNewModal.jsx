@@ -28,6 +28,7 @@ const WhatsNewModal = ({ isOpen, onClose, onOpenFeedback }) => {
   if (!isOpen) return null;
 
   const features = [
+    { title: t('whatsNew.itemAutoThemeTitle'), desc: t('whatsNew.itemAutoThemeDesc') },
     { title: t('whatsNew.itemZoomTitle'), desc: t('whatsNew.itemZoomDesc') },
     { title: t('whatsNew.itemNearTitle'), desc: t('whatsNew.itemNearDesc') },
     { title: t('whatsNew.itemFastBusTitle'), desc: t('whatsNew.itemFastBusDesc') },

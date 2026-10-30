@@ -260,6 +260,8 @@ export default {
     item3Desc: 'Live walking estimates and guidance to nearest stations.',
     item4Title: 'Appearance & Accessibility',
     item4Desc: 'Dark/light themes and adjustable text size that also scales the map markers.',
+    itemAutoThemeTitle: "Follows Your Phone's Theme",
+    itemAutoThemeDesc: "The app now starts in Auto, matching your device's light or dark setting. You can still pick Light or Dark.",
     itemZoomTitle: 'Bus Stops That Grow as You Zoom',
     itemZoomDesc: 'Bus stops show as dots, then the EMT logo, then their line numbers.',
     itemNearTitle: 'Closer Nearby Stops',

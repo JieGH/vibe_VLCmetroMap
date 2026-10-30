@@ -256,6 +256,8 @@ export default {
     item3Desc: 'Estimació de temps a peu i guiatge a la teua estació propera.',
     item4Title: 'Aparença i accessibilitat',
     item4Desc: 'Modes clar i fosc i mida de text ajustable que també escala els marcadors del mapa.',
+    itemAutoThemeTitle: 'Segueix el tema del mòbil',
+    itemAutoThemeDesc: 'L\'app ara comença en Auto i segueix el mode clar o fosc del teu dispositiu. Encara pots triar Clar o Fosc.',
     itemZoomTitle: 'Parades d\'autobús segons el zoom',
     itemZoomDesc: 'Les parades passen de punts al logo de l\'EMT i després als seus números de línia.',
     itemNearTitle: 'Parades properes més ajustades',
