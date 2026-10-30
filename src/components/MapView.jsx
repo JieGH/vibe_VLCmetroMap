@@ -661,6 +661,7 @@ const MapView = ({
   // wrapper structure built far away in createVehicleMarker.
   const markerMapRef    = useRef(new globalThis.Map());
   const themeRef        = useRef(theme);
+  const appliedThemeRef = useRef(theme);
   const languageRef     = useRef(language);
   const filterRef       = useRef(activeLineFilter);
   const hoverRef        = useRef(null);
@@ -1171,9 +1172,10 @@ const MapView = ({
     initBasemapPromise.then(() => {
       if (isCancelled || !containerRef.current || mapRef.current) return;
 
+      appliedThemeRef.current = themeRef.current;
       const map = new MapLibreMap({
         container: containerRef.current,
-        style: styleFor(theme),
+        style: styleFor(themeRef.current),
         center: DEFAULT_MAP_CENTER,
         // Opens past the zoom where updateZoomScale's formula below caps marker scale at its
         // 1.2x maximum (12.3), so stations are already at their largest, easiest-to-tap size,
@@ -1353,15 +1355,33 @@ const MapView = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // isStyleLoaded() is false whenever tiles are still loading, which is exactly when the app
+  // has just resumed from the background. Dropping the swap then left a light map under a dark
+  // UI (or the reverse), so wait for the map to go idle and apply whatever theme is current.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    if (!map.isStyleLoaded() || !map.style) return;
-    try {
-      map.setStyle(styleFor(theme), { diff: false });
-    } catch (err) {
-      console.warn('map.setStyle suppressed error during style transition:', err);
+    if (!map) return undefined;
+    let cancelled = false;
+    function apply() {
+      if (cancelled || !map.style) return;
+      if (appliedThemeRef.current === themeRef.current) return;
+      if (!map.isStyleLoaded()) {
+        map.once('idle', apply);
+        return;
+      }
+      appliedThemeRef.current = themeRef.current;
+      try {
+        map.setStyle(styleFor(themeRef.current), { diff: false });
+      } catch (err) {
+        appliedThemeRef.current = null;
+        console.warn('map.setStyle suppressed error during style transition:', err);
+      }
     }
+    apply();
+    return () => {
+      cancelled = true;
+      map.off('idle', apply);
+    };
   }, [theme]);
 
   useEffect(() => {

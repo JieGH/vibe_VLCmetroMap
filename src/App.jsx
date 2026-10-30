@@ -262,11 +262,22 @@ function App() {
   const applyTheme = (next) => {
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'dark' ? '#1D1D29' : '#f0f2f5');
   };
   useEffect(() => {
     if (themeMode !== 'system') return undefined;
-    applyTheme(initialTheme(true));
-    return watchSystemTheme(applyTheme);
+    const sync = () => applyTheme(initialTheme(true));
+    sync();
+    // The change event can be missed while the app is in the background; re-read on return.
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', sync);
+    const unwatch = watchSystemTheme(applyTheme);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', sync);
+      unwatch();
+    };
   }, [themeMode]);
 
   const handleSelectTheme = (mode) => {
