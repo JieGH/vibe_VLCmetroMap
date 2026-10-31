@@ -251,6 +251,18 @@ describe('useDragToDismiss helpers', () => {
     expect(isInsideScrollRegion(wrapper, card, readStyle)).toBe(false);
     expect(isInsideScrollRegion(card, card, readStyle)).toBe(false);
   });
+  it('allows dragging in vertical scroll containers when content fits without scrolling', () => {
+    const card = {};
+    const nonOverflowingList = { parentElement: card, style: { overflowY: 'auto' }, scrollHeight: 200, clientHeight: 400 };
+    const row = { parentElement: nonOverflowingList };
+    expect(isInsideScrollRegion(row, card, readStyle)).toBe(false);
+  });
+  it('allows dragging on explicit data-drag-surface elements inside scroll containers', () => {
+    const card = {};
+    const list = { parentElement: card, style: { overflowY: 'auto' }, scrollHeight: 800, clientHeight: 400 };
+    const header = { parentElement: list, closest: (sel) => sel === '[data-drag-surface="true"]' ? {} : null };
+    expect(isInsideScrollRegion(header, card, readStyle)).toBe(false);
+  });
 });
 
 it('allows header strip gaps when horizontal chips fit without scrolling', () => {

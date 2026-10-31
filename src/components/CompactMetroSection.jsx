@@ -50,7 +50,7 @@ const CompactMetroSection = ({
     return (
       <div className="compact-metro-section" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {/* Header */}
-        <div style={splitHeaderBoxStyle(compact)}>
+        <div data-drag-surface="true" style={splitHeaderBoxStyle(compact)}>
           <span
             style={{
               fontSize: compact ? SPLIT_HEADER.titleFontSize : '0.74rem',

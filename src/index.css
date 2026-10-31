@@ -898,13 +898,16 @@ button:active {
   pointer-events: none;
   transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
 }
+.bottom-stack[data-sheet='portrait'],
 .bottom-stack[data-dragging='true'],
 body:has(.station-panel[data-dragging='true']) .bottom-stack {
   transition: none !important;
 }
 .bottom-stack[data-dismissing='true'],
 body:has(.station-panel[data-dismissing='true']) .bottom-stack {
-  transition: transform 0.28s cubic-bezier(0.32, 0, 0.67, 0) !important;
+  --sheet-lift: 0px !important;
+  bottom: calc(40px + env(safe-area-inset-bottom, 0px)) !important;
+  transition: transform 0.28s cubic-bezier(0.32, 0, 0.67, 0), bottom 0.28s cubic-bezier(0.32, 0, 0.67, 0) !important;
 }
 .bottom-stack > * { pointer-events: auto; }
 /* Portrait with a Station open: the locate button sits on the walking box's row, 10px above the sheet, inside its right edge. */

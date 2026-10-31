@@ -136,6 +136,7 @@ function App() {
   // Where the sheet sits, so the bottom-right stack can ride above (portrait)
   // or beside (landscape) it instead of overlapping.
   const [sheetBox, setSheetBox] = useState(null);
+  const bottomStackRef = useRef(null);
   const autoLocatorRef = useRef(null);
   // The Station auto-locate itself selected, so its own refinement may replace
   // it while a Station the viewer chose may not.
@@ -637,6 +638,7 @@ function App() {
   // Measure the open sheet so the bottom stack never overlaps it.
   useEffect(() => {
     if (!selectedStation) {
+      bottomStackRef.current?.style.removeProperty('--sheet-lift');
       setSheetBox(null);
       return undefined;
     }
@@ -646,21 +648,17 @@ function App() {
       if (!el) return;
       const measure = () => {
         const rect = el.getBoundingClientRect();
-        const next = {
-          height: Math.round(rect.height),
-          landscape: el.dataset.landscape === 'true',
-          isDragging: el.dataset.dragging === 'true',
-          isDismissing: el.dataset.dismissing === 'true',
-        };
-        setSheetBox((prev) => (
-          prev &&
-          prev.height === next.height &&
-          prev.landscape === next.landscape &&
-          prev.isDragging === next.isDragging &&
-          prev.isDismissing === next.isDismissing
-            ? prev
-            : next
-        ));
+        const isLandscape = el.dataset.landscape === 'true';
+        if (bottomStackRef.current && !isLandscape) {
+          bottomStackRef.current.style.setProperty('--sheet-lift', `${(rect.height + 12).toFixed(1)}px`);
+        }
+        setSheetBox((prev) => {
+          if (prev && prev.landscape === isLandscape) return prev;
+          return {
+            height: Math.round(rect.height),
+            landscape: isLandscape,
+          };
+        });
       };
       measure();
       if (typeof ResizeObserver !== 'undefined') {
@@ -935,10 +933,9 @@ function App() {
       {/* One column, bottom right: the walking box above the locate button,
           lifted over the sheet in portrait and set beside it in landscape */}
       <div
+        ref={bottomStackRef}
         className="bottom-stack"
         data-sheet={sheetBox ? (sheetBox.landscape ? 'landscape' : 'portrait') : 'none'}
-        data-dragging={sheetBox?.isDragging ? 'true' : 'false'}
-        data-dismissing={sheetBox?.isDismissing ? 'true' : 'false'}
         style={sheetBox && !sheetBox.landscape ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
       >
         <LocateButton

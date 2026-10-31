@@ -69,6 +69,7 @@ export function multimodalSheetGeometry(_tab, isExpanded) {
 export const SPLIT_LAYOUT = { columns: '1fr 1.25fr', gap: 0, sidePadding: 6, metroPadRight: 10, busPadLeft: 10 };
 
 export const SPLIT_SHEET_BOTTOM = 'calc(4px + env(safe-area-inset-bottom, 0px))';
+export const COLLAPSED_SHEET_HEIGHT = 'calc(min(50dvh, 400px) + 60px)';
 export const EXPANDED_SHEET_HEIGHT =
   'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 84px))';
 
@@ -101,8 +102,6 @@ const StationPanel = ({
     handleProps,
     cardStyle: dragStyle,
     isDragging,
-    isDraggingUp,
-    isReducing,
     isDismissing,
     triggerDismiss,
   } = useDragToDismiss({
@@ -147,6 +146,20 @@ const StationPanel = ({
       };
     });
   }, [nearbyMetro, now]);
+
+  const stationNameForFeeders = station?.properties?.name || station?.name || '';
+  const isMapPing = Boolean(userLocation?.isMapClick) || stationNameForFeeders === 'Map Ping';
+  const feeders = useMemo(() => {
+    if (!station) return [];
+    return anchorCoords
+      ? pickWalkSet(getAllBusStops(), anchorCoords, {
+          getCoords: (stop) => stop.coordinates,
+          getKey: (stop) => String(stop.stopCode || stop.code || ''),
+          radiusMetres: WALK_RADIUS_BUS_METRES,
+          allowFallback: !isMapPing,
+        }).items.map(({ item: stop, distance }) => feederFromStop(stop, distance))
+      : getStationBusFeeders(stationNameForFeeders, stationCoords);
+  }, [station, anchorCoords, isMapPing, stationNameForFeeders, stationCoords]);
 
   // getStationFocus only ever reads arrivalStore's cache — it has to, since it
   // also runs inside MapView's floating node every second and must not fire a
@@ -202,18 +215,6 @@ const StationPanel = ({
 
   const stationLines = focus.servedLines || [];
 
-  // Real EMT stops only (#122): inside the walk radius, no nearest-stop fallback
-  // for a map ping, and never invented times, vehicles or default lines.
-  const isMapPing = Boolean(userLocation?.isMapClick) || focus.name === 'Map Ping';
-  const feeders = anchorCoords
-    ? pickWalkSet(getAllBusStops(), anchorCoords, {
-        getCoords: (stop) => stop.coordinates,
-        getKey: (stop) => String(stop.stopCode || stop.code || ''),
-        radiusMetres: WALK_RADIUS_BUS_METRES,
-        allowFallback: !isMapPing,
-      }).items.map(({ item: stop, distance }) => feederFromStop(stop, distance))
-    : getStationBusFeeders(focus.name, stationCoords);
-
   const _totalBusLines = feeders.reduce((acc, f) => acc + (f.lines?.length || 0), 0);
   const metroStopsCount = (focus.name === 'Map Ping' || focus.name === "Where you're at") ? nearbyMetro.length : (1 + nearbyMetro.length);
   const busStopsCount = feeders.length;
@@ -242,7 +243,6 @@ const StationPanel = ({
         role="tab"
         aria-selected={activeTab === 'split'}
         onClick={() => setActiveTab('split')}
-        onPointerDown={(e) => e.stopPropagation()}
         title={t('stationPanel.tabAllTitle')}
         style={{
           padding: '6px 12px',
@@ -282,7 +282,6 @@ const StationPanel = ({
         aria-label={t('stationPanel.tabMetroAria')}
         aria-selected={activeTab === 'metro'}
         onClick={() => setActiveTab('metro')}
-        onPointerDown={(e) => e.stopPropagation()}
         title={t('stationPanel.tabMetroTitle')}
         style={{
           padding: '6px 12px',
@@ -339,7 +338,6 @@ const StationPanel = ({
         aria-label={t('stationPanel.tabBusAria')}
         aria-selected={activeTab === 'bus'}
         onClick={() => setActiveTab('bus')}
-        onPointerDown={(e) => e.stopPropagation()}
         title={t('stationPanel.tabBusTitle')}
         style={{
           padding: '6px 12px',
@@ -422,11 +420,11 @@ const StationPanel = ({
           : {
               left: 12,
               right: 12,
-              bottom: (isMultimodal && !isExpanded)
+              bottom: isMultimodal
                 ? SPLIT_SHEET_BOTTOM
                 : 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58dvh, calc(100dvh - 120px))',
-              height: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58dvh, calc(100dvh - 120px))',
+              maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : COLLAPSED_SHEET_HEIGHT,
+              height: isExpanded ? EXPANDED_SHEET_HEIGHT : COLLAPSED_SHEET_HEIGHT,
               transition: 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }),
         ...dragStyle,
@@ -445,8 +443,8 @@ const StationPanel = ({
         <div
           className="sheet-drag-handle-wrap"
           data-testid="station-drag-handle"
+          data-drag-surface="true"
           style={{ padding: '6px 0 2px' }}
-          {...handleProps}
         >
           <div className="sheet-drag-handle" />
         </div>
@@ -455,11 +453,11 @@ const StationPanel = ({
       {/* Header: when isPinPlace, tabs + actions in a single compact row; otherwise station name & lines + actions */}
       <header
         className="station-panel-header"
+        data-drag-surface="true"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, padding: !landscape ? '2px 16px 12px' : '12px 16px 12px', borderBottom: '1px solid var(--border-color)',
         }}
-        {...(!landscape ? handleProps : {})}
       >
         {isPinPlace ? (
           renderMultimodalTabs(true)
@@ -598,7 +596,6 @@ const StationPanel = ({
               e.stopPropagation();
               setIsExpanded((v) => !v);
             }}
-            onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-expand"
             aria-label={isExpanded ? t('stationPanel.collapsePanelAria') : t('stationPanel.expandPanelAria')}
             title={isExpanded ? t('stationPanel.minimizeTitle') : t('stationPanel.maximizeTitle')}
@@ -622,7 +619,6 @@ const StationPanel = ({
 
           <button
             onClick={triggerDismiss}
-            onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-close"
             aria-label={t('stationPanel.closeAria')}
             style={{
@@ -638,7 +634,7 @@ const StationPanel = ({
 
       {/* Body Container */}
       {isMultimodal ? (
-        <div style={{ position: 'relative', overflow: 'hidden', ...((isExpanded || isDraggingUp || isReducing) && { flex: '1 1 auto', minHeight: 0 }) }}>
+        <div style={{ position: 'relative', overflow: 'hidden', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {focus.fetchError && (
             <div role="status" style={{
               margin: '6px 10px', padding: '6px 10px', borderRadius: 8,
@@ -657,10 +653,11 @@ const StationPanel = ({
               display: 'grid',
               gridTemplateColumns: activeTab === 'split' ? SPLIT_LAYOUT.columns : '1fr',
               gap: activeTab === 'split' ? SPLIT_LAYOUT.gap : 0,
-              height: (isExpanded || isDraggingUp || isReducing) ? '100%' : multimodalSheetGeometry(activeTab, isExpanded).bodyHeight,
+              flex: '1 1 auto',
+              minHeight: 0,
+              height: '100%',
               padding: activeTab === 'split' ? `8px ${SPLIT_LAYOUT.sidePadding}px` : 0,
               overflow: 'hidden',
-              transition: isDragging ? 'none' : 'height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }}
           >
             <div
@@ -721,13 +718,11 @@ const StationPanel = ({
         <div
           className="station-panel-body"
           style={{
-            flex: (isExpanded || isDraggingUp || isReducing) ? '1 1 auto' : undefined,
+            flex: '1 1 auto',
             minHeight: 0,
-            height: (isExpanded || isDraggingUp || isReducing) ? '100%' : MULTIMODAL_BODY_HEIGHT,
-            maxHeight: (isExpanded || isDraggingUp || isReducing) ? '100%' : MULTIMODAL_BODY_HEIGHT,
+            height: '100%',
             overflowY: 'auto',
             padding: '0 10px 8px',
-            transition: isDragging ? 'none' : 'height 0.36s cubic-bezier(0.32, 0.72, 0, 1), max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
         >
           {focus.fetchError && (

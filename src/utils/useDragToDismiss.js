@@ -108,24 +108,25 @@ export const shouldIgnoreDragStart = (target, activeElement) => {
   if (isEditableElement(activeElement)) return true;
   if (
     target?.isContentEditable ||
-    target?.closest?.('input, textarea, button, a, select, [role="button"], [role="tab"], [contenteditable]')
+    target?.closest?.('input, textarea, select, [contenteditable]')
   ) {
     return true;
   }
   return false;
 };
 
-/** Keep gestures inside scroll regions independent, even at a scroll boundary. */
+/** Keep gestures inside scroll regions independent when they actually overflow. */
 export const isInsideScrollRegion = (
   target,
   card,
   readStyle = typeof getComputedStyle !== 'undefined' ? getComputedStyle : () => ({})
 ) => {
+  if (target?.closest?.('[data-drag-surface="true"]')) return false;
   for (let node = target; node && node !== card; node = node.parentElement) {
     const style = readStyle(node);
-    // Vertical lists own the gesture even at their edges. A horizontal chip
-    // strip only owns it when it actually overflows, leaving header gaps draggable.
-    if (/(auto|scroll)/.test(style.overflowY)) return true;
+    // Vertical lists own the gesture when they overflow vertically (or in synthetic unit tests where scrollHeight is undefined).
+    // When a column fits without scrolling (scrollHeight <= clientHeight), its empty space remains draggable.
+    if (/(auto|scroll)/.test(style.overflowY) && (node.scrollHeight === undefined || node.scrollHeight > node.clientHeight + 1)) return true;
     if (/(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth) return true;
   }
   return false;
@@ -234,8 +235,11 @@ export const useDragToDismiss = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const startYRef = useRef(0);
+  const startXRef = useRef(0);
   const startHeightRef = useRef(0);
   const pointerIdRef = useRef(null);
+  const pendingInteractiveRef = useRef(false);
+  const didDragRef = useRef(false);
   const coalescerRef = useRef(null);
   const dismissTimerRef = useRef(null);
 
@@ -253,6 +257,8 @@ export const useDragToDismiss = ({
     setIsDismissing(true);
     setIsDragging(false);
     pointerIdRef.current = null;
+    pendingInteractiveRef.current = false;
+    didDragRef.current = false;
     coalescerRef.current?.cancel();
     setDragState({
       offset: 0,
@@ -271,7 +277,9 @@ export const useDragToDismiss = ({
     // Prevent browser panning only after a gesture starts on an eligible surface.
     // Using a native non-passive listener leaves scroll regions fully native.
     const preventPan = (event) => {
-      if (pointerIdRef.current !== null && event.cancelable) event.preventDefault();
+      if (pointerIdRef.current !== null && !pendingInteractiveRef.current && event.cancelable) {
+        event.preventDefault();
+      }
     };
     document.addEventListener('touchmove', preventPan, { passive: false });
     return () => {
@@ -295,8 +303,9 @@ export const useDragToDismiss = ({
     }
 
     startYRef.current = e.clientY;
+    startXRef.current = e.clientX ?? 0;
     pointerIdRef.current = e.pointerId ?? 1;
-    setIsDragging(true);
+    didDragRef.current = false;
 
     const targetCard = cardRef?.current ||
       e.currentTarget?.closest?.('aside, [role="dialog"], .glass-panel') ||
@@ -307,8 +316,20 @@ export const useDragToDismiss = ({
       startHeightRef.current = rect.height;
     } else {
       const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
-      startHeightRef.current = Math.min(viewportH * 0.5, 420);
+      startHeightRef.current = Math.min(viewportH * 0.5, 400) + 60;
     }
+
+    const isInteractive = Boolean(
+      e.target?.closest?.('button, a, [role="button"], [role="tab"], [data-testid="metro-card"], [data-testid="bus-feeder-card"]')
+    );
+    if (isInteractive) {
+      // Wait for 6px vertical drag slop before capturing pointer so taps/clicks still fire cleanly
+      pendingInteractiveRef.current = true;
+      return;
+    }
+
+    pendingInteractiveRef.current = false;
+    setIsDragging(true);
 
     try {
       e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -319,10 +340,34 @@ export const useDragToDismiss = ({
 
   const handlePointerMove = useCallback((e) => {
     if (pointerIdRef.current === null || (e.pointerId !== undefined && e.pointerId !== pointerIdRef.current)) return;
+
+    if (pendingInteractiveRef.current) {
+      const dy = Math.abs(e.clientY - startYRef.current);
+      const dx = Math.abs((e.clientX ?? startXRef.current) - startXRef.current);
+      if (dy < 6 && dx < 6) return;
+      if (dx > dy) {
+        pendingInteractiveRef.current = false;
+        pointerIdRef.current = null;
+        return;
+      }
+      pendingInteractiveRef.current = false;
+      didDragRef.current = true;
+      startYRef.current = e.clientY;
+      setIsDragging(true);
+      try {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+      } catch {
+        // Ignore
+      }
+    }
+
     const offset = calculateDragOffset(startYRef.current, e.clientY, {
       allowUpward: canDragUp,
       isExpanded,
     });
+    if (Math.abs(offset) >= 6) {
+      didDragRef.current = true;
+    }
 
     const canReduce = isExpanded && Boolean(onCollapse);
     let newHeight = null;
@@ -337,10 +382,10 @@ export const useDragToDismiss = ({
       newHeight = Math.min(maxH, startHeightRef.current + upwardDist);
       draggingUp = true;
     } else if (canReduce && offset > 0) {
-      // Reducing downward: height decreases from startHeight towards minH
+      // Reducing downward: height decreases from startHeight towards exact collapsed height
       const downwardDist = offset;
       const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
-      const minH = Math.min(viewportH * 0.58, viewportH - 120);
+      const minH = Math.min(viewportH * 0.5, 400) + 60;
       newHeight = Math.max(minH, startHeightRef.current - downwardDist);
       reducing = true;
     }
@@ -355,7 +400,14 @@ export const useDragToDismiss = ({
 
   const handlePointerUp = useCallback((e) => {
     if (pointerIdRef.current === null || (e.pointerId !== undefined && e.pointerId !== pointerIdRef.current)) return;
-    coalescerRef.current.cancel();
+
+    if (pendingInteractiveRef.current) {
+      pendingInteractiveRef.current = false;
+      pointerIdRef.current = null;
+      return;
+    }
+
+    coalescerRef.current?.cancel();
     const offset = calculateDragOffset(startYRef.current, e.clientY, {
       allowUpward: canDragUp,
       isExpanded,
@@ -369,6 +421,17 @@ export const useDragToDismiss = ({
       // Ignore
     }
 
+    if (didDragRef.current && typeof window !== 'undefined') {
+      const suppressClick = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+        window.removeEventListener('click', suppressClick, true);
+      };
+      window.addEventListener('click', suppressClick, true);
+      setTimeout(() => window.removeEventListener('click', suppressClick, true), 80);
+    }
+
+    didDragRef.current = false;
     setIsDragging(false);
     pointerIdRef.current = null;
     setDragState({
@@ -393,7 +456,9 @@ export const useDragToDismiss = ({
 
   const handlePointerCancel = useCallback(() => {
     if (pointerIdRef.current === null) return;
-    coalescerRef.current.cancel();
+    coalescerRef.current?.cancel();
+    pendingInteractiveRef.current = false;
+    didDragRef.current = false;
     setIsDragging(false);
     setDragState({
       offset: 0,

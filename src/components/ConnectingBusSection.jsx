@@ -161,7 +161,7 @@ export const ConnectingBusSection = ({
 
   return (
     <div className="connecting-bus-feeder-section" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={splitHeaderBoxStyle(compact)}>
+      <div data-drag-surface="true" style={splitHeaderBoxStyle(compact)}>
         <span
           style={{
             fontSize: compact ? SPLIT_HEADER.titleFontSize : '0.74rem',
