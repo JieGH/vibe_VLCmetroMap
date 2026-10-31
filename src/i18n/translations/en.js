@@ -252,6 +252,8 @@ export default {
     badge: "What's New",
     title: "What's New in Xarxa",
     subtitle: 'Discover the latest transit updates and improvements',
+    itemFluidMotionTitle: 'Fluid Gestures & Animations',
+    itemFluidMotionDesc: 'Cards now expand and reduce continuously under your touch, dismiss with an accelerating curve, and the location button glides effortlessly without jitter.',
     item1Title: 'Real-Time Train Tracking',
     item1Desc: 'Live train positions & platform countdowns across lines 1–10.',
     item2Title: 'High-Speed Vector Map',

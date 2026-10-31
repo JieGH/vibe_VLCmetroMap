@@ -645,8 +645,22 @@ function App() {
       const el = document.querySelector('.station-panel');
       if (!el) return;
       const measure = () => {
-        const next = { height: el.offsetHeight, landscape: el.dataset.landscape === 'true' };
-        setSheetBox((prev) => (prev && prev.height === next.height && prev.landscape === next.landscape ? prev : next));
+        const rect = el.getBoundingClientRect();
+        const next = {
+          height: Math.round(rect.height),
+          landscape: el.dataset.landscape === 'true',
+          isDragging: el.dataset.dragging === 'true',
+          isDismissing: el.dataset.dismissing === 'true',
+        };
+        setSheetBox((prev) => (
+          prev &&
+          prev.height === next.height &&
+          prev.landscape === next.landscape &&
+          prev.isDragging === next.isDragging &&
+          prev.isDismissing === next.isDismissing
+            ? prev
+            : next
+        ));
       };
       measure();
       if (typeof ResizeObserver !== 'undefined') {
@@ -923,6 +937,8 @@ function App() {
       <div
         className="bottom-stack"
         data-sheet={sheetBox ? (sheetBox.landscape ? 'landscape' : 'portrait') : 'none'}
+        data-dragging={sheetBox?.isDragging ? 'true' : 'false'}
+        data-dismissing={sheetBox?.isDismissing ? 'true' : 'false'}
         style={sheetBox && !sheetBox.landscape ? { '--sheet-lift': `${sheetBox.height + 12}px` } : undefined}
       >
         <LocateButton

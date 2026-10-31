@@ -248,6 +248,8 @@ export default {
     badge: 'Novedades',
     title: 'Novedades en Xarxa',
     subtitle: 'Descubre las últimas mejoras y funciones de transporte',
+    itemFluidMotionTitle: 'Gestos y animaciones fluidas',
+    itemFluidMotionDesc: 'Las tarjetas ahora se expanden y reducen de forma continua bajo tu dedo, se cierran con curva acelerada y el botón de ubicación se desplaza con suavidad sin temblores.',
     item1Title: 'Seguimiento de trenes en directo',
     item1Desc: 'Posición de trenes y cuentas atrás en andén (líneas 1–10).',
     item2Title: 'Mapa vectorial sin conexión',

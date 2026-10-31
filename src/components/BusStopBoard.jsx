@@ -149,6 +149,8 @@ export const BusStopBoard = ({
     <aside
       ref={cardRef}
       className="glass-panel station-panel bus-stop-board"
+      data-dismissing={isDismissing ? 'true' : 'false'}
+      data-dragging={isDragging ? 'true' : 'false'}
       {...handleProps}
       aria-label={t('bus.stopAria', { name: displayName })}
       data-landscape={landscape ? 'true' : 'false'}

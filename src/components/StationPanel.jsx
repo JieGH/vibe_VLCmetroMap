@@ -392,9 +392,11 @@ const StationPanel = ({
       <aside
         ref={cardRef}
         className="glass-panel station-panel"
+        data-dismissing={isDismissing ? 'true' : 'false'}
+        data-dragging={isDragging ? 'true' : 'false'}
         {...handleProps}
         aria-label={shownName}
-      data-landscape={landscape ? 'true' : 'false'}
+        data-landscape={landscape ? 'true' : 'false'}
       style={{
         position: 'absolute',
         zIndex: 30,

@@ -248,6 +248,8 @@ export default {
     badge: 'Novetats',
     title: 'Novetats a Xarxa',
     subtitle: 'Descobreix les últimes millores i funcions de transport',
+    itemFluidMotionTitle: 'Gestos i animacions fluides',
+    itemFluidMotionDesc: 'Les targetes ara s’expandeixen i es redueixen de manera contínua sota el teu dit, es tanquen amb una corba accelerada i el botó d’ubicació es desplaça amb suavitat sense tremolors.',
     item1Title: 'Seguiment de trens en directe',
     item1Desc: 'Posicions en temps real i comptes enrere a l\'andana (línies 1–10).',
     item2Title: 'Mapa vectorial fora de línia',
