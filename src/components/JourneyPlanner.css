@@ -33,7 +33,8 @@
 
 .journey-status { margin-top: 14px; }
 .journey-disclosure { margin: 10px 0; }
+.journey-planner .journey-sound-option { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
 .journey-planner :is(button, select):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 @media (min-width: 768px) {
-  .journey-planner { max-height: calc(100dvh - 110px); }
+  .journey-planner { left: auto; right: max(12px, env(safe-area-inset-right)); max-height: calc(100dvh - 110px); }
 }

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { readFile, stat } from 'node:fs/promises';
 
 // OTP is an operator-configured endpoint, never a URL supplied by the passenger.
 // Version 2.7.0's planConnection API keeps street routing and transit scheduling
@@ -125,7 +126,7 @@ function alternatives(journeys) {
   const distinct = new Map();
   for (const journey of journeys.toSorted((a, b) => a.endTime - b.endTime || a.walkDistanceMetres - b.walkDistanceMetres)) {
     const rides = journey.legs.filter(leg => leg.mode !== 'WALK');
-    const path = rides.length ? rides.map(leg => [leg.mode, leg.route.id, leg.from.stopId, leg.to.stopId,
+    const path = rides.length ? rides.map(leg => [leg.mode, leg.route.id.split(':')[0], leg.route.shortName || leg.route.id, leg.from.stopId, leg.to.stopId,
       leg.intermediateStops.map(stop => stop.stopId)]) : ['WALK', journey.from.coordinates, journey.to.coordinates];
     const key = JSON.stringify(path);
     if (!distinct.has(key)) distinct.set(key, journey);
@@ -153,10 +154,37 @@ function exceedsWalkingLimit(journey, maxMinutes) {
   return false;
 }
 
+async function loadFeedManifest(filename) {
+  if (!filename) return null;
+  try {
+    if ((await stat(filename)).size > 256 * 1024) return null;
+    const manifest = JSON.parse(await readFile(filename, 'utf8'));
+    const calendar = value => value && /^\d{8}$/.test(value.start) && /^\d{8}$/.test(value.end) && value.start <= value.end;
+    if (manifest.otpVersion !== '2.7.0' || !Number.isFinite(timestamp(manifest.builtAt)) ||
+        !/^[a-f0-9]{64}$/.test(manifest.graph?.sha256) || !(manifest.graph.sizeBytes > 0) ||
+        !calendar(manifest.rail?.calendar) || (manifest.emt && !calendar(manifest.emt.calendar))) return null;
+    return manifest;
+  } catch { return null; }
+}
+
+function feedValidity(manifest, departureTime) {
+  if (!manifest) return { feedCalendarsVerified: false, warnings: [] };
+  const parts = new Intl.DateTimeFormat('en', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(new Date(departureTime));
+  const date = ['year', 'month', 'day'].map(type => parts.find(part => part.type === type).value).join('');
+  const warnings = [];
+  for (const [feed, modes] of [[manifest.rail, ['METRO', 'TRAM']], [manifest.emt, ['BUS']]]) {
+    const code = !feed ? 'calendar-unavailable' : date < feed.calendar.start || date > feed.calendar.end ? 'calendar-expired' : null;
+    if (code) modes.forEach(mode => warnings.push({ mode, code }));
+  }
+  return { feedCalendarsVerified: Boolean(manifest.rail && manifest.emt), warnings, graphBuiltAt: timestamp(manifest.builtAt) };
+}
+
 /** Returns HTTP status/body for the application's fixed POST /api/journeys route. */
 export function createJourneyRouter({ otpUrl = process.env.OTP_URL, fetchFn = globalThis.fetch,
-  now = Date.now, timeoutMs = 12000, maxInFlight = 2 } = {}) {
+  now = Date.now, timeoutMs = 12000, maxInFlight = 2, feedManifestPath = process.env.OTP_GRAPH_MANIFEST } = {}) {
   let inFlight = 0;
+  const feedManifest = loadFeedManifest(feedManifestPath);
   return async function planJourneys(input) {
     if (!validRequest(input)) return failure(400, 'invalid-request', 'Choose named starting and destination coordinates and an ISO departure time with timezone.');
     if (!validEndpoint(otpUrl)) return failure(503, 'routing-unavailable', 'Journey planning is not configured.');
@@ -194,7 +222,8 @@ export function createJourneyRouter({ otpUrl = process.env.OTP_URL, fetchFn = gl
       const journeys = alternatives(eligible);
       const status = journeys.length ? 'ok' : candidates.length ? 'walking-limit' : 'no-route';
       return { status: 200, body: { status, journeys, generatedAt: now(),
-        servicePeriod: { startTime: range.start * 1000, endTime: range.end * 1000 } } };
+        servicePeriod: { startTime: range.start * 1000, endTime: range.end * 1000 },
+        ...feedValidity(await feedManifest, input.departureTime) } };
     } catch (error) {
       if (error.code === 'routing-timeout') return failure(504, 'routing-timeout', 'Journey planning did not answer in time.');
       return failure(502, 'routing-unavailable', 'The Journey routing service could not produce a verified Journey.');

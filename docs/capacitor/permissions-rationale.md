@@ -1,27 +1,32 @@
 # Permissions and their rationale
 
-Declared in `android/app/src/main/AndroidManifest.xml` (Capacitor), which declares INTERNET, ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION and `uses-feature` location, location.gps and location.network all `required=false`, so devices without GPS can still install. The native app also declares ACCESS_NETWORK_STATE, and its merged manifest adds ACCESS_WIFI_STATE from MapLibre (both normal permissions, no Play declaration needed). Anything not listed here must not be added without updating this file, [data-safety.md](data-safety.md) and the privacy policy.
+This describes the Capacitor app (`com.jielei.Xarxa`) with passenger navigation. The separate native-app worktree is unchanged. Location hardware remains optional so devices without GPS can still browse transit and plan from a manually selected Starting Point. Changes to these permissions must be reflected here, in the data-safety notes, and in the privacy policy.
 
 | Permission | Why | Required to use the app? |
 |---|---|---|
-| `INTERNET` | Fetch live departures from FGV's public API. | Yes, for live data. |
-| `ACCESS_COARSE_LOCATION` | Find the nearest station when the viewer uses the locate button (or already allowed it). | No. |
-| `ACCESS_FINE_LOCATION` | Same, with enough precision to choose between stations a few hundred metres apart. | No. |
+| `INTERNET` | Fetch FGV/EMT Arrivals and send requested place searches and Journey endpoints to the configured services. | For online data and planning. |
+| `ACCESS_COARSE_LOCATION` | Nearby transit and location-assisted Journey Progress. | No; manual planning remains available. |
+| `ACCESS_FINE_LOCATION` | More accurate matching to Stations and EMT Bus Stops during guidance. | No; uncertain fixes remain estimated. |
+| `FOREGROUND_SERVICE` | Maintain an explicitly started Android Journey while its screen is off. | For locked-phone guidance. |
+| `FOREGROUND_SERVICE_LOCATION` | Declare the foreground service's location purpose on supported Android versions. | For locked-phone guidance. |
+| `POST_NOTIFICATIONS` | Request permission where the OS requires it for visible Journey notifications and get-off alerts. | For supported native alerts; denial is shown honestly. |
+| `VIBRATE` | Get-off alert vibration, subject to OS settings. | No. |
+| `WAKE_LOCK` | Keep native progress/alert decisions running during an active Android Journey, including underground. The lock has a six-hour safety cap and is released when guidance stops. | For the active native guidance service. |
 
-Play policy (https://support.google.com/googleplay/android-developer/answer/9799150): the Permissions Declaration Form is for background location; foreground-only location needs no form. The Location policy (https://support.google.com/googleplay/android-developer/answer/9888170) asks for the least scope necessary (coarse over fine, foreground over background), no use once no longer needed, and never for advertising or analytics. We request both coarse and fine so Android 12+ users can grant either; the app also works on an approximate fix only when it is accurate enough, otherwise it says the location is too rough. The policy page also mentions a forthcoming (27 January 2027) recommendation of the Android location button as minimum scope for precise location; not relevant to Play acceptance today, watch it.
+The app does not request `ACCESS_BACKGROUND_LOCATION`, contacts, storage access, camera, microphone, or advertising ID. The location foreground service is started from an explicit user action while the app is visible; it is not general background map tracking. It displays an ongoing notification with an End journey action. Completion, cancellation, denial, and service failure release active guidance resources. Actual delivery, silent-mode vibration, and cleanup still need physical-device acceptance.
 
-Not requested: background location, notifications, contacts, storage, camera, microphone, advertising ID.
+## How permission is requested
 
-## How location is asked for
+Ordinary location discovery retains its contextual rationale and existing device-location permission flow. The rationale explains that nearest-transit discovery is on-device, while requesting Directions sends the selected Starting Point and Destination to the routing service. Place search has its own visible query-sharing disclosure.
 
-1. The app never raises the system prompt cold. On Android, before the first system prompt, `LocationRationale` (an M3-style dialog) explains that location is used only on the device to find the nearest station and is never sent anywhere. **Continue** raises the system prompt; **Not now** does not, and the locate button can be pressed later.
-2. Launch-time auto-locate (ADR-0008, ADR-0010) runs if location was already granted, and asks once on a first launch. The one first-launch prompt that ADR-0008 allows on native is preceded by the same dialog on Android.
-3. A refusal is final until the viewer changes it. When the system reports "denied", a snackbar with an **Open settings** action is shown; the action calls the `AppSettings.open()` plugin method from `src/services/openSettings.js`.
+Start journey and an explicitly confirmed Resume journey request the native guidance capabilities in context. A denied capability does not prevent manual route planning, and the shared interface must not describe unavailable locked-phone guidance as active. Ordinary map viewing retains ADR-0012's foreground-only, battery-adaptive tracking.
 
-## Native piece the web code expects (Capacitor app only)
+## Native integration
 
-`AppSettings.open()` must exist as a Capacitor plugin registered on Android (name `AppSettings`) that starts `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` with `package:com.jielei.Xarxa`. If it is missing, the snackbar still shows but the button does nothing. The native app uses Compose and opens settings directly.
+The Android `JourneyGuidance` plugin registers with the existing Capacitor activity and communicates with the scoped native guidance service through the versioned Journey contract. Native progress and notification decisions continue independently of suspended WebView JavaScript. The iOS adapter supplies the corresponding Core Location and notification behavior without adding a platform-specific visual theme.
 
-## Play Console text for the permissions declaration
+`AppSettings.open()` remains the existing Android plugin that opens this app's OS settings page. Permission changes made there are reconciled when the app becomes active.
 
-"Location is used only when the user taps the locate button, to find and show the nearest metro station. It is processed on the device and is not collected, stored or shared. The app works fully without it."
+## Store declarations
+
+The previous map-only statement that location is never transmitted and notifications are not requested no longer describes a navigation-enabled release. Directions may transmit User Location as the Starting Point; an unfinished Journey and its instructions can be retained locally. Review the actual configured providers, transport security, retention, and enabled service behavior before submitting store declarations. See [data-safety.md](data-safety.md), [privacy-policy.md](privacy-policy.md), and the platform Journey validation notes.

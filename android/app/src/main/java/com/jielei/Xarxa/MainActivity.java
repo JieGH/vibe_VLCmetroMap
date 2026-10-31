@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(JourneyGuidancePlugin.class);
         SplashScreen.installSplashScreen(this);
         // Transparent system bars; icon colour follows the system night mode.
         EdgeToEdge.enable(this);

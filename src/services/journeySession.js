@@ -13,6 +13,13 @@ export function journeyLegCalls(leg) {
 
 const transit = leg => leg && leg.mode !== 'WALK';
 const callTime = call => call.arrivalTime ?? call.departureTime;
+const validJourney = journey => Boolean(journey?.id && Array.isArray(journey.legs) && journey.legs.length &&
+  journey.legs.every(leg => leg.from && leg.to && Number.isFinite(leg.startTime) && Number.isFinite(leg.endTime) && leg.endTime >= leg.startTime));
+const validIndices = session => Number.isInteger(session.legIndex) && Number.isInteger(session.callIndex) &&
+  session.legIndex >= 0 && session.callIndex >= 0 && Boolean(session.journey?.legs?.[session.legIndex]) &&
+  Boolean(journeyLegCalls(session.journey.legs[session.legIndex])[session.callIndex]);
+const nativeStatus = result => result?.supported && result.status === 'active' ? 'active' :
+  result?.status === 'denied' ? 'denied' : result?.platform === 'web' ? 'foreground-only' : 'unavailable';
 
 /** Public passenger Journey interface. Location is supplied by the existing app watch. */
 export function createJourneySession({ now = Date.now,
@@ -29,6 +36,7 @@ export function createJourneySession({ now = Date.now,
   let confirmedAt = 0;
   let sessionId = null;
   let serial = 0;
+  let lifecycle = 0;
   let startedAt = null;
   let sessionOptions = {};
   let nativeQueue = Promise.resolve();
@@ -37,19 +45,22 @@ export function createJourneySession({ now = Date.now,
   const publish = () => {
     const leg = snapshot.journey?.legs[snapshot.legIndex];
     const calls = leg ? journeyLegCalls(leg) : [];
-    snapshot = { ...snapshot, updatedAt: now(), sessionId, startedAt, scheduleOffset,
+    snapshot = { ...snapshot, version: JOURNEY_SESSION_VERSION, updatedAt: now(), sessionId, startedAt, scheduleOffset, manualAt,
+      soundEnabled: Boolean(sessionOptions.soundEnabled), labels: sessionOptions.labels || {},
       nextCall: calls[snapshot.callIndex + 1] || null,
       remainingCalls: Math.max(0, calls.length - snapshot.callIndex - 1) };
+    if (snapshot.remainingCalls !== 1) snapshot = { ...snapshot, alightAlert: null };
     if (snapshot.status === 'active' && transit(leg) && snapshot.remainingCalls === 1 &&
       (snapshot.boardingConfirmed || now() >= leg.startTime + scheduleOffset)) {
       const eventId = `${sessionId}:${leg.id}:alight`;
       if (!alerted.has(eventId)) {
         alerted.add(eventId);
         snapshot = { ...snapshot, alightAlert: { eventId, legId: leg.id,
-          estimated: snapshot.progressSource === 'estimated', destination: leg.to.name } };
+          estimated: snapshot.progressSource === 'estimated' || !snapshot.boardingConfirmed, destination: leg.to.name } };
         onAlert(snapshot.alightAlert);
       }
     }
+    snapshot = { ...snapshot, alertedEventIds: [...alerted] };
     onChange(snapshot);
     listeners.forEach(fn => fn(snapshot));
     return snapshot;
@@ -58,7 +69,7 @@ export function createJourneySession({ now = Date.now,
     journey: snapshot.journey, legIndex: snapshot.legIndex, callIndex: snapshot.callIndex,
     boardingConfirmed: snapshot.boardingConfirmed, progressSource: snapshot.progressSource,
     startedAt, updatedAt: snapshot.updatedAt, scheduleOffset, soundEnabled: Boolean(sessionOptions.soundEnabled),
-    labels: sessionOptions.labels || {} });
+    labels: sessionOptions.labels || {}, alertedEventIds: [...alerted] });
   const nativeOperation = (operation, session = payload()) => {
     if (!nativeAdapter?.[operation]) return Promise.resolve(null);
     nativeQueue = nativeQueue.catch(() => {}).then(() => nativeAdapter[operation](
@@ -69,7 +80,11 @@ export function createJourneySession({ now = Date.now,
   const syncNative = () => {
     if (snapshot.status === 'active' && nativeAdapter && ['starting', 'active'].includes(snapshot.nativeStatus)) {
       const id = sessionId;
-      void nativeOperation('updateSession').catch(() => {
+      void nativeOperation('updateSession').then(result => {
+        if (snapshot.status === 'active' && sessionId === id && nativeStatus(result) !== snapshot.nativeStatus) {
+          snapshot = { ...snapshot, nativeStatus: nativeStatus(result) }; publish();
+        }
+      }).catch(() => {
         if (snapshot.status === 'active' && sessionId === id) { snapshot = { ...snapshot, nativeStatus: 'unavailable' }; publish(); }
       });
     }
@@ -95,6 +110,7 @@ export function createJourneySession({ now = Date.now,
     return publish();
   };
   const stop = status => {
+    lifecycle += 1;
     if (!active()) return snapshot;
     if (timer !== null) clearIntervalFn(timer);
     timer = null;
@@ -103,30 +119,30 @@ export function createJourneySession({ now = Date.now,
     void nativeOperation('stopSession', stoppedPayload).catch(() => {});
     return publish();
   };
-  const api = {
-    start(journey, options = {}) {
-      if (!journey?.id || !Array.isArray(journey.legs) || !journey.legs.length ||
-        journey.legs.some(leg => !leg.from || !leg.to || !Number.isFinite(leg.startTime) || !Number.isFinite(leg.endTime))) {
+  const begin = (journey, options = {}, restored = null, adoptNative = false) => {
+      if (!validJourney(journey)) {
         throw new Error('Invalid Journey');
       }
       if (active()) stop('cancelled');
-      startedAt = now();
-      sessionId = `${journey.id}:${startedAt}:${++serial}`;
+      lifecycle += 1;
+      startedAt = restored?.startedAt ?? now();
+      sessionId = restored?.sessionId || `${journey.id}:${startedAt}:${++serial}`;
       sessionOptions = options;
-      scheduleOffset = 0;
-      manualAt = 0;
+      scheduleOffset = restored?.scheduleOffset ?? 0;
+      manualAt = restored?.manualAt ?? 0;
       confirmedAt = 0;
       alerted.clear();
-      snapshot = { status: 'active', journey, legIndex: 0, callIndex: 0,
-        boardingConfirmed: false, progressSource: 'estimated', updatedAt: now(),
-        nativeStatus: nativeAdapter ? 'starting' : 'foreground-only', alightAlert: null };
+      (restored?.alertedEventIds || []).forEach(id => alerted.add(id));
+      snapshot = { status: 'active', journey, legIndex: restored?.legIndex ?? 0, callIndex: restored?.callIndex ?? 0,
+        boardingConfirmed: Boolean(restored?.boardingConfirmed), progressSource: 'estimated', updatedAt: now(),
+        nativeStatus: adoptNative ? 'active' : nativeAdapter ? 'starting' : 'foreground-only', alightAlert: null };
       tick();
       const id = sessionId;
-      if (nativeAdapter) {
+      if (adoptNative) syncNative();
+      else if (nativeAdapter) {
         void nativeOperation('startSession').then(result => {
           if (!active() || sessionId !== id) return;
-          snapshot = { ...snapshot, nativeStatus: result?.supported && result.status === 'active' ? 'active' :
-            result?.status === 'denied' ? 'denied' : result?.platform === 'web' ? 'foreground-only' : 'unavailable' };
+          snapshot = { ...snapshot, nativeStatus: nativeStatus(result) };
           publish();
         }).catch(() => {
           if (active() && sessionId === id) { snapshot = { ...snapshot, nativeStatus: 'unavailable' }; publish(); }
@@ -134,6 +150,38 @@ export function createJourneySession({ now = Date.now,
       }
       timer = setIntervalFn(tick, 10_000);
       return snapshot;
+  };
+  const api = {
+    start: begin,
+    async resume(saved, options = {}) {
+      if (saved?.version !== JOURNEY_SESSION_VERSION || saved.status !== 'active' ||
+        typeof saved.sessionId !== 'string' || !saved.sessionId || !validJourney(saved.journey) || !validIndices(saved) ||
+        !Number.isFinite(saved.startedAt) || !Number.isFinite(saved.updatedAt) || !Number.isFinite(saved.scheduleOffset)) {
+        throw Object.assign(new Error('Saved Journey is invalid'), { code: 'invalid-session' });
+      }
+      if (active()) stop('cancelled');
+      const operation = ++lifecycle;
+      let restored = saved;
+      let adoptNative = false;
+      if (nativeAdapter?.getSession) {
+        try {
+          await nativeQueue.catch(() => {});
+          const response = await nativeAdapter.getSession();
+          const remote = response?.session;
+          if (response?.supported && response.status === 'active' && remote?.version === JOURNEY_SESSION_VERSION &&
+            remote.id === saved.sessionId && remote.journey?.id === saved.journey.id && validIndices(remote) &&
+            Number.isFinite(remote.updatedAt) && remote.updatedAt >= saved.updatedAt && remote.updatedAt <= now() + 10_000 &&
+            Number.isFinite(remote.scheduleOffset)) {
+            restored = { ...saved, legIndex: remote.legIndex, callIndex: remote.callIndex,
+              boardingConfirmed: Boolean(remote.boardingConfirmed), scheduleOffset: remote.scheduleOffset,
+              alertedEventIds: [...(Array.isArray(saved.alertedEventIds) ? saved.alertedEventIds : []),
+                ...(Array.isArray(remote.alertedEventIds) ? remote.alertedEventIds.filter(id => typeof id === 'string') : [])] };
+            adoptNative = true;
+          }
+        } catch { /* An unavailable OS session can be explicitly restarted. */ }
+      }
+      if (operation !== lifecycle) return snapshot;
+      return begin(saved.journey, { soundEnabled: saved.soundEnabled, labels: saved.labels, ...options }, restored, adoptNative);
     },
     tick,
     updateLocation(fix) {
@@ -184,6 +232,9 @@ export function createJourneySession({ now = Date.now,
         const result = await nativeAdapter.getSession();
         const session = result?.session;
         if (!active() || sessionId !== id) return snapshot;
+        if (result?.supported && result.status === 'stopped' && snapshot.nativeStatus === 'active') {
+          return stop('cancelled');
+        }
         if (!result?.supported || result.status !== 'active') {
           snapshot = { ...snapshot, nativeStatus: result?.status === 'denied' ? 'denied' : 'unavailable' };
           return publish();
@@ -196,6 +247,7 @@ export function createJourneySession({ now = Date.now,
         const leg = snapshot.journey.legs[session.legIndex];
         if (!leg || !journeyLegCalls(leg)[session.callIndex]) return snapshot;
         const calls = journeyLegCalls(leg);
+        if (Array.isArray(session.alertedEventIds)) session.alertedEventIds.filter(id => typeof id === 'string').forEach(id => alerted.add(id));
         scheduleOffset = Number.isFinite(session.scheduleOffset) ? session.scheduleOffset : now() - callTime(calls[session.callIndex]);
         snapshot = { ...snapshot, legIndex: session.legIndex, callIndex: session.callIndex,
           boardingConfirmed: Boolean(session.boardingConfirmed), progressSource: session.progressSource,

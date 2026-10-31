@@ -184,6 +184,14 @@ export function getEmtCachedArrivals(stopCode) {
   return null;
 }
 
+/** Read-only Arrival Memory metadata, including stale entries for honest countdown aging. */
+export function getEmtArrivalSnapshot(stopCode) {
+  const code = normalizeStopCode(stopCode);
+  const entry = code ? emtCache.get(code) : null;
+  return entry ? { arrivals: entry.arrivals, fetchedAt: entry.timestamp,
+    isFresh: Date.now() - entry.timestamp < EMT_CACHE_TTL_MS } : null;
+}
+
 /** True while a request for this stop is already running (joining it costs no extra request). */
 export function isEmtInFlight(stopCode) {
   const code = normalizeStopCode(stopCode);

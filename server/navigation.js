@@ -29,12 +29,13 @@ async function readRequest(req) {
 export function createNavigationHandler({
   placeSearchUrl = process.env.PLACE_SEARCH_URL,
   otpUrl = process.env.OTP_URL,
+  feedManifestPath = process.env.OTP_GRAPH_MANIFEST,
   allowedOrigins = process.env.NAVIGATION_ALLOWED_ORIGINS?.split(',').map(value => value.trim()).filter(Boolean) ?? NATIVE_ORIGINS,
   fetchFn = globalThis.fetch,
   now = Date.now,
 } = {}) {
   const search = createPlaceSearchHandler({ endpoint: placeSearchUrl, fetchImpl: fetchFn });
-  const plan = createJourneyRouter({ otpUrl, fetchFn, now });
+  const plan = createJourneyRouter({ otpUrl, feedManifestPath, fetchFn, now });
 
   return async (req, res, next) => {
     let pathname;

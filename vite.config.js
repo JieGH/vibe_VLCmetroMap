@@ -37,6 +37,7 @@ export default defineConfig({
         server.middlewares.use(createNavigationHandler({
           placeSearchUrl: env.PLACE_SEARCH_URL || process.env.PLACE_SEARCH_URL,
           otpUrl: env.OTP_URL || process.env.OTP_URL,
+          feedManifestPath: env.OTP_GRAPH_MANIFEST || process.env.OTP_GRAPH_MANIFEST,
         }));
       },
     },

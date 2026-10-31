@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import gtfsData from '../data/gtfs_expanded.json';
 import { useTranslation } from '../i18n';
 import { createJourneyPlanner } from '../services/journeyPlanner';
+import SearchBar from './SearchBar';
 import './JourneyPlanner.css';
 
 const stations = gtfsData.features
@@ -16,6 +17,7 @@ const stations = gtfsData.features
 
 const modeKeys = { WALK: 'walk', METRO: 'metro', TRAM: 'tram', BUS: 'bus' };
 const provenanceKeys = { scheduled: 'scheduled', live: 'live', stale: 'stale', estimated: 'estimated' };
+const recommendationKeys = { fastest: 'fastest', 'less-walking': 'lessWalking', 'fewer-transfers': 'fewerTransfers' };
 
 export function JourneyResults({ result, onStartJourney, onAllowLongerWalk }) {
   const { t, language } = useTranslation();
@@ -23,9 +25,11 @@ export function JourneyResults({ result, onStartJourney, onAllowLongerWalk }) {
     hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid',
   }).format(new Date(value));
   if (!result) return null;
+  const hasCalendarWarning = result.warnings?.length > 0 || result.feedCalendarsVerified === false;
   if (!result.journeys.length) {
     return (
       <div className="journey-status" role="status">
+        {hasCalendarWarning && <p>{t('navigation.scheduleWarning')}</p>}
         <p>{t(result.status === 'walking-limit' ? 'navigation.walkingLimit' : 'navigation.noJourney')}</p>
         {result.status === 'walking-limit' && onAllowLongerWalk && (
           <button type="button" name="allowLongerWalk" className="journey-primary-action" onClick={onAllowLongerWalk}>
@@ -37,8 +41,12 @@ export function JourneyResults({ result, onStartJourney, onAllowLongerWalk }) {
   }
   return (
     <div className="journey-options">
+      {hasCalendarWarning && <p role="status" className="journey-muted">{t('navigation.scheduleWarning')}</p>}
       {result.journeys.map(journey => (
         <article className="journey-option" key={journey.id}>
+          {recommendationKeys[journey.recommendation] && (
+            <p className="journey-muted">{t(`navigation.${recommendationKeys[journey.recommendation]}`)}</p>
+          )}
           <div className="journey-option-summary">
             <strong>{t('navigation.journeyDuration', { minutes: Math.ceil(journey.durationSeconds / 60) })}</strong>
             <span>{t('navigation.walkingDistance', { metres: Math.round(journey.walkDistanceMetres) })}</span>
@@ -79,6 +87,9 @@ const defaultPlanner = createJourneyPlanner();
 export default function JourneyPlanner({ destination, initialStartingPoint = null, onStartJourney, onClose, planner = defaultPlanner }) {
   const { t } = useTranslation();
   const [startingPoint, setStartingPoint] = useState(initialStartingPoint ? 'location' : '');
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [customStartingPoint, setCustomStartingPoint] = useState(null);
+  const [choosingPlace, setChoosingPlace] = useState(false);
   const [request, setRequest] = useState({ status: 'idle', result: null });
   const requestRef = useRef(null);
   useEffect(() => () => requestRef.current?.abort(), []);
@@ -90,7 +101,7 @@ export default function JourneyPlanner({ destination, initialStartingPoint = nul
     setRequest({ status: 'idle', result: null });
   };
   const plan = async (allowLongerWalk = false) => {
-    const from = startingPoint === 'location' ? initialStartingPoint : stations[Number(startingPoint)];
+    const from = startingPoint === 'location' ? initialStartingPoint : startingPoint === 'place' ? customStartingPoint : stations[Number(startingPoint)];
     if (!startingPoint || !from || !destination) return;
     requestRef.current?.abort();
     const controller = new AbortController();
@@ -123,16 +134,37 @@ export default function JourneyPlanner({ destination, initialStartingPoint = nul
         <select id="journey-starting-point" name="startingPoint" value={startingPoint} onChange={event => reset(event.target.value)}>
           <option value="">{t('navigation.chooseStation')}</option>
           {initialStartingPoint && <option value="location">{t('navigation.useCurrentLocation')}</option>}
+          {customStartingPoint && <option value="place">{customStartingPoint.name}</option>}
           {stations.map((station, index) => <option key={`${station.stopId}-${index}`} value={String(index)}>{station.name}</option>)}
         </select>
+        <button type="button" className="journey-secondary-action" onClick={() => setChoosingPlace(value => !value)}>
+          {t('navigation.chooseAddress')}
+        </button>
+        {choosingPlace && (
+          <div className="journey-origin-search">
+            <SearchBar
+              placesOnly
+              autoFocus
+              onSelectDestination={place => {
+                setCustomStartingPoint(place);
+                reset('place');
+                setChoosingPlace(false);
+              }}
+            />
+          </div>
+        )}
         <p className="journey-muted journey-disclosure">{t('navigation.routeDisclosure')}</p>
         <button type="submit" className="journey-primary-action" disabled={!startingPoint || request.status === 'loading'}>
           {t(request.status === 'loading' ? 'navigation.planningJourney' : 'navigation.planJourney')}
         </button>
       </form>
+      <label className="journey-sound-option">
+        <input type="checkbox" name="soundEnabled" checked={soundEnabled} onChange={event => setSoundEnabled(event.target.checked)} />
+        {t('navigation.alertSound')}
+      </label>
       <div aria-live="polite" aria-busy={request.status === 'loading'}>
         {request.status === 'error' && <p className="journey-status" role="alert">{t('navigation.journeyUnavailable')}</p>}
-        <JourneyResults result={request.result} onStartJourney={onStartJourney} onAllowLongerWalk={() => void plan(true)} />
+        <JourneyResults result={request.result} onStartJourney={journey => onStartJourney?.(journey, { soundEnabled })} onAllowLongerWalk={() => void plan(true)} />
       </div>
     </section>
   );

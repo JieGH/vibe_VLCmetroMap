@@ -25,9 +25,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Xarxa uses your location to show nearby transit and guide a Journey you start. When you request Directions, your starting point and destination are sent to the configured routing service.</string>
+	<string>Xarxa uses your location for nearby transit. During a Journey you explicitly start, location continues with the screen locked for progress and get-off alerts, until you end the Journey. Directions sends your starting point and destination to the configured routing service.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Xarxa uses your location to show nearby transit and guide a Journey you start. When you request Directions, your starting point and destination are sent to the configured routing service.</string>
+	<string>Xarxa uses your location for nearby transit. During a Journey you explicitly start, location continues with the screen locked for progress and get-off alerts, until you end the Journey. Directions sends your starting point and destination to the configured routing service.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

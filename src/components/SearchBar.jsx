@@ -50,6 +50,7 @@ const SearchBar = ({
   onSelectDestination,
   locationCoordinates,
   placeSearch = searchPlaces,
+  placesOnly = false,
   autoFocus = false,
   onClose,
 }) => {
@@ -85,10 +86,10 @@ const SearchBar = ({
   // Filtered results with Valencian accent-insensitive fuzzy search; bus stops only when the host can open them.
   const { filteredLines, filteredBusLines, filteredStations, filteredBusStops, filteredPlaces, allItems } = buildSearchResults({
     query,
-    lines,
-    busLines: getRealBusLines(),
-    stations,
-    busStops: onSelectBusStop ? getAllBusStops() : [],
+    lines: placesOnly ? [] : lines,
+    busLines: placesOnly ? [] : getRealBusLines(),
+    stations: placesOnly ? [] : stations,
+    busStops: !placesOnly && onSelectBusStop ? getAllBusStops() : [],
     places: onSelectDestination && placeState.query === query.trim() ? placeState.places : [],
   });
   const showPlaceSearch = Boolean(onSelectDestination && query.trim().length >= 3);
@@ -296,7 +297,7 @@ const SearchBar = ({
       </div>
 
       {/* Before anything is typed: popular stations and a line grid, side by side and compact */}
-      {isOpen && !query.trim() && (
+      {!placesOnly && isOpen && !query.trim() && (
         <div className="glass-panel search-suggest" style={suggestStyle} role="group" aria-label={t('searchBar.popularStations')}>
           <div className="search-suggest-col">
             <div className="search-suggest-title">{t('searchBar.popularStations')}</div>

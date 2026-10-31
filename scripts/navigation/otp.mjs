@@ -152,7 +152,9 @@ async function java(action) {
   await run(javaPath, [`-Xmx${heap}`, '-jar', jar, ...args]);
   if (action === 'build') {
     const inputs = JSON.parse(await fs.readFile(path.join(cache, 'inputs.json'), 'utf8'));
-    await fs.writeFile(path.join(cache, 'built.json'), `${JSON.stringify({ ...inputs, builtAt: new Date().toISOString() }, null, 2)}\n`);
+    const file = path.join(graph, 'graph.obj');
+    const graphMetadata = { sizeBytes: (await fs.stat(file)).size, sha256: await hash(file) };
+    await fs.writeFile(path.join(cache, 'built.json'), `${JSON.stringify({ ...inputs, builtAt: new Date().toISOString(), graph: graphMetadata }, null, 2)}\n`);
   }
 }
 

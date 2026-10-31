@@ -85,6 +85,15 @@ describe('active passenger Journey', () => {
     expect(session.getSnapshot().alightAlert).toBe(null);
   });
 
+  it('clears an alighting alert once the last call is reached without ending the Journey automatically', () => {
+    const h = harness();
+    h.session.start(journey);
+    h.time(start + 800_000);
+    expect(h.session.getSnapshot().alightAlert).not.toBe(null);
+    h.time(start + 1_300_000);
+    expect(h.session.getSnapshot()).toMatchObject({ status: 'active', callIndex: 2, alightAlert: null });
+  });
+
   it('keeps native cleanup after a pending start and never revives a cancelled session', async () => {
     let resolveStart;
     const plugin = {
@@ -98,6 +107,81 @@ describe('active passenger Journey', () => {
     resolveStart({ supported: true, status: 'active' });
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(plugin.stopSession).toHaveBeenCalledTimes(1);
+    expect(session.getSnapshot()).toMatchObject({ status: 'cancelled', nativeStatus: 'stopped' });
+  });
+
+  it('resumes an explicitly chosen saved Journey with its identity and delay, without treating old location as fresh', async () => {
+    const h = harness();
+    h.session.start(journey, { soundEnabled: true });
+    h.time(start + 800_000);
+    h.session.correctCall(1, 0);
+    const saved = JSON.parse(JSON.stringify(h.session.getSnapshot()));
+    h.session.dispose();
+    const restored = harness();
+    restored.time(start + 810_000);
+    await restored.session.resume(saved);
+    expect(restored.session.getSnapshot()).toMatchObject({ status: 'active', sessionId: saved.sessionId,
+      startedAt: saved.startedAt, scheduleOffset: saved.scheduleOffset, legIndex: 1, callIndex: 0,
+      progressSource: 'estimated', soundEnabled: true });
+    await expect(restored.session.resume({ ...saved, callIndex: 999 })).rejects.toThrow();
+  });
+
+  it('inspects and adopts newer locked-phone progress before sending a native start', async () => {
+    const h = harness();
+    h.session.start(journey);
+    const saved = h.session.getSnapshot();
+    const nativeAdapter = {
+      getSession: vi.fn(async () => ({ supported: true, status: 'active', session: {
+        version: 1, id: saved.sessionId, journey, legIndex: 1, callIndex: 1,
+        updatedAt: start + 900_000, scheduleOffset: 0, boardingConfirmed: false,
+      } })),
+      startSession: vi.fn(), updateSession: vi.fn(async () => ({ supported: true, status: 'active' })),
+    };
+    const session = createJourneySession({ now: () => start + 900_000, nativeAdapter, setIntervalFn: () => 1, clearIntervalFn: () => {} });
+    await session.resume(saved);
+    expect(session.getSnapshot()).toMatchObject({ sessionId: saved.sessionId, legIndex: 1, callIndex: 1, nativeStatus: 'active' });
+    expect(nativeAdapter.startSession).not.toHaveBeenCalled();
+  });
+
+  it('cannot restart guidance after a pending resume was cancelled', async () => {
+    const h = harness();
+    h.session.start(journey);
+    const saved = h.session.getSnapshot();
+    let answer;
+    const nativeAdapter = { getSession: () => new Promise(resolve => { answer = resolve; }), startSession: vi.fn() };
+    const session = createJourneySession({ now: () => start, nativeAdapter, setIntervalFn: () => 1, clearIntervalFn: () => {} });
+    const pending = session.resume(saved);
+    await Promise.resolve(); await Promise.resolve();
+    session.cancel();
+    answer({ supported: false, status: 'unavailable' });
+    await pending;
+    expect(session.getSnapshot().status).toBe('idle');
+    expect(nativeAdapter.startSession).not.toHaveBeenCalled();
+  });
+
+  it('reports a native session that stopped accepting updates as unavailable', async () => {
+    const nativeAdapter = {
+      startSession: async () => ({ supported: true, status: 'active' }),
+      updateSession: async () => ({ supported: false, status: 'unavailable' }),
+    };
+    const session = createJourneySession({ now: () => start, nativeAdapter, setIntervalFn: () => 1, clearIntervalFn: () => {} });
+    session.start(journey);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    session.correctCall(1, 0);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(session.getSnapshot().nativeStatus).toBe('unavailable');
+  });
+
+  it('ends the foreground Journey when the passenger stops previously active guidance from the OS notification', async () => {
+    const nativeAdapter = {
+      startSession: async () => ({ supported: true, status: 'active' }),
+      getSession: async () => ({ supported: true, status: 'stopped', session: null }),
+      stopSession: async () => ({ supported: true, status: 'stopped' }),
+    };
+    const session = createJourneySession({ now: () => start, nativeAdapter, setIntervalFn: () => 1, clearIntervalFn: () => {} });
+    session.start(journey);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await session.reconcileNative();
     expect(session.getSnapshot()).toMatchObject({ status: 'cancelled', nativeStatus: 'stopped' });
   });
 });

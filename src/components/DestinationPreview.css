@@ -45,3 +45,7 @@
 
 .destination-preview-attribution { margin-top: 10px; font-size: 0.65rem; color: var(--text-secondary); }
 .destination-preview-attribution a { color: inherit; }
+
+@media (min-width: 768px) {
+  .destination-preview { left: auto; right: max(12px, env(safe-area-inset-right)); }
+}

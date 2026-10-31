@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="journey_guidance_title">Guia del viatge</string>
+    <string name="journey_guidance_stop">Acabar viatge</string>
+    <string name="journey_guidance_alight">Baixa a la pròxima parada</string>
+    <string name="journey_guidance_estimated_alight">Estimació: baixa a la pròxima parada</string>
+    <string name="journey_guidance_estimated_progress">Progrés estimat</string>
+    <string name="journey_guidance_quiet_channel">Avisos de baixada (vibració)</string>
+    <string name="journey_guidance_sound_channel">Avisos de baixada (so)</string>
+</resources>

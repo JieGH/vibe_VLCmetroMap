@@ -1,7 +1,14 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Xarxa</string>
-    <string name="title_activity_main">Xarxa</string>
-    <string name="package_name">com.jielei.Xarxa</string>
-    <string name="custom_url_scheme">com.jielei.Xarxa</string>
+    <string name="app_name" translatable="false">Xarxa</string>
+    <string name="title_activity_main" translatable="false">Xarxa</string>
+    <string name="package_name" translatable="false">com.jielei.Xarxa</string>
+    <string name="custom_url_scheme" translatable="false">com.jielei.Xarxa</string>
+    <string name="journey_guidance_title">Journey guidance</string>
+    <string name="journey_guidance_stop">End journey</string>
+    <string name="journey_guidance_alight">Get off at the next stop</string>
+    <string name="journey_guidance_estimated_alight">Estimated: get off at the next stop</string>
+    <string name="journey_guidance_estimated_progress">Estimated progress</string>
+    <string name="journey_guidance_quiet_channel">Get-off alerts (vibration)</string>
+    <string name="journey_guidance_sound_channel">Get-off alerts (sound)</string>
 </resources>

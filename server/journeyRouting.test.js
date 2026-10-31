@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { createJourneyRouter } from './journeyRouting.js';
 
 const START = Date.parse('2026-10-31T12:00:00+01:00');
@@ -127,11 +130,14 @@ describe('rail Journey routing service boundary', () => {
     });
   });
 
-  it('shows fastest arrival first and collapses later departures on the same transit path', async () => {
+  it('shows fastest arrival first and collapses later departures on the same public Line and transit path', async () => {
     const payload = response();
     const original = payload.data.planConnection.edges[0].node;
     const later = structuredClone(original);
     later.end = '2026-10-31T12:23:00+01:00';
+    // FGV publishes separate GTFS route IDs for branches of the same public
+    // Line even when the passenger boards, passes, and alights at the same calls.
+    later.legs[0].route.gtfsId = 'rail:3-different-origin-branch';
     later.legs[0].end.scheduledTime = later.end;
     const other = structuredClone(original);
     other.end = '2026-10-31T12:17:00+01:00';
@@ -179,5 +185,24 @@ describe('rail Journey routing service boundary', () => {
       fetchFn: async () => Response.json(payload) })(request);
     expect(result.body.journeys.map(journey => journey.legs[0].route.shortName)).toEqual(['3', '9', '10']);
     expect(result.body.journeys.map(journey => journey.recommendation)).toEqual(['fastest', 'less-walking', 'fewer-transfers']);
+  });
+
+  it('warns when EMT calendars have expired without hiding a valid rail Journey', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'journey-feed-manifest-'));
+    const feedManifestPath = path.join(directory, 'built.json');
+    try {
+      await fs.writeFile(feedManifestPath, JSON.stringify({ otpVersion: '2.7.0', builtAt: '2026-10-29T12:00:00Z',
+        graph: { sha256: 'a'.repeat(64), sizeBytes: 1000 },
+        rail: { calendar: { start: '20261001', end: '20261227' } },
+        emt: { calendar: { start: '20261001', end: '20261030' } } }));
+      const result = await createJourneyRouter({ otpUrl: 'http://127.0.0.1:8801/otp/gtfs/v1', feedManifestPath,
+        fetchFn: async () => Response.json(response()) })(request);
+      expect(result.status).toBe(200);
+      expect(result.body).toMatchObject({ feedCalendarsVerified: true,
+        warnings: [{ mode: 'BUS', code: 'calendar-expired' }], journeys: [{ legs: [{ mode: 'METRO' }] }] });
+      const noMetadata = await createJourneyRouter({ otpUrl: 'http://127.0.0.1:8801/otp/gtfs/v1', feedManifestPath: path.join(directory, 'missing.json'),
+        fetchFn: async () => Response.json(response()) })(request);
+      expect(noMetadata.body).toMatchObject({ feedCalendarsVerified: false });
+    } finally { await fs.rm(directory, { force: true, recursive: true }); }
   });
 });

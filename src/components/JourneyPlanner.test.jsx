@@ -17,6 +17,13 @@ describe('Journey planning presentation', () => {
     expect(html).toContain('Your starting point and destination are sent');
   });
 
+  it('offers an optional alert sound setting without enabling it by default', () => {
+    const html = renderToStaticMarkup(<JourneyPlanner destination={destination} />);
+    expect(html).toContain('name="soundEnabled"');
+    expect(html).toContain('type="checkbox"');
+    expect(html).not.toContain('checked=""');
+  });
+
   it('presents ordered pedestrian and rail portions without claiming the scheduled departure is live', () => {
     const html = renderToStaticMarkup(
       <JourneyResults

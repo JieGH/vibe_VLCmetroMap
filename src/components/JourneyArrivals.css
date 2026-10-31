@@ -1,0 +1,29 @@
+.journey-arrivals {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+}
+
+.journey-arrivals h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.journey-arrival-predictions {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.journey-arrival-predictions li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  padding: 5px 0;
+}
+
+.journey-arrivals .journey-muted {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}

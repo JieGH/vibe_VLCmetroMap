@@ -7,6 +7,7 @@ import {
   calculateDueSeconds,
   clearEmtCache,
   getEmtCachedArrivals,
+  getEmtArrivalSnapshot,
   EMT_CACHE_TTL_MS,
   EMT_TIMEOUT_MS,
 } from './emtArrivalService';
@@ -103,6 +104,19 @@ describe('midnight rollover (#90)', () => {
 });
 
 describe('20 s TTL cache (#90)', () => {
+  it('exposes the original Arrival timestamp without refreshing stale predictions', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-31T17:00:00Z'));
+    const fetchedAt = Date.now();
+    const fetchFn = vi.fn(async () => ok(wrap(busXml('6', '3 min.'))));
+    expect(getEmtArrivalSnapshot('2261')).toBeNull();
+    await fetchStopArrivals('2261', { fetchFn });
+    expect(getEmtArrivalSnapshot('P-2261')).toMatchObject({ fetchedAt, isFresh: true, arrivals: [{ dueSeconds: 180 }] });
+    vi.advanceTimersByTime(EMT_CACHE_TTL_MS);
+    expect(getEmtCachedArrivals('2261')).toBeNull();
+    expect(getEmtArrivalSnapshot('2261')).toMatchObject({ fetchedAt, isFresh: false, arrivals: [{ dueSeconds: 180 }] });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
   it('serves from cache up to the TTL boundary and refetches exactly at it', async () => {
     vi.useFakeTimers();
     const fetchFn = vi.fn(async () => ok(wrap(busXml('6', '3 min.'))));

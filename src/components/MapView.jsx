@@ -590,7 +590,7 @@ const panelAwarePadding = (map, { hasPanel } = {}) => {
   const container = map?.getContainer();
   const containerRect = container ? container.getBoundingClientRect() : undefined;
   const searchBarRect = document.querySelector('.search-bar-container')?.getBoundingClientRect();
-  const panel = document.querySelector('.station-panel, .bus-stop-board');
+  const panel = document.querySelector('.station-panel, .bus-stop-board, .journey-planner, .destination-preview');
 
   const sheetRect = panel
     ? restingSheetRect({
@@ -645,6 +645,7 @@ const MapView = ({
   gpsFix = null,
   destination = null,
   navigationReady = false,
+  journey = null,
 }) => {
   // Search hands in the raw feed's Station; focus must read like a tapped marker.
   const selectedStation = useMemo(
@@ -654,6 +655,43 @@ const MapView = ({
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
+  const framedJourneyRef = useRef(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const sourceId = 'passenger-journey';
+    const layers = ['passenger-journey-transit', 'passenger-journey-walk'];
+    const render = () => {
+      if (!map.isStyleLoaded()) return;
+      if (!journey) {
+        for (const id of layers) if (map.getLayer(id)) map.removeLayer(id);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+        framedJourneyRef.current = null;
+        return;
+      }
+      const features = journey.legs.filter(leg => leg.geometry?.type === 'LineString' && leg.geometry.coordinates?.length > 1)
+        .map(leg => ({ type: 'Feature', geometry: leg.geometry, properties: { mode: leg.mode } }));
+      const data = { type: 'FeatureCollection', features };
+      if (map.getSource(sourceId)) map.getSource(sourceId).setData(data);
+      else map.addSource(sourceId, { type: 'geojson', data });
+      if (!map.getLayer(layers[0])) map.addLayer({ id: layers[0], source: sourceId, type: 'line',
+        filter: ['!=', ['get', 'mode'], 'WALK'], layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#f0b429', 'line-width': 6, 'line-opacity': 0.9 } });
+      if (!map.getLayer(layers[1])) map.addLayer({ id: layers[1], source: sourceId, type: 'line',
+        filter: ['==', ['get', 'mode'], 'WALK'], paint: { 'line-color': theme === 'dark' ? '#f0f0f0' : '#334155',
+          'line-width': 4, 'line-dasharray': [1, 1.5] } });
+      if (framedJourneyRef.current !== journey.id && features.length) {
+        const coordinates = features.flatMap(feature => feature.geometry.coordinates);
+        const bounds = coordinates.reduce((result, coordinate) => result.extend(coordinate), new LngLatBounds(coordinates[0], coordinates[0]));
+        map.fitBounds(bounds, fitBoundsOptions(panelAwarePadding(map, { hasPanel: true }), { maxZoom: STATION_FOCUS_ZOOM, duration: CAMERA_EASE_MS }));
+        framedJourneyRef.current = journey.id;
+      }
+    };
+    render();
+    map.on('style.load', render);
+    map.once('idle', render);
+    return () => { map.off('style.load', render); map.off('idle', render); };
+  }, [journey, navigationReady, theme]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !destination?.coordinates) return;

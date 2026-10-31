@@ -14,8 +14,10 @@ import SearchBar from './components/SearchBar';
 import DestinationPreview from './components/DestinationPreview';
 import JourneyPlanner from './components/JourneyPlanner';
 import JourneyProgress from './components/JourneyProgress';
+import JourneyArrivals from './components/JourneyArrivals';
 import { createJourneySession } from './services/journeySession';
 import journeyNative from './services/journeyNative';
+import { createJourneyRecovery } from './services/journeyRecovery';
 import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
@@ -115,28 +117,108 @@ function App() {
   // accepts this prop to dim other lines when one does.
   const hoverLine = null;
   const [userLocation, setUserLocation] = useState(null);
+  const latestGpsFixRef = useRef(null);
+  const [planningStartingPoint, setPlanningStartingPoint] = useState(null);
+  useEffect(() => {
+    if (userLocation?.status === 'located' && !userLocation.isMapClick) latestGpsFixRef.current = userLocation;
+  }, [userLocation]);
   // Destination is independent of the GPS fix and the existing nearby-transit pin.
   const [destination, setDestination] = useState(null);
   const [planningDestination, setPlanningDestination] = useState(null);
   const [journeySnapshot, setJourneySnapshot] = useState(null);
+  const [journeyRecovery] = useState(() => createJourneyRecovery());
+  const [savedJourney, setSavedJourney] = useState(() => journeyRecovery.load());
+  const [offline, setOffline] = useState(() => navigator.onLine === false);
+  const [resumingJourney, setResumingJourney] = useState(false);
+  const startingJourneyRef = useRef(false);
+  const webAlertAudioRef = useRef(null);
   const [journeySession] = useState(() => createJourneySession({
     nativeAdapter: journeyNative,
     onChange: setJourneySnapshot,
+    onAlert: () => {
+      if (Capacitor.isNativePlatform()) return;
+      navigator.vibrate?.([250, 120, 250]);
+      const audio = webAlertAudioRef.current;
+      if (audio?.state === 'running') {
+        const tone = audio.createOscillator();
+        const gain = audio.createGain();
+        gain.gain.setValueAtTime(0.12, audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.35);
+        tone.frequency.value = 880;
+        tone.connect(gain).connect(audio.destination);
+        tone.start();
+        tone.stop(audio.currentTime + 0.35);
+      }
+    },
   }));
   const activeJourney = journeySnapshot?.status === 'active' ? journeySnapshot.journey : null;
   useEffect(() => () => journeySession.dispose(), [journeySession]);
-  const startJourney = (journey) => {
-    journeySession.start(journey, { soundEnabled: false, labels: {
+  useEffect(() => journeySession.subscribe(snapshot => { journeyRecovery.save(snapshot); }), [journeySession, journeyRecovery]);
+  useEffect(() => {
+    const update = () => setOffline(navigator.onLine === false);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
+  const journeyLabels = () => ({
       journeyTitle: t('navigation.journeyTitle'),
       alightNext: t('navigation.alightNext'),
       estimatedAlightNext: t('navigation.estimatedAlightNext'),
-    } });
-    setPlanningDestination(null);
-    if (!userLocation?.coordinates || userLocation.isMapClick) void handleLocate();
+  });
+  const prepareWebAlerts = (soundEnabled) => {
+    if (Capacitor.isNativePlatform()) return;
+    void webAlertAudioRef.current?.close();
+    webAlertAudioRef.current = null;
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    if (soundEnabled && Audio) {
+      try {
+        webAlertAudioRef.current = new Audio();
+        void webAlertAudioRef.current.resume().catch(() => {});
+      } catch { /* Visual guidance remains available if sound is unsupported. */ }
+    }
+  };
+  const startJourney = async (journey, { soundEnabled = false } = {}) => {
+    if (startingJourneyRef.current) return;
+    startingJourneyRef.current = true;
+    prepareWebAlerts(soundEnabled);
+    try {
+      if (Capacitor.isNativePlatform()) await journeyNative.requestPermissions();
+      journeySession.start(journey, { soundEnabled, labels: journeyLabels() });
+      setSavedJourney(null);
+      setPlanningDestination(null);
+      if (!userLocation?.coordinates || userLocation.isMapClick) void handleLocate();
+    } finally { startingJourneyRef.current = false; }
+  };
+  const resumeJourney = async () => {
+    if (resumingJourney || !savedJourney) return;
+    setResumingJourney(true);
+    prepareWebAlerts(savedJourney.soundEnabled);
+    try {
+      const fix = await locate();
+      if (fix.status === 'located') {
+        latestGpsFixRef.current = fix;
+        setUserLocation(fix);
+      }
+      if (Capacitor.isNativePlatform()) await journeyNative.requestPermissions();
+      await journeySession.resume(savedJourney, { labels: journeyLabels() });
+      if (fix.status === 'located') journeySession.updateLocation(fix);
+      setDestination(savedJourney.journey.to);
+      setSavedJourney(null);
+    } catch {
+      // Corrupt/incompatible stored sessions are discarded, never presented as active.
+      journeyRecovery.clear();
+      setSavedJourney(null);
+    } finally { setResumingJourney(false); }
+  };
+  const discardSavedJourney = () => {
+    if (savedJourney?.sessionId) void journeyNative.stopSession({ sessionId: savedJourney.sessionId });
+    journeyRecovery.clear();
+    setSavedJourney(null);
   };
   const endJourney = (completed = false) => {
     if (completed) journeySession.complete();
     else journeySession.cancel();
+    prepareWebAlerts(false);
     setDestination(null);
     setPlanningDestination(null);
   };
@@ -147,11 +229,14 @@ function App() {
     setFollowing(false);
   };
   const openDirections = (place) => {
+    const fix = latestGpsFixRef.current;
+    const fresh = fix && Date.now() - (fix.updatedAt ?? fix.fetchedAt ?? 0) < 60_000;
+    setPlanningStartingPoint(fresh ? { name: t('navigation.useCurrentLocation'), coordinates: fix.coordinates } : null);
     setDestination(place);
     setPlanningDestination(place);
     setFollowing(false);
   };
-  const navigationOpen = Boolean(destination || planningDestination || activeJourney);
+  const navigationOpen = Boolean(destination || planningDestination || activeJourney || savedJourney);
   const [locateState, setLocateState] = useState('idle');
   const [locateNotice, setLocateNotice] = useState(null);
   // The Station the floating walking box points at; null hides the box. The
@@ -164,7 +249,10 @@ function App() {
   // every few seconds never re-renders the app; only the larger-movement anchor below updates React state.
   const liveFixChannelRef = useRef(null);
   if (!liveFixChannelRef.current) liveFixChannelRef.current = createLiveFixChannel();
-  useEffect(() => liveFixChannelRef.current.subscribe(fix => journeySession.updateLocation(fix)), [journeySession]);
+  useEffect(() => liveFixChannelRef.current.subscribe(fix => {
+    latestGpsFixRef.current = { ...fix, status: 'located' };
+    journeySession.updateLocation(fix);
+  }), [journeySession]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return undefined;
     let handle;
@@ -536,6 +624,7 @@ function App() {
   // stale on its own — the fade says so — and once it has served its purpose
   // there was previously no way to take it off the map short of a reload.
   const handleHideLocation = () => {
+    latestGpsFixRef.current = null;
     if (!userLocation) return;
     setUserLocation(null);
     setLocateState('idle');
@@ -828,6 +917,7 @@ function App() {
           userLocation={userLocation}
           destination={destination}
           navigationReady={mapReady}
+          journey={activeJourney}
           onReady={() => setMapReady(true)}
           onUserInteract={() => { autoLocatorRef.current?.interrupt(); setFollowing(false); }}
           liveFixChannel={liveFixChannelRef.current}
@@ -1055,19 +1145,17 @@ function App() {
         <DestinationPreview destination={destination} onDirections={openDirections} onClose={() => setDestination(null)} />
       )}
 
-      {planningDestination && !activeJourney && (
+      {planningDestination && (
         <JourneyPlanner
           key={planningDestination.id || planningDestination.name}
           destination={planningDestination}
-          initialStartingPoint={userLocation?.status === 'located' && !userLocation.isMapClick
-            ? { name: t('navigation.useCurrentLocation'), coordinates: userLocation.coordinates }
-            : null}
+          initialStartingPoint={planningStartingPoint}
           onStartJourney={startJourney}
           onClose={() => setPlanningDestination(null)}
         />
       )}
 
-      {activeJourney && (
+      {activeJourney && !planningDestination && (
         <JourneyProgress
           snapshot={journeySnapshot}
           onConfirmBoarding={journeySession.confirmBoarding}
@@ -1075,7 +1163,23 @@ function App() {
           onAdvanceLeg={journeySession.advanceLeg}
           onComplete={() => endJourney(true)}
           onCancel={() => endJourney(false)}
-        />
+          offline={offline}
+          onFindAnotherRoute={() => openDirections(activeJourney.to)}
+        >
+          <JourneyArrivals journey={activeJourney} legIndex={journeySnapshot.legIndex} callIndex={journeySnapshot.callIndex} />
+        </JourneyProgress>
+      )}
+
+      {savedJourney && !activeJourney && !planningDestination && !destination && (
+        <section className="journey-planner glass-panel" aria-label={t('navigation.resumeJourney')}>
+          <h2>{t('navigation.resumeJourney')}</h2>
+          <p>{savedJourney.journey.to?.name}</p>
+          <p className="journey-muted">{t(offline ? 'navigation.offlineInstructions' : 'navigation.resumeRefresh')}</p>
+          <button type="button" className="journey-primary-action" disabled={resumingJourney} onClick={() => void resumeJourney()}>
+            {t(resumingJourney ? 'navigation.resumingJourney' : 'navigation.resumeJourney')}
+          </button>
+          <button type="button" className="journey-secondary-action" onClick={discardSavedJourney}>{t('navigation.discardJourney')}</button>
+        </section>
       )}
 
       {rationale && (
