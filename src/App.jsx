@@ -195,6 +195,13 @@ function App() {
       if (Capacitor.isNativePlatform()) await journeyNative.requestPermissions();
       if (action !== journeyActionRef.current) return;
       journeySession.start(journey, { soundEnabled, labels: journeyLabels() });
+      // Start is an explicit selection of this Journey's next boarding stop.
+      // Rail memory remains immediate; one relevant live request runs separately.
+      if (navigator.onLine !== false) {
+        const arrivals = createJourneyArrivals();
+        arrivals.select(journeySession.getSnapshot());
+        void arrivals.refresh().catch(() => {}).finally(() => arrivals.dispose());
+      }
       setDestinationPreviewOpen(false);
       setSavedJourney(null);
       setPlanningDestination(null);
