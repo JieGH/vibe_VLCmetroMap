@@ -202,7 +202,7 @@ export const BusStopBoard = ({
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 40, height: 20, minWidth: 40, borderRadius: 4,
               background: '#D62828', color: '#FFFFFF',
-              boxShadow: '0 2px 6px rgba(214, 40, 40, 0.35)',
+              boxShadow: 'none',
               flexShrink: 0,
               cursor: 'pointer',
             }}
@@ -224,8 +224,8 @@ export const BusStopBoard = ({
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
               <h2 style={{
-                fontSize: '1.02rem', fontWeight: 700, lineHeight: 1.15,
-                letterSpacing: '-.01em',
+                fontSize: '1.02rem', fontWeight: 600, lineHeight: 1.15,
+                letterSpacing: 0,
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',

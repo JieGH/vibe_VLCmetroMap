@@ -233,20 +233,20 @@ const StationPanel = ({
         onPointerDown={(e) => e.stopPropagation()}
         title={t('stationPanel.tabAllTitle')}
         style={{
-          padding: '6px 13px',
-          borderRadius: 9,
-          border: 'none',
-          background: activeTab === 'split' ? '#37474F' : 'var(--bg-hover)',
-          color: activeTab === 'split' ? '#80D8FF' : '#ffffff',
-          fontWeight: 800,
+          padding: '6px 12px',
+          borderRadius: 8,
+          border: '1px solid var(--border-color)',
+          background: activeTab === 'split' ? 'var(--surface-selected)' : 'transparent',
+          color: activeTab === 'split' ? 'var(--accent-ui)' : 'var(--text-secondary)',
+          fontWeight: 600,
           fontSize: '.84rem',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          boxShadow: activeTab === 'split' ? '0 2px 6px rgba(55,71,79,0.35)' : 'none',
-          transition: 'all 0.15s ease',
+          boxShadow: 'none',
+          transition: 'background-color 0.15s ease, color 0.15s ease',
         }}
       >
         <span>{t('common.all')}</span>
@@ -254,7 +254,7 @@ const StationPanel = ({
           style={{
             fontSize: '.72rem',
             opacity: 0.9,
-            background: 'rgba(0,0,0,0.28)',
+            background: 'var(--bg-hover)',
             padding: '1.5px 6px',
             borderRadius: 5,
           }}
@@ -273,20 +273,20 @@ const StationPanel = ({
         onPointerDown={(e) => e.stopPropagation()}
         title={t('stationPanel.tabMetroTitle')}
         style={{
-          padding: '6px 13px',
-          borderRadius: 9,
-          border: 'none',
-          background: activeTab === 'metro' ? '#E2001A' : 'var(--bg-hover)',
-          color: '#ffffff',
-          fontWeight: 800,
+          padding: '6px 12px',
+          borderRadius: 8,
+          border: '1px solid var(--border-color)',
+          background: activeTab === 'metro' ? 'var(--surface-selected)' : 'transparent',
+          color: 'var(--text-primary)',
+          fontWeight: 600,
           fontSize: '.84rem',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          boxShadow: activeTab === 'metro' ? '0 2px 6px rgba(226,0,26,0.35)' : 'none',
-          transition: 'all 0.15s ease',
+          boxShadow: 'none',
+          transition: 'background-color 0.15s ease, color 0.15s ease',
         }}
       >
         <span
@@ -311,7 +311,7 @@ const StationPanel = ({
           style={{
             fontSize: '.72rem',
             opacity: 0.9,
-            background: 'rgba(0,0,0,0.28)',
+            background: 'var(--bg-hover)',
             padding: '1.5px 6px',
             borderRadius: 5,
           }}
@@ -330,20 +330,20 @@ const StationPanel = ({
         onPointerDown={(e) => e.stopPropagation()}
         title={t('stationPanel.tabBusTitle')}
         style={{
-          padding: '6px 13px',
-          borderRadius: 9,
-          border: 'none',
-          background: activeTab === 'bus' ? '#D62828' : 'var(--bg-hover)',
-          color: '#ffffff',
-          fontWeight: 800,
+          padding: '6px 12px',
+          borderRadius: 8,
+          border: '1px solid var(--border-color)',
+          background: activeTab === 'bus' ? 'var(--surface-selected)' : 'transparent',
+          color: 'var(--text-primary)',
+          fontWeight: 600,
           fontSize: '.84rem',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          boxShadow: activeTab === 'bus' ? '0 2px 6px rgba(214,40,40,0.35)' : 'none',
-          transition: 'all 0.15s ease',
+          boxShadow: 'none',
+          transition: 'background-color 0.15s ease, color 0.15s ease',
         }}
       >
         <span
@@ -364,7 +364,7 @@ const StationPanel = ({
           style={{
             fontSize: '.72rem',
             opacity: 0.9,
-            background: 'rgba(0,0,0,0.28)',
+            background: 'var(--bg-hover)',
             padding: '1.5px 6px',
             borderRadius: 5,
           }}
@@ -451,7 +451,7 @@ const StationPanel = ({
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, minWidth: 34, borderRadius: '50%',
                 background: '#E2001A', color: '#FFFFFF',
-                boxShadow: '0 2px 6px rgba(226, 0, 26, 0.35)',
+                boxShadow: 'none',
                 flexShrink: 0,
                 cursor: 'pointer',
               }}
@@ -474,8 +474,8 @@ const StationPanel = ({
             <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
                 <h2 style={{
-                  fontSize: '1.14rem', fontWeight: 800, lineHeight: 1.15,
-                  letterSpacing: '-.01em',
+                  fontSize: '1.14rem', fontWeight: 600, lineHeight: 1.15,
+                  letterSpacing: 0,
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',

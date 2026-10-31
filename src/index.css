@@ -31,14 +31,18 @@
   /* Theme Variables - Default Dark */
   --bg-base: #121212;
   --bg-canvas: #121212;
-  /* The panels float above the map, so they are a step lighter than it: a deep blue-slate rather than grey. */
-  --bg-panel: rgba(43, 51, 71, 0.95);
-  --bg-panel-solid: #2b3347;
+  /* Restrained slate surfaces keep the route map and arrival data prominent. */
+  --bg-panel: rgba(38, 43, 53, 0.98);
+  --bg-panel-solid: #262b35;
   --bg-hover: rgba(255, 255, 255, 0.10);
   --bg-hover-active: rgba(255, 255, 255, 0.18);
-  --text-primary: #ffffff;
-  --text-secondary: #b6bbc8;
-  --border-color: rgba(255, 255, 255, 0.18);
+  --text-primary: #f2f3f5;
+  --text-secondary: #b7bdc8;
+  --text-muted: #9ba3b1;
+  --accent-ui: #8fc9ee;
+  --surface-selected: #343f4c;
+  --focus-ring: #8fc9ee;
+  --border-color: rgba(255, 255, 255, 0.10);
   
   /* Metro Valencia colours, read from the official zonal fare map (Plano zonal tarifario) */
   --color-line-1: #E3AD43; /* Gold */
@@ -55,7 +59,7 @@
   /* Typography Scaling */
   --font-scale: 1;
 
-  --shadow-panel: 0 8px 28px 0 rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.28);
   --radius: 14px;
 }
 
@@ -86,15 +90,19 @@ html {
 [data-theme='light'] {
   --bg-base: #f0f2f5;
   --bg-canvas: #f0f2f5;
-  /* A pale blue-tinted white, a shade darker than white and less grey, so panels stand out against the pale map. */
-  --bg-panel: rgba(228, 236, 248, 0.96);
-  --bg-panel-solid: #e4ecf8;
+  /* A quiet cool white separates cards from the pale map. */
+  --bg-panel: rgba(246, 248, 251, 0.98);
+  --bg-panel-solid: #f6f8fb;
   --bg-hover: rgba(15, 23, 42, 0.07);
   --bg-hover-active: rgba(15, 23, 42, 0.14);
   --text-primary: #121212;
   --text-secondary: #525a68;
-  --border-color: rgba(15, 23, 42, 0.18);
-  --shadow-panel: 0 8px 26px 0 rgba(15, 23, 42, 0.30);
+  --text-muted: #626d7b;
+  --accent-ui: #185b87;
+  --surface-selected: #e2ebf2;
+  --focus-ring: #185b87;
+  --border-color: rgba(15, 23, 42, 0.12);
+  --shadow-panel: 0 3px 12px rgba(15, 23, 42, 0.14);
 }
 
 * {
@@ -414,7 +422,7 @@ textarea {
   padding: 0;
 }
 
-/* Glassmorphism Panel Utilities */
+/* Shared floating surfaces */
 .glass-panel {
   background: var(--bg-panel);
   backdrop-filter: blur(20px);
@@ -959,16 +967,16 @@ button:active {
    matches the blue of the viewer's own dot. Greyed out when location is off for good. */
 .locate-button.glass-panel {
   /* Slightly see-through, so the map shows faintly behind it. */
-  background: linear-gradient(145deg, rgba(59, 130, 246, 0.82) 0%, rgba(37, 99, 235, 0.80) 55%, rgba(29, 78, 216, 0.80) 100%);
+  background: #2563b8;
   border: 1px solid rgba(255, 255, 255, 0.32);
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--shadow-panel);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
 .locate-button.glass-panel:hover {
-  background: linear-gradient(145deg, rgba(76, 143, 248, 0.88) 0%, rgba(47, 111, 239, 0.86) 55%, rgba(32, 88, 224, 0.86) 100%);
+  background: #1f56a1;
 }
 
 .locate-button[data-state="locating"] {
@@ -1348,13 +1356,13 @@ button:active {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 46px;
+  min-height: 48px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #007AFF 0%, #0056b3 100%);
-  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.4), 0 0 10px rgba(0, 122, 255, 0.2);
-  color: #ffffff;
-  font-weight: 700;
+  background: var(--text-primary);
+  box-shadow: none;
+  color: var(--bg-panel-solid);
+  font-weight: 600;
   font-size: 0.92rem;
   cursor: pointer;
   transition: opacity 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
@@ -1363,8 +1371,7 @@ button:active {
   user-select: none;
 }
 .feedback-submit-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 18px rgba(0, 122, 255, 0.5), 0 0 14px rgba(0, 122, 255, 0.3);
-  transform: translateY(-1px);
+  opacity: 0.88;
 }
 .feedback-submit-btn:active:not(:disabled) {
   transform: translateY(0);
@@ -2051,4 +2058,35 @@ button:active {
   touch-action: pan-x;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Visual polish informed by unslop, Damir Sokolovsky (@heydamir), CC BY 4.0.
+   https://github.com/heydamir/unslop — existing transit layout and identity retained. */
+.station-panel {
+  font-variant-numeric: tabular-nums;
+}
+
+.station-multimodal-tabs button:hover {
+  filter: brightness(1.08);
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.feedback-label {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-multimodal-tabs button,
+  .feedback-submit-btn,
+  .locate-button {
+    transition: none;
+  }
 }
