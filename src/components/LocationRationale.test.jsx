@@ -9,7 +9,8 @@ describe('LocationRationale', () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain('md-dialog');
-    expect(html).toContain('only on this device');
+    expect(html).toContain('on this device to find nearby transit');
+    expect(html).toContain('starting point and destination are sent');
     expect(html).toContain('Continue');
     expect(html).toContain('Not now');
   });

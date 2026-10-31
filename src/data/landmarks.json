@@ -1,0 +1,2210 @@
+{
+  "fetchedAt": "2026-10-31T15:04:11.889Z",
+  "bounds": [
+    -0.85,
+    39,
+    0.1,
+    39.95
+  ],
+  "sources": [
+    {
+      "name": "Ajuntament de València",
+      "url": "https://geoportal.valencia.es/server/rest/services/OPENDATA/SociedadBienestar/MapServer/1/query?where=clase%3D%27Bibliotecas%27+OR+UPPER%28equipamien%29+LIKE+%27%25UNIVERSI%25%27&outFields=*&outSR=4326&f=geojson",
+      "streets": "https://geoportal.valencia.es/server/rest/services/OPENDATA/UrbanismoEInfraestructuras/MapServer/223/query",
+      "licence": "CC BY 4.0",
+      "catalogue": "https://opendata.vlci.valencia.es/dataset/equipamients-municipals-equipamientos-municipales"
+    },
+    {
+      "name": "Universitat de València",
+      "url": "https://www.uv.es/uvweb/servicio-bibliotecas-documentacion/es/servicios/carta-servicios/localizacion-horario-atencion-1285926483170.html",
+      "maps": [
+        "https://www.google.com/maps/d/kml?mid=zxGXsRHRxnBs.kxFDXIlBH70s&forcekml=1",
+        "https://www.google.com/maps/d/kml?mid=zxGXsRHRxnBs.kOUlM6tbL0Jg&forcekml=1",
+        "https://www.google.com/maps/d/kml?mid=zxGXsRHRxnBs.ke3tfHoErWww&forcekml=1",
+        "https://www.google.com/maps/d/kml?mid=zxGXsRHRxnBs.k-a3LVr5mB60&forcekml=1",
+        "https://www.google.com/maps/d/kml?mid=zxGXsRHRxnBs.kXFxWhBo8De4&forcekml=1",
+        "https://www.google.com/maps/d/kml?mid=zxGXsRHRxnBs.kJsTsV7U5YGw&forcekml=1"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "id": "valencia-facility:22770",
+      "name": "\"UNIVERSIDAD CATÓLICA DE VALENCIA \"\"SAN VICENTE MÁRTIR\"\"",
+      "address": "CARRER QUEVEDO 2, València",
+      "coordinates": [
+        -0.38021849994822116,
+        39.47013899981663
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19734",
+      "name": "ARCHIVO UNIVERSIDAD DE VALENCIA",
+      "address": "AVINGUDA BLASCO IBÁÑEZ 30, València",
+      "coordinates": [
+        -0.36057599986578626,
+        39.477185999562465
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:23080",
+      "name": "ASOCIACIÓN CLUB UNIVERSITARIO ARTES",
+      "address": "CARRER DOCTOR MOLINER 12, València",
+      "coordinates": [
+        -0.36259200043362383,
+        39.476438999998074
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22299",
+      "name": "ASOCIACIÓN CULTURAL UNIVERSITARIA ALBALAT - ASOCUAL",
+      "address": "AVINGUDA PRIMAT REIG S/N, València",
+      "coordinates": [
+        -0.35886739978465976,
+        39.48117590949338
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20257",
+      "name": "AUTME. ASOCIACIÓN DE UNIVERSITARIOS Y TITULADOS MARROQUÍES EN ESPAÑA",
+      "address": "València",
+      "coordinates": [
+        -0.36090606607503445,
+        39.479428874469924
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22594",
+      "name": "BIBLIOMAR PLAYA DE LA MALVARROSA - Biblioteca de la playa",
+      "address": "CARRER JOSÉ BALLESTER GOZALVO 30, València",
+      "coordinates": [
+        -0.3243734996803246,
+        39.48121800032124
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22548",
+      "name": "BIBLIOMAR PLAYA DE PINEDO - Biblioteca de la playa",
+      "address": "València",
+      "coordinates": [
+        -0.33402690543043534,
+        39.421280825578286
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22574",
+      "name": "BIBLIOMAR PLAYA DEL CABANYAL - Biblioteca de la playa",
+      "address": "València",
+      "coordinates": [
+        -0.3232897634005289,
+        39.46840720837832
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kOUlM6tbL0Jg:5",
+      "name": "Biblioteca d'Educació \"María Moliner\"",
+      "address": "C/ Ramon Llull s/n.",
+      "coordinates": [
+        -0.3462464,
+        39.4791479
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kxFDXIlBH70s:0",
+      "name": "Biblioteca d'Humanitats \"Joan Reglà\"",
+      "address": "C/ Arts gràfiques nº 13, 46010 València",
+      "coordinates": [
+        -0.3616423,
+        39.4767754
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.ke3tfHoErWww:0",
+      "name": "Biblioteca de Ciències \"Eduard Bosca\"",
+      "address": "Dr. Moliner, 50, 46100 Burjassot, València",
+      "coordinates": [
+        -0.4183924,
+        39.5068718
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kxFDXIlBH70s:2",
+      "name": "Biblioteca de Ciències de la Salut \"Pelegrí Casanova\"",
+      "address": "Facultat de Medicina, Av. Blasco Ibáñez, 15",
+      "coordinates": [
+        -0.3630584,
+        39.4793302
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kOUlM6tbL0Jg:6",
+      "name": "Biblioteca de Ciències Socials \"Gregori Maians\"",
+      "address": "Av. Tarongers s/n, 46022 València",
+      "coordinates": [
+        -0.3417833,
+        39.4774959
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.ke3tfHoErWww:2",
+      "name": "Biblioteca de Farmàcia",
+      "address": "Av.Vicent Andrés Estellés, s/n, 46100 Burjassot - València",
+      "coordinates": [
+        -0.4203049,
+        39.5099262
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kxFDXIlBH70s:7",
+      "name": "Biblioteca de Psicologia i Esport",
+      "address": "Avda. Blasco Ibáñez, 21, 46010 València",
+      "coordinates": [
+        -0.359813,
+        39.4784565
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kJsTsV7U5YGw:2",
+      "name": "Biblioteca del Jardí Botànic \"José Pizcueta\"",
+      "address": "Quart 80, 2ª Planta., 46008 València",
+      "coordinates": [
+        -0.3867853,
+        39.4776864
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "valencia-facility:21006",
+      "name": "BIBLIOTECA DEPORTIVA MUNICIPAL",
+      "address": "PLAÇA MAGÚNCIA 1, València",
+      "coordinates": [
+        -0.4007012851071592,
+        39.467093019026024
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kOUlM6tbL0Jg:2",
+      "name": "Biblioteca Dipòsit",
+      "address": "Av. Tarongers s/n, (Edifici Biblioteca de Ciències Socials)",
+      "coordinates": [
+        -0.3414399,
+        39.477649
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kOUlM6tbL0Jg:1",
+      "name": "Biblioteca Dipositària Nacions Unides ONUBIB",
+      "address": "Campus de Tarongers, s/n.,, Biblioteca de Ciències Socials \"Gregori Maians\"",
+      "coordinates": [
+        -0.3413541,
+        39.4773634
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kJsTsV7U5YGw:7",
+      "name": "Biblioteca Histórica",
+      "address": "C/ Universitat, 2 | C/ la Nau, 2, 46003 València",
+      "coordinates": [
+        -0.3735298,
+        39.4721915
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "valencia-facility:22374",
+      "name": "BIBLIOTECA HISTÓRICA MUNICIPAL",
+      "address": "PLAÇA MAGÚNCIA 1, València",
+      "coordinates": [
+        -0.40204953595322684,
+        39.465252833634146
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kJsTsV7U5YGw:5",
+      "name": "Biblioteca Historicomèdica \"Vicent Peset Llorca\"",
+      "address": "Palau de Cerveró, Plaça Cisneros, 4",
+      "coordinates": [
+        -0.3760786,
+        39.4779731
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "valencia-facility:21430",
+      "name": "BIBLIOTECA MUNICIPAL AL-RUSAFI",
+      "address": "CARRER MATIES PERELLÓ 5 y 7, València",
+      "coordinates": [
+        -0.3692982606823636,
+        39.46098533263769
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22646",
+      "name": "BIBLIOTECA MUNICIPAL D'AIORA - VICENT CASP I VERGER",
+      "address": "CARRER PERIS BRELL 6, València",
+      "coordinates": [
+        -0.34606122263624395,
+        39.46691378681057
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22634",
+      "name": "BIBLIOTECA MUNICIPAL D'ARRANCAPINS - EDUARD ESCALANTE",
+      "address": "CARRER ALBERIC 18, València",
+      "coordinates": [
+        -0.3873803988090581,
+        39.46967447111307
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:20914",
+      "name": "BIBLIOTECA MUNICIPAL DE BENICALAP - CARMELINA SÁNCHEZ-CUTILLAS",
+      "address": "CARRER POETA SERRANO CLAVERO 40, València",
+      "coordinates": [
+        -0.38599227584745915,
+        39.49623326558671
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22592",
+      "name": "BIBLIOTECA MUNICIPAL DE BENIFERRI - JOAN DE TIMONEDA",
+      "address": "CARRER XIPRERS S/N, València",
+      "coordinates": [
+        -0.40446843102655816,
+        39.49670415338709
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22638",
+      "name": "BIBLIOTECA MUNICIPAL DE BENIMACLET - CAROLA REIG",
+      "address": "CARRER FRANCESC MARTÍNEZ 32, València",
+      "coordinates": [
+        -0.35829449655583284,
+        39.48814769909618
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:19748",
+      "name": "BIBLIOTECA MUNICIPAL DE BENIMÀMET - TEODOR LLORENTE",
+      "address": "CARRER CAMPAMENT 64, València",
+      "coordinates": [
+        -0.4234634996686547,
+        39.50129699983061
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22565",
+      "name": "BIBLIOTECA MUNICIPAL DE CIUTAT FALLERA - VICENT TORTOSA I BIOSCA",
+      "address": "CARRER NINOT 24, València",
+      "coordinates": [
+        -0.3911753190936111,
+        39.50179261800164
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22639",
+      "name": "BIBLIOTECA MUNICIPAL DE EL CASTELLAR - L'OLIVERAL - MATILDE RAMOS",
+      "address": "CARRER POETESSA LEONOR PERALES S/N, València",
+      "coordinates": [
+        -0.3620429997741569,
+        39.428199000252384
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:19769",
+      "name": "BIBLIOTECA MUNICIPAL DE L'AMISTAT - TOMÀS VICENT TOSCA",
+      "address": "València",
+      "coordinates": [
+        -0.3488917498774664,
+        39.473234999872055
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22571",
+      "name": "BIBLIOTECA MUNICIPAL DE L'EXPOSICIÓ - PALAU DE L'EXPOSICIÓ",
+      "address": "CARRER GALÍCIA 1, València",
+      "coordinates": [
+        -0.36266400051595926,
+        39.473451000011494
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22612",
+      "name": "BIBLIOTECA MUNICIPAL DE LA CREU DEL GRAU - GREGORI MAIANS I SÍSCAR",
+      "address": "CARRER TRAFALGAR 34, València",
+      "coordinates": [
+        -0.3437517379775894,
+        39.46324321914097
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22758",
+      "name": "BIBLIOTECA MUNICIPAL DE LA FONTSANTA - VICENT BOIX I RICARTE",
+      "address": "CARRER ESCULTOR SALZILLO 12, València",
+      "coordinates": [
+        -0.40795047622293323,
+        39.46780265264515
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22586",
+      "name": "BIBLIOTECA MUNICIPAL DE LA PETXINA - LA PETXINA",
+      "address": "PASSEIG PETXINA 42, València",
+      "coordinates": [
+        -0.39461850017566047,
+        39.4754940000956
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22839",
+      "name": "BIBLIOTECA MUNICIPAL DE LA RAÏOSA - GERMANA DE FOIX",
+      "address": "AVINGUDA GIORGETA 18, València",
+      "coordinates": [
+        -0.3846638456556924,
+        39.46234338223319
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:19771",
+      "name": "BIBLIOTECA MUNICIPAL DE LA TORRE - JOAN CHURAT I SAURÍ",
+      "address": "CARRER CASTELL DE CULLERA 16, València",
+      "coordinates": [
+        -0.39287700037218853,
+        39.43430999970708
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:20090",
+      "name": "BIBLIOTECA MUNICIPAL DE LA VEGA BAIXA - MARÍA MOLINER",
+      "address": "CARRER SERPIS 9, València",
+      "coordinates": [
+        -0.34917749983915586,
+        39.47624100019695
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:19759",
+      "name": "BIBLIOTECA MUNICIPAL DE MALILLA - ROÍS DE CORELLA",
+      "address": "CARRER ILLA CABRERA 52, València",
+      "coordinates": [
+        -0.37732499954765414,
+        39.448710000412476
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22626",
+      "name": "BIBLIOTECA MUNICIPAL DE MARXALENES - JOANOT MARTORELL",
+      "address": "València",
+      "coordinates": [
+        -0.3807855003294819,
+        39.48586649975441
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:23120",
+      "name": "BIBLIOTECA MUNICIPAL DE NA ROVELLA - JOAQUIM MARTÍ I GADEA",
+      "address": "AVINGUDA ALCALDE GISBERT RICO 20, València",
+      "coordinates": [
+        -0.3604738344962375,
+        39.456104220541505
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22547",
+      "name": "BIBLIOTECA MUNICIPAL DE NATZARET - DEL MAR",
+      "address": "CARRER FONTILLES 35, València",
+      "coordinates": [
+        -0.3308444607499814,
+        39.451231224040065
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22605",
+      "name": "BIBLIOTECA MUNICIPAL DE RUSSAFA - NOVA AL-RUSSAFÍ",
+      "address": "CARRER POETA AL RUSSAFI 2-4, València",
+      "coordinates": [
+        -0.37075950021237186,
+        39.460904999915996
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:19761",
+      "name": "BIBLIOTECA MUNICIPAL DE TORREFIEL - ISABEL DE VILLENA",
+      "address": "CARRER DOMÉNEC GÓMEZ 35-37, València",
+      "coordinates": [
+        -0.3820860004212445,
+        39.492441000279605
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22751",
+      "name": "BIBLIOTECA MUNICIPAL DE TRES FORQUES - LLUÍS FULLANA I MIRA",
+      "address": "PLAÇA MAGÚNCIA 1, València",
+      "coordinates": [
+        -0.4008335232311372,
+        39.46728208384178
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:19743",
+      "name": "BIBLIOTECA MUNICIPAL DEL BOTÀNIC - MARIA BENEYTO",
+      "address": "València",
+      "coordinates": [
+        -0.38433638274041726,
+        39.47683478376432
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22576",
+      "name": "BIBLIOTECA MUNICIPAL DEL CABANYAL - EL CANYAMELAR - CASA DE LA REINA",
+      "address": "CARRER REINA 85, València",
+      "coordinates": [
+        -0.3289635003034694,
+        39.46743899962358
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22589",
+      "name": "BIBLIOTECA MUNICIPAL DEL CARME - CARLES ROS",
+      "address": "València",
+      "coordinates": [
+        -0.3806140180811079,
+        39.47745450166965
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22577",
+      "name": "BIBLIOTECA MUNICIPAL DEL GRAU - CONSTANTÍ LLOMBART",
+      "address": " DOCTOR JOSEP JUAN DÒMINE 19, València",
+      "coordinates": [
+        -0.32933371752676577,
+        39.464448744974
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:20164",
+      "name": "BIBLIOTECA MUNICIPAL DELS ORRIOLS - JOSEP MARIA BAYARRI",
+      "address": "CAMÍ ALQUERIA D'ALBORS 4, València",
+      "coordinates": [
+        -0.36889650039831606,
+        39.49694100002097
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22608",
+      "name": "BIBLIOTECA MUNICIPAL PATRAIX - AZORÍN",
+      "address": "València",
+      "coordinates": [
+        -0.39148227720912315,
+        39.462210682188726
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:20646",
+      "name": "BIBLIOTECA MUNICIPAL ROIG DE CORELLA",
+      "address": "CARRER ILLA CABRERA 52, València",
+      "coordinates": [
+        -0.3773622535160868,
+        39.44872245431616
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22593",
+      "name": "BIBLIOTECA MUNICIPAL SANT MARCEL·LÍ - CAMÍ REAL - CLARA SANTIRÓ I FONT",
+      "address": "CARRER PIUS IX 2, València",
+      "coordinates": [
+        -0.39121494891838854,
+        39.448903896627556
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22629",
+      "name": "BIBLIOTECA MUNICIPAL SANT PAU - FRANCESC ALMELA I VIVES",
+      "address": "CARRER GRAVADOR ENGUÍDANOS 3, València",
+      "coordinates": [
+        -0.3993596036470796,
+        39.482117182473246
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22389",
+      "name": "BIBLIOTECA MUNICIPAL SERRANO MORALES",
+      "address": "PLAÇA TETUAN 3, València",
+      "coordinates": [
+        -0.37024200024532417,
+        39.4741889997981
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22379",
+      "name": "BIBLIOTECA MUSICAL COMPOSITORES VALENCIANOS",
+      "address": "PLAÇA MAGÚNCIA 1, València",
+      "coordinates": [
+        -0.40204953595322684,
+        39.465252833634146
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "uv-library:zxGXsRHRxnBs.kxFDXIlBH70s:4",
+      "name": "Cartoteca",
+      "address": "Edifici Facultat Geografia i Història, planta primera., Avda. Blasco Ibañez, 28.",
+      "coordinates": [
+        -0.3619373,
+        39.4773572
+      ],
+      "source": "uv-library-directory",
+      "attribution": "Universitat de València — directori de biblioteques",
+      "aliases": [
+        "library",
+        "university library",
+        "biblioteca universitaria",
+        "biblioteca universitat",
+        "Universitat de València",
+        "Universidad de Valencia"
+      ]
+    },
+    {
+      "id": "valencia-facility:22581",
+      "name": "CENTRO CULTURAL LA RAMBLETA",
+      "address": "CARRER PIUS IX 2, València",
+      "coordinates": [
+        -0.39114785563368376,
+        39.44888808914016
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:21511",
+      "name": "CENTRO DE EDUCACIÓN INFANTIL UNIVERSIDAD POLITÉCNICA",
+      "address": "CAMÍ VERA S/N, València",
+      "coordinates": [
+        -0.3475003146557922,
+        39.48376674572455
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22723",
+      "name": "CENTRO DE IDIOMAS DE LA UNIVERSIDAD DE VALENCIA",
+      "address": "CARRER SERPIS 25, València",
+      "coordinates": [
+        -0.3478410001501067,
+        39.47575499977405
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22122",
+      "name": "CENTRO UNIVERSITARIO DE DIAGNÓSTICO Y ATENCIÓN TEMPRANA",
+      "address": "CARRER GUÀRDIA CIVIL 22, València",
+      "coordinates": [
+        -0.35617665850126606,
+        39.48084304452475
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22943",
+      "name": "CLÍNICA UNIVERSITARIA SÍNDROME",
+      "address": "CARRER POETA MAS I ROS 41, València",
+      "coordinates": [
+        -0.34743150034553316,
+        39.47024699999454
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20981",
+      "name": "CLUB UNIVERSITARIO ARTES",
+      "address": "PLAÇA VALÈNCIA CLUB DE FUTBOL 1, València",
+      "coordinates": [
+        -0.3599505001702684,
+        39.47481899960995
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22027",
+      "name": "CUDAP. CENTRE UNIVERSITARI DE DIAGNOSTIC I ATENCIÓ PRIMERENCA",
+      "address": "CARRER GUÀRDIA CIVIL 22, València",
+      "coordinates": [
+        -0.35617666293452327,
+        39.480842927511794
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20481",
+      "name": "ESCUELA TÉCNICA SUPERIOR DE INGENIEROS AGRÓNOMOS - UNIVERSIDAD POLITÉCNICA",
+      "address": "CAMÍ VERA 14, València",
+      "coordinates": [
+        -0.344238184394862,
+        39.48206501863895
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19858",
+      "name": "ESCUELA UNIVERSITARIA DE ENFERMERÍA DE -LA FE-",
+      "address": "AVINGUDA CAMPANAR 106, València",
+      "coordinates": [
+        -0.38953363387486617,
+        39.48662377684523
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19856",
+      "name": "ESCUELA UNIVERSITÁRIA DE FISIOTERAPIA",
+      "address": "CARRER GASCÓ OLIAG 5, València",
+      "coordinates": [
+        -0.3560801499450211,
+        39.48077762796984
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21439",
+      "name": "ESCUELA UNIVERSITARIA DE INGENIERIA TÉCNICA INDUSTRIAL",
+      "address": "CAMÍ VERA S/N, València",
+      "coordinates": [
+        -0.33761670849109227,
+        39.480227912221935
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19948",
+      "name": "FACULTAD DE ENFERMERÍA Y PODOLOGÍA DE LA UNIVERSIDAD DE VALENCIA",
+      "address": "València",
+      "coordinates": [
+        -0.3596257492200742,
+        39.479049491491814
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22390",
+      "name": "FONOTECA MUNICIPAL",
+      "address": "CARRER PALAU 6, València",
+      "coordinates": [
+        -0.3723285088017303,
+        39.47717143888907
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:22448",
+      "name": "FUNDACIÓN GENERAL DE LA UNIVERSIDAD DE VALÈNCIA",
+      "address": "CARRER AMADEU DE SAVOIA 4, València",
+      "coordinates": [
+        -0.36333450002183637,
+        39.47393700013644
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:23105",
+      "name": "GUP. GRUPO UNIVERSITARIO PARROQUIAL BENIMACLET.",
+      "address": "CARRER MARE DE DÉU DE L´ASSUMPCIÓ 2ac, València",
+      "coordinates": [
+        -0.35964794135326356,
+        39.48632633679334
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22504",
+      "name": "HEMEROTECA MUNICIPAL",
+      "address": "PLAÇA MAGÚNCIA 1, València",
+      "coordinates": [
+        -0.40204953595322684,
+        39.465252833634146
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "biblioteca",
+        "library",
+        "biblioteques",
+        "municipal library"
+      ]
+    },
+    {
+      "id": "valencia-facility:20037",
+      "name": "HOSPITAL CLÍNICO UNIVERSITARIO",
+      "address": "AVINGUDA BLASCO IBÁÑEZ 17, València",
+      "coordinates": [
+        -0.3606029746783577,
+        39.48053876008551
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20039",
+      "name": "HOSPITAL GENERAL UNIVERSITARIO",
+      "address": "AVINGUDA TRES CREUS 2, València",
+      "coordinates": [
+        -0.40547446647968804,
+        39.47117895816753
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20021",
+      "name": "HOSPITAL UNIVERSITARI I POLITÈCNIC LA FE (NUEVO HOSPITAL LA FE)",
+      "address": "AVINGUDA FERNANDO ABRIL MARTORELL 7, València",
+      "coordinates": [
+        -0.37368646538259637,
+        39.446176911844155
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20038",
+      "name": "HOSPITAL UNIVERSITARIO DOCTOR PESET",
+      "address": "AVINGUDA GASPAR AGUILAR 90, València",
+      "coordinates": [
+        -0.3923918825909075,
+        39.45420043961424
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20841",
+      "name": "INSTALACIONES DEPORTIVAS CAMPUS DE BLASCO IBÁÑEZ- UNIVERSIDAD DE VALENCIA",
+      "address": "AVINGUDA MENÉNDEZ Y PELAYO 19, València",
+      "coordinates": [
+        -0.35829108775083807,
+        39.48176402751738
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21019",
+      "name": "INSTALACIONES DEPORTIVAS CAMPUS DE TARONGERS - UNIVERSIDAD DE VALENCIA",
+      "address": "CARRER ALBALAT DELS TARONGERS S/N, València",
+      "coordinates": [
+        -0.34236074342288547,
+        39.48009041671259
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21020",
+      "name": "INSTITUTO CONFUCIO DE LA UNIVERSITAT DE VALÈNCIA",
+      "address": "CARRER SERPIS 29, València",
+      "coordinates": [
+        -0.34365599968203414,
+        39.475106999645796
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22778",
+      "name": "Instituto de Estudios Europeos de la Universidad Católica de Valencia San Vicente Mártir",
+      "address": "CARRER JORGE JUAN 18, València",
+      "coordinates": [
+        -0.3693240000777606,
+        39.469031999699034
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22562",
+      "name": "INSTITUTO INTERUNIVERSITARIO LÓPEZ PIÑERO -  (PALACIO DE CERVERÓ)",
+      "address": "PLAÇA CISNEROS 4, València",
+      "coordinates": [
+        -0.37603799973024987,
+        39.477996000117386
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22772",
+      "name": "INSTITUTO UNIVERSITARIO DE LA CREATIVIDAD E INNOVACIONES EDUCATIVAS",
+      "address": "CARRER SERPIS 29, València",
+      "coordinates": [
+        -0.34366499987633553,
+        39.47509800024543
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22769",
+      "name": "INSTITUTO UNIVERSITARIO DE TRÁFICO Y SEGURIDAD VIAL - INTRAS",
+      "address": "CARRER SERPIS 29, València",
+      "coordinates": [
+        -0.34366499987633553,
+        39.47509800024543
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22746",
+      "name": "LA NAU GRAN - UNIVERSITAT DE VALÈNCIA",
+      "address": "CARRER UNIVERSITAT 2, València",
+      "coordinates": [
+        -0.3725730002437302,
+        39.47190299999132
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22451",
+      "name": "ORFEÓN UNIVERSITARIO DE VALENCIA",
+      "address": "CARRER GASCÓ OLIAG 5, València",
+      "coordinates": [
+        -0.35741249969641564,
+        39.47897700034326
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21026",
+      "name": "ORGANISMO AUTÓNOMO UNIVERSIDAD POPULAR DEL AYUNTAMIENTO DE VALENCIA - OFICINAS CENTRALES",
+      "address": "CARRER MICALET 1, València",
+      "coordinates": [
+        -0.3756779996097226,
+        39.47553899995706
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22452",
+      "name": "ORQUESTA FILARMÓNICA DE LA UNIVERSIDAD DE VALENCIA",
+      "address": "CARRER AMADEU DE SAVOIA 4, València",
+      "coordinates": [
+        -0.36333450002183637,
+        39.47393700013644
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22241",
+      "name": "PATRONATO SUR-NORTE. UNIVERSIDAD DE VALENCIA",
+      "address": "CARRER AMADEU DE SAVOIA 4, València",
+      "coordinates": [
+        -0.36333625935195235,
+        39.47393901477782
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22766",
+      "name": "SERVEI DE LLENGÜES I POLITICA LINGÜISTICA - UNIVERSITAT DE VALÈNCIA",
+      "address": "CARRER SERPIS 29, València",
+      "coordinates": [
+        -0.34366499987633553,
+        39.47509800024543
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:23117",
+      "name": "TETUÁN. CLUB UNIVERSITARIO EN VALENCIA",
+      "address": "CARRER DOCTOR MOLINER 13, València",
+      "coordinates": [
+        -0.3625650003692262,
+        39.477014999832626
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21895",
+      "name": "UNIVERSIDAD DE VALENCIA",
+      "address": "AVINGUDA BLASCO IBÁÑEZ 13, València",
+      "coordinates": [
+        -0.36441140372764286,
+        39.47950567577
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21893",
+      "name": "UNIVERSIDAD DE VALENCIA",
+      "address": "CARRER NAU 2, València",
+      "coordinates": [
+        -0.3715761866992501,
+        39.47407477190717
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19966",
+      "name": "UNIVERSIDAD DE VALENCIA - ESTUDIO GENERAL - SEDE HISTÓRICA",
+      "address": "CARRER NAU 2, València",
+      "coordinates": [
+        -0.3716192874984114,
+        39.47404763935446
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22771",
+      "name": "UNIVERSIDAD EUROPEA DE VALENCIA",
+      "address": "PASSEIG ALBEREDA 7, València",
+      "coordinates": [
+        -0.36534150039050545,
+        39.47543999974323
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19965",
+      "name": "UNIVERSIDAD INTERNACIONAL MENÉNDEZ PELAYO - UIMP",
+      "address": "PLAÇA CARME 4, València",
+      "coordinates": [
+        -0.37733401002126105,
+        39.480791637973404
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19964",
+      "name": "UNIVERSIDAD NACIONAL EDUCACIÓN A DISTANCIA - UNED",
+      "address": "CARRER CASA DE LA MISERICÒRDIA 34, València",
+      "coordinates": [
+        -0.40912896669344423,
+        39.46637994877124
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21894",
+      "name": "UNIVERSIDAD POLITÉCNICA DE VALENCIA",
+      "address": "CAMÍ VERA S/N, València",
+      "coordinates": [
+        -0.344169504722603,
+        39.48362963043904
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20003",
+      "name": "UNIVERSIDAD POPULAR - ABASTOS",
+      "address": "CARRER ALBERIC 18, València",
+      "coordinates": [
+        -0.3874060464072242,
+        39.46965004104174
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19992",
+      "name": "UNIVERSIDAD POPULAR - ALGIRÓS",
+      "address": "CARRER MÚSIC GINÉS 21, València",
+      "coordinates": [
+        -0.34196113756118496,
+        39.4725226189617
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20116",
+      "name": "UNIVERSIDAD POPULAR - BENICALAP ESPACIO SOCIOCULTURAL",
+      "address": "CARRER LOUIS BRAILLE 1, València",
+      "coordinates": [
+        -0.3943023144636618,
+        39.49808837728415
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19999",
+      "name": "UNIVERSIDAD POPULAR - BENIFARAIG-POBLATS DEL NORD 2",
+      "address": "CARRER FERRER I BIGNÉ 85, València",
+      "coordinates": [
+        -0.38546999967855694,
+        39.53023200006023
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20120",
+      "name": "UNIVERSIDAD POPULAR - BENIMACLET",
+      "address": "CARRER FRANCESC MARTÍNEZ 28, València",
+      "coordinates": [
+        -0.3587715000710419,
+        39.48820200006233
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19988",
+      "name": "UNIVERSIDAD POPULAR - BENIMÀMET-BENIFERRI",
+      "address": "PLAÇA DOCTOR XIMENO 1, València",
+      "coordinates": [
+        -0.41724153342103476,
+        39.49950278050092
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20121",
+      "name": "UNIVERSIDAD POPULAR - BORBOTÓ-POBLATS DEL NORD 1",
+      "address": "PLAÇA MORERAL 8, BORBOTÓ, València",
+      "coordinates": [
+        -0.39060879035339896,
+        39.51590869600585
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22779",
+      "name": "UNIVERSIDAD POPULAR - CABANYAL",
+      "address": "València",
+      "coordinates": [
+        -0.32962771048966133,
+        39.47581227923745
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20086",
+      "name": "UNIVERSIDAD POPULAR - CAMINS AL GRAU",
+      "address": "CARRER TRAFALGAR 34, València",
+      "coordinates": [
+        -0.3439436351821816,
+        39.46345289039154
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20117",
+      "name": "UNIVERSIDAD POPULAR - CARPESA-POBLATS DEL NORD 2",
+      "address": "CARRER APÒSTOL SANT PERE 21, València",
+      "coordinates": [
+        -0.3780094119145727,
+        39.519111058954714
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21821",
+      "name": "UNIVERSIDAD POPULAR - CASTELLAR-OLIVERAL",
+      "address": "CAMÍ TREMOLAR 8, València",
+      "coordinates": [
+        -0.3632018101658681,
+        39.4237472631004
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20113",
+      "name": "UNIVERSIDAD POPULAR - CIUTAT VELLA",
+      "address": "CARRER SANT MIQUEL 14, València",
+      "coordinates": [
+        -0.37884264514362326,
+        39.47867102844638
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20115",
+      "name": "UNIVERSIDAD POPULAR - EL CABANYAL",
+      "address": "València",
+      "coordinates": [
+        -0.32962771048966133,
+        39.47581227923745
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19996",
+      "name": "UNIVERSIDAD POPULAR - EL HORNO DE ALCEDO",
+      "address": "CARRER GUADALQUIVIR 17, València",
+      "coordinates": [
+        -0.3761730000814084,
+        39.43241999969764
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19987",
+      "name": "UNIVERSIDAD POPULAR - EL PALMAR",
+      "address": "CARRER VILA JOIOSA 1, València",
+      "coordinates": [
+        -0.31751966662178593,
+        39.31311061134621
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22780",
+      "name": "UNIVERSIDAD POPULAR - ELS ORRIOLS",
+      "address": "CARRER SANTIAGO RUSIÑOL 13, València",
+      "coordinates": [
+        -0.3692602324872297,
+        39.49708447824268
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19985",
+      "name": "UNIVERSIDAD POPULAR - JESÚS",
+      "address": "PLAÇA HOLANDA S/N, València",
+      "coordinates": [
+        -0.38657381498510723,
+        39.449926777454344
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19990",
+      "name": "UNIVERSIDAD POPULAR - LA MALVARROSA",
+      "address": "AVINGUDA MALVA-ROSA 98, València",
+      "coordinates": [
+        -0.3265944522253319,
+        39.48314833936068
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19993",
+      "name": "UNIVERSIDAD POPULAR - LA SAÏDIA",
+      "address": "CARRER FRA PERE VIVES 8, València",
+      "coordinates": [
+        -0.37275200045198986,
+        39.488666393688966
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:20118",
+      "name": "UNIVERSIDAD POPULAR - LA TORRE",
+      "address": "CARRER BENIDOLEIG S/N, València",
+      "coordinates": [
+        -0.3932858429048714,
+        39.434422476175406
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19998",
+      "name": "UNIVERSIDAD POPULAR - MASSARROJOS-POBLATS DEL NORD 1",
+      "address": "CARRER MOSSÉN BAU 1012, València",
+      "coordinates": [
+        -0.40406436675560964,
+        39.539533949594734
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19982",
+      "name": "UNIVERSIDAD POPULAR - NA ROVELLA",
+      "address": "CARRER ARABISTA AMBROSIO HUICI s/n, València",
+      "coordinates": [
+        -0.35946771464176536,
+        39.4579136114656
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19991",
+      "name": "UNIVERSIDAD POPULAR - NAZARET",
+      "address": "CARRER ALGEMESÍ S/N, València",
+      "coordinates": [
+        -0.3333524932662181,
+        39.44859335284161
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19989",
+      "name": "UNIVERSIDAD POPULAR - NOU MOLES",
+      "address": "CARRER LLUÍS LAMARCA 12, València",
+      "coordinates": [
+        -0.39972059421671907,
+        39.472731403160815
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19994",
+      "name": "UNIVERSIDAD POPULAR - PARRETA - MARXALENES",
+      "address": "CARRER VICENT PERIS 3, València",
+      "coordinates": [
+        -0.38705639359198185,
+        39.488493871253645
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19986",
+      "name": "UNIVERSIDAD POPULAR - PINEDO",
+      "address": "CARRER SERRELLA 21, PINEDO, València",
+      "coordinates": [
+        -0.3397818994063599,
+        39.42360889680442
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19997",
+      "name": "UNIVERSIDAD POPULAR - POBLE NOU-POBLATS DEL NORD 1",
+      "address": "CAMÍ MONTCADA 205, València",
+      "coordinates": [
+        -0.38362854246200023,
+        39.50382405513024
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19995",
+      "name": "UNIVERSIDAD POPULAR - RUZAFA",
+      "address": "València",
+      "coordinates": [
+        -0.3737785054138153,
+        39.464709112092116
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:19984",
+      "name": "UNIVERSIDAD POPULAR - SAN ISIDRO",
+      "address": "CARRER JOSÉ ANDREU ALABARTA 25, València",
+      "coordinates": [
+        -0.40274219087597657,
+        39.45515939185351
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:21732",
+      "name": "UNIVERSIDAD SIN BARRERAS",
+      "address": "AVINGUDA BLASCO IBÁÑEZ S/N, València",
+      "coordinates": [
+        -0.36103495609437286,
+        39.47839005684525
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:22764",
+      "name": "UNIVERSITAT DE VALÈNCIA. SERVEI D'ESPORTS",
+      "address": "AVINGUDA BLASCO IBÁÑEZ 13, València",
+      "coordinates": [
+        -0.3641445001101134,
+        39.479292000357695
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    },
+    {
+      "id": "valencia-facility:39982",
+      "name": "UNIVERSITAT INTERNACIONAL DE VALÈNCIA. VIU",
+      "address": "CARRER PINTOR SOROLLA 21, València",
+      "coordinates": [
+        -0.37205999956923036,
+        39.47152500014197
+      ],
+      "source": "valencia-open-data",
+      "attribution": "Ajuntament de València — CC BY 4.0",
+      "aliases": [
+        "universitat",
+        "universidad",
+        "university"
+      ]
+    }
+  ]
+}

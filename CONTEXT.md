@@ -126,6 +126,24 @@ _Avoid_: Closest stop, local station, nearest stop, my station
 Taking a User Location at launch, and on a native resume after 5 minutes hidden, without being asked. It runs only where permission is already granted, with one system prompt for life on native and none on the web, and it yields to anything the viewer does first. Silent when it fails. See ADR-0008.
 _Avoid_: Autolocate, background location, geofencing
 
+### Passenger Journeys
+
+**Destination**:
+The place a passenger chooses to reach, identified by a street address, a named landmark, a Station, or an EMT Bus Stop.
+_Avoid_: Headsign (which describes a Vehicle's advertised direction), target station (when the destination is a place beyond transit)
+
+**Starting Point**:
+The place from which a passenger plans a Journey, taken from User Location by default or chosen explicitly.
+_Avoid_: User Location (when the passenger has chosen a different starting place)
+
+**Journey**:
+A passenger's complete trip from a Starting Point to a Destination, including walking, metro, tram, or EMT bus travel and any transfers.
+_Avoid_: Line (which is a transit corridor), Timetable Walk (which estimates a Vehicle's location)
+
+**Journey Progress**:
+The passenger's progress through a chosen Journey, including the current walking or transit portion and upcoming Stations, EMT Bus Stops, transfers, and alighting points.
+_Avoid_: Vehicle tracking (which concerns a Vehicle rather than the passenger's Journey)
+
 ### Data Sources
 
 **GTFS Feed**:

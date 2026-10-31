@@ -11,6 +11,11 @@ const MapView = lazy(() =>
 );
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
+import DestinationPreview from './components/DestinationPreview';
+import JourneyPlanner from './components/JourneyPlanner';
+import JourneyProgress from './components/JourneyProgress';
+import { createJourneySession } from './services/journeySession';
+import journeyNative from './services/journeyNative';
 import StationPanel from './components/StationPanel';
 import DashboardBoard from './components/DashboardBoard';
 import AboutModal from './components/AboutModal';
@@ -110,6 +115,43 @@ function App() {
   // accepts this prop to dim other lines when one does.
   const hoverLine = null;
   const [userLocation, setUserLocation] = useState(null);
+  // Destination is independent of the GPS fix and the existing nearby-transit pin.
+  const [destination, setDestination] = useState(null);
+  const [planningDestination, setPlanningDestination] = useState(null);
+  const [journeySnapshot, setJourneySnapshot] = useState(null);
+  const [journeySession] = useState(() => createJourneySession({
+    nativeAdapter: journeyNative,
+    onChange: setJourneySnapshot,
+  }));
+  const activeJourney = journeySnapshot?.status === 'active' ? journeySnapshot.journey : null;
+  useEffect(() => () => journeySession.dispose(), [journeySession]);
+  const startJourney = (journey) => {
+    journeySession.start(journey, { soundEnabled: false, labels: {
+      journeyTitle: t('navigation.journeyTitle'),
+      alightNext: t('navigation.alightNext'),
+      estimatedAlightNext: t('navigation.estimatedAlightNext'),
+    } });
+    setPlanningDestination(null);
+    if (!userLocation?.coordinates || userLocation.isMapClick) void handleLocate();
+  };
+  const endJourney = (completed = false) => {
+    if (completed) journeySession.complete();
+    else journeySession.cancel();
+    setDestination(null);
+    setPlanningDestination(null);
+  };
+  const selectDestination = (place) => {
+    setDestination(place);
+    setPlanningDestination(null);
+    setIsSearchOpen(false);
+    setFollowing(false);
+  };
+  const openDirections = (place) => {
+    setDestination(place);
+    setPlanningDestination(place);
+    setFollowing(false);
+  };
+  const navigationOpen = Boolean(destination || planningDestination || activeJourney);
   const [locateState, setLocateState] = useState('idle');
   const [locateNotice, setLocateNotice] = useState(null);
   // The Station the floating walking box points at; null hides the box. The
@@ -122,6 +164,16 @@ function App() {
   // every few seconds never re-renders the app; only the larger-movement anchor below updates React state.
   const liveFixChannelRef = useRef(null);
   if (!liveFixChannelRef.current) liveFixChannelRef.current = createLiveFixChannel();
+  useEffect(() => liveFixChannelRef.current.subscribe(fix => journeySession.updateLocation(fix)), [journeySession]);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    let handle;
+    let disposed = false;
+    CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void journeySession.reconcileNative();
+    }).then(listener => { if (disposed) void listener.remove(); else handle = listener; });
+    return () => { disposed = true; void handle?.remove(); };
+  }, [journeySession]);
   const liveTrackerRef = useRef(null);
   // True while the camera follows the dot; broken by a manual pan or by choosing a stop, restored by locate.
   const [following, setFollowing] = useState(false);
@@ -774,6 +826,8 @@ function App() {
           activeLineFilter={activeLineFilter}
           hoverLine={hoverLine}
           userLocation={userLocation}
+          destination={destination}
+          navigationReady={mapReady}
           onReady={() => setMapReady(true)}
           onUserInteract={() => { autoLocatorRef.current?.interrupt(); setFollowing(false); }}
           liveFixChannel={liveFixChannelRef.current}
@@ -839,6 +893,8 @@ function App() {
               selectedStation={selectedStation}
               onSelectBusLine={handleSelectBusLine}
               onSelectBusStop={handleSelectBusStop}
+              onSelectDestination={selectDestination}
+              locationCoordinates={!userLocation?.isMapClick ? userLocation?.coordinates : null}
               onClose={() => setIsSearchOpen(false)}
             />
             <button
@@ -934,7 +990,7 @@ function App() {
       </div>
 
       {/* Station Focus panel — right in landscape, bottom in portrait */}
-      {selectedStation && (
+      {selectedStation && !navigationOpen && (
         <StationPanel
           key={stationPanelKey(selectedStation)}
           station={selectedStation}
@@ -950,6 +1006,12 @@ function App() {
           }}
           onSelectFeederStop={handleSelectBusStopFromHub}
           onSelectStation={handleSelectStationFromHub}
+          onDirections={!isHubStation(selectedStation) && !selectedStation.isPin ? () => openDirections({
+            id: `station:${selectedStation.properties?.name}`,
+            name: selectedStation.properties?.name,
+            coordinates: selectedStation.geometry.coordinates,
+            source: 'station',
+          }) : null}
           userLocation={userLocation}
           isPin={Boolean(
             selectedStation?.isPin ||
@@ -961,7 +1023,7 @@ function App() {
       )}
 
       {/* Bus Line Inspector Card (Variant B & C) */}
-      {activeBusLine && (
+      {activeBusLine && !navigationOpen && (
         <BusLineInspector
           line={activeBusLine}
           onClose={() => setActiveBusLine(null)}
@@ -970,7 +1032,7 @@ function App() {
       )}
 
       {/* Bus Stop Board (Variant B & C) */}
-      {selectedBusStop && (
+      {selectedBusStop && !navigationOpen && (
         <BusStopBoard
           stop={selectedBusStop}
           theme={theme}
@@ -986,6 +1048,33 @@ function App() {
             const found = getRealBusLines().find(l => l.id.toLowerCase() === String(lineId).toLowerCase());
             if (found) handleSelectBusLine(found);
           }}
+        />
+      )}
+
+      {destination && !planningDestination && !activeJourney && (
+        <DestinationPreview destination={destination} onDirections={openDirections} onClose={() => setDestination(null)} />
+      )}
+
+      {planningDestination && !activeJourney && (
+        <JourneyPlanner
+          key={planningDestination.id || planningDestination.name}
+          destination={planningDestination}
+          initialStartingPoint={userLocation?.status === 'located' && !userLocation.isMapClick
+            ? { name: t('navigation.useCurrentLocation'), coordinates: userLocation.coordinates }
+            : null}
+          onStartJourney={startJourney}
+          onClose={() => setPlanningDestination(null)}
+        />
+      )}
+
+      {activeJourney && (
+        <JourneyProgress
+          snapshot={journeySnapshot}
+          onConfirmBoarding={journeySession.confirmBoarding}
+          onCorrectCall={journeySession.correctCall}
+          onAdvanceLeg={journeySession.advanceLeg}
+          onComplete={() => endJourney(true)}
+          onCancel={() => endJourney(false)}
         />
       )}
 

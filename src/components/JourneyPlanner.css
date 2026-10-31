@@ -1,0 +1,39 @@
+.journey-planner {
+  position: absolute;
+  z-index: 1100;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(72dvh, 760px);
+  overflow: auto;
+  padding: 18px;
+  border-radius: 18px;
+  box-sizing: border-box;
+  color: var(--text-primary);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-panel);
+}
+.journey-planner-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.journey-planner h2, .journey-planner p { margin: 0 0 6px; }
+.journey-planner h2 { font-size: 1.1rem; }
+.journey-planner button, .journey-planner select { font: inherit; color: inherit; }
+.journey-planner-header button { background: transparent; border: 0; padding: 6px; cursor: pointer; }
+.journey-planner label { display: block; margin-bottom: 6px; }
+.journey-planner select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-panel-solid); }
+.journey-options { display: grid; gap: 14px; margin-top: 14px; }
+.journey-option { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; }
+.journey-option-summary { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .9rem; }
+.journey-legs { padding-left: 22px; margin: 14px 0; }
+.journey-legs li { padding: 0 0 12px 4px; }
+.journey-leg-heading { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.journey-leg-heading > span, .journey-muted { color: var(--text-secondary); font-size: .82rem; }
+.journey-primary-action { width: 100%; border: 1px solid var(--border-color); background: var(--bg-panel-solid); border-radius: 10px; padding: 11px; cursor: pointer; }
+.journey-primary-action:disabled { opacity: .5; cursor: default; }
+
+.journey-status { margin-top: 14px; }
+.journey-disclosure { margin: 10px 0; }
+.journey-planner :is(button, select):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (min-width: 768px) {
+  .journey-planner { max-height: calc(100dvh - 110px); }
+}

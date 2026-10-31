@@ -6,7 +6,7 @@
 // tablet that is where a thumb rests; bottom in portrait, because on a phone it
 // is the only place a thumb reaches at all.
 import React, { useEffect, useState, useMemo } from 'react';
-import { X, Radio, Database, CheckCircle2, Clock, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Radio, Database, CheckCircle2, Clock, Maximize2, Minimize2, Navigation } from 'lucide-react';
 import arrivalStore, { CACHE_TTL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
 import { countdownHeat, countdownLabel, countdownUnit } from '../utils/countdownHeat';
@@ -78,6 +78,7 @@ const StationPanel = ({
   station,
   theme,
   onClose,
+  onDirections,
   onSelectFeederStop,
   onSelectStation,
   userLocation,
@@ -568,6 +569,19 @@ const StationPanel = ({
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {onDirections && (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); onDirections(); }}
+              onPointerDown={(event) => event.stopPropagation()}
+              className="station-panel-close"
+              aria-label={t('navigation.directions')}
+              title={t('navigation.directions')}
+              style={{ width: 32, height: 32, minWidth: 32, borderRadius: '50%', border: 'none', background: 'var(--bg-hover)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <Navigation size={16} />
+            </button>
+          )}
           <button
             type="button"
             onClick={(e) => {

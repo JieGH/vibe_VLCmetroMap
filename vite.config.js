@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createNavigationHandler } from './server/navigation.js'
 
 // Build-time date-stamp injected as a global constant so the running app can
 // always report which build it is. Format: YYYY.MM.DD (UTC). Baked in at
@@ -29,6 +30,16 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    {
+      name: 'navigation-api',
+      configureServer(server) {
+        const env = loadEnv('development', process.cwd(), '');
+        server.middlewares.use(createNavigationHandler({
+          placeSearchUrl: env.PLACE_SEARCH_URL || process.env.PLACE_SEARCH_URL,
+          otpUrl: env.OTP_URL || process.env.OTP_URL,
+        }));
+      },
+    },
     {
       name: 'feedback-mock-api',
       configureServer(server) {

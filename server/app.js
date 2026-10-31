@@ -7,6 +7,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { createPrevisionClient } from './prevision.js';
+import { createNavigationHandler } from './navigation.js';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -96,6 +97,7 @@ const sendText = (res, status, body, type = 'application/json') => {
 export function createApp({ root, fetch, now = () => Date.now() } = {}) {
   const assets = loadAssets(root);
   const getPrevision = createPrevisionClient({ fetch, now });
+  const navigation = createNavigationHandler({ fetchFn: fetch ?? globalThis.fetch, now });
 
   async function proxyPrevision(req, res, stationId) {
     if (req.method !== 'GET') return sendText(res, 405, '{"error":"method not allowed"}');
@@ -403,6 +405,9 @@ export function createApp({ root, fetch, now = () => Date.now() } = {}) {
     }
 
     if (pathname.startsWith('/api/')) {
+      if (pathname === '/api/places' || pathname === '/api/journeys') {
+        return void navigation(req, res);
+      }
       if (pathname === '/api/feedback') {
         return void handleFeedback(req, res);
       }

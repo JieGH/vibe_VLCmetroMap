@@ -2,17 +2,17 @@
 
 _Play requires a privacy policy link to complete the Data safety form, even for apps that collect nothing, and it must be on the store listing and reachable in the app (https://support.google.com/googleplay/android-developer/answer/10787469). Publish this text at a stable public URL (for example the project's GitHub Pages site or a page in this repository) and enter that URL in Play Console. Replace the contact line if the contact address changes._
 
-**Effective date:** 26 October 2026
+**Effective date:** 31 October 2026
 
-Xarxa ("the app") is a free, independent map of the Metrovalencia metro and tram network. This policy explains what the app does with information. In short: it does not collect your personal data.
+Xarxa ("the app") is a free, independent map of the Metrovalencia metro and tram network. This policy explains what the app does with information. Optional place search and Journey planning send the information described below to the configured services.
 
 ## What we collect
 
-Nothing. Xarxa has no accounts, no sign-in, no advertising, no analytics and no tracking. We do not receive any information about you or your use of the app.
+The app does not require a passenger account or advertising identifiers. When you use place search, the configured search service receives your query. When you request Directions, the configured routing service receives your chosen starting point and destination, including their coordinates and requested departure time. These services also receive normal connection information such as an IP address; their own terms and retention policies apply.
 
 ## Your location
 
-If you use the locate button, the app asks Android for your location. It uses the location only on your phone to work out which metro stations and bus stops are nearest and to draw a dot on the map. After you locate yourself, the app keeps following your position, but only while the app is open on screen; it stops when you close or leave the app, and it never tracks you in the background. To save battery it reads your position less often while you stand still. Your location is not sent to us or to anyone else, is not stored, and is not written to logs. You can refuse the permission and still use the whole app; only the locate button needs it. You can withdraw the permission at any time in Android Settings, Apps, Xarxa, Permissions.
+If you use the locate button, the app asks Android for your location. It uses the location only on your phone to work out which metro stations and bus stops are nearest and to draw a dot on the map. After you locate yourself, the app keeps following your position, but only while the app is open on screen; it stops when you close or leave the app, and ordinary map browsing does not track you in the background. An explicitly started native Journey can enable locked-phone guidance, which stops when the Journey completes or is cancelled. To save battery it reads your position less often while you stand still. Nearby-station discovery is performed on-device. Requesting Directions can send your User Location as the starting point to the configured routing service; it is not continuously uploaded by map tracking. You can refuse location permission and still browse transit or plan using a manually chosen Starting Point. You can withdraw the permission at any time in Android Settings, Apps, Xarxa, Permissions.
 
 ## Live departure times
 
@@ -22,7 +22,7 @@ To show live city-bus arrivals the app contacts the public information service o
 
 ## Information stored on your phone
 
-The app stores your preferences (language, text size, theme choice, and whether it has already explained location or shown an install banner) and recently fetched departure times on your phone so that it works faster. This stays on your phone and is removed when you uninstall the app or clear its storage.
+The app stores your preferences (language, text size, theme choice, and whether it has already explained location or shown an install banner) and recently fetched departure times on your phone so that it works faster. An unfinished selected Journey and its instructions may also be retained on-device for an explicit Resume journey action and cleared when ended or cancelled. Local preferences and saved instructions are removed when you uninstall the app or clear its storage.
 
 ## Children
 
@@ -30,7 +30,7 @@ The app is a general-purpose public-transport tool and does not knowingly collec
 
 ## Third parties
 
-The app contains no advertising or analytics code. It uses open-source libraries (the main ones, MapLibre Native, OpenStreetMap data and Protomaps PMTiles, are credited under About in the app; the full list is in the source code repository) and open map data (OpenStreetMap contributors). They run on your phone and do not send your data anywhere.
+The app contains no advertising or analytics code. It uses open-source libraries (the main ones, MapLibre Native, OpenStreetMap data and Protomaps PMTiles, are credited under About in the app; the full list is in the source code repository) and open map data (OpenStreetMap contributors). The map-rendering libraries run on your phone. Configured place-search and routing services receive the queries and coordinates described above.
 
 ## Changes
 

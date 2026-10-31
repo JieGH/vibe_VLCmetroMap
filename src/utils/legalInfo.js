@@ -44,7 +44,7 @@ export const APP_LEGAL_INFO = {
   privacy: {
     title: 'Privacy & Device Data',
     points: [
-      'Your User Location fix is queried on-device only when requesting nearest station navigation, and is never logged, stored, or transmitted to any server.',
+      'Nearest-station discovery uses your User Location on-device. Place search sends your query to the configured search service; Directions sends the selected starting point and destination to the routing service.',
       'Zero telemetry: no user analytics, tracking cookies, advertising identifiers, or account requirements.',
     ],
   },
@@ -93,7 +93,7 @@ export const APP_LEGAL_INFO_ES = {
   privacy: {
     title: 'Privacidad y datos del dispositivo',
     points: [
-      'Tu ubicación se consulta solo en el dispositivo cuando solicitas la navegación a la estación más cercana, y nunca se registra, almacena ni transmite a ningún servidor.',
+      'La búsqueda de estaciones cercanas usa tu ubicación en el dispositivo. La búsqueda de lugares envía tu consulta al servicio configurado; Cómo llegar envía el punto de partida y destino al servicio de rutas.',
       'Cero telemetría: sin analíticas de usuario, cookies de seguimiento, identificadores publicitarios ni cuentas obligatorias.',
     ],
   },
@@ -141,7 +141,7 @@ export const APP_LEGAL_INFO_CA = {
   privacy: {
     title: 'Privacitat i dades del dispositiu',
     points: [
-      'La teua ubicació es consulta només en el dispositiu quan sol·licites la navegació a l\'estació més pròxima, i mai es registra, emmagatzema ni transmet a cap servidor.',
+      'La cerca d’estacions pròximes usa la teua ubicació en el dispositiu. La cerca de llocs envia la consulta al servici configurat; Com arribar envia el punt de partida i destinació al servici de rutes.',
       'Zero telemetria: sense analítiques d\'usuari, galetes de seguiment, identificadors publicitaris ni comptes obligatoris.',
     ],
   },

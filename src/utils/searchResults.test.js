@@ -13,6 +13,21 @@ const sources = {
 const search = (query) => buildSearchResults({ query, ...sources });
 
 describe('search results (#137, #138)', () => {
+  it('offers place Destinations alongside transit and selects the intended ambiguous match', () => {
+    const places = [
+      { id: 'library-1', name: 'Biblioteca', address: 'Carrer Major 1', coordinates: [-0.37, 39.47] },
+      { id: 'library-2', name: 'Biblioteca', address: 'Carrer Major 2', coordinates: [-0.38, 39.48] },
+    ];
+    const { allItems } = buildSearchResults({ query: 'Biblioteca', ...sources, places });
+    const destinations = allItems.filter(item => item.type === 'destination');
+    expect(destinations.map(item => item.data.address)).toEqual(['Carrer Major 1', 'Carrer Major 2']);
+    const onDestination = vi.fn();
+    const onStation = vi.fn();
+    selectResult(destinations[1], { destination: onDestination, station: onStation });
+    expect(onDestination).toHaveBeenCalledWith(places[1]);
+    expect(onStation).not.toHaveBeenCalled();
+  });
+
   it('finds Colón as a station, accent-insensitively, and hands on the feed feature itself', () => {
     const { allItems } = search('Colon');
     const item = allItems.find(i => i.type === 'station' && i.data.properties.name === 'Colón');

@@ -643,6 +643,8 @@ const MapView = ({
   following = false,
   centrePinActive = false,
   gpsFix = null,
+  destination = null,
+  navigationReady = false,
 }) => {
   // Search hands in the raw feed's Station; focus must read like a tapped marker.
   const selectedStation = useMemo(
@@ -652,6 +654,15 @@ const MapView = ({
   const { language } = useTranslation();
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !destination?.coordinates) return;
+    const marker = new Marker({ color: '#f4c542' }).setLngLat(destination.coordinates).addTo(map);
+    marker.getElement().setAttribute('aria-label', destination.name);
+    marker.getElement().title = destination.name;
+    focusTarget(map, destination.coordinates, panelAwarePadding(map, { hasPanel: true }), { minZoom: STATION_FOCUS_ZOOM });
+    return () => marker.remove();
+  }, [destination, navigationReady]);
   const stMarkersRef    = useRef([]);
   const busMarkersRef   = useRef([]);
   const animFrameRef    = useRef(null);

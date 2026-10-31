@@ -1,5 +1,8 @@
 # Play Console: Data safety form
 
+> Navigation implementation update (31 October 2026): the no-transmission answers below describe the earlier transit-map build. Do not reuse those answers for a release with passenger navigation enabled. Place queries are sent to the configured search service; Directions sends starting-point and destination coordinates to the routing service. Active Journey instructions may be retained on-device for resume, and native guidance can use location while the phone is locked only during an explicitly started Journey. Reassess the store declarations against the actual deployed providers, retention, permissions, and enabled features before submission. The separate native-app worktree has not been changed by this implementation.
+
+
 Answers for the Data safety section, for both Android apps (Capacitor `com.jielei.Xarxa` and native `com.jielei.xarxa.nativeapp`; they behave the same). Rules verified 2026-10-25 against https://support.google.com/googleplay/android-developer/answer/10787469. They match the app's behaviour as built; re-check them whenever a dependency, permission or network call is added.
 
 ## Overview questions

@@ -6,12 +6,12 @@ import { searchFuzzy } from './fuzzySearch';
 export const MAX_BUS_STOP_RESULTS = 8;
 
 /**
- * @param {{ query: string, lines: object[], busLines: object[], stations: object[], busStops: object[] }} sources
- * @returns {{ filteredLines: object[], filteredBusLines: object[], filteredStations: object[], filteredBusStops: object[],
- *   allItems: { type: 'line'|'busLine'|'station'|'busStop', data: object }[] }}
- *   allItems is the flat order keyboard navigation walks: lines, bus lines, stations, bus stops.
+ * @param {{ query: string, lines: object[], busLines: object[], stations: object[], busStops: object[], places?: object[] }} sources
+ * @returns {{ filteredLines: object[], filteredBusLines: object[], filteredStations: object[], filteredBusStops: object[], filteredPlaces: object[],
+ *   allItems: { type: 'line'|'busLine'|'station'|'busStop'|'destination', data: object }[] }}
+ *   allItems is the flat order keyboard navigation walks: lines, bus lines, stations, bus stops, places.
  */
-export const buildSearchResults = ({ query, lines, busLines, stations, busStops }) => {
+export const buildSearchResults = ({ query, lines, busLines, stations, busStops, places = [] }) => {
   const q = query.trim();
   const filteredLines = q
     ? searchFuzzy(lines, query, l => `${l.properties.name} Line ${l.properties.line} Linia ${l.properties.line}`)
@@ -23,14 +23,17 @@ export const buildSearchResults = ({ query, lines, busLines, stations, busStops 
   const filteredBusStops = q
     ? searchFuzzy(busStops, query, s => `${s.stopCode} ${s.stopName}`).slice(0, MAX_BUS_STOP_RESULTS)
     : [];
+  // The provider has already searched these, including spellings not present in the returned name.
+  const filteredPlaces = q ? places.slice(0, 8) : [];
 
   const allItems = [
     ...filteredLines.map(data => ({ type: 'line', data })),
     ...filteredBusLines.map(data => ({ type: 'busLine', data })),
     ...filteredStations.map(data => ({ type: 'station', data })),
     ...filteredBusStops.map(data => ({ type: 'busStop', data })),
+    ...filteredPlaces.map(data => ({ type: 'destination', data })),
   ];
-  return { filteredLines, filteredBusLines, filteredStations, filteredBusStops, allItems };
+  return { filteredLines, filteredBusLines, filteredStations, filteredBusStops, filteredPlaces, allItems };
 };
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Search, X, MapPin, Navigation } from 'lucide-react';
 import metroData from '../data/metro_lines.json';
 import gtfsData from '../data/gtfs_expanded.json';
@@ -9,6 +9,8 @@ import { lineColor } from '../utils/lineColor';
 import { getRealBusLines, getAllBusStops } from '../data/emtData';
 import BusBadge from './BusBadge';
 import { POPULAR_BUS_LINE_IDS } from '../utils/popularBus';
+import { createPlaceSearchSession, searchPlaces } from '../services/placeSearch';
+import { getDistance } from '../utils/geoUtils';
 
 // gtfs_expanded.json is the canonical station set for the whole network; the
 // handful of points in metro_lines.json are a much older subset.
@@ -45,6 +47,9 @@ const SearchBar = ({
   selectedStation,
   onSelectBusLine,
   onSelectBusStop,
+  onSelectDestination,
+  locationCoordinates,
+  placeSearch = searchPlaces,
   autoFocus = false,
   onClose,
 }) => {
@@ -55,6 +60,15 @@ const SearchBar = ({
   const dropdownRef = useRef(null);
   const inputRef    = useRef(null);
   const [suggestStyle, setSuggestStyle] = useState({});
+  const [placeState, setPlaceState] = useState({ query: '', places: [], status: 'idle' });
+  const placeSession = useMemo(() => createPlaceSearchSession({ search: placeSearch, onChange: setPlaceState }), [placeSearch]);
+
+  useEffect(() => {
+    // Local distances do not require sending the passenger's GPS coordinates to the search service.
+    if (onSelectDestination && isOpen) placeSession.query(query);
+    else placeSession.dispose();
+    return () => placeSession.dispose();
+  }, [placeSession, query, isOpen, onSelectDestination]);
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
@@ -69,13 +83,17 @@ const SearchBar = ({
     : [];
 
   // Filtered results with Valencian accent-insensitive fuzzy search; bus stops only when the host can open them.
-  const { filteredLines, filteredBusLines, filteredStations, filteredBusStops, allItems } = buildSearchResults({
+  const { filteredLines, filteredBusLines, filteredStations, filteredBusStops, filteredPlaces, allItems } = buildSearchResults({
     query,
     lines,
     busLines: getRealBusLines(),
     stations,
     busStops: onSelectBusStop ? getAllBusStops() : [],
+    places: onSelectDestination && placeState.query === query.trim() ? placeState.places : [],
   });
+  const showPlaceSearch = Boolean(onSelectDestination && query.trim().length >= 3);
+  const showDropdown = isOpen && (allItems.length > 0 || showPlaceSearch);
+  const placeStatus = placeState.query === query.trim() ? placeState.status : 'loading';
 
   // The suggestions are wider than the search field, so place them inside the viewport.
   useEffect(() => {
@@ -158,6 +176,12 @@ const SearchBar = ({
     finishSelection();
   }, [onSelectBusStop, finishSelection]);
 
+  const handleSelectDestination = useCallback((place) => {
+    onSelectDestination(place);
+    setQuery(place.name);
+    finishSelection();
+  }, [onSelectDestination, finishSelection]);
+
   const handleClear = () => {
     setQuery('');
     setIsOpen(false);
@@ -205,6 +229,7 @@ const SearchBar = ({
           busLine: handleSelectBusLine,
           busStop: handleSelectBusStop,
           line: handleSelectLine,
+          destination: handleSelectDestination,
         });
       }
     }
@@ -222,10 +247,10 @@ const SearchBar = ({
           type="text"
           className="search-bar-input"
           role="combobox"
-          aria-expanded={isOpen && allItems.length > 0}
+          aria-expanded={showDropdown}
           aria-controls="search-bar-listbox"
           aria-autocomplete="list"
-          aria-activedescendant={isOpen && highlighted >= 0 ? `search-bar-option-${highlighted}` : undefined}
+          aria-activedescendant={isOpen && highlighted >= 0 && highlighted < allItems.length ? `search-bar-option-${highlighted}` : undefined}
           autoComplete="off"
           value={query}
           onChange={e => {
@@ -245,8 +270,8 @@ const SearchBar = ({
             }
           }}
           onKeyDown={handleKeyDown}
-          placeholder={t('searchBar.placeholder')}
-          aria-label={t('searchBar.ariaLabel')}
+          placeholder={t(onSelectDestination ? 'navigation.searchPlaceholder' : 'searchBar.placeholder')}
+          aria-label={t(onSelectDestination ? 'navigation.searchLabel' : 'searchBar.ariaLabel')}
           style={{
             background: 'transparent',
             border: 'none',
@@ -312,7 +337,7 @@ const SearchBar = ({
       )}
 
       {/* Dropdown */}
-      {isOpen && allItems.length > 0 && (
+      {showDropdown && (
         <div
           className="glass-panel search-bar-results"
           id="search-bar-listbox"
@@ -330,6 +355,11 @@ const SearchBar = ({
           }}
           role="listbox"
         >
+          {showPlaceSearch && (
+            <div style={{ padding: '4px 14px 8px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+              {t('navigation.searchDisclosure')}
+            </div>
+          )}
           {/* Lines section */}
           {filteredLines.length > 0 && (
             <div style={{ padding: '4px 0' }}>
@@ -466,6 +496,44 @@ const SearchBar = ({
                   </ResultOption>
                 );
               })}
+            </div>
+          )}
+          {filteredPlaces.length > 0 && (
+            <div style={{ padding: '4px 0' }}>
+              <div style={{ padding: '2px 14px 4px', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-secondary)' }}>
+                {t('navigation.places')}
+              </div>
+              {filteredPlaces.map(place => {
+                const idx = itemIdx++;
+                const distance = Array.isArray(locationCoordinates) && locationCoordinates.length === 2 && locationCoordinates.every(Number.isFinite)
+                  ? getDistance(locationCoordinates, place.coordinates) : null;
+                return (
+                  <ResultOption key={place.id} idx={idx} highlighted={highlighted === idx} onPick={() => handleSelectDestination(place)} onHover={setHighlighted}>
+                    <MapPin size={14} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 500 }}>{place.name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{place.address}</div>
+                      {distance !== null && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                          {distance < 1000
+                            ? t('navigation.distanceMetres', { distance: Math.round(distance) })
+                            : t('navigation.distanceKilometres', { distance: (distance / 1000).toFixed(1) })}
+                        </div>
+                      )}
+                    </div>
+                  </ResultOption>
+                );
+              })}
+              {[...new Set(filteredPlaces.map(place => place.attribution).filter(Boolean))].map(attribution => (
+                <div key={attribution} style={{ padding: '4px 14px', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                  {t('navigation.searchAttribution', { attribution })}
+                </div>
+              ))}
+            </div>
+          )}
+          {showPlaceSearch && (placeStatus !== 'ready' || filteredPlaces.length === 0) && (
+            <div role="status" aria-live="polite" style={{ padding: '8px 14px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {t(placeStatus === 'unavailable' ? 'navigation.placesUnavailable' : placeStatus === 'ready' ? 'navigation.noPlaces' : 'navigation.searchingPlaces')}
             </div>
           )}
         </div>
