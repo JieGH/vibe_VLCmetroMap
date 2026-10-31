@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  isInsideScrollRegion,
   calculateDragOffset,
   shouldDismissOnRelease,
   getDragCardStyle,
@@ -153,4 +154,28 @@ describe('useDragToDismiss helpers', () => {
       delete globalThis.cancelAnimationFrame;
     });
   });
+});
+
+ describe('card drag scroll boundaries', () => {
+  const readStyle = (node) => node.style || {};
+  it('excludes both independent lists and horizontal scrolling even at their edges', () => {
+    const card = {};
+    for (const style of [{ overflowY: 'auto' }, { overflowX: 'auto' }, { overflowY: 'scroll' }]) {
+      const list = { parentElement: card, style, scrollWidth: 200, clientWidth: 100 };
+      const row = { parentElement: list };
+      expect(isInsideScrollRegion(row, card, readStyle)).toBe(true);
+    }
+  });
+  it('allows blank card padding and non-scrollable wrappers', () => {
+    const card = { style: { overflowY: 'auto' } };
+    const wrapper = { parentElement: card, style: { overflowY: 'hidden' } };
+    expect(isInsideScrollRegion(wrapper, card, readStyle)).toBe(false);
+    expect(isInsideScrollRegion(card, card, readStyle)).toBe(false);
+  });
+});
+
+it('allows header strip gaps when horizontal chips fit without scrolling', () => {
+  const card = {};
+  const strip = { parentElement: card, scrollWidth: 200, clientWidth: 200 };
+  expect(isInsideScrollRegion(strip, card, () => ({ overflowX: 'auto', overflowY: 'hidden' }))).toBe(false);
 });

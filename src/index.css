@@ -2044,3 +2044,11 @@ button:active {
 @media (prefers-reduced-motion: reduce) {
   .wave-dot { animation: none; opacity: 0.7; }
 }
+
+/* The whole non-interactive header is a drag surface; overflowing chip strips
+   retain horizontal panning, and arrival lists below retain vertical scrolling. */
+.station-panel-header {
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+}

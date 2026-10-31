@@ -212,12 +212,11 @@ const StationPanel = ({
     <nav
       className="station-multimodal-tabs"
       aria-label={t('stationPanel.tabsAria')}
-      onPointerDown={(e) => e.stopPropagation()}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        overflowX: 'auto',
+        overflowX: 'auto', overflowY: 'hidden',
         scrollbarWidth: 'none',
         minWidth: 0,
         ...(isHeaderRow
@@ -380,6 +379,7 @@ const StationPanel = ({
     <>
       <aside
         className="glass-panel station-panel"
+        {...handleProps}
         aria-label={shownName}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
@@ -511,7 +511,7 @@ const StationPanel = ({
                   alignItems: 'center',
                   gap: 5,
                   flexWrap: 'nowrap',
-                  overflowX: 'auto',
+                  overflowX: 'auto', overflowY: 'hidden',
                   scrollbarWidth: 'none',
                 }}
               >

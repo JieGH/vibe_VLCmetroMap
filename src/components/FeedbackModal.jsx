@@ -159,6 +159,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         aria-modal="true"
         aria-labelledby="feedback-modal-title"
         className="glass-panel feedback-modal-content"
+        {...handleProps}
         style={{
           ...dragStyle,
         }}

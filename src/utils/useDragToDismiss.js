@@ -92,6 +92,18 @@ export const shouldIgnoreDragStart = (target, activeElement) => {
   return false;
 };
 
+/** Keep gestures inside scroll regions independent, even at a scroll boundary. */
+export const isInsideScrollRegion = (target, card, readStyle = getComputedStyle) => {
+  for (let node = target; node && node !== card; node = node.parentElement) {
+    const style = readStyle(node);
+    // Vertical lists own the gesture even at their edges. A horizontal chip
+    // strip only owns it when it actually overflows, leaving header gaps draggable.
+    if (/(auto|scroll)/.test(style.overflowY)) return true;
+    if (/(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth) return true;
+  }
+  return false;
+};
+
 /**
  * Computes the inline style for the card during and after a drag interaction.
  *
@@ -134,7 +146,14 @@ export const useDragToDismiss = ({
   }
 
   useEffect(() => {
+    // Prevent browser panning only after a gesture starts on an eligible surface.
+    // Using a native non-passive listener leaves scroll regions fully native.
+    const preventPan = (event) => {
+      if (pointerIdRef.current !== null && event.cancelable) event.preventDefault();
+    };
+    document.addEventListener('touchmove', preventPan, { passive: false });
     return () => {
+      document.removeEventListener('touchmove', preventPan);
       coalescerRef.current?.cancel();
     };
   }, []);
@@ -146,7 +165,9 @@ export const useDragToDismiss = ({
 
     // Do not initiate drag if user is actively editing text or clicked an editable element
     const active = typeof document !== 'undefined' ? document.activeElement : null;
-    if (shouldIgnoreDragStart(e.target, active)) {
+    if (pointerIdRef.current !== null || e.isPrimary === false ||
+        shouldIgnoreDragStart(e.target, active) ||
+        isInsideScrollRegion(e.target, e.currentTarget)) {
       return;
     }
 
@@ -162,13 +183,13 @@ export const useDragToDismiss = ({
   }, [enabled]);
 
   const handlePointerMove = useCallback((e) => {
-    if (!isDragging) return;
+    if (!isDragging || e.pointerId !== pointerIdRef.current) return;
     const offset = calculateDragOffset(startYRef.current, e.clientY);
     coalescerRef.current.schedule(offset);
   }, [isDragging]);
 
   const handlePointerUp = useCallback((e) => {
-    if (!isDragging) return;
+    if (!isDragging || e.pointerId !== pointerIdRef.current) return;
     coalescerRef.current.cancel();
     const offset = calculateDragOffset(startYRef.current, e.clientY);
 

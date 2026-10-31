@@ -112,6 +112,7 @@ const Sidebar = ({
         className={`sidebar glass-panel ${!isOpen ? 'collapsed' : ''}`} 
         style={{ padding: '20px', ...dragStyle }}
         {...drawerAria}
+        {...handleProps}
       >
         {/* Mobile drag handle for swipe-down dismiss */}
         <div

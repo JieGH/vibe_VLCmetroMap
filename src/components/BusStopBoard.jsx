@@ -134,6 +134,7 @@ export const BusStopBoard = ({
   return (
     <aside
       className="glass-panel station-panel bus-stop-board"
+        {...handleProps}
       aria-label={t('bus.stopAria', { name: displayName })}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
@@ -258,7 +259,7 @@ export const BusStopBoard = ({
                 alignItems: 'center',
                 gap: 5,
                 flexWrap: 'nowrap',
-                overflowX: 'auto',
+                overflowX: 'auto', overflowY: 'hidden',
                 scrollbarWidth: 'none',
               }}
             >
