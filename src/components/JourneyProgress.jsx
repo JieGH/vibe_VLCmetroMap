@@ -9,7 +9,7 @@ const modeKeys = { WALK: 'walk', METRO: 'metro', TRAM: 'tram', BUS: 'bus' };
 const sourceKeys = { estimated: 'estimatedProgress', location: 'progressFromLocation', manual: 'progressFromCorrection' };
 
 export default function JourneyProgress({ snapshot, onConfirmBoarding, onCorrectCall,
-  onAdvanceLeg, onComplete, onCancel, onFindAnotherRoute, offline = false, children }) {
+  onAdvanceLeg, onComplete, onCancel, onFindAnotherRoute, onReportMissed, offline = false, children }) {
   const { t } = useTranslation();
   if (snapshot?.status !== 'active') return null;
   const { journey, legIndex, callIndex, progressSource, boardingConfirmed, remainingCalls, nativeStatus, alightAlert } = snapshot;
@@ -28,6 +28,7 @@ export default function JourneyProgress({ snapshot, onConfirmBoarding, onCorrect
       <p className="journey-muted">{t(`navigation.${nativeKey}`)}</p>
       {offline && <p role="status" className="journey-muted">{t('navigation.offlineInstructions')}</p>}
       {snapshot.updatedAt > journey.endTime && <p role="status">{t('navigation.checkJourney')}</p>}
+      {snapshot.updateNeeded && <p role="status">{t('navigation.connectionNeedsCheck')}</p>}
       {children}
       {alightAlert && (
         <p className="journey-alight-alert" role="alert">
@@ -66,6 +67,7 @@ export default function JourneyProgress({ snapshot, onConfirmBoarding, onCorrect
         )}
         <button type="button" className="journey-secondary-action" onClick={onCancel}>{t('navigation.cancelJourney')}</button>
         {onFindAnotherRoute && <button type="button" className="journey-secondary-action" onClick={onFindAnotherRoute}>{t('navigation.findAnotherRoute')}</button>}
+        {onReportMissed && <button type="button" className="journey-secondary-action" onClick={onReportMissed}>{t('navigation.reportMissed')}</button>}
       </div>
     </section>
   );

@@ -1901,6 +1901,10 @@ const MapView = ({
 
     prevUserLocationRef.current = userLocation;
 
+    // Journey-acquired fixes move the dot; the chosen route keeps its framing.
+    // An explicit press of Locate supplies an ordinary fix and recentres normally.
+    if (userLocation.navigationFix) return;
+
     // Only animate the camera once per locate request (keyed by fetchedAt timestamp).
     // Subsequent accuracy refinements for the same fix update the marker dot and
     // accuracy ring in place without disrupting the user's view or overriding a station click.

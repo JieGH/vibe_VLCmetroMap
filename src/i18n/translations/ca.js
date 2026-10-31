@@ -2,6 +2,8 @@
 // see translate.js for how a missing key falls back to the English string.
 export default {
   navigation: {
+    connectionNeedsCheck: "Comprova el progrés o la connexió. Corregix el progrés o busca una altra ruta.",
+    reportMissed: "He perdut una connexió o parada",
     scheduleWarning: "Alguns horaris de transport no estan disponibles per a esta data; les opcions de viatge poden estar incompletes.",
     journeyArrivals: "Arribades per a este viatge",
     journeyArrivalsAt: "Arribades a {{stop}}",

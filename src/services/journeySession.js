@@ -34,6 +34,7 @@ export function createJourneySession({ now = Date.now,
   let scheduleOffset = 0;
   let manualAt = 0;
   let confirmedAt = 0;
+  let latestFixAt = 0;
   let sessionId = null;
   let serial = 0;
   let lifecycle = 0;
@@ -90,6 +91,9 @@ export function createJourneySession({ now = Date.now,
     }
   };
   const active = () => snapshot.status === 'active';
+  const passedUnconfirmedConnection = (throughIndex, at, context = snapshot) => context.journey.legs.some((leg, index) =>
+    index >= context.legIndex && index <= throughIndex && transit(leg) && leg.endTime <= at &&
+    (index !== context.legIndex || !context.boardingConfirmed));
   const tick = () => {
     if (!active()) return snapshot;
     const at = now() - scheduleOffset;
@@ -102,8 +106,11 @@ export function createJourneySession({ now = Date.now,
     calls.forEach((call, index) => { if (callTime(call) <= at) callIndex = index; });
     if (legIndex === snapshot.legIndex) callIndex = Math.max(snapshot.callIndex, callIndex);
     const changedLeg = legIndex !== snapshot.legIndex;
+    const connectionUnconfirmed = passedUnconfirmedConnection(legIndex, at);
     const sameCall = legIndex === snapshot.legIndex && callIndex === snapshot.callIndex;
     snapshot = { ...snapshot, legIndex, callIndex,
+      updateNeeded: snapshot.updateNeeded || connectionUnconfirmed,
+      updateReason: snapshot.updateReason || (connectionUnconfirmed ? 'connection-unconfirmed' : null),
       boardingConfirmed: changedLeg ? false : snapshot.boardingConfirmed,
       progressSource: sameCall && now() - confirmedAt < 60_000 ? snapshot.progressSource : 'estimated',
       alightAlert: changedLeg ? null : snapshot.alightAlert };
@@ -131,9 +138,11 @@ export function createJourneySession({ now = Date.now,
       scheduleOffset = restored?.scheduleOffset ?? 0;
       manualAt = restored?.manualAt ?? 0;
       confirmedAt = 0;
+      latestFixAt = 0;
       alerted.clear();
       (restored?.alertedEventIds || []).forEach(id => alerted.add(id));
       snapshot = { status: 'active', journey, legIndex: restored?.legIndex ?? 0, callIndex: restored?.callIndex ?? 0,
+        updateNeeded: Boolean(restored?.updateNeeded), updateReason: restored?.updateReason || null,
         boardingConfirmed: Boolean(restored?.boardingConfirmed), progressSource: 'estimated', updatedAt: now(),
         nativeStatus: adoptNative ? 'active' : nativeAdapter ? 'starting' : 'foreground-only', alightAlert: null };
       tick();
@@ -172,7 +181,10 @@ export function createJourneySession({ now = Date.now,
             remote.id === saved.sessionId && remote.journey?.id === saved.journey.id && validIndices(remote) &&
             Number.isFinite(remote.updatedAt) && remote.updatedAt >= saved.updatedAt && remote.updatedAt <= now() + 10_000 &&
             Number.isFinite(remote.scheduleOffset)) {
+            const connectionUnconfirmed = passedUnconfirmedConnection(remote.legIndex, now() - remote.scheduleOffset, saved);
             restored = { ...saved, legIndex: remote.legIndex, callIndex: remote.callIndex,
+              updateNeeded: saved.updateNeeded || connectionUnconfirmed,
+              updateReason: saved.updateReason || (connectionUnconfirmed ? 'connection-unconfirmed' : null),
               boardingConfirmed: Boolean(remote.boardingConfirmed), scheduleOffset: remote.scheduleOffset,
               alertedEventIds: [...(Array.isArray(saved.alertedEventIds) ? saved.alertedEventIds : []),
                 ...(Array.isArray(remote.alertedEventIds) ? remote.alertedEventIds.filter(id => typeof id === 'string') : [])] };
@@ -189,7 +201,9 @@ export function createJourneySession({ now = Date.now,
       const timestamp = fix?.updatedAt ?? fix?.fetchedAt;
       if (!active() || !Array.isArray(coordinates) || coordinates.length !== 2 || !coordinates.every(Number.isFinite) ||
         !Number.isFinite(fix.accuracy) || fix.accuracy < 0 || fix.accuracy > 100 ||
-        !Number.isFinite(timestamp) || now() - timestamp > 60_000 || timestamp > now() + 10_000) return snapshot;
+        !Number.isFinite(timestamp) || now() - timestamp > 60_000 || timestamp > now() + 10_000 ||
+        timestamp < manualAt || timestamp < latestFixAt) return snapshot;
+      latestFixAt = timestamp;
       const calls = journeyLegCalls(snapshot.journey.legs[snapshot.legIndex]);
       const candidates = calls.map((call, index) => ({ call, index,
         distance: Array.isArray(call.coordinates) ? getDistance(coordinates, call.coordinates) : Infinity,
@@ -203,7 +217,9 @@ export function createJourneySession({ now = Date.now,
     },
     confirmBoarding() {
       if (!active() || !transit(snapshot.journey.legs[snapshot.legIndex])) return snapshot;
-      snapshot = { ...snapshot, boardingConfirmed: true };
+      snapshot = { ...snapshot, boardingConfirmed: true,
+        updateNeeded: snapshot.updateReason === 'connection-unconfirmed' ? false : snapshot.updateNeeded,
+        updateReason: snapshot.updateReason === 'connection-unconfirmed' ? null : snapshot.updateReason };
       publish(); syncNative(); return snapshot;
     },
     correctCall(legIndex, callIndex) {
@@ -216,6 +232,8 @@ export function createJourneySession({ now = Date.now,
       manualAt = now();
       confirmedAt = now();
       snapshot = { ...snapshot, legIndex, callIndex, progressSource: 'manual',
+        updateNeeded: snapshot.updateNeeded || Math.abs(scheduleOffset) > 60_000,
+        updateReason: snapshot.updateReason || (Math.abs(scheduleOffset) > 60_000 ? 'progress-corrected' : null),
         boardingConfirmed: legIndex === snapshot.legIndex ? snapshot.boardingConfirmed : false,
         alightAlert: null };
       publish(); syncNative(); return snapshot;
@@ -223,6 +241,11 @@ export function createJourneySession({ now = Date.now,
     advanceLeg() {
       if (!active() || snapshot.legIndex >= snapshot.journey.legs.length - 1) return snapshot;
       return api.correctCall(snapshot.legIndex + 1, 0);
+    },
+    reportMissed() {
+      if (!active()) return snapshot;
+      snapshot = { ...snapshot, updateNeeded: true, updateReason: 'missed' };
+      return publish();
     },
     async reconcileNative() {
       if (!active() || !nativeAdapter?.getSession) return snapshot;
@@ -249,7 +272,10 @@ export function createJourneySession({ now = Date.now,
         const calls = journeyLegCalls(leg);
         if (Array.isArray(session.alertedEventIds)) session.alertedEventIds.filter(id => typeof id === 'string').forEach(id => alerted.add(id));
         scheduleOffset = Number.isFinite(session.scheduleOffset) ? session.scheduleOffset : now() - callTime(calls[session.callIndex]);
+        const connectionUnconfirmed = passedUnconfirmedConnection(session.legIndex, now() - scheduleOffset);
         snapshot = { ...snapshot, legIndex: session.legIndex, callIndex: session.callIndex,
+          updateNeeded: snapshot.updateNeeded || connectionUnconfirmed,
+          updateReason: snapshot.updateReason || (connectionUnconfirmed ? 'connection-unconfirmed' : null),
           boardingConfirmed: Boolean(session.boardingConfirmed), progressSource: session.progressSource,
           nativeStatus: 'active', alightAlert: null };
         confirmedAt = session.progressSource === 'estimated' ? 0 : now();

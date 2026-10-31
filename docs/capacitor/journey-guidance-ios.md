@@ -38,6 +38,7 @@ The user's normal device workflow remains Xcode Run. Before closing #162, valida
 - Underground/suspended-WebView timing is labeled estimated, and no scheduled movement confirms boarding.
 - Manual correction shifts pending alerts; the same event does not notify repeatedly through foreground/background transitions or a same-session restart.
 - Native progress reconciles on return without overwriting a newer passenger correction.
+- After a manual correction, deliver a cached GPS fix observed before that correction (even if less than 60 seconds old): the corrected call and delay must remain unchanged. Then deliver a newer accurate fix and verify it is accepted. Advance the native timer between those fixes to confirm timer `updatedAt` does not reject fresh GPS evidence.
 - Completion/cancellation removes pending alerts and ends the background location indicator. Test cancellation while a permission request or notification scheduling operation is pending.
 - Discarding a saved Journey invokes `stopSession` with its saved identity even if no JS controller is active, so OS-scheduled estimates from an earlier process are cancelled.
 

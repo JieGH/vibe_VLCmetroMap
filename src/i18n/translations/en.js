@@ -6,6 +6,8 @@
 // with no I18nProvider ancestor (the context's default value is this file).
 export default {
   navigation: {
+    connectionNeedsCheck: "Your progress or connection needs checking. Correct your progress or find another route.",
+    reportMissed: "I missed a connection or stop",
     scheduleWarning: "Some transport schedules could not be verified for this date; route choices may be incomplete.",
     journeyArrivals: "Arrivals for this Journey",
     journeyArrivalsAt: "Arrivals at {{stop}}",

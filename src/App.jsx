@@ -15,6 +15,7 @@ import DestinationPreview from './components/DestinationPreview';
 import JourneyPlanner from './components/JourneyPlanner';
 import JourneyProgress from './components/JourneyProgress';
 import JourneyArrivals from './components/JourneyArrivals';
+import { createJourneyArrivals } from './services/journeyArrivals';
 import { createJourneySession } from './services/journeySession';
 import journeyNative from './services/journeyNative';
 import { createJourneyRecovery } from './services/journeyRecovery';
@@ -124,6 +125,7 @@ function App() {
   }, [userLocation]);
   // Destination is independent of the GPS fix and the existing nearby-transit pin.
   const [destination, setDestination] = useState(null);
+  const [destinationPreviewOpen, setDestinationPreviewOpen] = useState(false);
   const [planningDestination, setPlanningDestination] = useState(null);
   const [journeySnapshot, setJourneySnapshot] = useState(null);
   const [journeyRecovery] = useState(() => createJourneyRecovery());
@@ -131,6 +133,7 @@ function App() {
   const [offline, setOffline] = useState(() => navigator.onLine === false);
   const [resumingJourney, setResumingJourney] = useState(false);
   const startingJourneyRef = useRef(false);
+  const journeyActionRef = useRef(0);
   const webAlertAudioRef = useRef(null);
   const [journeySession] = useState(() => createJourneySession({
     nativeAdapter: journeyNative,
@@ -152,7 +155,7 @@ function App() {
     },
   }));
   const activeJourney = journeySnapshot?.status === 'active' ? journeySnapshot.journey : null;
-  useEffect(() => () => journeySession.dispose(), [journeySession]);
+  useEffect(() => () => { journeyActionRef.current += 1; journeySession.dispose(); }, [journeySession]);
   useEffect(() => journeySession.subscribe(snapshot => { journeyRecovery.save(snapshot); }), [journeySession, journeyRecovery]);
   useEffect(() => {
     const update = () => setOffline(navigator.onLine === false);
@@ -177,62 +180,105 @@ function App() {
       } catch { /* Visual guidance remains available if sound is unsupported. */ }
     }
   };
+  const cancelPendingJourneyAction = () => {
+    journeyActionRef.current += 1;
+    setResumingJourney(false);
+    if (journeySession.getSnapshot().status !== 'active') journeySession.cancel();
+  };
   const startJourney = async (journey, { soundEnabled = false } = {}) => {
     if (startingJourneyRef.current) return;
+    cancelPendingJourneyAction();
+    const action = journeyActionRef.current;
     startingJourneyRef.current = true;
     prepareWebAlerts(soundEnabled);
     try {
       if (Capacitor.isNativePlatform()) await journeyNative.requestPermissions();
+      if (action !== journeyActionRef.current) return;
       journeySession.start(journey, { soundEnabled, labels: journeyLabels() });
+      setDestinationPreviewOpen(false);
       setSavedJourney(null);
       setPlanningDestination(null);
-      if (!userLocation?.coordinates || userLocation.isMapClick) void handleLocate();
+      if (!userLocation?.coordinates || userLocation.isMapClick) {
+        void locate().then(fix => {
+          if (action !== journeyActionRef.current || journeySession.getSnapshot().status !== 'active') return;
+          if (fix.status === 'located') {
+            latestGpsFixRef.current = fix;
+            setUserLocation({ ...fix, navigationFix: true });
+          } else setLocateNotice({ text: describeLocateResult(fix), _ts: Date.now() });
+        });
+      }
     } finally { startingJourneyRef.current = false; }
   };
   const resumeJourney = async () => {
     if (resumingJourney || !savedJourney) return;
+    cancelPendingJourneyAction();
+    const action = journeyActionRef.current;
     setResumingJourney(true);
     prepareWebAlerts(savedJourney.soundEnabled);
     try {
       const fix = await locate();
+      if (action !== journeyActionRef.current) return;
       if (fix.status === 'located') {
         latestGpsFixRef.current = fix;
-        setUserLocation(fix);
+        setUserLocation({ ...fix, navigationFix: true });
       }
+      // Resume is the user's on-demand request for this single relevant stop.
+      const arrivals = createJourneyArrivals();
+      try {
+        arrivals.select(savedJourney);
+        if (navigator.onLine !== false) await arrivals.refresh();
+      } finally { arrivals.dispose(); }
+      if (action !== journeyActionRef.current) return;
       if (Capacitor.isNativePlatform()) await journeyNative.requestPermissions();
+      if (action !== journeyActionRef.current) return;
       await journeySession.resume(savedJourney, { labels: journeyLabels() });
+      if (action !== journeyActionRef.current) return;
       if (fix.status === 'located') journeySession.updateLocation(fix);
       setDestination(savedJourney.journey.to);
+      setDestinationPreviewOpen(false);
       setSavedJourney(null);
     } catch {
       // Corrupt/incompatible stored sessions are discarded, never presented as active.
-      journeyRecovery.clear();
-      setSavedJourney(null);
-    } finally { setResumingJourney(false); }
+      if (action === journeyActionRef.current) {
+        journeyRecovery.clear();
+        setSavedJourney(null);
+      }
+    } finally { if (action === journeyActionRef.current) setResumingJourney(false); }
   };
   const discardSavedJourney = () => {
+    cancelPendingJourneyAction();
+    journeySession.cancel();
+    setResumingJourney(false);
     if (savedJourney?.sessionId) void journeyNative.stopSession({ sessionId: savedJourney.sessionId });
     journeyRecovery.clear();
     setSavedJourney(null);
   };
   const endJourney = (completed = false) => {
+    cancelPendingJourneyAction();
     if (completed) journeySession.complete();
     else journeySession.cancel();
     prepareWebAlerts(false);
     setDestination(null);
+    setDestinationPreviewOpen(false);
     setPlanningDestination(null);
   };
   const selectDestination = (place) => {
+    cancelPendingJourneyAction();
+    autoLocatorRef.current?.interrupt();
     setDestination(place);
+    setDestinationPreviewOpen(true);
     setPlanningDestination(null);
     setIsSearchOpen(false);
     setFollowing(false);
   };
   const openDirections = (place) => {
+    cancelPendingJourneyAction();
+    autoLocatorRef.current?.interrupt();
     const fix = latestGpsFixRef.current;
     const fresh = fix && Date.now() - (fix.updatedAt ?? fix.fetchedAt ?? 0) < 60_000;
     setPlanningStartingPoint(fresh ? { name: t('navigation.useCurrentLocation'), coordinates: fix.coordinates } : null);
     setDestination(place);
+    setDestinationPreviewOpen(false);
     setPlanningDestination(place);
     setFollowing(false);
   };
@@ -1141,8 +1187,11 @@ function App() {
         />
       )}
 
-      {destination && !planningDestination && !activeJourney && (
-        <DestinationPreview destination={destination} onDirections={openDirections} onClose={() => setDestination(null)} />
+      {destination && !planningDestination && (!activeJourney || destinationPreviewOpen) && (
+        <DestinationPreview destination={destination} onDirections={openDirections} onClose={() => {
+          setDestinationPreviewOpen(false);
+          setDestination(activeJourney?.to || null);
+        }} />
       )}
 
       {planningDestination && (
@@ -1151,11 +1200,11 @@ function App() {
           destination={planningDestination}
           initialStartingPoint={planningStartingPoint}
           onStartJourney={startJourney}
-          onClose={() => setPlanningDestination(null)}
+          onClose={() => { cancelPendingJourneyAction(); setPlanningDestination(null); }}
         />
       )}
 
-      {activeJourney && !planningDestination && (
+      {activeJourney && !planningDestination && !destinationPreviewOpen && (
         <JourneyProgress
           snapshot={journeySnapshot}
           onConfirmBoarding={journeySession.confirmBoarding}
@@ -1165,6 +1214,7 @@ function App() {
           onCancel={() => endJourney(false)}
           offline={offline}
           onFindAnotherRoute={() => openDirections(activeJourney.to)}
+          onReportMissed={journeySession.reportMissed}
         >
           <JourneyArrivals journey={activeJourney} legIndex={journeySnapshot.legIndex} callIndex={journeySnapshot.callIndex} />
         </JourneyProgress>

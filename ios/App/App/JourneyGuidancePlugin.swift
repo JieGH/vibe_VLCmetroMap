@@ -28,6 +28,10 @@ public final class JourneyGuidancePlugin: CAPPlugin, CAPBridgedPlugin, CLLocatio
     private var alerted = Set<String>()
     private var announced = Set<String>()
     private var scheduled: [String: Double] = [:]
+    // Evidence times are independent of the session's timer/receipt updatedAt.
+    // A cached GPS callback must not undo a later passenger correction.
+    private var latestCorrectionAt: Double = 0
+    private var latestFixAt: Double = 0
     private let alertStoreKey = "xarxa.journey.nativeAlerts.v1"
     private var permissionWaiters: [(Bool) -> Void] = []
     private weak var previousNotificationDelegate: UNUserNotificationCenterDelegate?
@@ -85,6 +89,12 @@ public final class JourneyGuidancePlugin: CAPPlugin, CAPBridgedPlugin, CLLocatio
         ["supported": true, "status": status, "session": session as Any? ?? NSNull()]
     }
 
+    private func recordBridgeEvidence(_ value: [String: Any]) {
+        guard let at = number(value["updatedAt"]) else { return }
+        if value["progressSource"] as? String == "manual" { latestCorrectionAt = max(latestCorrectionAt, at) }
+        if value["progressSource"] as? String == "location" { latestFixAt = max(latestFixAt, at) }
+    }
+
     private func ensurePermissions(_ completion: @escaping (Bool) -> Void) {
         guard CLLocationManager.locationServicesEnabled() else { completion(false); return }
         switch location.authorizationStatus {
@@ -128,6 +138,7 @@ public final class JourneyGuidancePlugin: CAPPlugin, CAPBridgedPlugin, CLLocatio
                 let savedAlerts = UserDefaults.standard.dictionary(forKey: self.alertStoreKey)
                 if (self.session?["id"] as? String) != id && savedAlerts?["sessionId"] as? String != id { self.stopEngine() }
                 self.session = value
+                self.recordBridgeEvidence(value)
                 if savedAlerts?["sessionId"] as? String == id {
                     self.alerted.formUnion(savedAlerts?["alerted"] as? [String] ?? [])
                     self.scheduled.merge(savedAlerts?["scheduled"] as? [String: Double] ?? [:]) { _, saved in saved }
@@ -158,6 +169,7 @@ public final class JourneyGuidancePlugin: CAPPlugin, CAPBridgedPlugin, CLLocatio
             self.reconcileScheduledAlerts()
             self.announced.formUnion(value["alertedEventIds"] as? [String] ?? [])
             self.session = value
+            self.recordBridgeEvidence(value)
             self.advance()
             self.scheduleAlerts()
             call.resolve(self.response())
@@ -203,6 +215,8 @@ public final class JourneyGuidancePlugin: CAPPlugin, CAPBridgedPlugin, CLLocatio
         scheduled.removeAll()
         alerted.removeAll()
         announced.removeAll()
+        latestCorrectionAt = 0
+        latestFixAt = 0
         UserDefaults.standard.removeObject(forKey: alertStoreKey)
         session = nil
     }
@@ -307,6 +321,11 @@ public final class JourneyGuidancePlugin: CAPPlugin, CAPBridgedPlugin, CLLocatio
               fix.horizontalAccuracy >= 0, fix.horizontalAccuracy <= 100,
               abs(fix.timestamp.timeIntervalSinceNow) <= 60,
               let legIndex = integer(value["legIndex"]), legs(value).indices.contains(legIndex) else { return }
+        let fixAt = fix.timestamp.timeIntervalSince1970 * 1000
+        guard fixAt >= latestCorrectionAt, fixAt >= latestFixAt, fixAt <= milliseconds() + 10_000 else { return }
+        // Keep the device's observation timestamp, rather than advancing this
+        // gate with a timer tick or the time at which a delayed fix arrived.
+        latestFixAt = fixAt
         let points = calls(legs(value)[legIndex])
         let matches: [(Int, CLLocationDistance)] = points.enumerated().compactMap { index, point in
             guard let coordinates = point["coordinates"] as? [Double], coordinates.count == 2 else { return nil }

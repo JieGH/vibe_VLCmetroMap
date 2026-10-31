@@ -184,4 +184,24 @@ describe('active passenger Journey', () => {
     await session.reconcileNative();
     expect(session.getSnapshot()).toMatchObject({ status: 'cancelled', nativeStatus: 'stopped' });
   });
+
+  it('does not let a delayed GPS reading overwrite a newer passenger correction', () => {
+    const h = harness();
+    h.session.start(journey);
+    h.time(start + 800_000);
+    h.session.correctCall(1, 1);
+    h.session.updateLocation({ coordinates: journey.legs[1].from.coordinates, accuracy: 10, updatedAt: start + 795_000 });
+    expect(h.session.getSnapshot()).toMatchObject({ legIndex: 1, callIndex: 1, progressSource: 'manual' });
+  });
+
+  it('asks the passenger to check an unconfirmed connection and retains the Journey until a replacement is chosen', () => {
+    const h = harness();
+    h.session.start(journey);
+    h.time(start + 1_300_000);
+    expect(h.session.getSnapshot()).toMatchObject({ status: 'active', updateNeeded: true, updateReason: 'connection-unconfirmed' });
+    h.session.reportMissed();
+    expect(h.session.getSnapshot()).toMatchObject({ status: 'active', journey: { id: journey.id }, updateReason: 'missed' });
+    h.session.start({ ...journey, id: 'confirmed-replacement' });
+    expect(h.session.getSnapshot().journey.id).toBe('confirmed-replacement');
+  });
 });
