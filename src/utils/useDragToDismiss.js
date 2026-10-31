@@ -145,7 +145,7 @@ export const isInsideScrollRegion = (
  * @returns {React.CSSProperties}
  */
 export const getDragCardStyle = (dragOffset, isDragging, options = {}) => {
-  const { dragHeight, isDraggingUp, isReducing, isDismissing, landscape } = options;
+  const { dragHeight, isDraggingUp, isReducing, isDismissing, landscape, isExpanded } = options;
 
   if (isDismissing) {
     return {
@@ -160,6 +160,15 @@ export const getDragCardStyle = (dragOffset, isDragging, options = {}) => {
     return {
       height: `${dragHeight}px`,
       maxHeight: `${dragHeight}px`,
+      transform: undefined,
+      transition: isDragging
+        ? 'none'
+        : 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
+    };
+  }
+
+  if (isExpanded) {
+    return {
       transform: undefined,
       transition: isDragging
         ? 'none'
@@ -216,8 +225,12 @@ export const useDragToDismiss = ({
   landscape = false,
   threshold = 70,
 } = {}) => {
-  const [dragOffset, setDragOffset] = useState(0);
-  const [dragHeight, setDragHeight] = useState(null);
+  const [dragState, setDragState] = useState({
+    offset: 0,
+    height: null,
+    isDraggingUp: false,
+    isReducing: false,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const startYRef = useRef(0);
@@ -228,17 +241,25 @@ export const useDragToDismiss = ({
 
   const canDragUp = allowUpward !== undefined ? Boolean(allowUpward) : Boolean(onExpand);
 
-  if (!coalescerRef.current) {
-    coalescerRef.current = createRafCoalescer(setDragOffset);
-  }
+  const getCoalescer = useCallback(() => {
+    if (!coalescerRef.current) {
+      coalescerRef.current = createRafCoalescer(setDragState);
+    }
+    return coalescerRef.current;
+  }, []);
 
   const triggerDismiss = useCallback(() => {
     if (isDismissing) return;
     setIsDismissing(true);
     setIsDragging(false);
-    setDragHeight(null);
     pointerIdRef.current = null;
     coalescerRef.current?.cancel();
+    setDragState({
+      offset: 0,
+      height: null,
+      isDraggingUp: false,
+      isReducing: false,
+    });
 
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     dismissTimerRef.current = setTimeout(() => {
@@ -304,27 +325,33 @@ export const useDragToDismiss = ({
     });
 
     const canReduce = isExpanded && Boolean(onCollapse);
+    let newHeight = null;
+    let draggingUp = false;
+    let reducing = false;
 
     if (canDragUp && !isExpanded && offset < 0) {
       // Expanding upward: height increases from startHeight towards maxH
       const upwardDist = Math.abs(offset);
       const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
       const maxH = Math.min(viewportH * 0.82, viewportH - 84);
-      const newH = Math.min(maxH, startHeightRef.current + upwardDist);
-      setDragHeight(newH);
+      newHeight = Math.min(maxH, startHeightRef.current + upwardDist);
+      draggingUp = true;
     } else if (canReduce && offset > 0) {
       // Reducing downward: height decreases from startHeight towards minH
       const downwardDist = offset;
       const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
       const minH = Math.min(viewportH * 0.58, viewportH - 120);
-      const newH = Math.max(minH, startHeightRef.current - downwardDist);
-      setDragHeight(newH);
-    } else {
-      setDragHeight(null);
+      newHeight = Math.max(minH, startHeightRef.current - downwardDist);
+      reducing = true;
     }
 
-    coalescerRef.current.schedule(offset);
-  }, [canDragUp, isExpanded, onCollapse]);
+    getCoalescer().schedule({
+      offset,
+      height: newHeight,
+      isDraggingUp: draggingUp,
+      isReducing: reducing,
+    });
+  }, [canDragUp, isExpanded, onCollapse, getCoalescer]);
 
   const handlePointerUp = useCallback((e) => {
     if (pointerIdRef.current === null || (e.pointerId !== undefined && e.pointerId !== pointerIdRef.current)) return;
@@ -344,22 +371,23 @@ export const useDragToDismiss = ({
 
     setIsDragging(false);
     pointerIdRef.current = null;
-    setDragHeight(null);
+    setDragState({
+      offset: 0,
+      height: null,
+      isDraggingUp: false,
+      isReducing: false,
+    });
 
     if (shouldDismissOnRelease(offset, threshold)) {
       if (isExpanded && onCollapse) {
-        setDragOffset(0);
         onCollapse();
       } else {
         triggerDismiss();
       }
     } else if (shouldExpandOnRelease(offset, threshold)) {
-      setDragOffset(0);
       if (!isExpanded && onExpand) {
         onExpand();
       }
-    } else {
-      setDragOffset(0);
     }
   }, [canDragUp, isExpanded, threshold, triggerDismiss, onExpand, onCollapse]);
 
@@ -367,21 +395,23 @@ export const useDragToDismiss = ({
     if (pointerIdRef.current === null) return;
     coalescerRef.current.cancel();
     setIsDragging(false);
-    setDragOffset(0);
-    setDragHeight(null);
+    setDragState({
+      offset: 0,
+      height: null,
+      isDraggingUp: false,
+      isReducing: false,
+    });
     pointerIdRef.current = null;
   }, []);
 
-  const isDraggingUp = canDragUp && !isExpanded && dragOffset < 0;
-  const isReducing = Boolean(isExpanded && onCollapse && dragOffset > 0);
-
   const cardStyle = enabled
-    ? getDragCardStyle(dragOffset, isDragging, {
-        dragHeight,
-        isDraggingUp,
-        isReducing,
+    ? getDragCardStyle(dragState.offset, isDragging, {
+        dragHeight: dragState.height,
+        isDraggingUp: dragState.isDraggingUp,
+        isReducing: dragState.isReducing,
         isDismissing,
         landscape,
+        isExpanded,
       })
     : {};
 
@@ -393,11 +423,11 @@ export const useDragToDismiss = ({
   };
 
   return {
-    dragOffset,
-    dragHeight,
+    dragOffset: dragState.offset,
+    dragHeight: dragState.height,
     isDragging,
-    isDraggingUp,
-    isReducing,
+    isDraggingUp: dragState.isDraggingUp,
+    isReducing: dragState.isReducing,
     isDismissing,
     triggerDismiss,
     handleProps,

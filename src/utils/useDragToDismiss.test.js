@@ -152,6 +152,16 @@ describe('useDragToDismiss helpers', () => {
       expect(style.transition).toBe('none');
     });
 
+    it('never returns translateY when isExpanded is true to prevent layout shaking', () => {
+      const styleDragging = getDragCardStyle(40, true, { isExpanded: true });
+      expect(styleDragging.transform).toBeUndefined();
+      expect(styleDragging.transition).toBe('none');
+
+      const styleResting = getDragCardStyle(0, false, { isExpanded: true });
+      expect(styleResting.transform).toBeUndefined();
+      expect(styleResting.transition).toContain('max-height');
+    });
+
     it('returns accelerating downward transform when isDismissing in portrait', () => {
       const style = getDragCardStyle(0, false, { isDismissing: true });
       expect(style.transform).toContain('translateY');
