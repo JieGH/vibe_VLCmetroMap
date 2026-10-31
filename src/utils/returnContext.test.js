@@ -1,5 +1,6 @@
+import { buildCentrePing } from './centrePin';
 import { describe, it, expect } from 'vitest';
-import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, isGpsHub, shouldRefreshGpsHub } from './returnContext';
+import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, isGpsHub, shouldRefreshGpsHub, stationPanelKey } from './returnContext';
 
 const ping = { isPin: true, properties: { name: 'Map Ping' } };
 const gps = { properties: { name: "Where you're at" } };
@@ -96,5 +97,21 @@ describe('GPS hub refresh (#104)', () => {
     const back = resolveReturn(ctx, later);
     expect(back.selectedStation.geometry.coordinates).toEqual(later.coordinates);
     expect(back.selectedStation.properties.nearestStation).toBe(later.nearestStation);
+  });
+});
+
+describe('geolocation sheet identity', () => {
+  it('keeps one sheet mounted when the GPS camera settles and publishes the centre pin', () => {
+    const fix = { coordinates: [-0.377, 39.47], nearestStation: metro };
+    const gpsHub = buildGpsHub(fix);
+    const centreHub = buildCentrePing(fix.coordinates, 123, metro).station;
+    // Changing this key remounts StationPanel and replays stationPanelSlideUp.
+    expect(stationPanelKey(centreHub)).toBe(stationPanelKey(gpsHub));
+    expect(stationPanelKey(buildGpsHub({ ...fix, coordinates: [-0.378, 39.471] })))
+      .toBe(stationPanelKey(centreHub));
+  });
+  it('still resets the sheet when selecting a different real station', () => {
+    expect(stationPanelKey(metro)).not.toBe(stationPanelKey({ properties: { name: 'Colón' } }));
+    expect(stationPanelKey(metro)).not.toBe(stationPanelKey(buildGpsHub({ coordinates: [-0.377, 39.47] })));
   });
 });

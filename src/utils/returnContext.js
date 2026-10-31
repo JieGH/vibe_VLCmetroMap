@@ -74,3 +74,9 @@ export const reconcileReturnContext = (ctx, { selectedStation, selectedBusStop, 
   if (selectedStation && !selectedBusStop && !isHubStation(selectedStation)) return ctx;
   return null;
 };
+
+/** React identity for the arrival sheet across location updates. */
+export const stationPanelKey = (station) =>
+  isHubStation(station)
+    ? 'location-hub'
+    : station?.properties?.name || station?.properties?.apiId || 'station-panel';

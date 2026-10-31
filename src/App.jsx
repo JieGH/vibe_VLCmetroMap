@@ -47,7 +47,7 @@ import { useNetworkNotice } from './services/useNetworkNotice';
 import { setupIncidentReporting, reportNormalUserVisit, reportStationAccess, reportApiTrouble } from './utils/telemetry';
 import { watchApiTrouble } from './services/apiTroubleWatch';
 import { isCentrePinActive, shouldLeaveCentreMode } from './utils/centrePin';
-import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub } from './utils/returnContext';
+import { isHubStation, captureReturnContext, resolveReturn, reconcileReturnContext, buildGpsHub, shouldRefreshGpsHub, stationPanelKey } from './utils/returnContext';
 import BusLineInspector from './components/BusLineInspector';
 import BusStopBoard from './components/BusStopBoard';
 import { getRealBusLines } from './data/emtData';
@@ -936,7 +936,7 @@ function App() {
       {/* Station Focus panel — right in landscape, bottom in portrait */}
       {selectedStation && (
         <StationPanel
-          key={selectedStation?.properties?.name || selectedStation?.properties?.apiId || 'station-panel'}
+          key={stationPanelKey(selectedStation)}
           station={selectedStation}
           theme={theme}
           onClose={() => {
