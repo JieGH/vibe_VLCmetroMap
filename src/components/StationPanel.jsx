@@ -5,7 +5,7 @@
 // Docked right in landscape and bottom in portrait. Right, because on a held
 // tablet that is where a thumb rests; bottom in portrait, because on a phone it
 // is the only place a thumb reaches at all.
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { X, Radio, Database, CheckCircle2, Clock, Maximize2, Minimize2 } from 'lucide-react';
 import arrivalStore, { CACHE_TTL_MS } from '../services/arrivalStore';
 import { getStationFocus } from '../services/stationFocus';
@@ -47,8 +47,6 @@ const useIsLandscape = () => {
 // Compact sheet, mirroring the native StationSheet: header plus four rows of
 // ROW_HEIGHT_PX, anything further scrolls inside the body.
 const ROW_HEIGHT_PX = 48;
-const VISIBLE_ROWS = 4;
-const TABLE_HEAD_PX = 30;
 
 // Portrait expanded sheet: bottom edge is 12px + bottom inset, so its top edge
 // is 100dvh - 12 - bottom - height. Subtracting both insets plus 84px keeps that
@@ -98,9 +96,23 @@ const StationPanel = ({
         station?.properties?.name === "Where you're at"
       );
 
-  const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
+  const cardRef = useRef(null);
+  const {
+    handleProps,
+    cardStyle: dragStyle,
+    isDragging,
+    isDraggingUp,
+    isReducing,
+    isDismissing,
+    triggerDismiss,
+  } = useDragToDismiss({
+    cardRef,
     onDismiss: onClose,
-    enabled: !landscape && Boolean(station),
+    onExpand: () => setIsExpanded(true),
+    onCollapse: () => setIsExpanded(false),
+    isExpanded,
+    enabled: Boolean(station),
+    landscape,
     threshold: 70,
   });
 
@@ -169,12 +181,12 @@ const StationPanel = ({
         if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) return;
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        triggerDismiss();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [station, onClose]);
+  }, [station, triggerDismiss]);
 
   if (!station) return null;
 
@@ -378,6 +390,7 @@ const StationPanel = ({
   return (
     <>
       <aside
+        ref={cardRef}
         className="glass-panel station-panel"
         {...handleProps}
         aria-label={shownName}
@@ -402,7 +415,7 @@ const StationPanel = ({
               width: isExpanded
                 ? 'min(820px, 68vw)'
                 : (isMultimodal && activeTab === 'split') ? 'min(680px, 55vw)' : 'min(380px, 34vw)',
-              transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }
           : {
               left: 12,
@@ -411,10 +424,18 @@ const StationPanel = ({
                 ? SPLIT_SHEET_BOTTOM
                 : 'calc(12px + env(safe-area-inset-bottom, 0px))',
               maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58dvh, calc(100dvh - 120px))',
-              height: isExpanded ? EXPANDED_SHEET_HEIGHT : 'auto',
-              transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              height: isExpanded ? EXPANDED_SHEET_HEIGHT : 'min(58dvh, calc(100dvh - 120px))',
+              transition: 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }),
         ...dragStyle,
+        ...(!landscape && !isDismissing && {
+          transition: isDragging
+            ? 'none'
+            : 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1), transform 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
+        }),
+        ...(isDismissing && {
+          animation: 'none',
+        }),
       }}
     >
       {/* Top drag handle indicator for swipe-down to dismiss in portrait mode */}
@@ -436,6 +457,7 @@ const StationPanel = ({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, padding: !landscape ? '2px 16px 12px' : '12px 16px 12px', borderBottom: '1px solid var(--border-color)',
         }}
+        {...(!landscape ? handleProps : {})}
       >
         {isPinPlace ? (
           renderMultimodalTabs(true)
@@ -597,7 +619,7 @@ const StationPanel = ({
           </button>
 
           <button
-            onClick={onClose}
+            onClick={triggerDismiss}
             onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-close"
             aria-label={t('stationPanel.closeAria')}
@@ -614,7 +636,7 @@ const StationPanel = ({
 
       {/* Body Container */}
       {isMultimodal ? (
-        <div style={{ position: 'relative', overflow: 'hidden', ...(isExpanded && { flex: '1 1 auto', minHeight: 0 }) }}>
+        <div style={{ position: 'relative', overflow: 'hidden', ...((isExpanded || isDraggingUp || isReducing) && { flex: '1 1 auto', minHeight: 0 }) }}>
           {focus.fetchError && (
             <div role="status" style={{
               margin: '6px 10px', padding: '6px 10px', borderRadius: 8,
@@ -633,10 +655,10 @@ const StationPanel = ({
               display: 'grid',
               gridTemplateColumns: activeTab === 'split' ? SPLIT_LAYOUT.columns : '1fr',
               gap: activeTab === 'split' ? SPLIT_LAYOUT.gap : 0,
-              height: multimodalSheetGeometry(activeTab, isExpanded).bodyHeight,
+              height: (isExpanded || isDraggingUp || isReducing) ? '100%' : multimodalSheetGeometry(activeTab, isExpanded).bodyHeight,
               padding: activeTab === 'split' ? `8px ${SPLIT_LAYOUT.sidePadding}px` : 0,
               overflow: 'hidden',
-              transition: 'height 0.22s ease',
+              transition: isDragging ? 'none' : 'height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }}
           >
             <div
@@ -697,10 +719,13 @@ const StationPanel = ({
         <div
           className="station-panel-body"
           style={{
-            maxHeight: isExpanded ? 'calc(78dvh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
+            flex: (isExpanded || isDraggingUp || isReducing) ? '1 1 auto' : undefined,
+            minHeight: 0,
+            height: (isExpanded || isDraggingUp || isReducing) ? '100%' : MULTIMODAL_BODY_HEIGHT,
+            maxHeight: (isExpanded || isDraggingUp || isReducing) ? '100%' : MULTIMODAL_BODY_HEIGHT,
             overflowY: 'auto',
             padding: '0 10px 8px',
-            transition: 'max-height 0.22s ease',
+            transition: isDragging ? 'none' : 'height 0.36s cubic-bezier(0.32, 0.72, 0, 1), max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
         >
           {focus.fetchError && (

@@ -896,7 +896,7 @@ button:active {
   align-items: flex-end;
   gap: 8px;
   pointer-events: none;
-  transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .bottom-stack > * { pointer-events: auto; }
 /* Portrait with a Station open: the locate button sits on the walking box's row, 10px above the sheet, inside its right edge. */

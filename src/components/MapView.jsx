@@ -1620,7 +1620,11 @@ const MapView = ({
       focusPaddingRef.current = padding;
       recentreOnResize(map, coords, padding);
     };
-    const schedule = () => {
+    const schedule = (entries = []) => {
+      // The map must stay completely still when expanding, contracting, or dragging the sheet window.
+      // Only re-centre when the actual map container/viewport is resized.
+      const hasContainerResize = entries.some((e) => e.target === map.getContainer());
+      if (entries.length > 0 && !hasContainerResize) return;
       if (!frame) frame = requestAnimationFrame(recentre);
     };
 

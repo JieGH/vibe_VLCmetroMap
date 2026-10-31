@@ -1,6 +1,6 @@
 // BusStopBoard Component: Dedicated departure board for an EMT bus stop node (EMT-only card).
 // Perfectly mirrors the visual layout, typography, and design of StationPanel (Metro station view).
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Accessibility, X, Radio, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
 import BusBadge from './BusBadge';
 import WaveDots from './WaveDots';
@@ -46,9 +46,23 @@ export const BusStopBoard = ({
   const landscape = useIsLandscape();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
+  const cardRef = useRef(null);
+  const {
+    handleProps,
+    cardStyle: dragStyle,
+    isDragging,
+    isDraggingUp,
+    isReducing,
+    isDismissing,
+    triggerDismiss,
+  } = useDragToDismiss({
+    cardRef,
     onDismiss: onClose,
-    enabled: !landscape && Boolean(stop),
+    onExpand: () => setIsExpanded(true),
+    onCollapse: () => setIsExpanded(false),
+    isExpanded,
+    enabled: Boolean(stop),
+    landscape,
     threshold: 70,
   });
 
@@ -106,12 +120,12 @@ export const BusStopBoard = ({
         if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) return;
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        triggerDismiss();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [stop, onClose]);
+  }, [stop, triggerDismiss]);
 
   if (!stop) return null;
 
@@ -133,8 +147,9 @@ export const BusStopBoard = ({
 
   return (
     <aside
+      ref={cardRef}
       className="glass-panel station-panel bus-stop-board"
-        {...handleProps}
+      {...handleProps}
       aria-label={t('bus.stopAria', { name: displayName })}
       data-landscape={landscape ? 'true' : 'false'}
       style={{
@@ -151,7 +166,7 @@ export const BusStopBoard = ({
               maxHeight: isExpanded ? 'calc(100dvh - 40px)' : 'calc(100dvh - 100px)',
               height: isExpanded ? 'calc(100dvh - 100px)' : 'auto',
               width: isExpanded ? 'min(820px, 68vw)' : 'min(380px, 34vw)',
-              transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }
           : {
               left: 12,
@@ -162,10 +177,18 @@ export const BusStopBoard = ({
                 : 'min(58dvh, calc(100dvh - 120px))',
               height: isExpanded
                 ? 'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 96px))'
-                : 'auto',
-              transition: 'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+                : 'min(58dvh, calc(100dvh - 120px))',
+              transition: 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }),
         ...dragStyle,
+        ...(!landscape && !isDismissing && {
+          transition: isDragging
+            ? 'none'
+            : 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1), transform 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
+        }),
+        ...(isDismissing && {
+          animation: 'none',
+        }),
       }}
     >
       {/* Top drag handle indicator for swipe-down to dismiss in portrait mode */}
@@ -342,7 +365,7 @@ export const BusStopBoard = ({
           </button>
 
           <button
-            onClick={onClose}
+            onClick={triggerDismiss}
             onPointerDown={(e) => e.stopPropagation()}
             className="station-panel-close"
             aria-label={t('stationPanel.closeAria')}
@@ -361,10 +384,10 @@ export const BusStopBoard = ({
       <div
         className="station-panel-body"
         style={{
-          maxHeight: isExpanded ? 'calc(78dvh - 110px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
+          maxHeight: (isExpanded || isDraggingUp || isReducing) ? 'calc(100% - 60px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
           overflowY: 'auto',
           padding: '0 10px 8px',
-          transition: 'max-height 0.22s ease',
+          transition: isDragging ? 'none' : 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
       >
         {isLoading ? (

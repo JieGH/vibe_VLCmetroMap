@@ -1,11 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, it, expect, vi } from 'vitest';
 import {
   isInsideScrollRegion,
   calculateDragOffset,
   shouldDismissOnRelease,
+  shouldExpandOnRelease,
   getDragCardStyle,
   isEditableElement,
   shouldIgnoreDragStart,
+  useDragToDismiss,
 } from './useDragToDismiss';
 
 describe('useDragToDismiss helpers', () => {
@@ -54,9 +58,19 @@ describe('useDragToDismiss helpers', () => {
       expect(calculateDragOffset(50, 125)).toBe(75);
     });
 
-    it('clamps upward dragging to 0', () => {
+    it('clamps upward dragging to 0 when allowUpward is not enabled', () => {
       expect(calculateDragOffset(100, 80)).toBe(0);
       expect(calculateDragOffset(200, 50)).toBe(0);
+    });
+
+    it('calculates upward drag distance (negative offset) when allowUpward is true', () => {
+      expect(calculateDragOffset(100, 80, true)).toBe(-20);
+      expect(calculateDragOffset(100, 30, { allowUpward: true })).toBe(-70);
+    });
+
+    it('clamps upward dragging to 0 when already expanded', () => {
+      expect(calculateDragOffset(100, 80, { allowUpward: true, isExpanded: true })).toBe(0);
+      expect(calculateDragOffset(100, 160, { allowUpward: true, isExpanded: true })).toBe(60);
     });
 
     it('handles non-numeric inputs gracefully', () => {
@@ -84,11 +98,30 @@ describe('useDragToDismiss helpers', () => {
     });
   });
 
+  describe('shouldExpandOnRelease', () => {
+    it('returns true when negative offset meets or exceeds threshold', () => {
+      expect(shouldExpandOnRelease(-70, 70)).toBe(true);
+      expect(shouldExpandOnRelease(-71, 70)).toBe(true);
+      expect(shouldExpandOnRelease(-120, 70)).toBe(true);
+    });
+
+    it('returns false when negative offset is below threshold', () => {
+      expect(shouldExpandOnRelease(-69, 70)).toBe(false);
+      expect(shouldExpandOnRelease(0, 70)).toBe(false);
+      expect(shouldExpandOnRelease(10, 70)).toBe(false);
+    });
+
+    it('uses default threshold of 70px if unspecified', () => {
+      expect(shouldExpandOnRelease(-70)).toBe(true);
+      expect(shouldExpandOnRelease(-69)).toBe(false);
+    });
+  });
+
   describe('getDragCardStyle', () => {
     it('returns undefined transform when offset is 0', () => {
       const style = getDragCardStyle(0, false);
       expect(style.transform).toBeUndefined();
-      expect(style.transition).toBe('transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1)');
+      expect(style.transition).toBe('transform 0.36s cubic-bezier(0.32, 0.72, 0, 1)');
     });
 
     it('returns translateY transform when offset is positive', () => {
@@ -97,9 +130,45 @@ describe('useDragToDismiss helpers', () => {
       expect(style.transition).toBe('none');
     });
 
+    it('returns negative translateY transform when offset is negative (upward drag)', () => {
+      const style = getDragCardStyle(-50, true);
+      expect(style.transform).toBe('translateY(-50px)');
+      expect(style.transition).toBe('none');
+    });
+
+    it('returns height and maxHeight when isDraggingUp with dragHeight', () => {
+      const style = getDragCardStyle(-50, true, { dragHeight: 370, isDraggingUp: true });
+      expect(style.height).toBe('370px');
+      expect(style.maxHeight).toBe('370px');
+      expect(style.transform).toBeUndefined();
+      expect(style.transition).toBe('none');
+    });
+
+    it('returns height and maxHeight when isReducing with dragHeight', () => {
+      const style = getDragCardStyle(60, true, { dragHeight: 480, isReducing: true });
+      expect(style.height).toBe('480px');
+      expect(style.maxHeight).toBe('480px');
+      expect(style.transform).toBeUndefined();
+      expect(style.transition).toBe('none');
+    });
+
+    it('returns accelerating downward transform when isDismissing in portrait', () => {
+      const style = getDragCardStyle(0, false, { isDismissing: true });
+      expect(style.transform).toContain('translateY');
+      expect(style.transition).toContain('0.28s cubic-bezier(0.32, 0, 0.67, 0)');
+      expect(style.opacity).toBe(0);
+      expect(style.pointerEvents).toBe('none');
+    });
+
+    it('returns accelerating rightward transform when isDismissing in landscape', () => {
+      const style = getDragCardStyle(0, false, { isDismissing: true, landscape: true });
+      expect(style.transform).toContain('translateX');
+      expect(style.transition).toContain('0.28s cubic-bezier(0.32, 0, 0.67, 0)');
+    });
+
     it('applies smooth transition when not dragging', () => {
       const style = getDragCardStyle(0, false);
-      expect(style.transition).toContain('0.25s');
+      expect(style.transition).toContain('0.36s');
     });
   });
 
@@ -178,4 +247,109 @@ it('allows header strip gaps when horizontal chips fit without scrolling', () =>
   const card = {};
   const strip = { parentElement: card, scrollWidth: 200, clientWidth: 200 };
   expect(isInsideScrollRegion(strip, card, () => ({ overflowX: 'auto', overflowY: 'hidden' }))).toBe(false);
+});
+
+describe('useDragToDismiss gesture lifecycle', () => {
+  const mountHook = (options) => {
+    let hookResult;
+    function Component({ onMount }) {
+      const res = useDragToDismiss(options);
+      onMount(res);
+      return React.createElement('div', res.handleProps);
+    }
+    renderToStaticMarkup(React.createElement(Component, { onMount: (res) => { hookResult = res; } }));
+    return hookResult;
+  };
+
+  it('triggers onExpand when dragged up past threshold', () => {
+    const onExpand = vi.fn();
+    const onDismiss = vi.fn();
+    const hook = mountHook({ onExpand, onDismiss, threshold: 70 });
+
+    hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+    hook.handleProps.onPointerMove({ clientY: 120 });
+    hook.handleProps.onPointerUp({ clientY: 120, currentTarget: {} });
+
+    expect(onExpand).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger onExpand when drag distance is less than threshold', () => {
+    const onExpand = vi.fn();
+    const onDismiss = vi.fn();
+    const hook = mountHook({ onExpand, onDismiss, threshold: 70 });
+
+    hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+    hook.handleProps.onPointerMove({ clientY: 160 });
+    hook.handleProps.onPointerUp({ clientY: 160, currentTarget: {} });
+
+    expect(onExpand).not.toHaveBeenCalled();
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('triggers onDismiss after dismissal animation when dragged down past threshold (unexpanded)', () => {
+    vi.useFakeTimers();
+    try {
+      const onExpand = vi.fn();
+      const onDismiss = vi.fn();
+      const hook = mountHook({ onExpand, onDismiss, threshold: 70 });
+
+      hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+      hook.handleProps.onPointerMove({ clientY: 280 });
+      hook.handleProps.onPointerUp({ clientY: 280, currentTarget: {} });
+
+      // Exit animation is playing (280ms delay)
+      expect(onDismiss).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(300);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+      expect(onExpand).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('triggers onCollapse when dragged down while isExpanded', () => {
+    const onCollapse = vi.fn();
+    const onDismiss = vi.fn();
+    const hook = mountHook({ onCollapse, onDismiss, isExpanded: true, threshold: 70 });
+
+    hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+    hook.handleProps.onPointerMove({ clientY: 280 });
+    hook.handleProps.onPointerUp({ clientY: 280, currentTarget: {} });
+
+    expect(onCollapse).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('does not drag up or trigger onExpand when already isExpanded', () => {
+    const onExpand = vi.fn();
+    const hook = mountHook({ onExpand, isExpanded: true, threshold: 70 });
+
+    hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+    hook.handleProps.onPointerMove({ clientY: 100 });
+    hook.handleProps.onPointerUp({ clientY: 100, currentTarget: {} });
+
+    expect(onExpand).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger onExpand mid-drag and commits onExpand on release', () => {
+    const onExpand = vi.fn();
+    const hook = mountHook({ onExpand, threshold: 70 });
+
+    hook.handleProps.onPointerDown({ clientY: 300, target: {}, currentTarget: {} });
+    // Drag slowly past threshold without releasing - should NOT fire mid-drag to avoid flash
+    hook.handleProps.onPointerMove({ clientY: 250 }); // -50px
+    expect(onExpand).not.toHaveBeenCalled();
+
+    hook.handleProps.onPointerMove({ clientY: 220 }); // -80px (crosses threshold)
+    expect(onExpand).not.toHaveBeenCalled();
+
+    // Continue dragging all the way up continuously
+    hook.handleProps.onPointerMove({ clientY: 100 }); // -200px
+    expect(onExpand).not.toHaveBeenCalled();
+
+    // Release hand: commits expansion cleanly
+    hook.handleProps.onPointerUp({ clientY: 100, currentTarget: {} });
+    expect(onExpand).toHaveBeenCalledTimes(1);
+  });
 });
