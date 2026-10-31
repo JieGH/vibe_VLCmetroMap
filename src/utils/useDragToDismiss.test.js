@@ -283,6 +283,29 @@ describe('useDragToDismiss gesture lifecycle', () => {
     return hookResult;
   };
 
+  it('handles tap (pointerDown followed by pointerUp or pointerCancel without pointerMove) without throwing or wedging future drags', () => {
+    const onExpand = vi.fn();
+    const hook = mountHook({ onExpand, threshold: 70 });
+
+    // Tap without moving
+    expect(() => {
+      hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+      hook.handleProps.onPointerUp({ clientY: 200, currentTarget: {} });
+    }).not.toThrow();
+
+    // PointerCancel without moving
+    expect(() => {
+      hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+      hook.handleProps.onPointerCancel();
+    }).not.toThrow();
+
+    // Subsequent drag still works cleanly
+    hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+    hook.handleProps.onPointerMove({ clientY: 120 });
+    hook.handleProps.onPointerUp({ clientY: 120, currentTarget: {} });
+    expect(onExpand).toHaveBeenCalledTimes(1);
+  });
+
   it('triggers onExpand when dragged up past threshold', () => {
     const onExpand = vi.fn();
     const onDismiss = vi.fn();
