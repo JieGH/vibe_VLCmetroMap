@@ -267,6 +267,26 @@ describe('BusStopBoard countdown formatting and states (#90)', () => {
     expect(html).not.toContain('′');
   });
 
+  it('departure body flexes to fill available sheet height without artificial max-height cap', () => {
+    const stop = {
+      stopCode: 'P-2277',
+      stopName: 'Xàtiva - Institut Lluís Vives',
+      lines: ['59', '31'],
+      arrivals: [
+        { line: '59', destination: 'Sociòpolis', dueSeconds: 180, isLive: true },
+        { line: '31', destination: 'Est.J.Sorolla', dueSeconds: 180, isLive: true },
+      ],
+      coordinates: [-0.3772, 39.4672],
+    };
+    const html = renderToStaticMarkup(<BusStopBoard stop={stop} theme="dark" onClose={() => {}} />);
+    const bodyMatch = html.match(/class="station-panel-body"[^>]*style="([^"]*)"/);
+    expect(bodyMatch).not.toBeNull();
+    const style = bodyMatch[1];
+    expect(style).toContain('flex:1 1 auto');
+    expect(style).toContain('min-height:0');
+    expect(style).not.toContain('max-height');
+  });
+
 });
 
 describe('#144 loading mark', () => {

@@ -9,6 +9,7 @@ import { LANDSCAPE_BREAKPOINT_PX } from '../utils/layout';
 import { useDragToDismiss } from '../utils/useDragToDismiss';
 import { useTranslation } from '../i18n';
 import { busBadgeBox } from '../utils/busBadgeStyle';
+import { COLLAPSED_SHEET_HEIGHT, EXPANDED_SHEET_HEIGHT } from './StationPanel';
 import {
   fetchStopArrivals,
   getEmtCachedArrivals,
@@ -17,8 +18,6 @@ import {
 } from '../services/emtArrivalService';
 
 const ROW_HEIGHT_PX = 48;
-const VISIBLE_ROWS = 4;
-const TABLE_HEAD_PX = 30;
 
 const useIsLandscape = () => {
   const [landscape, setLandscape] = useState(
@@ -51,8 +50,6 @@ export const BusStopBoard = ({
     handleProps,
     cardStyle: dragStyle,
     isDragging,
-    isDraggingUp,
-    isReducing,
     isDismissing,
     triggerDismiss,
   } = useDragToDismiss({
@@ -174,12 +171,8 @@ export const BusStopBoard = ({
               left: 12,
               right: 12,
               bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-              maxHeight: isExpanded
-                ? 'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 96px))'
-                : 'min(58dvh, calc(100dvh - 120px))',
-              height: isExpanded
-                ? 'min(82dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 96px))'
-                : 'min(58dvh, calc(100dvh - 120px))',
+              maxHeight: isExpanded ? EXPANDED_SHEET_HEIGHT : COLLAPSED_SHEET_HEIGHT,
+              height: isExpanded ? EXPANDED_SHEET_HEIGHT : COLLAPSED_SHEET_HEIGHT,
               transition: 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1), height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
             }),
         ...dragStyle,
@@ -198,6 +191,7 @@ export const BusStopBoard = ({
         <div
           className="sheet-drag-handle-wrap"
           data-testid="station-drag-handle"
+          data-drag-surface="true"
           style={{ padding: '6px 0 2px' }}
           {...handleProps}
         >
@@ -208,6 +202,7 @@ export const BusStopBoard = ({
       {/* Header: stop emblem, stop name, line icons underneath, and live status */}
       <header
         className="station-panel-header"
+        data-drag-surface="true"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, padding: !landscape ? '2px 16px 12px' : '12px 16px 12px', borderBottom: '1px solid var(--border-color)',
@@ -386,10 +381,10 @@ export const BusStopBoard = ({
       <div
         className="station-panel-body"
         style={{
-          maxHeight: (isExpanded || isDraggingUp || isReducing) ? 'calc(100% - 60px)' : TABLE_HEAD_PX + ROW_HEIGHT_PX * VISIBLE_ROWS + 8,
+          flex: '1 1 auto',
+          minHeight: 0,
           overflowY: 'auto',
           padding: '0 10px 8px',
-          transition: isDragging ? 'none' : 'max-height 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
       >
         {isLoading ? (
