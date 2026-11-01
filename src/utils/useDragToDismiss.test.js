@@ -353,6 +353,39 @@ describe('useDragToDismiss gesture lifecycle', () => {
     }
   });
 
+  it('resets isDismissing and prevents lingering dismiss styles for persistent components', () => {
+    vi.useFakeTimers();
+    try {
+      const onDismiss = vi.fn();
+      const hook = mountHook({ onDismiss, enabled: true, threshold: 70 });
+
+      hook.handleProps.onPointerDown({ clientY: 200, target: {}, currentTarget: {} });
+      hook.handleProps.onPointerMove({ clientY: 280 });
+      hook.handleProps.onPointerUp({ clientY: 280, currentTarget: {} });
+
+      // Before timer completes, onDismiss not called
+      expect(onDismiss).not.toHaveBeenCalled();
+
+      // Once timer completes, onDismiss is called
+      vi.advanceTimersByTime(300);
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+
+      // When the component re-renders disabled (enabled: false, like when closed)
+      const disabledHook = mountHook({ onDismiss, enabled: false, threshold: 70 });
+      expect(disabledHook.cardStyle).toEqual({});
+      expect(disabledHook.isDismissing).toBe(false);
+
+      // When re-opened (enabled: true), cardStyle has no lingering dismiss transform
+      const reopenedHook = mountHook({ onDismiss, enabled: true, threshold: 70 });
+      expect(reopenedHook.isDismissing).toBe(false);
+      expect(reopenedHook.cardStyle.transform).toBeUndefined();
+      expect(reopenedHook.cardStyle.opacity).toBeUndefined();
+      expect(reopenedHook.cardStyle.pointerEvents).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('triggers onCollapse when dragged down while isExpanded', () => {
     const onCollapse = vi.fn();
     const onDismiss = vi.fn();

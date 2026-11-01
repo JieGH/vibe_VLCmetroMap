@@ -801,6 +801,7 @@ function App() {
       <Sidebar
         isOpen={isSidebarOpen}
         onToggleSidebar={handleToggleSidebar}
+        onClose={() => setIsSidebarOpen(false)}
         trainStats={trainStats}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenFeedback={() => setIsFeedbackOpen(true)}

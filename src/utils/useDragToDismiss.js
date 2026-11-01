@@ -269,9 +269,31 @@ export const useDragToDismiss = ({
 
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     dismissTimerRef.current = setTimeout(() => {
+      setIsDismissing(false);
       onDismiss?.();
     }, 280);
   }, [isDismissing, onDismiss]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsDismissing(false);
+      setIsDragging(false);
+      pointerIdRef.current = null;
+      pendingInteractiveRef.current = false;
+      didDragRef.current = false;
+      coalescerRef.current?.cancel();
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+      setDragState({
+        offset: 0,
+        height: null,
+        isDraggingUp: false,
+        isReducing: false,
+      });
+    }
+  }, [enabled]);
 
   useEffect(() => {
     // Prevent browser panning only after a gesture starts on an eligible surface.
@@ -290,7 +312,7 @@ export const useDragToDismiss = ({
   }, []);
 
   const handlePointerDown = useCallback((e) => {
-    if (!enabled) return;
+    if (!enabled || isDismissing) return;
     // Only handle primary pointer (left mouse click or touch)
     if (e.button !== undefined && e.button !== 0) return;
 
@@ -336,7 +358,7 @@ export const useDragToDismiss = ({
     } catch {
       // Ignore if pointer capture is unsupported
     }
-  }, [enabled, cardRef]);
+  }, [enabled, isDismissing, cardRef]);
 
   const handlePointerMove = useCallback((e) => {
     if (pointerIdRef.current === null || (e.pointerId !== undefined && e.pointerId !== pointerIdRef.current)) return;
@@ -460,6 +482,7 @@ export const useDragToDismiss = ({
     pendingInteractiveRef.current = false;
     didDragRef.current = false;
     setIsDragging(false);
+    setIsDismissing(false);
     setDragState({
       offset: 0,
       height: null,

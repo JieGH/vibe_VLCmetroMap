@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Info, LayoutDashboard, MessageSquare, Minus, Plus, Sun, Moon, SunMoon, Sparkles } from 'lucide-react';
 import { FONT_SIZE_CONFIG, FONT_SIZES } from '../utils/fontSize';
@@ -38,6 +38,7 @@ const useIsMobile = () => {
 const Sidebar = ({
   isOpen,
   onToggleSidebar,
+  onClose,
   _trainStats = { live: 0, confirmed: 0 },
   onOpenAbout,
   onOpenFeedback,
@@ -52,6 +53,14 @@ const Sidebar = ({
   const isMobile = useIsMobile();
   const [internalDownloadOpen, setInternalDownloadOpen] = useState(false);
   const devTapCountRef = useRef(0);
+
+  const handleClose = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else if (onToggleSidebar) {
+      onToggleSidebar();
+    }
+  }, [onClose, onToggleSidebar]);
 
   const handleDevTap = () => {
     devTapCountRef.current += 1;
@@ -77,8 +86,8 @@ const Sidebar = ({
     ? { role: 'dialog', 'aria-modal': isOpen ? 'true' : undefined, 'aria-label': 'Xarxa', 'aria-hidden': isOpen ? undefined : 'true' }
     : {};
   const { t, language, setLanguage } = useTranslation();
-  const { handleProps, cardStyle: dragStyle } = useDragToDismiss({
-    onDismiss: onToggleSidebar,
+  const { handleProps, cardStyle: dragStyle, isDismissing, isDragging } = useDragToDismiss({
+    onDismiss: handleClose,
     enabled: isMobile && isOpen,
     threshold: 70,
   });
@@ -90,19 +99,19 @@ const Sidebar = ({
       if (e.key === 'Escape') {
         if (e.defaultPrevented) return;
         if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) return;
-        onToggleSidebar();
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onToggleSidebar]);
+  }, [isOpen, handleClose]);
 
   return (
     <>
       {/* Backdrop for closing menu card by tapping outside on the map */}
       <div
         className={`sidebar-backdrop ${isOpen ? 'active' : ''}`}
-        onClick={onToggleSidebar}
+        onClick={handleClose}
         aria-hidden="true"
         data-testid="sidebar-backdrop"
       />
@@ -110,6 +119,8 @@ const Sidebar = ({
       {/* Sidebar Container */}
       <div 
         className={`sidebar glass-panel ${!isOpen ? 'collapsed' : ''}`} 
+        data-dismissing={isDismissing ? 'true' : 'false'}
+        data-dragging={isDragging ? 'true' : 'false'}
         style={{ padding: '20px', ...dragStyle }}
         {...drawerAria}
         {...handleProps}
@@ -137,7 +148,7 @@ const Sidebar = ({
           </div>
 
           <button 
-            onClick={onToggleSidebar}
+            onClick={handleClose}
             onPointerDown={(e) => e.stopPropagation()}
             className="sidebar-close-btn"
             aria-label={isOpen ? t('sidebar.collapseSidebar') : t('sidebar.expandSidebar')}
